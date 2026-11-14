@@ -5,7 +5,7 @@ var e=`# Changes
 ### Changed
 - Remove the unused canvas icon override and SDK declaration mutation. Copilot's native tab uses the owning plugin's compact SVG logo, the same mechanism as Usage Insights.
 - Check the plugin logo's size and canvas ownership instead of treating SDK icon-path propagation as proof of desktop rendering.
-- Document the icon investigation and fresh-session requirement. The owner confirmed the SVG appears in a new Copilot session; an older session still showed the generic icon.
+- Recommend the cached GitHub marketplace installation. Follow-up diagnostics found that the live local install omitted the logo from desktop session metadata; switching the installation source restored the exact SVG in the same sessions. A new session alone was not a reliable repair.
 
 ## [0.1.4] - 2026-11-14
 

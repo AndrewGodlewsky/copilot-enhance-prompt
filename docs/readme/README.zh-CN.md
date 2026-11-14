@@ -8,6 +8,8 @@
 
 参阅[安装和开发指南](../../README.md)、[隐私说明](../privacy.md)和[更新记录](../changelog/CHANGELOG.zh-CN.md)。
 
+建议从 GitHub marketplace 安装。本地目录安装在 Copilot desktop 1.4.2 中可能只显示面板标志，而原生标签页仍缺少标志。请参阅[将本地安装切换到 GitHub 的步骤](../../README.md#repair-an-existing-local-installation)；仅新建会话并不能可靠修复此问题。
+
 ## 许可证与致谢
 
 Enhance Prompt 最初由 [cattfan](https://github.com/cattfan) 在[原始项目](https://github.com/cattfan/orca-enhance-prompt)中创建。本分支基于原作者及贡献者的设计和实现，将其适配到 GitHub Copilot。

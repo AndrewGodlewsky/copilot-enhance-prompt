@@ -8,6 +8,8 @@ Canvas gửi tin nhắn mới, không gõ vào terminal. Phiên bận hoặc ch�
 
 Xem [hướng dẫn cài đặt và phát triển](../../README.md), [quyền riêng tư](../privacy.md) và [thay đổi](../changelog/CHANGELOG.vi.md).
 
+Nên cài từ marketplace GitHub. Với bản cài trực tiếp từ thư mục, Copilot desktop 1.4.2 có thể hiển thị logo trong bảng nhưng thiếu logo trên tab. Xem [cách chuyển bản cài cục bộ sang GitHub](../../README.md#repair-an-existing-local-installation); chỉ mở phiên mới không khắc phục ổn định.
+
 ## Giấy phép và ghi nhận tác giả
 
 Enhance Prompt được [cattfan](https://github.com/cattfan) tạo ra trong [dự án gốc](https://github.com/cattfan/orca-enhance-prompt). Bản fork này kế thừa thiết kế và phần triển khai của tác giả cùng những người đóng góp, rồi điều chỉnh cho GitHub Copilot.

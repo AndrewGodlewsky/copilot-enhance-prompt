@@ -5,7 +5,7 @@
 ### Thay đổi
 - Bỏ ghi đè biểu tượng canvas và sửa trực tiếp khai báo SDK không có tác dụng. Tab Copilot dùng SVG nhỏ gọn của plugin, cùng cơ chế với Usage Insights.
 - Kiểm tra kích thước logo và plugin sở hữu canvas, thay vì coi đường dẫn biểu tượng trong SDK là bằng chứng hiển thị trên ứng dụng.
-- Ghi lại kết quả điều tra và yêu cầu mở phiên mới. Chủ dự án xác nhận SVG xuất hiện trong phiên Copilot mới; phiên cũ vẫn hiện biểu tượng mặc định.
+- Khuyến nghị cài từ marketplace GitHub có bản sao trong bộ nhớ đệm. Kiểm tra tiếp cho thấy bản cài trực tiếp từ thư mục thiếu logo trong siêu dữ liệu phiên của ứng dụng; đổi nguồn cài đã khôi phục đúng SVG trong chính các phiên đó. Chỉ mở phiên mới không khắc phục ổn định.
 
 ## [0.1.4] - 2026-11-14
 

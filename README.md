@@ -12,7 +12,7 @@ The React panel retains model chains and fallback, prompt styles, reusable rules
 
 ## Download and install
 
-**Development preview, version 0.1.4.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub or download a local copy using the instructions below. The package includes the root `plugin.json` and `com.github.copilot/` directory.
+**Development preview, version 0.1.5.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
 
 ### Requirements
 
@@ -23,7 +23,23 @@ The React panel retains model chains and fallback, prompt styles, reusable rules
 
 Windows supports encrypted saved API keys through DPAPI. On other systems, use a key available in the extension's environment or a subscription CLI; saved keys are unavailable. Desktop environments may omit shell environment variables. Other platforms have not been verified.
 
-### Get the plugin folder
+### Install from GitHub (recommended)
+
+In Copilot, open **Customize → marketplace settings** next to the marketplace dropdown. Add `https://github.com/AndrewGodlewsky/copilot-enhance-prompt.git`, find **Enhance Prompt** under Browse, and click **Install**. [GitHub's desktop installation guide](https://docs.github.com/en/copilot/how-tos/github-copilot-app/customize-github-copilot-app#adding-plugins).
+
+Or use the CLI:
+
+```sh
+copilot plugin marketplace add AndrewGodlewsky/copilot-enhance-prompt
+copilot plugin install enhance-prompt@copilot-enhance-prompt
+copilot plugin list
+```
+
+This installs a cached copy, matching the working Usage Insights setup. Copilot desktop 1.4.2 omitted Enhance Prompt's logo from session metadata when it was loaded through a local directory marketplace. Switching to the GitHub install restored the exact SVG in both affected sessions without changing the plugin version. After restarting Copilot, the owner confirmed that the top tab displays the logo. See [repair an existing local installation](#repair-an-existing-local-installation) if that marketplace name is already registered locally.
+
+To select a published branch or tag, use `"AndrewGodlewsky/copilot-enhance-prompt#COPILOT_REF"` as the marketplace source. Built extension and panel files are included; users do not need `npm install` or a build step.
+
+### Download a local copy for development
 
 If you already have this Copilot checkout, use it directly. Otherwise, [download the main branch as a ZIP](https://github.com/AndrewGodlewsky/copilot-enhance-prompt/archive/refs/heads/main.zip) and extract it, or clone it with Git:
 
@@ -31,9 +47,7 @@ If you already have this Copilot checkout, use it directly. Otherwise, [download
 git clone --branch main https://github.com/AndrewGodlewsky/copilot-enhance-prompt.git
 ```
 
-Built extension and panel files are included; users do not need `npm install` or a build step.
-
-### Add the local marketplace, then install
+Local marketplaces load edits directly from the folder, but the desktop's session logo lookup can fail for this installation type. Use the GitHub installation above for normal use.
 
 Open PowerShell in the extracted repository root, the folder containing `plugin.json`. Run:
 
@@ -47,18 +61,18 @@ The first command registers the marketplace. The second installs and enables the
 
 Keep that folder: plugins installed from a local marketplace load directly from it. To use changes, start a new session or restart the existing one. [GitHub's plugin command reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference).
 
-### Install from GitHub
+### Repair an existing local installation
 
-You can add the repository without downloading it yourself:
+If the panel has its logo but the native tab shows generic squares, and this marketplace was added from a folder, switch its source to GitHub:
 
 ```sh
+copilot plugin uninstall enhance-prompt@copilot-enhance-prompt
+copilot plugin marketplace remove copilot-enhance-prompt
 copilot plugin marketplace add AndrewGodlewsky/copilot-enhance-prompt
 copilot plugin install enhance-prompt@copilot-enhance-prompt
 ```
 
-To select a published branch or tag, use `"AndrewGodlewsky/copilot-enhance-prompt#COPILOT_REF"` as the marketplace source. Use either the local or GitHub marketplace source for this name; you do not need both.
-
-The desktop route is **Customize → marketplace settings** next to the marketplace dropdown. Add `https://github.com/AndrewGodlewsky/copilot-enhance-prompt.git`, find **Enhance Prompt** under Browse, and click **Install**. [GitHub's desktop installation guide](https://docs.github.com/en/copilot/how-tos/github-copilot-app/customize-github-copilot-app#adding-plugins).
+Run each command only after the preceding command succeeds. For a live local install, uninstall disables the plugin; it does not delete the source folder. The plugin stores preferences, models, encrypted keys, and history separately from its installation. Restart Copilot after switching and reopen the installed canvas so the desktop reloads its plugin inventory. Future updates come from GitHub through `copilot plugin update enhance-prompt@copilot-enhance-prompt`.
 
 ### Open the canvas
 
@@ -66,7 +80,7 @@ In **Customize → Installed**, check that Enhance Prompt is enabled. Open a ses
 
 To update a local install, replace or update the files in its existing folder and start a new session; rebuild first if you changed source code. For a GitHub install, run `copilot plugin update enhance-prompt@copilot-enhance-prompt`. Remove either installation with `copilot plugin uninstall enhance-prompt@copilot-enhance-prompt`.
 
-The native tab uses the compact SVG declared in `plugin.json`. If an older session still shows generic squares after an update, open Enhance Prompt in a **new Copilot session** to load the current plugin metadata. The owner confirmed that this displays the prompt/spark logo. Version 0.1.5 removes the unused canvas icon override; the larger PNG remains the panel image and favicon. See the [icon investigation](docs/canvas-icon-investigation.md) for the comparison with Usage Insights and the limits of automated checks.
+The native tab uses the compact SVG declared in `plugin.json`. Version 0.1.5 removes the unused canvas icon override; the larger PNG remains the panel image and favicon. A successful panel image or Installed-row logo does not establish that the session's tab received its logo. Opening a new session alone was not a reliable repair for the local installation. See the [icon investigation](docs/canvas-icon-investigation.md) for the measured failure and installation workaround.
 
 ## Use it
 
