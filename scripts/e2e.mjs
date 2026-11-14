@@ -50,8 +50,8 @@ try {
     throw new Error('The runtime did not discover Enhance Prompt.')
   }
   const discovered = canvases.canvases.find(canvas => canvas.canvasId === 'enhance-prompt')
-  assert.ok(discovered?.icon, 'canvas discovery must include the icon used by the desktop tab')
-  assert.deepEqual(await readFile(discovered.icon), await readFile('assets/icon.png'), 'canvas icon resolves to the packaged brand image')
+  const manifest = JSON.parse(await readFile('plugin.json', 'utf8'))
+  assert.equal(discovered?.extensionId, `plugin:${manifest.name}:enhance-prompt`, 'canvas identifies its owning plugin for desktop logo lookup')
   const openedEvent = new Promise(resolve => {
     const unsubscribe = session.on('session.canvas.opened', event => {
       if (event.data.instanceId === 'enhance-smoke') { unsubscribe(); resolve(event.data) }
@@ -61,9 +61,9 @@ try {
   console.log('Canvas opened.')
   assert.ok(opened.url, 'canvas returned a URL')
   const live = await session.rpc.canvas.listOpen()
-  assert.equal((await openedEvent).icon, discovered.icon, 'the tab-opening event includes the canvas icon')
-  assert.equal(live.openCanvases.find(canvas => canvas.instanceId === 'enhance-smoke')?.icon, discovered.icon, 'the open canvas retains its icon')
-  console.log('Canvas discovery, tab-opening event and open state carry the packaged icon.')
+  assert.equal((await openedEvent).extensionId, discovered.extensionId, 'the opening event identifies the owning plugin')
+  assert.equal(live.openCanvases.find(canvas => canvas.instanceId === 'enhance-smoke')?.extensionId, discovered.extensionId, 'the open canvas retains its plugin identity')
+  console.log('Canvas ownership verified. Desktop plugin inventory, logo enrichment and rendering require a manual check.')
   const page = await fetch(opened.url)
   assert.equal(page.status, 200)
   assert.match(await page.text(), /Enhance Prompt/)

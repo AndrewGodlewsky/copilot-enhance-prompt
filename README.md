@@ -66,7 +66,7 @@ In **Customize → Installed**, check that Enhance Prompt is enabled. Open a ses
 
 To update a local install, replace or update the files in its existing folder and start a new session; rebuild first if you changed source code. For a GitHub install, run `copilot plugin update enhance-prompt@copilot-enhance-prompt`. Remove either installation with `copilot plugin uninstall enhance-prompt@copilot-enhance-prompt`.
 
-Version 0.1.4 uses the compact SVG as the plugin logo. After updating, restart Copilot and open the canvas in a new session to reload its metadata. Existing sessions can retain the previous canvas registration. The desktop tab's appearance still needs manual confirmation; runtime tests verify the icon metadata only.
+The native tab uses the compact SVG declared in `plugin.json`. If an older session still shows generic squares after an update, open Enhance Prompt in a **new Copilot session** to load the current plugin metadata. The owner confirmed that this displays the prompt/spark logo. Version 0.1.5 removes the unused canvas icon override; the larger PNG remains the panel image and favicon. See the [icon investigation](docs/canvas-icon-investigation.md) for the comparison with Usage Insights and the limits of automated checks.
 
 ## Use it
 

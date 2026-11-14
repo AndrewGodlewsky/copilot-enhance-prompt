@@ -12,6 +12,12 @@ const catalog = JSON.parse(await readFile('.github/plugin/marketplace.json', 'ut
 assert.equal(manifest.name, 'enhance-prompt')
 assert.equal(catalog.plugins[0].name, manifest.name)
 assert.equal(catalog.plugins[0].source, './')
+const logoPath = manifest.extensions?.['com.github.copilot']?.logo
+assert.equal(logoPath, 'assets/icon.svg', 'Keep the compact vector logo for desktop plugin metadata')
+const logo = await readFile(logoPath)
+assert.match(logo.toString('utf8'), /<svg\b/)
+// Copilot 1.4.2 accepts base64 PNG/SVG plugin icons up to 350,000 characters.
+assert.ok(`data:image/svg+xml;base64,${logo.toString('base64')}`.length <= 350000, 'Plugin logo exceeds the desktop icon limit')
 assert.match(await readFile('src/version.ts', 'utf8'), new RegExp(`'${manifest.version.replaceAll('.', '\\.')}'`))
 const built = 'com.github.copilot/extensions/enhance-prompt'
 const extension = await readFile(`${built}/extension.mjs`, 'utf8')
