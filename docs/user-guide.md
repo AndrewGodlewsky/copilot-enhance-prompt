@@ -1,6 +1,10 @@
 # Using Enhance Prompt
 
-The header switches between Enhance, History, Models, Rules and Settings. The language picker supports English, Vietnamese and Chinese. Auto follows the webview's locale; appearance follows the system color scheme.
+The header switches between Enhance, History, Models, Rules and Settings. The language picker supports English, Vietnamese and Chinese. Auto follows the webview's locale.
+
+The Quiet Desk banner changes its still illustration with the current draft and enhancement status. Its window shows morning (05:00–11:59), afternoon (12:00–17:59), or night (18:00–04:59), using your local clock when the panel opens or regains focus. There is no animation. A finished page means a prompt is ready to review, not that it has been sent or verified.
+
+Use the single theme button at the banner's top right to switch the entire panel between light and dark. It initially follows the system, then remembers your choice across canvases and sessions. Time of day changes the artwork independently. The plugin version at the bottom opens release notes.
 
 ## Enhance
 

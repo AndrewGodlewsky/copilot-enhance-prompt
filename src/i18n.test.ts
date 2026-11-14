@@ -10,6 +10,7 @@ import { english, MESSAGES, msg, raw } from './messages.ts'
 import { CONTEXT_LEVEL_LABELS, PRESETS } from './presets.ts'
 import { STYLE_LABELS } from './prompts.ts'
 import { BUILT_IN_STRUCTURES } from './rules.ts'
+import { DESK_STATUS_LABELS } from './panel/appearance.ts'
 
 /** The text of every source file under a folder, its subfolders included (not the tests). */
 function sources(folder: URL): string[] {
@@ -36,6 +37,7 @@ function uiStrings(): Set<string> {
     ...Object.values(KEY_LABEL),
     ...Object.values(OUTPUT_LANGUAGE_LABELS),
     ...Object.values(SECTION_LABELS),
+    ...Object.values(DESK_STATUS_LABELS),
     ...Object.values(AUTO_MODE_HINTS),
     ...[...PRIVACY_ROWS, SEND_AFTER_ROW].flatMap((row) => [row.label, row.hint, row.risk, row.when]),
     ...PRIVACY_GROUPS.map((group) => group.title),
@@ -178,7 +180,7 @@ test('the brand "Enhance Prompt" is the same in every language', async () => {
   }
   // The panel's header shows it as it is: the name is the constant, never a string passed to t().
   for (const dict of Object.values(dictionaries)) assert.ok(!(BRAND in dict), 'the brand has a translation entry')
-  const header = readFileSync(new URL('../web/src/main.tsx', import.meta.url), 'utf8')
+  const header = readFileSync(new URL('../web/src/quiet-desk.tsx', import.meta.url), 'utf8')
   assert.match(header, /<h1[^>]*>\{BRAND\}<\/h1>/)
   assert.ok(!/\bt\(\s*BRAND\b/.test(header) && !header.includes(`t('${BRAND}')`), 'the brand goes through t()')
 })

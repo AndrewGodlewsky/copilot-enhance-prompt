@@ -12,7 +12,7 @@ The React panel retains model chains and fallback, prompt styles, reusable rules
 
 ## Download and install
 
-**Development preview, version 0.1.5.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
+**Development preview, version 0.1.6.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
 
 ### Requirements
 
@@ -63,7 +63,7 @@ Keep that folder: plugins installed from a local marketplace load directly from 
 
 ### Repair an existing local installation
 
-If the panel has its logo but the native tab shows generic squares, and this marketplace was added from a folder, switch its source to GitHub:
+If the native tab shows generic squares, and this marketplace was added from a folder, switch its source to GitHub:
 
 ```sh
 copilot plugin uninstall enhance-prompt@copilot-enhance-prompt
@@ -80,9 +80,11 @@ In **Customize → Installed**, check that Enhance Prompt is enabled. Open a ses
 
 To update a local install, replace or update the files in its existing folder and start a new session; rebuild first if you changed source code. For a GitHub install, run `copilot plugin update enhance-prompt@copilot-enhance-prompt`. Remove either installation with `copilot plugin uninstall enhance-prompt@copilot-enhance-prompt`.
 
-The native tab uses the compact SVG declared in `plugin.json`. Version 0.1.5 removes the unused canvas icon override; the larger PNG remains the panel image and favicon. A successful panel image or Installed-row logo does not establish that the session's tab received its logo. Opening a new session alone was not a reliable repair for the local installation. See the [icon investigation](docs/canvas-icon-investigation.md) for the measured failure and installation workaround.
+The native tab uses the compact SVG declared in `plugin.json`. Version 0.1.5 removed the unused canvas icon override; the larger PNG remains the favicon. A successful Installed-row logo does not establish that the session's tab received its logo. Opening a new session alone was not a reliable repair for the local installation. See the [icon investigation](docs/canvas-icon-investigation.md) for the measured failure and installation workaround.
 
 ## Use it
+
+The Quiet Desk banner changes its still scene with local time and the current enhancement state. Use the single button at its top right to toggle light/dark mode; your choice is remembered across sessions. The version and release notes are in the footer. See the [user guide](docs/user-guide.md) for the scene's triggers.
 
 1. In **Models**, add an API provider, local model, custom CLI, or detected subscription CLI. API calls use that provider's account and billing; installing this plugin does not give them access to your Copilot subscription.
 2. In **Enhance → Write a request**, describe the task and choose a model. **Options** opens style, context, output language and structure settings. Preview the context and uncheck items to exclude them; use **Attach files** for explicit attachments.

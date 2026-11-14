@@ -18,7 +18,9 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { Notices } from './common'
 import { Button } from '@/components/ui/button'
 import { WhatsNew } from './whats-new'
-import logo from '../../assets/icon.png'
+import { QuietDesk } from './quiet-desk'
+import { followTheme } from './theme'
+import { colorTheme } from '../../src/panel/appearance.ts'
 import { ready, usePanel } from './panel-runtime'
 import { EnhanceSection } from './enhance'
 import { connectCanvas } from './transport'
@@ -38,7 +40,7 @@ const SECTIONS = [
   { value: 'privacy', Icon: SettingsIcon }
 ] as const
 
-/** The panel language, at the top left (Auto follows Copilot). */
+/** The panel language, beside the navigation (Auto follows Copilot). */
 function LanguagePicker() {
   return (
     <Select value={read(uiLanguageSetting)} onValueChange={(value) => void changeUiLanguage(value)}>
@@ -78,30 +80,26 @@ function App() {
     <TooltipProvider delayDuration={300}>
       <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-4 p-3 sm:p-4">
         <header className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <img src={logo} alt="" className="size-6 shrink-0" />
-            <h1 className="truncate text-sm font-semibold">{BRAND}</h1>
-            <WhatsNew />
+          <QuietDesk />
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+            <nav aria-label={t('Plugin sections')} className="flex flex-wrap gap-1">
+              {SECTIONS.map(({ value, Icon }) => (
+                <Button
+                  key={value}
+                  size="sm"
+                  aria-current={value === current.value ? 'page' : undefined}
+                  variant={value === current.value ? 'secondary' : 'ghost'}
+                  className={`h-9 gap-1 px-2 text-xs sm:gap-2 sm:px-3 sm:text-sm ${value === current.value ? 'ring-1 ring-border' : 'text-muted-foreground'}`}
+                  onClick={() => openSection(value)}
+                >
+                  <Icon className="hidden sm:block" />
+                  {value === 'enhance' ? t('Enhance') : t(SECTION_LABELS[value])}
+                  {value === 'history' && read(history).length > 0 ? <span className="text-muted-foreground text-xs tabular-nums">{read(history).length}</span> : null}
+                </Button>
+              ))}
+            </nav>
+            <LanguagePicker />
           </div>
-          <LanguagePicker />
-          </div>
-          <nav aria-label={t('Plugin sections')} className="flex flex-wrap gap-1 border-b pb-3">
-            {SECTIONS.map(({ value, Icon }) => (
-              <Button
-                key={value}
-                size="sm"
-                aria-current={value === current.value ? 'page' : undefined}
-                variant={value === current.value ? 'secondary' : 'ghost'}
-                className={`h-9 gap-1 px-2 text-xs sm:gap-2 sm:px-3 sm:text-sm ${value === current.value ? 'ring-1 ring-border' : 'text-muted-foreground'}`}
-                onClick={() => openSection(value)}
-              >
-                <Icon className="hidden sm:block" />
-                {value === 'enhance' ? t('Enhance') : t(SECTION_LABELS[value])}
-                {value === 'history' && read(history).length > 0 ? <span className="text-muted-foreground text-xs tabular-nums">{read(history).length}</span> : null}
-              </Button>
-            ))}
-          </nav>
         </header>
         <Suspense fallback={null}>
           {current.value === 'history' ? (
@@ -116,6 +114,9 @@ function App() {
             <EnhanceSection refresh={refresh} />
           )}
         </Suspense>
+        <footer className="mt-auto flex items-center gap-2 border-t pt-3 text-xs text-muted-foreground">
+          <span>{BRAND}</span><WhatsNew />
+        </footer>
       </div>
       <Notices />
     </TooltipProvider>
@@ -132,6 +133,12 @@ async function start(): Promise<void> {
     if (section) set(tab, section)
   } else connectCanvas()
   await ready()
+  if (import.meta.env.DEV) {
+    const theme = new URLSearchParams(location.search).get('theme')
+    if (theme === 'light' || theme === 'dark') set(colorTheme, theme)
+  }
+  const stopTheme = followTheme(matchMedia('(prefers-color-scheme: dark)'), document.documentElement)
+  window.addEventListener('pagehide', stopTheme, { once: true })
   // Closing or reloading the panel ends its run: the worker stops the model too.
   window.addEventListener('pagehide', closePanel)
   wirePanel()

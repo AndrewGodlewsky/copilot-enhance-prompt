@@ -148,3 +148,64 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Quiet Desk is a set of still scenes. Theme and workflow changes never animate it. */
+.quiet-desk {
+  --desk-surface: #e6ebf4;
+  --desk-foreground: #29344c;
+  --desk-secondary: #53617a;
+  --desk-border: #a0adbf;
+  --desk-ink: #39445d;
+  --desk-muted: #7e8da3;
+  --desk-paper: #fff9e9;
+  --desk-brass: #a97228;
+  --desk-back: #ccd5e4;
+  --desk-green: #487d6d;
+  --desk-lamplight: #e5d9bc;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 46%);
+  min-height: 206px;
+  border-radius: 10px;
+  background: var(--desk-surface);
+  color: var(--desk-foreground);
+}
+.dark .quiet-desk {
+  --desk-surface: #242b3c;
+  --desk-foreground: #f0eee8;
+  --desk-secondary: #c0c7d5;
+  --desk-border: #697186;
+  --desk-ink: #263044;
+  --desk-muted: #748299;
+  --desk-paper: #ede8d8;
+  --desk-brass: #e1b86b;
+  --desk-back: #3c495f;
+  --desk-green: #9abaaa;
+  --desk-lamplight: #504a3d;
+}
+.quiet-desk-copy { padding: 24px 0 24px 24px; align-self: center; min-width: 0; }
+.quiet-desk-platform { margin: 0 0 9px; color: var(--desk-secondary); font-size: 13px; font-weight: 600; }
+.quiet-desk h1 { font-size: 28px; font-weight: 650; line-height: 1.2; letter-spacing: -.6px; }
+.quiet-desk-tagline { margin-top: 7px; color: var(--desk-secondary); font-size: 14px; }
+.quiet-desk-status { display: flex; align-items: center; gap: 8px; margin-top: 19px; min-height: 20px; font-size: 13px; font-weight: 600; }
+.quiet-desk-status > span { width: 7px; height: 7px; flex: none; background: var(--desk-brass); }
+.quiet-desk-status[data-state="ready"] > span { background: var(--desk-green); }
+.quiet-desk-status[data-state="error"] > span { transform: rotate(45deg); }
+.quiet-desk .quiet-desk-theme {
+  position: absolute; right: 12px; top: 12px; z-index: 1;
+  border: 1px solid var(--desk-border); background: var(--desk-surface); color: var(--desk-foreground);
+  box-shadow: none; transition: none;
+}
+.quiet-desk .quiet-desk-theme:hover { background: var(--desk-back); }
+.quiet-desk .quiet-desk-theme:focus-visible { outline-color: var(--desk-foreground); }
+.quiet-desk-scene { align-self: end; height: 164px; margin: 41px 12px 0 0; overflow: hidden; border-radius: 0 0 8px 0; }
+.quiet-desk-scene svg { display: block; width: 100%; height: 100%; }
+@media (max-width: 640px) {
+  .quiet-desk { grid-template-columns: minmax(0, 1fr); }
+  .quiet-desk-copy { padding: 20px 20px 0; }
+  .quiet-desk-platform { margin-bottom: 17px; padding-right: 40px; min-height: 24px; }
+  .quiet-desk h1 { font-size: 25px; }
+  .quiet-desk-status { margin-top: 12px; }
+  .quiet-desk-scene { width: 100%; height: 130px; margin: 4px 0 0; padding: 0 12px; }
+}

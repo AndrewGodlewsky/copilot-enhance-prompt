@@ -1091,6 +1091,7 @@ function registerDataHandlers(host: EnhanceWorker): void {
       // Confirmations go too: a switch that needs one asks again; what the host reported is forgotten.
       await host.storage.delete(CONSENTS_KEY)
       await host.storage.delete(LOCALE_KEY)
+      await host.storage.delete('colorTheme')
       forgetActivity()
       launchedPrompts.clear()
       lastHook = null

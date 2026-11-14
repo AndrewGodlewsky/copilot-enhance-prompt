@@ -339,7 +339,7 @@ export function beginRun(runId: string, workspace?: { key: string | null; name: 
   // The card's clock only moves while a run goes: start it with the run, or the time since the last
   // run would show as a negative duration until the first tick.
   set(tick, now)
-  set(run, { runId, startedAt: now, steps: [], status: 'running', ...(workspace ? { workspace } : {}) })
+  set(run, { runId, startedAt: now, prompt: read(draft).trim(), steps: [], status: 'running', ...(workspace ? { workspace } : {}) })
   startTicking()
   return runId
 }
@@ -630,6 +630,7 @@ export function reuse(entry: HistoryEntry): void {
   put(result, entry.enhanced)
   // What the composer showed about its last run was about another prompt.
   put(lastRun, null)
+  if (read(run)?.status !== 'running') set(run, null)
   put(contextShown, [])
   put(contextNotes, [])
   if (isStyle(entry.style)) set(style, entry.style)
@@ -899,6 +900,7 @@ export async function clearData(what: 'history' | 'catalogs' | 'all'): Promise<v
     if (what === 'catalogs' || what === 'all') set(catalogs, {})
     if (what === 'all') {
       set(consents, [])
+      if (read(run)?.status !== 'running') set(run, null)
       for (const [now, , empty] of KEPT) set(now, empty as never)
       set(rulesState, { rules: [], structures: [] })
       set(hookLast, null)

@@ -20,6 +20,16 @@ export function translate(lang: UiLanguage, text: string, params?: Record<string
 }
 
 export const VI: Record<string, string> = {
+  "GitHub Copilot": "GitHub Copilot",
+  "A little more thought. A clearer prompt.": "Thêm chút suy nghĩ. Prompt rõ ràng hơn.",
+  "A fresh page for your next idea": "Trang mới cho ý tưởng tiếp theo",
+  "Draft ready to enhance": "Bản nháp đã sẵn sàng để cải thiện",
+  "Enhancing your request…": "Đang cải thiện yêu cầu…",
+  "Prompt ready to review": "Prompt đã sẵn sàng để xem lại",
+  "Enhancement failed": "Cải thiện thất bại",
+  "Enhancement cancelled": "Đã hủy cải thiện",
+  "Switch to light mode": "Chuyển sang giao diện sáng",
+  "Switch to dark mode": "Chuyển sang giao diện tối",
   "Plugin sections": "Các mục của plugin",
   "Enhance": "Cải thiện",
   "Write a request": "Viết yêu cầu",
@@ -506,6 +516,16 @@ export const VI: Record<string, string> = {
 }
 
 export const ZH: Record<string, string> = {
+  "GitHub Copilot": "GitHub Copilot",
+  "A little more thought. A clearer prompt.": "多一分思考，让提示词更清晰。",
+  "A fresh page for your next idea": "为下一个想法开启新的一页",
+  "Draft ready to enhance": "草稿已就绪，可以增强",
+  "Enhancing your request…": "正在增强你的请求…",
+  "Prompt ready to review": "提示词已就绪，请检查",
+  "Enhancement failed": "增强失败",
+  "Enhancement cancelled": "增强已取消",
+  "Switch to light mode": "切换到浅色模式",
+  "Switch to dark mode": "切换到深色模式",
   "Plugin sections": "插件导航",
   "Enhance": "优化",
   "Write a request": "写下需求",

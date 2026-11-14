@@ -1,6 +1,6 @@
 // What's new and the changelog, from CHANGELOG.md and its translations (bundled as text, loaded when
 // the dialog opens).
-// The version in the header opens it; after an update it opens once by itself.
+// The version in the footer opens it; after an update it opens once by itself.
 import { useEffect, useState, type ReactNode } from 'react'
 import { currentLanguage, t, type UiLanguage } from '../../src/i18n.ts'
 import { VERSION } from '../../src/version.ts'
@@ -80,7 +80,7 @@ async function loadChangelog(lang: UiLanguage): Promise<Release[]> {
 }
 
 /**
- * `?version=0` on the dev server leaves the version out of the header: the listing's and the
+ * `?version=0` on the dev server leaves the version out of the footer: the listing's and the
  * README's pictures are drawn that way, since a number in them is out of date with the next
  * release. Never in the built panel.
  */

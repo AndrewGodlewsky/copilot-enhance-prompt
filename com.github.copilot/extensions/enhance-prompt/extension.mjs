@@ -2799,6 +2799,16 @@ function translate(lang, text, params) {
   return template.replace(/\{(\w+)\}/g, (match, key) => key in params ? String(params[key]) : match);
 }
 var VI = {
+  "GitHub Copilot": "GitHub Copilot",
+  "A little more thought. A clearer prompt.": "Th\xEAm ch\xFAt suy ngh\u0129. Prompt r\xF5 r\xE0ng h\u01A1n.",
+  "A fresh page for your next idea": "Trang m\u1EDBi cho \xFD t\u01B0\u1EDFng ti\u1EBFp theo",
+  "Draft ready to enhance": "B\u1EA3n nh\xE1p \u0111\xE3 s\u1EB5n s\xE0ng \u0111\u1EC3 c\u1EA3i thi\u1EC7n",
+  "Enhancing your request\u2026": "\u0110ang c\u1EA3i thi\u1EC7n y\xEAu c\u1EA7u\u2026",
+  "Prompt ready to review": "Prompt \u0111\xE3 s\u1EB5n s\xE0ng \u0111\u1EC3 xem l\u1EA1i",
+  "Enhancement failed": "C\u1EA3i thi\u1EC7n th\u1EA5t b\u1EA1i",
+  "Enhancement cancelled": "\u0110\xE3 h\u1EE7y c\u1EA3i thi\u1EC7n",
+  "Switch to light mode": "Chuy\u1EC3n sang giao di\u1EC7n s\xE1ng",
+  "Switch to dark mode": "Chuy\u1EC3n sang giao di\u1EC7n t\u1ED1i",
   "Plugin sections": "C\xE1c m\u1EE5c c\u1EE7a plugin",
   "Enhance": "C\u1EA3i thi\u1EC7n",
   "Write a request": "Vi\u1EBFt y\xEAu c\u1EA7u",
@@ -3284,6 +3294,16 @@ var VI = {
   "Changes the text Copilot receives; the chat still shows your original message. Off by default. Ambiguous prompts are left unchanged.": "Thay \u0111\u1ED5i v\u0103n b\u1EA3n Copilot nh\u1EADn \u0111\u01B0\u1EE3c; cu\u1ED9c tr\xF2 chuy\u1EC7n v\u1EABn hi\u1EC3n th\u1ECB tin nh\u1EAFn g\u1ED1c. M\u1EB7c \u0111\u1ECBnh t\u1EAFt. Gi\u1EEF nguy\xEAn n\u1EBFu kh\xF4ng x\xE1c \u0111\u1ECBnh \u0111\u01B0\u1EE3c ph\u1EA7n c\u1EA7n thay."
 };
 var ZH = {
+  "GitHub Copilot": "GitHub Copilot",
+  "A little more thought. A clearer prompt.": "\u591A\u4E00\u5206\u601D\u8003\uFF0C\u8BA9\u63D0\u793A\u8BCD\u66F4\u6E05\u6670\u3002",
+  "A fresh page for your next idea": "\u4E3A\u4E0B\u4E00\u4E2A\u60F3\u6CD5\u5F00\u542F\u65B0\u7684\u4E00\u9875",
+  "Draft ready to enhance": "\u8349\u7A3F\u5DF2\u5C31\u7EEA\uFF0C\u53EF\u4EE5\u589E\u5F3A",
+  "Enhancing your request\u2026": "\u6B63\u5728\u589E\u5F3A\u4F60\u7684\u8BF7\u6C42\u2026",
+  "Prompt ready to review": "\u63D0\u793A\u8BCD\u5DF2\u5C31\u7EEA\uFF0C\u8BF7\u68C0\u67E5",
+  "Enhancement failed": "\u589E\u5F3A\u5931\u8D25",
+  "Enhancement cancelled": "\u589E\u5F3A\u5DF2\u53D6\u6D88",
+  "Switch to light mode": "\u5207\u6362\u5230\u6D45\u8272\u6A21\u5F0F",
+  "Switch to dark mode": "\u5207\u6362\u5230\u6DF1\u8272\u6A21\u5F0F",
   "Plugin sections": "\u63D2\u4EF6\u5BFC\u822A",
   "Enhance": "\u4F18\u5316",
   "Write a request": "\u5199\u4E0B\u9700\u6C42",
@@ -6161,6 +6181,7 @@ function registerDataHandlers(host) {
       await host.storage.delete(RULES_KEY);
       await host.storage.delete(CONSENTS_KEY);
       await host.storage.delete(LOCALE_KEY);
+      await host.storage.delete("colorTheme");
       forgetActivity();
       launchedPrompts.clear();
       lastHook = null;
@@ -6864,8 +6885,8 @@ import { extname, resolve as resolve3, sep as sep2 } from "node:path";
 var LIMIT = 25e5;
 var MODEL_WRITES = /* @__PURE__ */ new Set(["models.save", "models.delete", "models.move", "models.roles", "consent.set", "rules.save"]);
 var PANEL_KEYS = /* @__PURE__ */ new Set(["tab", "style", "level", "profileChoice", "modelChoice", "outputChoice", "structureChoice", "terminalWorkspaces", "optionsOpen", "feedbackAsk", "feedbackOff", "draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked", "sendAfterEnhance", "historyScope"]);
-var readable = (key) => key === "history" || key.startsWith("panel:") && PANEL_KEYS.has(key.slice(6));
-var writable = (key) => key.startsWith("panel:") && PANEL_KEYS.has(key.slice(6));
+var readable = (key) => key === "history" || key === "colorTheme" || key.startsWith("panel:") && PANEL_KEYS.has(key.slice(6));
+var writable = (key) => key === "colorTheme" || key.startsWith("panel:") && PANEL_KEYS.has(key.slice(6));
 var PRIVATE_PANEL_KEYS = /* @__PURE__ */ new Set(["draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked"]);
 var invalid = (message = "Invalid canvas request.") => Object.assign(new Error(message), { status: 400 });
 async function body(request) {
@@ -6975,6 +6996,7 @@ async function createCanvasServer(options) {
           answer = await client.storage.get(input.key);
         } else if (method === "storage.set" || method === "storage.delete") {
           if (typeof input.key !== "string" || !writable(input.key)) throw invalid();
+          if (method === "storage.set" && input.key === "colorTheme" && !["system", "light", "dark"].includes(input.value)) throw invalid();
           if (method === "storage.set" && PRIVATE_PANEL_KEYS.has(input.key.slice(6)) && await client.settings.get("saveHistory") === false) await client.storage.delete(input.key);
           else if (method === "storage.set") await client.storage.set(input.key, input.value);
           else await client.storage.delete(input.key);

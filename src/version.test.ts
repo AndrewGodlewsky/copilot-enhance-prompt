@@ -9,7 +9,7 @@ test('src/version.ts matches plugin.json', () => {
 })
 
 test('the built panel shows this version', () => {
-  // The header prints VERSION, and the host runs the committed build (src/web-dist), not web/src: after
+  // The footer prints VERSION, and the host runs the committed build (src/web-dist), not web/src: after
   // a version change the panel has to be built again.
   const built = readFileSync(new URL('./web-dist/assets/app.js', import.meta.url), 'utf8')
   const quoted = new RegExp(`[\`'"]${VERSION.replace(/\./g, '\\.')}[\`'"]`)

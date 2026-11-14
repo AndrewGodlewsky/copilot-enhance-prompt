@@ -12,8 +12,8 @@ type Canvas = { id: string; token: string; streams: Set<ServerResponse>; subscri
 const LIMIT = 2_500_000
 const MODEL_WRITES = new Set(['models.save', 'models.delete', 'models.move', 'models.roles', 'consent.set', 'rules.save'])
 const PANEL_KEYS = new Set(['tab', 'style', 'level', 'profileChoice', 'modelChoice', 'outputChoice', 'structureChoice', 'terminalWorkspaces', 'optionsOpen', 'feedbackAsk', 'feedbackOff', 'draft', 'result', 'lastRun', 'contextShown', 'contextNotes', 'files', 'workspaceKey', 'parked', 'sendAfterEnhance', 'historyScope'])
-const readable = (key: string) => key === 'history' || key.startsWith('panel:') && PANEL_KEYS.has(key.slice(6))
-const writable = (key: string) => key.startsWith('panel:') && PANEL_KEYS.has(key.slice(6))
+const readable = (key: string) => key === 'history' || key === 'colorTheme' || key.startsWith('panel:') && PANEL_KEYS.has(key.slice(6))
+const writable = (key: string) => key === 'colorTheme' || key.startsWith('panel:') && PANEL_KEYS.has(key.slice(6))
 const PRIVATE_PANEL_KEYS = new Set(['draft', 'result', 'lastRun', 'contextShown', 'contextNotes', 'files', 'workspaceKey', 'parked'])
 const invalid = (message = 'Invalid canvas request.') => Object.assign(new Error(message), { status: 400 })
 
@@ -104,6 +104,7 @@ export async function createCanvasServer(options: { worker: Worker; assets: stri
           answer = await client.storage.get(input.key)
         } else if (method === 'storage.set' || method === 'storage.delete') {
           if (typeof input.key !== 'string' || !writable(input.key)) throw invalid()
+          if (method === 'storage.set' && input.key === 'colorTheme' && !['system', 'light', 'dark'].includes(input.value)) throw invalid()
           if (method === 'storage.set' && PRIVATE_PANEL_KEYS.has(input.key.slice(6)) && await client.settings.get('saveHistory') === false) await client.storage.delete(input.key)
           else if (method === 'storage.set') await client.storage.set(input.key, input.value as JsonValue)
           else await client.storage.delete(input.key)

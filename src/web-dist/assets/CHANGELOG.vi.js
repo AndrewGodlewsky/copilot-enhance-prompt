@@ -1,5 +1,14 @@
 var e=`# Thay đổi
 
+## [0.1.6] - 2026-11-14
+
+### Mới
+- Banner Quiet Desk với tên GitHub Copilot và hình minh họa tĩnh thay đổi theo giờ địa phương cùng trạng thái cải thiện hiện tại. Không có hoạt ảnh.
+- Một nút chuyển sáng/tối ở góc trên bên phải. Lựa chọn được ghi nhớ giữa các canvas và phiên; trước khi bạn chọn, giao diện theo hệ thống.
+
+### Thay đổi
+- Chuyển phiên bản và liên kết ghi chú phát hành xuống chân trang, đặt bộ chọn ngôn ngữ cạnh thanh điều hướng.
+
 ## [0.1.5] - 2026-11-14
 
 ### Thay đổi

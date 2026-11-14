@@ -310,7 +310,6 @@ export async function installMockHost(): Promise<void> {
   noKeyStore = query.get('nokeys') === '1'
   // ?nomodels=1: a first run, before any model is set (the Enhance tab then offers the CLI it found).
   if (query.get('nomodels') === '1') models = { ...models, profiles: [] }
-  if (query.get('theme') === 'dark') root.classList.add('dark')
   // ?width=360: a sidebar's width (headless browsers cannot make a window that narrow), with a
   // dashed line where the sidebar would end; ?edge=0 leaves the line out (pictures).
   if (query.get('width')) {

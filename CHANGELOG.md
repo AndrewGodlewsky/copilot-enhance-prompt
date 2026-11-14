@@ -1,5 +1,14 @@
 # Changes
 
+## [0.1.6] - 2026-11-14
+
+### Added
+- Quiet Desk banner with GitHub Copilot branding and still illustrations that reflect local time and the current enhancement state. No animation.
+- A single light/dark toggle at the top right. Your choice is remembered across canvases and sessions; until you choose, the panel follows the system.
+
+### Changed
+- Move the version and release-notes link to the footer, and the language picker beside the navigation.
+
 ## [0.1.5] - 2026-11-14
 
 ### Changed

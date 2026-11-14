@@ -111,10 +111,12 @@ test('online lists off: no request to the provider', async () => {
 test('data summary and delete everything', async () => {
   stubFetch()
   const host = hostWith({})
+  await host.storage.set('colorTheme', 'dark')
   const worker = await mountWorker(main, { host })
   await worker.request('prompt.enhance', { prompt: 'do it', level: 'off' })
   assert.deepEqual(await worker.request('data.summary'), { history: 1, profiles: 1, keys: 1, catalogs: 0 })
   await worker.request('data.clear', { what: 'all' })
+  assert.equal(await host.storage.get('colorTheme'), null)
   assert.deepEqual(await worker.request('data.summary'), { history: 0, profiles: 0, keys: 0, catalogs: 0 })
   assert.equal(host.data().secrets['apiKey.oa'], undefined)
   await worker.deactivate()

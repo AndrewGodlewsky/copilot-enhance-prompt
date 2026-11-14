@@ -53,9 +53,6 @@ export function connectCanvas(): void {
     } }
   }
   bindPanel(client)
-  const theme = matchMedia('(prefers-color-scheme: dark)')
-  const updateTheme = () => document.documentElement.classList.toggle('dark', theme.matches)
-  updateTheme(); theme.addEventListener('change', updateTheme)
   async function events() {
     while (!closing) {
       try {

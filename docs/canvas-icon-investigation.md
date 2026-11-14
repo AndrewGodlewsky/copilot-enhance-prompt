@@ -32,7 +32,7 @@ Both plugins now follow the same setup: a small manifest SVG and no canvas icon 
 
 In desktop 1.4.2, this selector does **not** consume the canvas declaration's `icon` field. Propagating a PNG path through SDK discovery and opening events never established that the desktop tab would use it. Version 0.1.5 removed that ineffective override and its SDK declaration mutation.
 
-The original PNG is 1,277,758 bytes and exceeds the selector's encoded-image limit. The compact SVG fixed that asset-size problem in v0.1.4. The subsequent missing-logo problem in live local installations is a separate issue. The PNG remains the panel image and favicon, which follow a browser image path.
+The original PNG is 1,277,758 bytes and exceeds the selector's encoded-image limit. The compact SVG fixed that asset-size problem in v0.1.4. The subsequent missing-logo problem in live local installations is a separate issue. The PNG was the panel image and favicon during this investigation; v0.1.6 replaces the panel header with Quiet Desk and retains the favicon. The native tab's manifest SVG is unchanged.
 
 ## Verification boundaries
 

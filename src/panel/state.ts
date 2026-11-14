@@ -89,6 +89,8 @@ export const customModel = atom(false)
 export type Run = {
   runId: string
   startedAt: number
+  /** In-memory input identity for this canvas's artwork; never persisted. */
+  prompt?: string
   /** The project the run was started in (its key and name): its answer belongs there. */
   workspace?: { key: string | null; name: string | null }
   steps: Step[]

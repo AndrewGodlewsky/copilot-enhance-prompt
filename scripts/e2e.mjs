@@ -68,6 +68,18 @@ try {
   assert.equal(page.status, 200)
   assert.match(await page.text(), /Enhance Prompt/)
   const token = new URL(opened.url).pathname.split('/')[2]
+  const themeStorage = async (url, method, value) => {
+    const auth = new URL(url).pathname.split('/')[2]
+    const response = await fetch(url + 'api', { method: 'POST', headers: { authorization: `Bearer ${auth}`, 'content-type': 'application/json' }, body: JSON.stringify({ method, input: { key: 'colorTheme', ...(value ? { value } : {}) } }) })
+    assert.equal(response.status, 200)
+    return (await response.json()).result
+  }
+  assert.equal(await themeStorage(opened.url, 'storage.get'), null)
+  await themeStorage(opened.url, 'storage.set', 'light')
+  const themeCanvas = await session.rpc.canvas.open({ canvasId: 'enhance-prompt', instanceId: 'theme-smoke' })
+  assert.equal(await themeStorage(themeCanvas.url, 'storage.get'), 'light')
+  await session.rpc.canvas.close({ instanceId: 'theme-smoke' })
+  console.log('Theme preference survives a new canvas URL.')
   const request = async (name, input = {}) => {
     const response = await fetch(opened.url + 'api', { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ method: 'request', name, input }) })
     assert.equal(response.status, 200, await response.clone().text())
