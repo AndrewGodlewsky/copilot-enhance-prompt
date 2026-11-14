@@ -1,4 +1,4 @@
 node_modules/
-.orca/
+.artifacts/
 # A code-navigation tool some agents start in the project folder: its cache and notes are not the plugin's.
 .serena/

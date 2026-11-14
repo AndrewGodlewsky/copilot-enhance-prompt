@@ -1,76 +1,11 @@
 # Settings
 
-Open **Settings → Plugins → Enhance Prompt**. Model profiles, API keys and fallback are also in the panel's **Models** section; auto-enhance and the access switches in its **Settings** section (gear icon); the language in the menu at the top.
+All preferences live inside the canvas. Prompt preferences includes default style, context and output language, custom instructions, extra context files, exclusions, model timeout, history limit and the text appended by Rules auto-enhance. Model fallback is configured in Models.
 
-## Language
+Privacy switches are checked by the worker on every preview, enhancement and prompt hook. Unsupported controls are disabled in both the UI and backend.
 
-| Setting | Default | Meaning |
-| --- | --- | --- |
-| Panel language | Auto | Language of the panel: Auto follows Orca, or English, Tiếng Việt, 中文. Also in the language menu at the top of the panel. |
-| Output language | Same as my prompt | Language of the enhanced prompt. The **Output** menu on the Enhance tab overrides it for one prompt. |
+“Send right after enhancing” is off by default and needs its explanation dialog. Once enabled, Ctrl+Enter or the second Enhance button may send an unread result. The panel checks the original session, project and input, cancellation, and whether Copilot is idle. Closing the panel, editing the prompt or changing the destination prevents automatic sending.
 
-Code, identifiers, paths and error messages are always kept as they are.
+Normal Send always submits a new Copilot message. There is no paste-without-Enter mode. The plugin checks immediately before sending, then uses Copilot's queue; if activity starts during that small gap, the message waits instead of becoming an immediate interjection.
 
-The status bar's tooltip and the answers of the plugin's commands are in the panel's language too. With **Auto** they follow Orca's language from the first time the panel has opened (only the panel can see which language Orca runs in; until then they are in English).
-
-## Prompt
-
-| Setting | Default | Meaning |
-| --- | --- | --- |
-| Default style | Balanced | See [Styles](getting-started.md#styles) |
-| Custom instructions | empty | Extra rules for the rewriter: your stack, conventions, "always ask the agent to run tests" |
-| Adapt to the target agent | On | Shape the prompt for the agent in the target terminal. See [Agent-aware prompts](context-levels.md#agent-aware-prompts) |
-
-## Context
-
-| Setting | Default | Meaning |
-| --- | --- | --- |
-| Project context level | Standard | See [Context levels](context-levels.md) |
-| Terminal lines (Max level) | 100 | Recent lines of the target terminal at the Max level; 0 turns it off |
-| Always include files | empty | Paths relative to the workspace, one per line, such as `docs/architecture.md` |
-| Exclude from code search | `dist/`, `build/`, `out/`, `coverage/`, lockfiles, `*.min.js`, `*.map`, `*.snap` | Glob-like patterns, one per line |
-
-## Models
-
-| Setting | Default | Meaning |
-| --- | --- | --- |
-| Fallback to the next model | On | See [Fallback](models.md#fallback) |
-| Fall back on | Any error | Or only network, timeout, rate limit and 5xx |
-| Timeout per model | 60 s | How long a model may take before the next one is tried. The last model to try (the only one, when you have one) may use the rest of the run instead; a run in the panel may take up to 5 minutes |
-
-## Sending
-
-| Setting | Default | Meaning |
-| --- | --- | --- |
-| How to send multi-line prompts | Bracketed paste | Keeps line breaks in Claude Code, Codex and most agent CLIs. **Raw text** or **Single line** for terminals that need it |
-| Press Enter after sending | Off | Off lets you review the prompt in the agent first. The switch on the Enhance tab overrides it |
-| History size | 50 | Enhanced prompts to keep; 0 turns history off |
-
-Shortcuts in the panel: **Enter** enhances, **Shift+Enter** is a new line, **Ctrl+Enter** (⌘+Enter on a Mac) sends the result once it is the one for the text in the box. An agent that is waiting for an answer from you is not typed into before you say so, and then without Enter.
-
-**Send right after enhancing** is a switch of the panel, not of this page: gear icon → **What it may do**. Off by default; on, Ctrl+Enter in the prompt box (and a second button next to Enhance) enhances and sends in one go, without a read in between. See the [user guide](user-guide.md#in-one-go-enhance-and-send-without-reading).
-
-## Status bar
-
-| Setting | Default | Meaning |
-| --- | --- | --- |
-| Status bar item | Icon and text | Icon and text, icon only, or hidden |
-
-The item reads **Enhance: On** or **Enhance: Off**: whether [auto-enhance](auto-enhance.md) is at work (its tooltip says with rules or with AI). Clicking it opens the right sidebar, where the panel lives. Orca's status bar right-click menu lists only Orca's own items, so use this setting, or the command **Enhance Prompt: Show / hide status bar item**, to hide it.
-
-## Auto-enhance
-
-See [Auto-enhance](auto-enhance.md#settings).
-
-## Feedback
-
-The switch **Ask for feedback now and then** is in the panel only, under **Feedback** in its Settings section (gear): a short note under the enhanced prompt invites your ideas, first after your fifth enhanced prompt, then at most once in 3 days. **Don't ask again** in the note turns it off too.
-
-## Commands
-
-| Command | Does |
-| --- | --- |
-| Enhance Prompt: Show / hide the right sidebar | Opens the sidebar that holds the panel |
-| Enhance Prompt: Cycle auto-enhance | Off → Rules → AI |
-| Enhance Prompt: Auto-enhance off / with rules / with AI | Sets the mode |
-| Enhance Prompt: Show / hide status bar item | Toggles the status bar item |
+The optional [auto-enhance hook](auto-enhance.md) can affect prompts entered directly into Copilot. Keep it off to preserve exact wording.

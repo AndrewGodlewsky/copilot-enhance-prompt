@@ -1,5 +1,5 @@
 // Model profiles in storage, their keys in secrets, and the fallback chain.
-import type { OrcaWorkerApi } from 'orca/worker'
+import type { EnhanceWorker } from '#host'
 import { runCli, type CliKind } from './cli.ts'
 import { complete, isLocalUrl, isTransient, LlmError, messageOf } from './llm.ts'
 import { english, msg, type Message } from './messages.ts'
@@ -41,20 +41,20 @@ function envProfiles(): ModelProfile[] {
 }
 
 /** Privacy: may API keys come from environment variables? */
-async function envKeysAllowed(orca: OrcaWorkerApi): Promise<boolean> {
-  return (await orca.settings.get('allowEnvKeys').catch(() => true)) !== false
+async function envKeysAllowed(host: EnhanceWorker): Promise<boolean> {
+  return (await host.settings.get('allowEnvKeys').catch(() => true)) !== false
 }
 
-export async function loadModels(orca: OrcaWorkerApi): Promise<ModelsConfig & { fromEnv: boolean }> {
-  const config = parseModelsConfig(await orca.storage.get(MODELS_KEY))
-  if (config.profiles.length > 0 || !(await envKeysAllowed(orca))) {
+export async function loadModels(host: EnhanceWorker): Promise<ModelsConfig & { fromEnv: boolean }> {
+  const config = parseModelsConfig(await host.storage.get(MODELS_KEY))
+  if (config.profiles.length > 0 || !(await envKeysAllowed(host))) {
     return { ...config, fromEnv: false }
   }
   return { profiles: envProfiles(), hookProfileId: null, selectorProfileId: null, fromEnv: true }
 }
 
-export async function saveModels(orca: OrcaWorkerApi, config: ModelsConfig): Promise<void> {
-  await orca.storage.set(MODELS_KEY, modelsToJson(config))
+export async function saveModels(host: EnhanceWorker, config: ModelsConfig): Promise<void> {
+  await host.storage.set(MODELS_KEY, modelsToJson(config))
 }
 
 export function needsKey(profile: ModelProfile): boolean {
@@ -76,34 +76,34 @@ export function effectiveModel(profile: ModelProfile): string {
 }
 
 export async function resolveKey(
-  orca: OrcaWorkerApi,
+  host: EnhanceWorker,
   profile: ModelProfile
 ): Promise<{ key: string | null; source: ProfileView['keySource'] }> {
   if (profile.provider === 'cli') {
     return { key: null, source: 'subscription' }
   }
   if (!needsKey(profile)) {
-    const stored = await orca.secrets.get(secretName(profile.id)).catch(() => null)
+    const stored = await host.secrets.get(secretName(profile.id)).catch(() => null)
     return { key: stored, source: stored ? 'secret' : 'not-needed' }
   }
-  const stored = await orca.secrets.get(secretName(profile.id)).catch(() => null)
+  const stored = await host.secrets.get(secretName(profile.id)).catch(() => null)
   if (stored) {
     return { key: stored, source: 'secret' }
   }
   const env = presetById(profile.preset).env
-  if (env && process.env[env] && (await envKeysAllowed(orca))) {
+  if (env && process.env[env] && (await envKeysAllowed(host))) {
     return { key: process.env[env] ?? null, source: 'env' }
   }
   return { key: null, source: 'none' }
 }
 
-export async function viewProfiles(orca: OrcaWorkerApi, profiles: ModelProfile[]): Promise<ProfileView[]> {
+export async function viewProfiles(host: EnhanceWorker, profiles: ModelProfile[]): Promise<ProfileView[]> {
   return Promise.all(
     profiles.map(async (profile) => ({
       ...profile,
       effectiveBaseUrl: effectiveBaseUrl(profile),
       effectiveModel: effectiveModel(profile),
-      keySource: (await resolveKey(orca, profile)).source,
+      keySource: (await resolveKey(host, profile)).source,
       envName: presetById(profile.preset).env
     }))
   )
@@ -152,7 +152,7 @@ export function candidates(profiles: ModelProfile[], preferredId: string | null,
 }
 
 export async function runChain(
-  orca: OrcaWorkerApi,
+  host: EnhanceWorker,
   list: ModelProfile[],
   system: string,
   user: string,
@@ -175,7 +175,7 @@ export async function runChain(
     const attemptStart = Date.now()
     const model = effectiveModel(profile)
     options.onAttempt?.(profile, model, attempts.length + 1, list.length)
-    const { key } = await resolveKey(orca, profile)
+    const { key } = await resolveKey(host, profile)
     if (!key && needsKey(profile)) {
       attempts.push({ profileId: profile.id, name: profile.name, model, ok: false, error: 'no API key', errorText: msg('error.no_key'), ms: 0 })
       lastError = new LlmError(msg('error.profile_no_key', { name: profile.name }), 'invalid_params')

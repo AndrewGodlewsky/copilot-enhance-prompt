@@ -1,10 +1,10 @@
-// Orca integrations, each behind its own Privacy switch (and a confirmation for the risky ones):
+// the host integrations, each behind its own Privacy switch (and a confirmation for the risky ones):
 // what agents do, files saved in the editor, starting a new agent, opening a file, notifications.
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { after } from 'node:test'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, assert, mockHost, mountWorker, test } from 'orca/testing'
+import { afterEach, assert, mockHost, mountWorker, test } from '#testing'
 import { forgetActivity, recordTool, toolTarget, agentActivity } from './context/activity.ts'
 import { redactSecrets } from './context/agents.ts'
 import { forgetTerminals, terminalsSaved } from './context/terminals.ts'
@@ -21,7 +21,7 @@ const root = mkdtempSync(join(tmpdir(), 'integrations-'))
 writeFileSync(join(root, 'login.ts'), 'export function login() {}\n')
 after(() => rmSync(root, { recursive: true, force: true }))
 
-// The two names Orca has for one workspace (workspaces.ts): the id workspace.list answers and takes
+// The two names the host has for one workspace (workspaces.ts): the id workspace.list answers and takes
 // (agent.launch, editor.open), and the id its hooks and events carry, "<repository id>::<path>".
 const WS = 'identity:wt2:local:test'
 const EVENT_WS = `repo-demo::${root}`
@@ -54,7 +54,7 @@ test('tool targets: a path or a command, masked; never the output', () => {
   recordTool({ agent: 'codex', workspaceId: EVENT_WS, tool: 'Edit', input: { path: 'a.ts' } }, 1000)
   assert.match(agentActivity(LISTED, 1000), /codex · Edit: a\.ts/)
   assert.equal(agentActivity({ id: 'identity:wt2:local:other', path: join(root, 'other') }, 1000), '')
-  // An Orca whose hooks carry the list's id (a folder workspace, an older version) is found as well.
+  // An Copilot whose hooks carry the list's id (a folder workspace, an older version) is found as well.
   recordTool({ agent: 'claude', workspaceId: WS, tool: 'Read', input: { path: 'b.ts' } }, 2000)
   assert.match(agentActivity(LISTED, 2000), /codex · Edit: a\.ts[^]*claude · Read: b\.ts/)
 })
@@ -238,7 +238,7 @@ test('a prompt the panel started an agent with goes through auto-enhance as it i
   })
   const worker = await mountWorker(main, { host: launchHost })
   await worker.request('agent.launch', { agent: 'claude', prompt: 'Fix the login page layout on phones.' })
-  // Orca runs the hook on a launch's prompt too: this one is enhanced already, so nothing is added.
+  // Copilot runs the hook on a launch's prompt too: this one is enhanced already, so nothing is added.
   const own = { agent: 'claude', terminalId: 'new-1', prompt: 'Fix the login page layout on phones.', inputKind: 'launch' as const }
   assert.deepEqual(await worker.hooks.fire('agent.prompt.before', own), { kind: 'continue', event: own })
   // Any other prompt gets the person's text, and the Settings section can say what happened.
@@ -246,7 +246,7 @@ test('a prompt the panel started an agent with goes through auto-enhance as it i
   assert.equal(other.kind === 'continue' && other.event.prompt, 'Now add a logout button to the header.\n\nRun the tests before you finish.')
   const last = await worker.request('hook.last')
   assert.deepEqual([last?.outcome, last?.agent], ['appended', 'claude'])
-  // The new terminal's workspace is known without waiting for Orca's first event about it.
+  // The new terminal's workspace is known without waiting for Copilot's first event about it.
   await terminalsSaved()
   assert.deepEqual(launchHost.data().storage.terminalWorkspaces, { 'new-1': WS })
   await worker.deactivate()
@@ -324,7 +324,7 @@ test('the project of a run is settled before its context is gathered: its rules 
     bodies.push(String(init?.body))
     return new Response(JSON.stringify({ choices: [{ message: { content: 'Better.' } }] }), { status: 200 })
   }) as typeof fetch
-  // The person looks at another project while the run goes: Orca's focus is "demo" when the run
+  // The person looks at another project while the run goes: Copilot's focus is "demo" when the run
   // starts and "blog" every time it is asked after that.
   let asked = 0
   const blog = { id: 'identity:wt9:local:blog', kind: 'worktree', name: 'blog', project: 'blog', path: `${LISTED.path}/blog`, branch: 'dev', hostId: 'local' }
@@ -344,7 +344,7 @@ test('the project of a run is settled before its context is gathered: its rules 
   // What the worker asks while it starts is not part of the run.
   await settle()
   asked = 0
-  // The Standard level reads the project, so the gather asks Orca for the focus again.
+  // The Standard level reads the project, so the gather asks Copilot for the focus again.
   await worker.request('prompt.enhance', { prompt: 'fix the login page', level: 'standard' })
   // The focus was read more than once, so the second project was really there to be picked up.
   assert.ok(asked > 1, `workspace.readContext was asked ${asked} time(s)`)
@@ -371,7 +371,7 @@ test('an API key that cannot be stored is said so in words, and no model is save
   assert.equal((await worker.request('models.get')).keysUnavailable, true)
   await assert.rejects(
     worker.request('models.save', { name: 'OpenAI', preset: 'openai', provider: 'openai', baseUrl: '', model: 'gpt-4.1-mini', maxTokens: 2000, enabled: true, apiKey: 'sk-test-1234567890' }),
-    /Orca could not store the API key/
+    /Copilot could not store the API key/
   )
   assert.deepEqual((await worker.request('models.get')).profiles, [])
   // Without a key (an environment variable, a local model) the same model is saved as before.

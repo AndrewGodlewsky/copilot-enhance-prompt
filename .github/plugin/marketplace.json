@@ -1,0 +1,7 @@
+{
+  "name": "copilot-enhance-prompt",
+  "owner": { "name": "AndrewGodlewsky" },
+  "plugins": [
+    { "name": "enhance-prompt", "source": "./", "description": "Prompt rewriting in a native GitHub Copilot canvas." }
+  ]
+}

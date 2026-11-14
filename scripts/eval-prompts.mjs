@@ -35,11 +35,11 @@ const runs = Math.max(1, Number(flag('--runs', '1')) || 1)
 const parallel = Math.max(1, Math.min(8, Number(flag('--parallel', '1')) || 1))
 
 const agents = readFileSync(join(root, 'AGENTS.md'), 'utf8').slice(0, 2500)
-const tree = ['src/', '  src/panel/ (8)', '  src/context/ (7)', 'src/worker.ts', 'src/prompts.ts', 'src/llm.ts', 'src/cli.ts', 'scripts/ (9)', 'AGENTS.md', 'orca-plugin.json'].join('\n')
+const tree = ['src/', '  src/panel/ (8)', '  src/context/ (7)', 'src/worker.ts', 'src/prompts.ts', 'src/llm.ts', 'src/cli.ts', 'scripts/ (9)', 'AGENTS.md', 'plugin.json'].join('\n')
 const context = [
-  { kind: 'workspace', label: 'Workspace', content: 'orca-plugin-enchatprompt (branch main)' },
+  { kind: 'workspace', label: 'Workspace', content: 'copilot-enhance-prompt (branch main)' },
   { kind: 'rules', label: 'AGENTS.md', content: agents },
-  { kind: 'stack', label: 'Stack & commands', content: 'TypeScript, Orca plugin (no build step). Test: orca plugin test . Typecheck: npx tsc -p .' },
+  { kind: 'stack', label: 'Stack & commands', content: 'TypeScript, GitHub Copilot canvas plugin. Test: npm test. Typecheck: npm run typecheck. Build: npm run build.' },
   { kind: 'tree', label: 'Repository tree', content: tree },
   { kind: 'file', label: 'src/panel/history-tab.tsx', note: 'keyword match', content: '1: // history-tab.tsx: part of the Enhance Prompt panel\n12: export function HistoryTab() {' }
 ]
@@ -111,7 +111,7 @@ async function runCase(item) {
   if (item.maxChars && text.length > item.maxChars) problems.push(`too long (${text.length} chars)`)
   // The agent reads AGENTS.md itself: a prompt that copies its unrelated rules is padding.
   for (const noise of item.noise ?? []) if (text.includes(noise)) problems.push(`repeats an unrelated project rule (${noise})`)
-  const checks = ['orca plugin types', 'npx tsc', 'orca plugin test', 'orca plugin check', 'orca plugin validate'].filter((command) => text.includes(command)).length
+  const checks = ['npm run typecheck', 'npm test', 'npm run build', 'npm run check'].filter((command) => text.includes(command)).length
   if (checks > 3) problems.push(`lists ${checks} check commands`)
   if (/<(context|requirements|constraints|done_when)>/.test(text) && /^#{1,3} /m.test(text)) problems.push('mixes XML tags and Markdown headings')
   if (/<(context|requirements|constraints|done_when)>/.test(text)) problems.push('uses XML tags instead of headings')

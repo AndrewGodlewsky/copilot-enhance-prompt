@@ -1,8 +1,8 @@
-// setup.ts: starts the panel. Orca's and the worker's events reach the panel's state (state.ts) and
+// setup.ts: starts the panel. the host's and the worker's events reach the panel's state (state.ts) and
 // the first data is asked for. No UI here: the web panel (web/src/main.tsx) calls it once its frame
-// is ready, and the tests call it on Orca's panel runtime (src/panel/testing.ts), so the wiring that
+// is ready, and the tests call it on the host's panel runtime (src/panel/testing.ts), so the wiring that
 // ships is the wiring that is tested.
-import { env, on, plugin, read, set, settings } from 'orca'
+import { env, on, plugin, read, set, settings } from '#panel'
 import { t } from '../i18n.ts'
 import {
   applyProgress,
@@ -32,7 +32,7 @@ export function wirePanel(): () => void {
     on('workspace.changed', () => void refreshTargets()),
     on('workspace.removed', ({ workspaceId, path }) => workspaceRemoved(workspaceId, path)),
     on('agent.status.changed', ({ terminalId, workspaceId }) => {
-      // Orca says which workspace this agent's terminal is in: keep it for telling workspaces apart.
+      // the host says which workspace this agent's terminal is in: keep it for telling workspaces apart.
       if (terminalId && workspaceId) learnTerminals([terminalId], workspaceId)
       void refreshTargets()
     }),
@@ -54,7 +54,7 @@ export function wirePanel(): () => void {
     })
   ]
   void refreshDefaults()
-  // The worker cannot see which language Orca runs in; its status bar tooltip and its commands'
+  // The worker cannot see which language Copilot runs in; its status bar tooltip and its commands'
   // answers follow it while the panel's language is Auto.
   void plugin.request('ui.locale', { locale: env.locale ?? 'en' }).catch(() => undefined)
   void refreshModels()

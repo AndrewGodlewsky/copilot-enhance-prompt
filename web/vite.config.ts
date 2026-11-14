@@ -1,17 +1,17 @@
-// The web panel: React + Tailwind + shadcn/ReUI components, built into ../src/web-dist, which Orca
+// The web panel: React + Tailwind + shadcn/ReUI components, built into ../src/web-dist, which Copilot
 // shows as the Enhance Prompt panel. `npm run dev` here shows it in a browser with sample data.
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { orcaBridge } from './orca-bridge.ts'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  // Orca serves the panel from the plugin folder: every asset path must be relative.
+  root: path.resolve(import.meta.dirname),
+  // Copilot serves the panel from the plugin folder: every asset path must be relative.
   base: './',
-  plugins: [react(), tailwindcss(), orcaBridge()],
-  // 'orca' is the panel-runtime module the panel's state uses; in the frame it is orca-runtime.ts.
-  resolve: { alias: { '@': path.resolve(import.meta.dirname, 'src'), orca: path.resolve(import.meta.dirname, 'src/orca-runtime.ts') } },
+  plugins: [react(), tailwindcss()],
+  // '#panel' is the panel-runtime module the panel's state uses; in the frame it is panel-runtime.ts.
+  resolve: { alias: { '@': path.resolve(import.meta.dirname, 'src'), '#panel': path.resolve(import.meta.dirname, '../src/runtime.ts') } },
   server: { port: 5174, fs: { allow: ['..'] } },
   build: {
     outDir: '../src/web-dist',

@@ -1,9 +1,9 @@
-// The other agent sessions Orca runs in the focused workspace (Max level, Privacy "Read other agents'
-// sessions"). Orca offers no API for an agent's chat history: what it does offer is the list of
+// The other agent sessions the host runs in the focused workspace (Max level, Privacy "Read other agents'
+// sessions"). the host offers no API for an agent's chat history: what it does offer is the list of
 // agents with their kind, title and state (`agents.list`), and each terminal's newest output
 // (`terminal.read`), which for an agent CLI is its conversation as shown on screen. Both are read
 // here, for the agents other than the one the prompt goes to, with obvious secrets masked.
-import type { OrcaWorkerApi } from 'orca/worker'
+import type { EnhanceWorker } from '#host'
 import { redactSecrets } from './secrets.ts'
 
 // Kept here too: this module is where the masking began, and others import it from here.
@@ -24,10 +24,10 @@ function since(at: number, now: number): string {
   return minutes < 60 ? `${minutes} min` : `${Math.round(minutes / 60)} h`
 }
 
-/** The agents in the focused workspace other than `except`, busiest first; [] when Orca cannot list them. */
-export async function otherAgents(orca: OrcaWorkerApi, except: string | null | undefined, signal?: AbortSignal): Promise<AgentSummary[]> {
-  if (!orca.host.has('agents.list')) return []
-  const listed = await orca.host.call('agents.list', {}, signal ? { signal } : undefined).catch(() => null)
+/** The agents in the focused workspace other than `except`, busiest first; [] when Copilot cannot list them. */
+export async function otherAgents(host: EnhanceWorker, except: string | null | undefined, signal?: AbortSignal): Promise<AgentSummary[]> {
+  if (!host.host.has('agents.list')) return []
+  const listed = await host.host.call('agents.list', {}, signal ? { signal } : undefined).catch(() => null)
   const order: Record<string, number> = { working: 0, blocked: 1, waiting: 2, done: 3 }
   return (listed?.agents ?? [])
     .filter((entry): entry is typeof entry & { terminalId: string } => Boolean(entry.terminalId) && entry.terminalId !== except)
@@ -41,10 +41,10 @@ export function agentsSummary(agents: readonly AgentSummary[], now = Date.now())
 }
 
 /** The newest output of one agent's terminal, secrets masked, the end kept; '' when unreadable. */
-export async function readSession(orca: OrcaWorkerApi, terminalId: string, signal?: AbortSignal, lines = SESSION_LINES): Promise<string> {
-  if (!orca.host.has('terminal.read')) return ''
-  const read = await orca.host.call('terminal.read', { terminalId, maxLines: lines }, signal ? { signal } : undefined).catch(() => null)
-  // Orca may return more lines than asked (an older version): keep the last `lines`.
+export async function readSession(host: EnhanceWorker, terminalId: string, signal?: AbortSignal, lines = SESSION_LINES): Promise<string> {
+  if (!host.host.has('terminal.read')) return ''
+  const read = await host.host.call('terminal.read', { terminalId, maxLines: lines }, signal ? { signal } : undefined).catch(() => null)
+  // Copilot may return more lines than asked (an older version): keep the last `lines`.
   const text = redactSecrets((read?.lines ?? []).map((line) => line.trimEnd()).filter(Boolean).slice(-lines).join('\n'))
   const chars = sessionChars(lines)
   return text.length > chars ? `…\n${text.slice(-chars)}` : text

@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSyn
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { after } from 'node:test'
-import { afterEach, assert, mockHost, mountWorker, test } from 'orca/testing'
+import { afterEach, assert, mockHost, mountWorker, test } from '#testing'
 import { ATTACHMENTS_DIR, excerpt, loadFiles, MAX_ATTACHMENT_BYTES, putChunk, safeName, TEXT_MAX } from './attachments.ts'
 import { ATTACHMENT_CHUNK_BYTES, attachmentItemId, MAX_CHUNK_BASE64, MAX_IMAGE_BYTES, REQUEST_INPUT_LIMIT } from './image-limits.ts'
 import * as main from './worker.ts'
@@ -170,7 +170,7 @@ test('two attached files of one name are two context items; an unticked one keep
   await worker.deactivate()
 })
 
-// "message too large": Orca refuses a panel request over 64 KiB, and the panel used to send pieces
+// "message too large": Copilot refuses a panel request over 64 KiB, and the panel used to send pieces
 // of 768 KB. Every piece now fits, a 5 MB image goes through, and a file too large says its size.
 test('each attachment piece fits in one panel request, so a 5 MB image attaches', async () => {
   const largest = JSON.stringify({ id: `att-${'x'.repeat(36)}`, name: 'n'.repeat(120), index: 9999, total: 9999, data: 'A'.repeat(MAX_CHUNK_BASE64), size: MAX_ATTACHMENT_BYTES })

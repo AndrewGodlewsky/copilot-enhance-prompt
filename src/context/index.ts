@@ -5,7 +5,7 @@
 //   deep      + git status/log/diff, files relevant to the prompt (paths, grep, snippets)
 //   max       + AI-picked files from the tree, recent output of the agent terminal, and (Privacy
 //             "Read other agents' sessions", off by default) the other agents and their sessions
-import type { OrcaWorkerApi } from 'orca/worker'
+import type { EnhanceWorker } from '#host'
 import { LlmError, messageOf } from '../llm.ts'
 import { english, msg, raw, type Message } from '../messages.ts'
 import type { ContextItemView, ContextLevel } from '../presets.ts'
@@ -32,13 +32,13 @@ export const atLeast = (level: ContextLevel, min: ContextLevel) => LEVEL_RANK[le
 /** A workspace as workspace.list answers it; `project` is its repository's name (host API 1.5). */
 export type Workspace = { id: string; name: string; project?: string | null; path: string; branch: string | null; hostId: string | null }
 /**
- * What workspace.readContext answers: a name, a branch and the terminals, and no path. The Orcas
+ * What workspace.readContext answers: a name, a branch and the terminals, and no path. The hosts
  * this was written on give no id either; a newer one does (`workspaceId`, host API 1.9 documents it).
  */
 export type Focused = { displayName: string; branch: string; terminals?: readonly { id: string }[]; workspaceId?: string }
 
 /**
- * Whether a workspace's files are on this machine. Orca names this machine's host `local` (older
+ * Whether a workspace's files are on this machine. the host names this machine's host `local` (older
  * versions left it null); any other host is SSH or WSL, whose files the plugin cannot read.
  */
 export const isLocalWorkspace = (workspace: { hostId: string | null }) => workspace.hostId === null || workspace.hostId === 'local'
@@ -62,13 +62,13 @@ export type GatherOptions = {
   otherAgentsLimits?: { agents: number; lines: number }
   /** Deep and Max: what the agents did lately (tools and targets, how sessions ended). Off unless true. */
   allowAgentActivity?: boolean
-  /** Deep and Max: the files saved lately in Orca's editor (ranked first in the code search). Off unless true. */
+  /** Deep and Max: the files saved lately in the host's editor (ranked first in the code search). Off unless true. */
   allowEditorSaves?: boolean
   /** Progress: called when a step starts, finishes or is skipped. */
   onStep?: StepReporter
   /** Cancel: running git commands are stopped and the gather ends with a cancelled error. */
   signal?: AbortSignal
-  /** Orca's id of the focused workspace, when the panel knows it (several may share a name). */
+  /** the host's id of the focused workspace, when the panel knows it (several may share a name). */
   workspaceId?: string | null
 }
 
@@ -99,9 +99,9 @@ const item = (id: string, kind: string, label: Message, content: string, why?: M
  * The workspaces the focused one could be when several share its name and branch (several checkouts
  * on "main", say): the person picks one. Empty when it is clear.
  */
-export async function focusedCandidates(orca: OrcaWorkerApi, focused: Focused): Promise<{ id: string; path: string; project?: string }[]> {
-  if (!orca.host.has('workspace.list')) return []
-  const list = await orca.host.call('workspace.list', {}).catch(() => null)
+export async function focusedCandidates(host: EnhanceWorker, focused: Focused): Promise<{ id: string; path: string; project?: string }[]> {
+  if (!host.host.has('workspace.list')) return []
+  const list = await host.host.call('workspace.list', {}).catch(() => null)
   const exact: Workspace[] = (list?.workspaces ?? []).filter((ws) => ws.name === focused.displayName && (ws.branch ?? '') === focused.branch && isLocalWorkspace(ws))
   return exact.length > 1 ? exact.map((ws) => ({ id: ws.id, path: ws.path, ...(ws.project ? { project: ws.project } : {}) })) : []
 }
@@ -119,28 +119,28 @@ function fittingWorkspace(workspaces: readonly Workspace[], id: string, focused:
 }
 
 /**
- * The focused workspace's entry in workspace.list. Orca gives the focus only a name and a branch,
- * so it is found by its terminals first: Orca said which workspace each agent's terminal is in
+ * The focused workspace's entry in workspace.list. the host gives the focus only a name and a branch,
+ * so it is found by its terminals first: the host said which workspace each agent's terminal is in
  * (terminals.ts). Then by what the panel knows, then by name and branch when only one fits.
  */
 export async function findFocusedWorkspace(
-  orca: OrcaWorkerApi,
+  host: EnhanceWorker,
   focused: Focused,
-  /** What the panel knows this workspace as: ids it noted from Orca's events, or the folder the person picked. */
+  /** What the panel knows this workspace as: ids it noted from the host's events, or the folder the person picked. */
   hint?: string | readonly string[] | null
 ): Promise<Workspace | null> {
-  if (!orca.host.has('workspace.list')) return null
+  if (!host.host.has('workspace.list')) return null
   try {
-    const workspaces: Workspace[] = (await orca.host.call('workspace.list', {})).workspaces
+    const workspaces: Workspace[] = (await host.host.call('workspace.list', {})).workspaces
     const terminals = (focused.terminals ?? []).map((terminal) => terminal.id)
     // What an earlier run of the worker kept is read once; a lookup right after a start waits for it.
-    await loadTerminals(orca)
-    // A newer Orca names the focused workspace itself: then there is nothing to work out. It must
+    await loadTerminals(host)
+    // A newer the host names the focused workspace itself: then there is nothing to work out. It must
     // still be a listed workspace that fits the focus, like every other id.
     if (typeof focused.workspaceId === 'string' && focused.workspaceId) {
       const named = fittingWorkspace(workspaces, focused.workspaceId, focused)
       if (named) {
-        for (const terminal of terminals) learnTerminal(orca, terminal, focused.workspaceId)
+        for (const terminal of terminals) learnTerminal(host, terminal, focused.workspaceId)
         return named
       }
     }
@@ -148,11 +148,11 @@ export async function findFocusedWorkspace(
       const said = fittingWorkspace(workspaces, id, focused)
       if (said) {
         // A terminal is in one workspace only: the others of this workspace are in it too.
-        for (const terminal of terminals) learnTerminal(orca, terminal, id)
+        for (const terminal of terminals) learnTerminal(host, terminal, id)
         return said
       }
     }
-    // The panel's notes also hold the person's pick, which can be wrong: after what Orca said.
+    // The panel's notes also hold the person's pick, which can be wrong: after what the host said.
     for (const id of typeof hint === 'string' ? [hint] : (hint ?? [])) {
       const hinted = fittingWorkspace(workspaces, id, focused)
       if (hinted) return hinted
@@ -169,28 +169,28 @@ export async function findFocusedWorkspace(
 }
 
 /**
- * The workspace a terminal is in, when Orca said so (terminals.ts) and exactly one listed workspace
+ * The workspace a terminal is in, when the host said so (terminals.ts) and exactly one listed workspace
  * carries that id; null otherwise. For a prompt that goes to one terminal, which need not be in the
  * focused workspace.
  *
- * What was kept is what Orca said at some time, and it stays in storage across restarts. `focused`
- * (Orca's focus as it is now) is the one check there is: a terminal Orca lists in the focused
+ * What was kept is what the host said at some time, and it stays in storage across restarts. `focused`
+ * (the host's focus as it is now) is the one check there is: a terminal the host lists in the focused
  * workspace is in that workspace, so a pairing that does not fit the focus is an old one (the id
  * went to a new terminal). It is dropped, and the answer is null: the caller takes the focus.
  */
-export async function workspaceOfTerminal(orca: OrcaWorkerApi, terminalId: string, focused?: Focused | null): Promise<Workspace | null> {
-  if (!terminalId || !orca.host.has('workspace.list')) return null
-  await loadTerminals(orca)
+export async function workspaceOfTerminal(host: EnhanceWorker, terminalId: string, focused?: Focused | null): Promise<Workspace | null> {
+  if (!terminalId || !host.host.has('workspace.list')) return null
+  await loadTerminals(host)
   const ids = workspacesOfTerminals([terminalId])
   if (ids.length === 0) return null
-  const list = await orca.host.call('workspace.list', {}).catch(() => null)
+  const list = await host.host.call('workspace.list', {}).catch(() => null)
   const workspaces: Workspace[] = list?.workspaces ?? []
   const inFocus = focused?.terminals?.some((terminal) => terminal.id === terminalId) ?? false
   for (const id of ids) {
     if (focused && inFocus) {
       const fits = inFocusedWorkspace(workspaces, id, focused)
       // Dropped only on what a whole list said: a list that failed or was cut short proves nothing.
-      if (!fits && list && !list.truncated) forgetTerminal(orca, terminalId)
+      if (!fits && list && !list.truncated) forgetTerminal(host, terminalId)
       return fits
     }
     const named = workspaces.filter((ws) => namesWorkspace(id, ws))
@@ -201,7 +201,7 @@ export async function workspaceOfTerminal(orca: OrcaWorkerApi, terminalId: strin
 
 /**
  * The listed workspace an id names when that workspace can be the focused one: the very workspace
- * a newer Orca names as the focus, else one with the focus's name and its branch (both, unlike
+ * a newer the host names as the focus, else one with the focus's name and its branch (both, unlike
  * `fittingWorkspace`: this decides whether a kept pairing is still true). Several projects can
  * share both ("main" on "main"); among those a pairing cannot be checked, and is taken as it is.
  */
@@ -215,24 +215,24 @@ function inFocusedWorkspace(workspaces: readonly Workspace[], id: string, focuse
 }
 
 /**
- * The name a project's rules are kept under (rules.ts): its repository's name in Orca, since the
- * workspace's own name is "main" for every project's first checkout. Null when Orca cannot tell
+ * The name a project's rules are kept under (rules.ts): its repository's name in the host, since the
+ * workspace's own name is "main" for every project's first checkout. Null when the host cannot tell
  * which of several workspaces of that name is open: a rule of one project is then followed in none
- * of them. Where Orca lists no workspaces (an older Orca), the workspace's name is all there is.
+ * of them. Where the host lists no workspaces (an older the host), the workspace's name is all there is.
  */
-export async function projectNameOf(orca: OrcaWorkerApi, focused: Focused, workspace: Workspace | null): Promise<string | null> {
+export async function projectNameOf(host: EnhanceWorker, focused: Focused, workspace: Workspace | null): Promise<string | null> {
   if (workspace) return workspace.project?.trim() || workspace.name
-  if (!orca.host.has('workspace.list')) return focused.displayName
-  const list = await orca.host.call('workspace.list', {}).catch(() => null)
+  if (!host.host.has('workspace.list')) return focused.displayName
+  const list = await host.host.call('workspace.list', {}).catch(() => null)
   const alike = (list?.workspaces ?? []).filter((ws) => ws.name === focused.displayName && (ws.branch ?? '') === focused.branch)
   return alike.length > 1 ? null : focused.displayName
 }
 
 /** Where a run's rules apply: the focused workspace's name, and its project's. */
-export async function focusedProject(orca: OrcaWorkerApi, hint?: string | readonly string[] | null): Promise<{ workspace: string | null; project: string | null }> {
-  const focused = await orca.host.call('workspace.readContext', {}).catch(() => null)
+export async function focusedProject(host: EnhanceWorker, hint?: string | readonly string[] | null): Promise<{ workspace: string | null; project: string | null }> {
+  const focused = await host.host.call('workspace.readContext', {}).catch(() => null)
   if (!focused) return { workspace: null, project: null }
-  return { workspace: focused.displayName, project: await projectNameOf(orca, focused, await findFocusedWorkspace(orca, focused, hint)) }
+  return { workspace: focused.displayName, project: await projectNameOf(host, focused, await findFocusedWorkspace(host, focused, hint)) }
 }
 
 // ---- prompt-independent parts, cached per workspace root (also what the hook uses) ----
@@ -281,7 +281,7 @@ export async function staticParts(
 
 // ---- the full gather ----
 
-export async function gatherContext(orca: OrcaWorkerApi, options: GatherOptions): Promise<GatherResult> {
+export async function gatherContext(host: EnhanceWorker, options: GatherOptions): Promise<GatherResult> {
   const { level } = options
   const step: StepReporter = options.onStep ?? (() => undefined)
   const items: ContextItem[] = []
@@ -291,9 +291,9 @@ export async function gatherContext(orca: OrcaWorkerApi, options: GatherOptions)
   const { signal } = options
   stopIfCancelled(signal)
   step('workspace', 'running')
-  const focused = await orca.host.call('workspace.readContext', {}).catch(() => null)
-  // Which of Orca's workspaces this is: its project's name for the label, its folder from Standard on.
-  const workspace = focused ? await findFocusedWorkspace(orca, focused, options.workspaceId) : null
+  const focused = await host.host.call('workspace.readContext', {}).catch(() => null)
+  // Which of Copilot's workspaces this is: its project's name for the label, its folder from Standard on.
+  const workspace = focused ? await findFocusedWorkspace(host, focused, options.workspaceId) : null
   const title = focused ? workspaceTitle(focused.displayName, workspace?.project) : undefined
   if (focused) {
     items.push(item('workspace', 'workspace', msg('label.workspace'), `${title}${focused.branch ? ` (branch ${focused.branch})` : ''}`))
@@ -301,7 +301,7 @@ export async function gatherContext(orca: OrcaWorkerApi, options: GatherOptions)
     notes.push(msg('note.no_workspace'))
   }
   if (options.terminalId) {
-    const agents = await orca.host.call('agents.list', {}).catch(() => null)
+    const agents = await host.host.call('agents.list', {}).catch(() => null)
     const agent = agents?.agents.find((entry) => entry.terminalId === options.terminalId)
     if (agent?.agent) items.push(item('agent', 'agent', msg('label.agent'), `${agent.agent} (${agent.state})`))
   }
@@ -318,7 +318,7 @@ export async function gatherContext(orca: OrcaWorkerApi, options: GatherOptions)
       root = workspace.path
     }
   }
-  // Files saved lately in Orca's editor (paths inside this workspace, made relative to it).
+  // Files saved lately in Copilot's editor (paths inside this workspace, made relative to it).
   const saved =
     root && workspace && options.allowEditorSaves === true && atLeast(level, 'deep')
       ? savedFiles(workspace)
@@ -354,7 +354,7 @@ export async function gatherContext(orca: OrcaWorkerApi, options: GatherOptions)
   if (readTerminal && options.terminalId) {
     step('terminal', 'running')
     stopIfCancelled(signal)
-    const read = await orca.host
+    const read = await host.host
       .call('terminal.read', { terminalId: options.terminalId, maxLines: options.terminalLines }, signal ? { signal } : undefined)
       .catch(() => null)
     stopIfCancelled(signal)
@@ -368,7 +368,7 @@ export async function gatherContext(orca: OrcaWorkerApi, options: GatherOptions)
   }
 
   if (level === 'max' && options.allowOtherAgents === true) {
-    items.push(...(await otherAgentItems(orca, options, step)))
+    items.push(...(await otherAgentItems(host, options, step)))
   }
 
   stopIfCancelled(signal)
@@ -520,9 +520,9 @@ async function dynamicParts(
 /**
  * The other agents of the focused workspace (not the one the prompt goes to): one summary item, then
  * the newest output of each, as many as the person set (OTHER_AGENTS_LIMITS). An unticked item is not read; no other agent, or an
- * Orca without these calls, adds nothing and says nothing.
+ * Copilot without these calls, adds nothing and says nothing.
  */
-async function otherAgentItems(orca: OrcaWorkerApi, options: GatherOptions, step: StepReporter): Promise<ContextItem[]> {
+async function otherAgentItems(host: EnhanceWorker, options: GatherOptions, step: StepReporter): Promise<ContextItem[]> {
   const { signal } = options
   if (options.exclude.has('agents')) {
     step('agents', 'skipped')
@@ -531,7 +531,7 @@ async function otherAgentItems(orca: OrcaWorkerApi, options: GatherOptions, step
   step('agents', 'running')
   stopIfCancelled(signal)
   const limits = options.otherAgentsLimits ?? { agents: MAX_SESSIONS, lines: SESSION_LINES }
-  const agents = (await otherAgents(orca, options.terminalId, signal)).slice(0, limits.agents)
+  const agents = (await otherAgents(host, options.terminalId, signal)).slice(0, limits.agents)
   stopIfCancelled(signal)
   if (agents.length === 0) {
     step('agents', 'done', '0')
@@ -541,7 +541,7 @@ async function otherAgentItems(orca: OrcaWorkerApi, options: GatherOptions, step
   for (const [index, agent] of agents.entries()) {
     const id = `session:${agent.terminalId}`
     if (options.exclude.has(id)) continue
-    const text = await readSession(orca, agent.terminalId, signal, limits.lines)
+    const text = await readSession(host, agent.terminalId, signal, limits.lines)
     stopIfCancelled(signal)
     step('agents', 'running', undefined, (index + 1) / agents.length)
     if (text) out.push(item(id, 'session', msg('label.session', { name: agent.title ?? agent.agent ?? agent.terminalId }), text))

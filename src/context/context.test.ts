@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { assert, test } from 'orca/testing'
+import { assert, test } from '#testing'
 import { compilePatterns, isExcluded, isSensitive, readText, snippet, treeSummary } from './files.ts'
 import { fitBudget, type ContextItem } from './index.ts'
 import { readmeDigest } from './instructions.ts'

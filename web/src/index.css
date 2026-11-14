@@ -4,32 +4,32 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * shadcn tokens taken from Orca's theme: Orca sets the --orca-* variables (and the light/dark class
- * on <html>) in the frame, so the panel follows every Orca theme. Primary and ring stay neutral
+ * shadcn tokens taken from Copilot's theme: Copilot sets the --enhance-* variables (and the light/dark class
+ * on <html>) in the frame, so the panel follows every Copilot theme. Primary and ring stay neutral
  * (near-black in light, near-white in dark): no accent colour. The second value is used in a
  * plain browser (npm run dev). Flat colours only.
  */
 :root {
-  --radius: var(--orca-radius, 0.5rem);
-  --background: var(--orca-background, oklch(1 0 0));
-  --foreground: var(--orca-foreground, oklch(0.145 0 0));
-  --card: var(--orca-card, oklch(1 0 0));
-  --card-foreground: var(--orca-card-foreground, oklch(0.145 0 0));
-  --popover: var(--orca-popover, oklch(1 0 0));
-  --popover-foreground: var(--orca-popover-foreground, oklch(0.145 0 0));
+  --radius: var(--enhance-radius, 0.5rem);
+  --background: var(--enhance-background, oklch(1 0 0));
+  --foreground: var(--enhance-foreground, oklch(0.145 0 0));
+  --card: var(--enhance-card, oklch(1 0 0));
+  --card-foreground: var(--enhance-card-foreground, oklch(0.145 0 0));
+  --popover: var(--enhance-popover, oklch(1 0 0));
+  --popover-foreground: var(--enhance-popover-foreground, oklch(0.145 0 0));
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: var(--orca-secondary, oklch(0.97 0 0));
-  --secondary-foreground: var(--orca-secondary-foreground, oklch(0.205 0 0));
-  --muted: var(--orca-muted, oklch(0.97 0 0));
-  --muted-foreground: var(--orca-muted-foreground, oklch(0.556 0 0));
-  --accent: var(--orca-accent, oklch(0.97 0 0));
-  --accent-foreground: var(--orca-accent-foreground, oklch(0.205 0 0));
-  --destructive: var(--orca-destructive, oklch(0.577 0.245 27.325));
-  --border: var(--orca-border, oklch(0.922 0 0));
-  --input: var(--orca-input, oklch(0.922 0 0));
+  --secondary: var(--enhance-secondary, oklch(0.97 0 0));
+  --secondary-foreground: var(--enhance-secondary-foreground, oklch(0.205 0 0));
+  --muted: var(--enhance-muted, oklch(0.97 0 0));
+  --muted-foreground: var(--enhance-muted-foreground, oklch(0.556 0 0));
+  --accent: var(--enhance-accent, oklch(0.97 0 0));
+  --accent-foreground: var(--enhance-accent-foreground, oklch(0.205 0 0));
+  --destructive: var(--enhance-destructive, oklch(0.577 0.245 27.325));
+  --border: var(--enhance-border, oklch(0.922 0 0));
+  --input: var(--enhance-input, oklch(0.922 0 0));
   --ring: oklch(0.708 0 0);
-  --destructive-foreground: var(--orca-destructive-foreground, var(--color-red-800));
+  --destructive-foreground: var(--enhance-destructive-foreground, var(--color-red-800));
   --success: var(--color-emerald-500);
   --success-foreground: var(--color-emerald-900);
   --info: var(--color-violet-500);
@@ -41,25 +41,25 @@
 }
 
 .dark {
-  --background: var(--orca-background, oklch(0.165 0 0));
-  --foreground: var(--orca-foreground, oklch(0.985 0 0));
-  --card: var(--orca-card, oklch(0.205 0 0));
-  --card-foreground: var(--orca-card-foreground, oklch(0.985 0 0));
-  --popover: var(--orca-popover, oklch(0.205 0 0));
-  --popover-foreground: var(--orca-popover-foreground, oklch(0.985 0 0));
+  --background: var(--enhance-background, oklch(0.165 0 0));
+  --foreground: var(--enhance-foreground, oklch(0.985 0 0));
+  --card: var(--enhance-card, oklch(0.205 0 0));
+  --card-foreground: var(--enhance-card-foreground, oklch(0.985 0 0));
+  --popover: var(--enhance-popover, oklch(0.205 0 0));
+  --popover-foreground: var(--enhance-popover-foreground, oklch(0.985 0 0));
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
-  --secondary: var(--orca-secondary, oklch(0.269 0 0));
-  --secondary-foreground: var(--orca-secondary-foreground, oklch(0.985 0 0));
-  --muted: var(--orca-muted, oklch(0.269 0 0));
-  --muted-foreground: var(--orca-muted-foreground, oklch(0.708 0 0));
-  --accent: var(--orca-accent, oklch(0.269 0 0));
-  --accent-foreground: var(--orca-accent-foreground, oklch(0.985 0 0));
-  --destructive: var(--orca-destructive, oklch(0.704 0.191 22.216));
-  --border: var(--orca-border, oklch(1 0 0 / 10%));
-  --input: var(--orca-input, oklch(1 0 0 / 15%));
+  --secondary: var(--enhance-secondary, oklch(0.269 0 0));
+  --secondary-foreground: var(--enhance-secondary-foreground, oklch(0.985 0 0));
+  --muted: var(--enhance-muted, oklch(0.269 0 0));
+  --muted-foreground: var(--enhance-muted-foreground, oklch(0.708 0 0));
+  --accent: var(--enhance-accent, oklch(0.269 0 0));
+  --accent-foreground: var(--enhance-accent-foreground, oklch(0.985 0 0));
+  --destructive: var(--enhance-destructive, oklch(0.704 0.191 22.216));
+  --border: var(--enhance-border, oklch(1 0 0 / 10%));
+  --input: var(--enhance-input, oklch(1 0 0 / 15%));
   --ring: oklch(0.556 0 0);
-  --destructive-foreground: var(--orca-destructive-foreground, var(--color-red-400));
+  --destructive-foreground: var(--enhance-destructive-foreground, var(--color-red-400));
   --success-foreground: var(--color-emerald-400);
   --info-foreground: var(--color-violet-400);
   --warning-foreground: var(--color-yellow-400);
@@ -111,7 +111,7 @@
   }
   body {
     margin: 0;
-    font-family: var(--orca-font-family, ui-sans-serif, system-ui, "Segoe UI", sans-serif);
+    font-family: var(--enhance-font-family, ui-sans-serif, system-ui, "Segoe UI", sans-serif);
   }
 }
 

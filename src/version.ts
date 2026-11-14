@@ -1,3 +1,2 @@
-// The plugin's version, shown next to the panel's title. Kept equal to `version` in orca-plugin.json:
-// src/version.test.ts checks it and scripts/release.mjs refuses a release where they differ.
-export const VERSION = '2.7.0'
+// Kept equal to plugin.json and shown in the panel header.
+export const VERSION = '0.1.0'

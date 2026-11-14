@@ -1,10 +1,10 @@
-// What happened lately in each workspace, as Orca reports it to the worker: the tools agents ran
+// What happened lately in each workspace, as the host reports it to the worker: the tools agents ran
 // (hook `agent.tool.after`: the tool and its target, a file or a command, never its output), how
-// their sessions ended (event `agent.status.changed`), and the files the person saved in Orca's
+// their sessions ended (event `agent.status.changed`), and the files the person saved in the host's
 // editor (hook `editor.save.before`: the path only, never the text). Kept in memory only, at most
 // MAX_ENTRIES per workspace and for KEEP_MS; nothing is written to disk. Each kind is recorded only
 // while its Privacy switch is on, and switching it off forgets what was kept.
-import type { JsonValue } from 'orca'
+import type { JsonValue } from '#panel'
 import { workspaceKey, workspaceKeys } from '../workspaces.ts'
 import { redactSecrets } from './agents.ts'
 
@@ -18,7 +18,7 @@ type SaveEntry = { kind: 'save'; at: number; path: string }
 type Entry = ToolEntry | StatusEntry | SaveEntry
 
 /**
- * By workspace key (workspaces.ts), not by Orca's id: its hooks and events name a workspace by another
+ * By workspace key (workspaces.ts), not by the host's id: its hooks and events name a workspace by another
  * id than workspace.list does, and both sides meet at the workspace's path.
  */
 const byWorkspace = new Map<string, Entry[]>()

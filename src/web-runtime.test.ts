@@ -1,7 +1,7 @@
-// The web panel's state runtime (web/src/orca-runtime.ts): a change reaches React within the same
+// The web panel's state runtime (web/src/host-runtime.ts): a change reaches React within the same
 // event. A later notification made React put the old text back in the prompt box, so the caret
 // jumped to the end of the line whenever you typed anywhere but the end.
-import { assert, test } from 'orca/testing'
+import { assert, test } from '#testing'
 import { atom, read, set, subscribe } from '../web/src/store.ts'
 
 test('a set() notifies subscribers at once, so a typed character is in the value before React checks it', () => {

@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { after } from 'node:test'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, assert, mockHost, mountWorker, test } from 'orca/testing'
+import { afterEach, assert, mockHost, mountWorker, test } from '#testing'
 import { cachedStatic } from './context/index.ts'
 import { forgetTerminals } from './context/terminals.ts'
 import * as main from './worker.ts'
@@ -329,7 +329,7 @@ test('history changes run one after another, so a slow writer is never overtaken
 })
 
 test('the gear section links to GitHub issues for feedback', async () => {
-  const { read } = await import('orca')
+  const { read } = await import('#panel')
   const { mountPanel } = await import('./panel/testing.ts')
   const { openIssues } = await import('./panel/actions.ts')
   const { notice } = await import('./panel/state.ts')
@@ -346,10 +346,10 @@ test('the gear section links to GitHub issues for feedback', async () => {
   const view = await mountPanel(host, { persisted: { plugin: { tab: 'privacy' } } })
   await openIssues()
   const opened = host.callsOf('shell.openExternal') as { url: string }[]
-  assert.deepEqual(opened.map((call) => call.url), ['https://github.com/cattfan/orca-enhance-prompt/issues/new'])
-  // Orca opens a site only on a click (there is none here) and may be told no: the panel then
+  assert.deepEqual(opened.map((call) => call.url), ['https://github.com/AndrewGodlewsky/copilot-enhance-prompt/issues/new'])
+  // Copilot opens a site only on a click (there is none here) and may be told no: the panel then
   // shows the address to open by hand.
-  assert.deepEqual(read(notice), { tone: 'neutral', text: 'Open https://github.com/cattfan/orca-enhance-prompt/issues/new in your browser.' })
+  assert.deepEqual(read(notice), { tone: 'neutral', text: 'Open https://github.com/AndrewGodlewsky/copilot-enhance-prompt/issues/new in your browser.' })
   assert.deepEqual(view.errors, [])
   await view.unmount()
 })
@@ -389,7 +389,7 @@ test("other agents' sessions are not read while their switch is off (the default
   const cases: [Record<string, boolean>, boolean][] = [
     [{}, true],
     [{ allowOtherAgents: true, allowTerminalRead: false }, true],
-    // On in Orca's Settings but never confirmed in the panel.
+    // On in Copilot's Settings but never confirmed in the panel.
     [{ allowOtherAgents: true }, false]
   ]
   for (const [settings, consented] of cases) {
@@ -476,7 +476,7 @@ test('out-of-range or wrong amounts are brought back within their limits; while 
     assert.ok(!readTerminals(host).some((id) => id !== 't1'))
     await worker.deactivate()
   }
-  // Huge values from Orca's Settings are clamped before any read.
+  // Huge values from Copilot's Settings are clamped before any read.
   const host = agentsHost({ allowOtherAgents: true, otherAgentsMax: 50, otherAgentsLines: 100000 })
   const worker = await mountWorker(main, { host })
   await worker.request('context.preview', { prompt: 'do it', level: 'max', terminalId: 't1' })

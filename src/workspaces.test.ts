@@ -1,7 +1,7 @@
-// Orca names one workspace two ways (workspace.list: "identity:…"; events and hooks:
+// the host names one workspace two ways (workspace.list: "identity:…"; events and hooks:
 // "<repository id>::<path>"), and writes the same folder with either kind of slash. The ids below
-// are the shapes the real Orca answered on Windows.
-import { assert, test } from 'orca/testing'
+// are the shapes the real the host answered on Windows.
+import { assert, test } from '#testing'
 import { namesWorkspace, pathInWorkspaceId, pathKey, projectLabel, workspaceKey, workspaceKeys, workspaceTitle } from './workspaces.ts'
 
 const LISTED = { id: 'identity:wt2:local:342c5fcf-f984-4f8b-9611-72159ac97370', path: 'C:/Users/me/Desktop/Tools/Reup' }
@@ -27,7 +27,7 @@ test('an id names a listed workspace by being its id, or by carrying its path', 
   assert.ok(namesWorkspace(LISTED.id, LISTED))
   assert.ok(namesWorkspace(EVENT, LISTED))
   // Another worktree of the same repository, another repository, another identity: not this one.
-  assert.ok(!namesWorkspace('fd0d6141-e929-4208-8cb8-5e2fe2c7d156::C:\\Users\\me\\orca\\workspaces\\Reup\\feature', LISTED))
+  assert.ok(!namesWorkspace('fd0d6141-e929-4208-8cb8-5e2fe2c7d156::C:\\Users\\me\\host\\workspaces\\Reup\\feature', LISTED))
   assert.ok(!namesWorkspace('fd0d6141-e929-4208-8cb8-5e2fe2c7d156::C:\\Users\\me\\Desktop\\Tools', LISTED))
   assert.ok(!namesWorkspace('identity:wt2:local:2a1c69a0-77a0-469b-9a9e-88f7c4c3cec8', LISTED))
   // A folder workspace has the same id in the list and in events.
@@ -44,7 +44,7 @@ test('what is kept per workspace is found again under either name', () => {
   assert.ok(!workspaceKeys({ id: 'identity:wt2:local:other', path: 'C:/Users/me/Desktop/GPT' }).includes(workspaceKey(EVENT)))
 })
 
-test('a project is shown by its own name where Orca\'s name for it says nothing', () => {
+test('a project is shown by its own name where Copilot\'s name for it says nothing', () => {
   // The list of folders to pick from: the project first, then where it is.
   assert.equal(projectLabel({ path: 'C:/Users/me/Desktop/Tools/Reup', project: 'Reup' }), 'Reup · C:/Users/me/Desktop/Tools/Reup')
   assert.equal(projectLabel({ path: 'C:/Users/me/Desktop/Tools/Reup' }), 'C:/Users/me/Desktop/Tools/Reup')

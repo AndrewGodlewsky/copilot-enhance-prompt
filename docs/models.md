@@ -19,7 +19,7 @@ Notes:
 
 - A CLI takes a few seconds to start, so [auto-enhance](auto-enhance.md) skips CLI models.
 - Each call counts against the CLI's own limits. Codex adds a large system prompt of its own to every call.
-- If Orca can't find the CLI (common for apps started from the dock on macOS), set its full path in **Command** when you edit the model.
+- If the extension cannot find a CLI, set its full path in **Command** when you edit the model.
 
 ## API models
 
@@ -38,7 +38,7 @@ Click **Add model** and pick a preset:
 | LM Studio | `http://localhost:1234/v1` | none |
 | Custom | any OpenAI-compatible or Anthropic-style endpoint | optional |
 
-- Keys you paste are stored in Orca's encrypted secrets and never shown again. Leave the field empty and the environment variable in the table is used instead.
+- On Windows, pasted keys are protected with DPAPI for your Windows account and never shown again. Other platforms do not support saved keys yet. Environment keys work only when the host makes them available to the extension; Copilot may strip sensitive variables. A signed-in CLI or a local model needs no pasted API key.
 - Endpoints must use `https`, except `http://localhost` for local servers.
 - If you have no saved models, the plugin uses any of those environment variables it finds, and the Models tab says so.
 - **Max tokens** is the most one answer may take: 8,000 for a model you add now. Current models think before they answer, and that thinking counts too. When an answer stops at the limit, the panel says so (and fallback moves on) instead of showing half a prompt; raise the limit for that model then.
@@ -62,7 +62,7 @@ Lists are cached for a day. Click **Refresh model list** (↻) next to the field
 Models are tried from top to bottom. The **#** menu on each card sets its position (pick **#1** to try it first), and the switch skips it.
 
 > [!NOTE]
-> Orca's plugin UI has no drag and drop, so the position is a menu: one click instead of a drag.
+> Use the position menu to reorder models.
 
 - **Fallback to the next model when one fails** (on by default).
 - **Fall back on**:

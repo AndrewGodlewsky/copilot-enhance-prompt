@@ -1,7 +1,7 @@
-// The panel's wiring (src/panel/setup.ts): what the worker posts, what Orca reports and a setting
+// The panel's wiring (src/panel/setup.ts): what the worker posts, what the host reports and a setting
 // changed elsewhere all reach the panel's state, and closing the panel ends its run.
-import { read, settings } from 'orca'
-import { assert, mockHost, test, type MockRequests } from 'orca/testing'
+import { read, settings } from '#panel'
+import { assert, mockHost, test, type MockRequests } from '#testing'
 import { PRESETS } from '../presets.ts'
 import { beginRun, cancel, enhanceNow } from './actions.ts'
 import { consents, defaults, draft, notice, privacy, put, result, rulesState, run, targets } from './state.ts'
@@ -26,7 +26,7 @@ test('starting the panel loads its terminals, rules and confirmations, and the s
   await view.unmount()
 })
 
-test('starting the panel tells the worker which language Orca runs in', async () => {
+test('starting the panel tells the worker which language Copilot runs in', async () => {
   const told: string[] = []
   const requests: MockRequests = { ...base, 'ui.locale': (input: { locale: string }) => (told.push(input.locale), { ok: true as const }) }
   const view = await mountPanel(mockHost({ requests }), { locale: 'vi-VN' })
@@ -51,7 +51,7 @@ test("the worker's progress and the auto-enhance hook's news reach the panel", a
   await view.unmount()
 })
 
-test("a setting changed outside the panel (Orca's Settings) is followed at once", async () => {
+test("a setting changed outside the panel (Copilot's Settings) is followed at once", async () => {
   const view = await mountPanel(mockHost({ requests: base }))
   assert.equal(read(defaults).style, 'balanced')
   assert.equal(read(privacy).allowTerminalSend, true)
@@ -63,7 +63,7 @@ test("a setting changed outside the panel (Orca's Settings) is followed at once"
   await view.unmount()
 })
 
-/** A panel whose Enhance stays unanswered until the test ends it, the way Orca ends a cancelled request: by rejecting it. */
+/** A panel whose Enhance stays unanswered until the test ends it, the way Copilot ends a cancelled request: by rejecting it. */
 async function withPendingRun() {
   let refuse: (reason: Error) => void = () => undefined
   const requests: MockRequests = { ...base, 'prompt.enhance': () => new Promise((_resolve, reject) => (refuse = reject)) }

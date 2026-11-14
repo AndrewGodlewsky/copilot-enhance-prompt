@@ -1,7 +1,7 @@
 // The Enhance section of the web panel: the composer (paste, drop or attach files; Enter enhances),
 // the run's progress, the context sent, and the enhanced prompt with Send.
 import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react'
-import { read, set, settings, update } from 'orca'
+import { read, set, settings, update } from '#panel'
 import {
   CopyIcon,
   CornerDownLeftIcon,
@@ -271,7 +271,7 @@ function Composer({ refresh }: { refresh: () => void }) {
 }
 
 /**
- * The "Custom only" style's instructions (the `customInstructions` setting, also in Orca's Settings):
+ * The "Custom only" style's instructions (the `customInstructions` setting, also in Copilot's Settings):
  * the prompt follows them instead of a built-in shape. Saved when the box loses focus.
  */
 function CustomInstructions() {
@@ -429,7 +429,7 @@ function ContextList() {
           </label>
           {/* Outside the label: a press here must not tick or untick the item. */}
           {item.id.startsWith('file:') && allowed('allowOpenFiles') ? (
-            <IconAction label={t('Open in Orca')} className="size-6 shrink-0" onClick={() => void openFile(item.id.slice('file:'.length))}>
+            <IconAction label={t('Open in Copilot')} className="size-6 shrink-0" onClick={() => void openFile(item.id.slice('file:'.length))}>
               <ExternalLinkIcon />
             </IconAction>
           ) : null}
@@ -444,7 +444,7 @@ function ContextList() {
   )
 }
 
-/** The terminal to send to; the list reloads each time it opens (and on Orca's workspace events). */
+/** The terminal to send to; the list reloads each time it opens (and on Copilot's workspace events). */
 function TargetPicker() {
   const list = read(targets)
   return (
@@ -452,7 +452,7 @@ function TargetPicker() {
       <Pick
         label={t('Send to')}
         value={read(target) ?? undefined}
-        placeholder={list.length === 0 ? t('No terminals in this workspace') : t('Choose a terminal')}
+        placeholder={list.length === 0 ? t('Copilot session unavailable') : t('Attached Copilot session')}
         options={list.map((item) => ({ value: item.terminalId, label: targetLabel(item) }))}
         onChange={(value) => set(target, value)}
         onOpen={() => void refreshTargets()}
@@ -518,21 +518,12 @@ function ResultCard({ output }: { output: string }) {
         <TargetPicker />
         <Tooltip>
           <TooltipTrigger asChild>
-            <label className="text-muted-foreground hover:text-foreground flex h-8 shrink-0 cursor-pointer items-center gap-1 rounded-md px-1 text-xs">
-              <Switch size="sm" checked={read(effectiveEnter)} onCheckedChange={(value) => set(pressEnter, value)} aria-label={t('Press Enter after sending')} />
-              Enter
-            </label>
-          </TooltipTrigger>
-          <TooltipContent>{t('Press Enter after sending')}</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
             <Button size="sm" onClick={() => void send(output)} disabled={!read(target) || working !== null}>
               <SendIcon />
               {t('Send')}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t('Send to the terminal (Ctrl+Enter)')}</TooltipContent>
+          <TooltipContent>{t('Send to Copilot (Ctrl+Enter)')}</TooltipContent>
         </Tooltip>
       </div>
       {allowed('allowAgentLaunch') ? <NewAgent output={output} /> : null}

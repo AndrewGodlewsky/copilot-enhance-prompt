@@ -1,8 +1,8 @@
-// The web panel's entry: starts the panel's state (src/panel/setup.ts wires Orca's events to it), then
+// The web panel's entry: starts the panel's state (src/panel/setup.ts wires Copilot's events to it), then
 // draws the header and the current section.
 import { lazy, StrictMode, Suspense, useReducer } from 'react'
 import { createRoot } from 'react-dom/client'
-import { read, set } from 'orca'
+import { onPersistenceError, read, set } from '#panel'
 import { BookOpenIcon, BotIcon, LanguagesIcon, ScrollTextIcon, SettingsIcon, SparklesIcon } from 'lucide-react'
 import './index.css'
 import { t, UI_LANGUAGES, uiLanguageSetting } from '../../src/i18n.ts'
@@ -18,8 +18,9 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { IconAction, Notices } from './common'
 import { WhatsNew } from './whats-new'
 import logo from '../../assets/art/logo-64.png'
-import { ready, useOrca } from './orca-runtime'
+import { ready, usePanel } from './panel-runtime'
 import { EnhanceSection } from './enhance'
+import { connectCanvas } from './transport'
 
 // The Enhance section is drawn at once; the others load the first time they open (a smaller first load).
 const loadSections = () => import('./sections')
@@ -36,7 +37,7 @@ const SECTIONS = [
   { value: 'privacy', Icon: SettingsIcon }
 ] as const
 
-/** The panel language, at the top left (Auto follows Orca). */
+/** The panel language, at the top left (Auto follows Copilot). */
 function LanguagePicker() {
   return (
     <Select value={read(uiLanguageSetting)} onValueChange={(value) => void changeUiLanguage(value)}>
@@ -68,7 +69,7 @@ function openSection(value: string): void {
 }
 
 function App() {
-  useOrca()
+  usePanel()
   // Uploads keep their own list outside the atoms; this redraws when it changes.
   const [, refresh] = useReducer((count: number) => count + 1, 0)
   const current = SECTIONS.find((section) => section.value === read(tab)) ?? SECTIONS[0]
@@ -116,19 +117,20 @@ function App() {
 }
 
 async function start(): Promise<void> {
-  // In a plain browser (npm run dev) there is no Orca: a mock stands in, with sample data.
-  if (import.meta.env.DEV && !('orca' in window)) {
-    await (await import('./mock-orca')).installMockOrca()
+  onPersistenceError(() => set(notice, { tone: 'danger', text: t('Changes could not be saved. Check the canvas connection and try again.') }))
+  // In a plain browser (npm run dev) there is no Copilot: a mock stands in, with sample data.
+  if (import.meta.env.DEV) {
+    await (await import('./mock-host')).installMockHost()
     // ?tab=models: open a section directly (screenshots).
     const section = new URLSearchParams(location.search).get('tab')
     if (section) set(tab, section)
-  }
+  } else connectCanvas()
   await ready()
   // Closing or reloading the panel ends its run: the worker stops the model too.
   window.addEventListener('pagehide', closePanel)
   wirePanel()
   if (import.meta.env.DEV) {
-    // A browser hears no Orca events: reload the terminal list now and then instead.
+    // A browser hears no Copilot events: reload the terminal list now and then instead.
     setInterval(() => void refreshTargets(), 8000)
     // ?demo=<prompt>: types it and runs Enhance (listing pictures, on the sample data); ?options=1 opens the options.
     const query = new URLSearchParams(location.search)
@@ -186,4 +188,8 @@ async function start(): Promise<void> {
   )
 }
 
-void start()
+void start().catch(() => {
+  createRoot(document.getElementById('root')!).render(
+    <div className="p-6"><h1>{BRAND}</h1><p role="alert">{t('The canvas could not connect. Close it and open Enhance Prompt again from Copilot.')}</p></div>
+  )
+})

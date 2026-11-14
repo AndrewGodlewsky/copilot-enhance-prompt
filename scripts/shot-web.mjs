@@ -1,19 +1,15 @@
-// Screenshots of the web panel's dev server (cd web && npm run dev) with headless Edge or Chrome:
+// Screenshots of the web panel's dev server (cd web && npm run dev) with headless Brave:
 // node scripts/shot-web.mjs [out.png] [width] [height] [query]. Used to check a layout change.
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdtempSync } from 'node:fs'
+import { existsSync, mkdtempSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { join, resolve, dirname } from 'node:path'
 
-const [out = '.orca/web.png', width = '400', height = '700', query = 'lang=vi'] = process.argv.slice(2)
-const browsers = [
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/usr/bin/google-chrome'
-]
+const [out = '.artifacts/web.png', width = '400', height = '700', query = 'lang=vi'] = process.argv.slice(2)
+const browsers = [process.env.BRAVE_PATH, 'C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe'].filter(Boolean)
 const browser = browsers.find((path) => existsSync(path))
-if (!browser) throw new Error('No Edge or Chrome found')
+if (!browser) throw new Error('No Brave found')
+mkdirSync(dirname(resolve(out)), { recursive: true })
 execFileSync(browser, [
   '--headless=new',
   '--disable-gpu',

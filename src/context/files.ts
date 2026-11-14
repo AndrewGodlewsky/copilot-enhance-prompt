@@ -3,7 +3,7 @@ import { readdir, readFile, realpath, stat } from 'node:fs/promises'
 import { isAbsolute, join, relative, sep } from 'node:path'
 
 const WALK_SKIP = new Set([
-  '.git', 'node_modules', '.orca', 'dist', 'build', 'out', 'target', '.next', '.nuxt', '.venv', 'venv',
+  '.git', 'node_modules', '.copilot', 'dist', 'build', 'out', 'target', '.next', '.nuxt', '.venv', 'venv',
   '__pycache__', '.cache', 'coverage', 'vendor', '.idea', '.vscode', '.turbo', '.svelte-kit', 'Pods'
 ])
 

@@ -1,18 +1,18 @@
 // Which workspace a terminal is in.
 //
-// Orca's plugin API names the focused workspace by its name and branch only, and several workspaces
-// can share both: every project's first checkout is "main" on "main". Orca does say which workspace
+// the host's plugin API names the focused workspace by its name and branch only, and several workspaces
+// can share both: every project's first checkout is "main" on "main". the host does say which workspace
 // an agent's terminal is in, in its agent events and tool hooks. The worker keeps that pairing (two
 // ids, nothing of what the agent did; the newest MAX_TERMINALS, in the plugin's storage so it
 // survives a restart), and the focused workspace is then known by its terminals. The panel keeps its
-// own notes too (it also remembers the folder the person picked); what Orca said comes first.
-import type { JsonValue, OrcaWorkerApi } from 'orca/worker'
+// own notes too (it also remembers the folder the person picked); what the host said comes first.
+import type { JsonValue, EnhanceWorker } from '#host'
 
 export const TERMINALS_KEY = 'terminalWorkspaces'
 export const MAX_TERMINALS = 500
 const MAX_ID_CHARS = 1200
 
-/** Terminal id -> workspace id as Orca gave it; insertion order is age (oldest first). */
+/** Terminal id -> workspace id as the host gave it; insertion order is age (oldest first). */
 let known = new Map<string, string>()
 let loading: Promise<void> | null = null
 let saving: Promise<unknown> = Promise.resolve()
@@ -24,9 +24,9 @@ function prune(): void {
 }
 
 /** Reads what an earlier run of the worker kept. Pairings learnt meanwhile are newer and win. */
-export function loadTerminals(orca: OrcaWorkerApi): Promise<void> {
+export function loadTerminals(host: EnhanceWorker): Promise<void> {
   loading ??= (async () => {
-    const stored = await orca.storage.get(TERMINALS_KEY).catch(() => null)
+    const stored = await host.storage.get(TERMINALS_KEY).catch(() => null)
     if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return
     const merged = new Map<string, string>()
     for (const [terminal, workspace] of Object.entries(stored)) if (isId(terminal) && isId(workspace)) merged.set(terminal, workspace)
@@ -40,29 +40,29 @@ export function loadTerminals(orca: OrcaWorkerApi): Promise<void> {
   return loading
 }
 
-function save(orca: OrcaWorkerApi): void {
+function save(host: EnhanceWorker): void {
   // One write after another, each with the map as it is by then.
   saving = saving
-    .then(() => loadTerminals(orca))
-    .then(() => orca.storage.set(TERMINALS_KEY, Object.fromEntries(known) as JsonValue))
-    .catch((error: unknown) => orca.log(`terminals: ${(error as Error).message}`))
+    .then(() => loadTerminals(host))
+    .then(() => host.storage.set(TERMINALS_KEY, Object.fromEntries(known) as JsonValue))
+    .catch((error: unknown) => host.log(`terminals: ${(error as Error).message}`))
 }
 
-/** Orca said this terminal is in this workspace (an agent event or a tool hook). */
-export function learnTerminal(orca: OrcaWorkerApi, terminalId: unknown, workspaceId: unknown): void {
+/** the host said this terminal is in this workspace (an agent event or a tool hook). */
+export function learnTerminal(host: EnhanceWorker, terminalId: unknown, workspaceId: unknown): void {
   if (!isId(terminalId) || !isId(workspaceId) || known.get(terminalId) === workspaceId) return
   known.delete(terminalId)
   known.set(terminalId, workspaceId)
   prune()
-  save(orca)
+  save(host)
 }
 
 /** Drops one pairing that turned out to be an old one (see workspaceOfTerminal). */
-export function forgetTerminal(orca: OrcaWorkerApi, terminalId: string): void {
-  if (known.delete(terminalId)) save(orca)
+export function forgetTerminal(host: EnhanceWorker, terminalId: string): void {
+  if (known.delete(terminalId)) save(host)
 }
 
-/** The workspaces Orca named for these terminals, the one with the most of them first. */
+/** The workspaces the host named for these terminals, the one with the most of them first. */
 export function workspacesOfTerminals(terminalIds: readonly string[]): string[] {
   const count = new Map<string, number>()
   for (const id of terminalIds) {
@@ -77,11 +77,11 @@ export function terminalsSaved(): Promise<unknown> {
   return saving
 }
 
-/** Forgets every pairing, here and (with `orca`) in storage: "Delete everything", and between tests. */
-export async function forgetTerminals(orca?: OrcaWorkerApi): Promise<void> {
+/** Forgets every pairing, here and (with `host`) in storage: "Delete everything", and between tests. */
+export async function forgetTerminals(host?: EnhanceWorker): Promise<void> {
   await saving.catch(() => undefined)
   known = new Map()
-  loading = orca ? Promise.resolve() : null
+  loading = host ? Promise.resolve() : null
   saving = Promise.resolve()
-  if (orca) await orca.storage.delete(TERMINALS_KEY).catch(() => undefined)
+  if (host) await host.storage.delete(TERMINALS_KEY).catch(() => undefined)
 }

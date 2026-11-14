@@ -1,112 +1,13 @@
-# Privacy & permissions
+# Privacy and storage
 
-Enhance Prompt has no tracking, analytics or telemetry, and no server of its own.
+Enhance Prompt sends the request and permitted context to configured rewriting providers. Fallback may send the payload to multiple providers. Max context can also send the original request and candidate file paths to a separate selector model. It has no analytics or tracking. Copilot receives a canvas result through explicit Send or the automatic-send workflow you enable. Separately, optional chat auto-enhance can replace the model-facing text of an existing turn while the visible chat keeps the original message.
 
-## Turn things off
+Project reads use the attached session's `workingDirectory`. Remote workspaces expose no local files. Sensitive filenames and links escaping the project are refused. Recognized secrets in relevant source excerpts and Git diffs are masked before trimming. Project instructions, README/extra context, stack summaries and Git metadata are not uniformly masked; preview and exclude material you do not want sent.
 
-Orca approves a plugin's access as a whole: it shows everything the plugin may do and asks once. The panel's **Settings** section (gear icon; it also holds auto-enhance and stored data) and **Settings → Plugins → Enhance Prompt → Privacy: …** decide what the plugin actually uses. The worker checks these switches before every read, send, save or download, so a switch that is off is never bypassed.
+Explicit attachments are copied into a temporary attachment directory for at most one day. Only those paths may be read as attachments. Their contents can be sent to the configured models; images are recognized by bytes and their paths are included for the destination agent. Attachments, your typed request and custom instructions are not automatically secret-masked. [Complete data flow](prompt-workflow.md).
 
-| Switch | Off means |
-| --- | --- |
-| Read project files | No rules, README, manifests or file list; Standard and above fall back to workspace and agent names |
-| Run git | No `git` commands; files are listed by walking the folder |
-| Read terminal output | The Max level skips the terminal (and the other agents' sessions) |
-| Read other agents' sessions (**off by default, asks to confirm**) | At the Max level, the other agents in the workspace and the last lines of their terminals are left out. On: their kind, title and state, and the last lines of each terminal, with keys, tokens and passwords masked. You set how many agents (1 to 8, 4 by default) and lines (10 to 300, 80 by default) under the switch; the amounts do nothing while it is off |
-| Watch what agents do (**off by default, asks to confirm**) | Nothing of what agents do is kept (only which workspace each agent's terminal is in: see [What is stored](#what-is-stored)). On: each tool an agent runs in Orca (its name and target: a file path or a command, never its output) and how sessions end, kept in memory for 45 minutes and sent with prompts at Deep and Max |
-| Notice files you save (**off by default**) | Nothing is kept. On: the paths (never the text) of files you save in Orca's editor, in memory for 45 minutes; they rank first in the code search at Deep and Max |
-| Send to terminals | **Send** is refused; use **Copy** |
-| Start new agents (**off by default, asks to confirm**) | No button. On: a button that starts a new agent in the workspace with the enhanced prompt, only when you press it; the agent runs with your user account |
-| Send right after enhancing (**off by default, asks to confirm; in the panel only**) | Enhancing always stops at the result. On: a second button next to Enhance, and Ctrl+Enter, enhance the prompt and type the result into the picked terminal without showing it first, when the terminal, the project and the text are what they were at the start and the agent is idle; otherwise nothing is sent and a note says why. Needs **Send to terminals** |
-| Open files in Orca | No open button on files in the context list |
-| Save history | Nothing is added to History |
-| Use API keys from environment variables | Only keys you saved in the Models tab |
-| Fetch model lists online | No `GET /models` or schema download; CLI lists still come from your machine |
+Local preferences, profiles, rules and history use atomic writes. API keys are held separately and encrypted with Windows DPAPI for the current user. Unsupported platforms report saved keys unavailable; there is no plaintext fallback. Environment keys are used only when the corresponding switch is on and the host actually passes them to the extension. Copilot may filter sensitive environment variables, so a shell's key is not guaranteed to be available.
 
-### What each switch risks
+History, context summaries and session drafts are plain text in the plugin's data directory. Disable Save history to stop retaining new prompt content. Delete everything removes models, saved keys, rules, history and the current session's retained panel data. Attached copies are also cleared. It does not erase Copilot conversations or exported downloads.
 
-The panel says this under every switch (**Risk and when to use it**). In short:
-
-| Switch | What can go wrong | Turn it on when |
-| --- | --- | --- |
-| Read project files | File names, your agent rules, the README and manifest files go to the model. Files that look like secrets are never read. | Prompts should name real files and commands. Off for a project whose contents must not reach a provider. |
-| Run git | Branch names, commit subjects and the diff of uncommitted changes go to the model. Nothing is changed. A value in the diff that is certainly a key is masked; a secret in another shape is not. | A prompt should know what you are working on now. |
-| Read terminal output | A terminal shows whatever was printed. Keys, tokens and passwords are masked first, which cannot catch everything. | An error on screen needs fixing. Off when terminals show secrets or customer data. |
-| Read other agents' sessions | Terminals you did not pick are read and sent too. | Several agents share a task. |
-| Watch what agents do | Tool names, paths and command lines of every agent are kept in memory and sent at Deep and Max. | Prompts should follow on from what agents just did. |
-| Notice files you save | Only paths, never text; a path can still say what you work on. | You edit in Orca. |
-| Send to terminals | Text is typed for you; with Enter on the agent starts at once. An agent waiting for an answer is never typed into unasked. | The normal flow. Off: Copy still works. |
-| Send right after enhancing | The agent gets a prompt you have not read: a model can misread a request, add a step you did not ask for, or answer with something that is not a prompt; with Enter on, the agent starts at once. | Small, low-risk requests, with an agent that asks before anything hard to undo. Off when the agent has wide permissions. |
-| Start new agents | A new agent runs with your account and can change files and run commands. | You start a fresh agent per task. |
-| Open files in Orca | An editor tab opens; nothing is read or changed. | You check what was read. |
-| Save history | Prompts, enhanced prompts, drafts and results are kept as plain text on this machine. | You reuse prompts. Off on a shared machine. |
-| Use API keys from environment variables | The key goes to that provider, and its account pays. | Your keys already live in the environment. |
-| Fetch model lists online | Requests go to your API providers and to schemastore.org, with no prompt and no project data. | You want new models without updating the plugin. |
-
-### Switches that ask to confirm
-
-![The Settings section: the switches, with Read other agents' sessions turned on and its agents and lines](assets/guide/9-other-agents-settings.png)
-
-![Turning on Watch what agents do: what it does, what can go wrong and when to turn it on, then I understand, turn it on or Cancel](assets/guide/10-confirm-dialog.png)
-
-**Read other agents' sessions**, **Watch what agents do** and **Start new agents** send more of your work to the model or start programs. Turning one on in the panel first shows everything it allows, in plain words, with **I understand, turn it on** and **Cancel**. Turned on in Orca's Settings alone, it stays off (the panel says so and offers to confirm). Turning it off withdraws the confirmation; **Delete everything** withdraws all of them.
-
-**Send right after enhancing** asks the same way. It is a switch of the panel alone (there is no entry for it in Orca's Settings), so the only way to turn it on is through its dialog. It types nothing the **Send to terminals** switch would not allow, and it holds a prompt back whenever the terminal, the project, the text or the agent's state is in doubt; what it adds is that you no longer read the prompt first, which is the risk its dialog names.
-
-**Notify when a long enhance finishes** (Settings section, off by default) shows a desktop notification after runs longer than 8 s; it names the model and the time, never your prompt.
-
-The same section shows what is stored and has **Clear history**, **Clear model lists** and **Delete everything** (history, model lists, saved models and their keys, your rules and structures, the confirmations, the saved drafts and results, which workspace each terminal is in, and the files you attached; press twice).
-
-## Where your prompt goes
-
-- Your prompt, plus the context items listed under **Options**, is sent **only to the model you run**: the API endpoint of that model profile, or the subscription CLI on your machine, which talks to its own provider.
-- With fallback on, a failed request is retried on your next model.
-- Files you attach: images go with it to models that read images (Anthropic, and the OpenAI, OpenRouter and Gemini presets; Codex CLI with `-i`). Other models get only their paths. Text files join the context (of a long one, the beginning and the end: 20,000 characters in all) unless you untick them in the context list. Only files you attached in the panel are read this way. The enhanced prompt lists the paths so your agent can open the files.
-- Model lists are fetched from the same providers (`GET /models`), from the CLIs themselves, and, for Claude Code aliases, from the public [Claude Code settings schema](https://www.schemastore.org/claude-code-settings.json). Nothing about you or your project is sent with these.
-
-## What is read on your machine
-
-- At the Standard level and above: the agent rule files, README, manifest files and file list of the focused workspace, through read-only `git` commands (`ls-files`, `status`, `log`, `diff`, `grep`) and file reads.
-- At the Max level: the last lines of the terminal you picked, with values that look like keys, tokens or passwords masked first (as in other agents' sessions). Masking cannot catch everything.
-- In the diff and in the lines taken from your source files, a value that is certainly a credential is masked too: one in a known key format (OpenAI, Anthropic, Stripe, GitHub, GitLab, npm, Google, AWS, Slack, a JWT, a private key block), or a quoted text of 12 characters or more, with letters and digits, given to a name that says it holds a secret (password, token, secret, credential, API key, private key, access key), unless that text is a plain address such as `https://auth.example.com/token`. The code around it is left as it is, so this is narrower than the masking of terminal output: `password = readPassword()` stays, a name that only starts like a key (`sk-skeleton-card`) stays, and so does a secret under a name that does not say what it is, or one that is not in quotes.
-- Files you paste, drop or pick: copied into a temporary folder on this machine (removed after a day) and read when you press Enhance. Nothing else is read.
-- **Never**: `.env*`, `*.pem`, `*.key`, `*.p12`, keystores, SSH keys, files named like `secret` or `credentials`, binary files, and anything matching your exclude patterns.
-- `~/.claude/settings.json`, `~/.codex/config.toml` and `~/.gemini/settings.json`, only to read which model you use and which models you allow.
-
-## What is stored
-
-| Where | What |
-| --- | --- |
-| Orca's encrypted secrets | API keys you paste |
-| The plugin's own storage | Model profiles, history, cached model lists, your rules and prompt structures, which switches you confirmed, the language Orca runs in (so that the status bar's tooltip is in it while the panel's language is Auto), and which workspace each agent's terminal is in (two ids per terminal, as Orca reports them; the newest 500): Orca names the open workspace only by its name and branch, and this is how projects that share both ("main" on "main") are told apart |
-| The panel's saved state (kept by Orca for the panel) | Your picks in the panel (section, style, context level, model, output language), whether **Send right after enhancing** is on, which workspace each terminal belongs to, and for the feedback note: how many prompts you enhanced before it first showed (it stops counting at five), when it last showed, and whether you turned it off. While **Save history** is on, also each project's draft, last result and context list, so they are there when you open the panel again; with it off, they are gone when the panel closes |
-| Orca settings | The options on the [Settings](settings.md) page |
-| The system's temporary folder | The files you paste, drop or pick (removed after a day) |
-
-A history entry also holds the name of the project it was written in, so the History tab can show one project.
-
-Nothing else is written to disk. Project context, what agents do and the paths of the files you save in Orca's editor are kept in memory only, like three small things that go when Orca restarts: a history entry you removed (for a minute, so that Undo can bring it back), what auto-enhance did with the last prompt, and the prompt of an agent you started from the panel (for two minutes, so that auto-enhance does not rewrite it); and a subscription CLI runs in a temporary folder that is deleted afterwards. Clear any of it from the panel's **Settings** section.
-
-## Permissions
-
-| Capability | Why |
-| --- | --- |
-| `storage:own`, `settings:own`, `secrets:own` | Profiles, history, settings, API keys |
-| `workspace:read` | Workspace name, branch and folder, its terminals, and keeping context warm when you switch workspace |
-| `agent:read` | Listing agent terminals and knowing which agent you target; with **Watch what agents do** on, how agent sessions end |
-| `terminal:send` | Typing the prompt into the terminal you pick in **Send to** |
-| `terminal:read` | Max context level only: recent output of the target terminal, and of the other agents' terminals while **Read other agents' sessions** is on |
-| `agent:launch` | The **Start** button under the result, only while **Start new agents** is on and confirmed |
-| `workspace:write` | Opening a file of the context list in an editor tab (**Open files in Orca**). The plugin never writes to your files |
-| `notifications:show` | The notification when a long enhance finishes, when you turn it on |
-
-It also registers three hooks: `agent.prompt.before` for [auto-enhance](auto-enhance.md), and `agent.tool.after` and `editor.save.before`, which only observe (**Watch what agents do**, **Notice files you save**) and never change or block anything; while those switches are off, what they receive is dropped.
-
-The plugin runs as a worker process (`trusted-worker`), because it calls model APIs, runs CLIs and `git`, and reads project files. Orca asks you to approve it on install, and again when an update asks for more.
-
-## Subscription CLIs
-
-When you use a subscription CLI, the prompt is passed on stdin to a fixed command (`claude -p`, `codex exec --sandbox read-only`, `gemini -p`) running in an empty temporary folder that is deleted afterwards. Claude Code runs with no tools; Codex runs in a read-only sandbox.
-
-## Clipboard
-
-**Copy** uses your OS clipboard tool (`clip.exe`, `pbcopy`, `wl-copy`, `xclip` or `xsel`) with the text passed on stdin.
+The UI is served only on `127.0.0.1`, with an unguessable per-canvas token, exact host/origin checks, request limits and confined static-file serving. No remote scripts load. Agent-callable canvas actions cannot send prompts, grant consent or edit credentials. As with other local extensions, processes already running as your OS account are outside that web-origin boundary.

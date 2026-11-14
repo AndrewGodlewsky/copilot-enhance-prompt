@@ -1,7 +1,7 @@
 // Attaching files in the web panel: paste, drop or the paperclip. A frame has no path for a file, so
 // its bytes go to the worker in chunks (`attachments.put`), which keeps it in a temporary folder and
 // answers with the path the run then uses.
-import { plugin, read, set } from 'orca'
+import { plugin, read, set } from '#panel'
 import { t } from '../../src/i18n.ts'
 import { files, notice, message, put, type AttachedFile } from '../../src/panel/state.ts'
 import { ATTACHMENT_CHUNK_BYTES, MAX_ATTACHMENT_BYTES, MAX_IMAGE_BYTES, sizeOver } from '../../src/image-limits.ts'
@@ -9,7 +9,7 @@ import { ATTACHMENT_CHUNK_BYTES, MAX_ATTACHMENT_BYTES, MAX_IMAGE_BYTES, sizeOver
 export const MAX_FILES = 8
 export const MAX_FILE_BYTES = MAX_ATTACHMENT_BYTES
 /**
- * Raw bytes per request. Orca refuses a panel request larger than 64 KiB ("message too large"):
+ * Raw bytes per request. Copilot refuses a panel request larger than 64 KiB ("message too large"):
  * pieces of 768 KB (about 1 MB in base64) made every attachment fail. See src/image-limits.ts.
  */
 const CHUNK = ATTACHMENT_CHUNK_BYTES

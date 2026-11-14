@@ -1,5 +1,5 @@
 // Built-in prompt structures can be edited: a saved structure with a built-in's id replaces it.
-import { assert, test } from 'orca/testing'
+import { assert, test } from '#testing'
 import { allStructures, BUILT_IN_STRUCTURES, structureById } from './rules.ts'
 import { progressOf } from './worker.ts'
 

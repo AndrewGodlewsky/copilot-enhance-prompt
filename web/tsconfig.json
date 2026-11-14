@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
@@ -12,9 +16,26 @@
     "isolatedModules": true,
     "allowImportingTsExtensions": true,
     "baseUrl": ".",
-    "paths": { "@/*": ["./src/*"] },
-    "typeRoots": ["../.orca/types", "./node_modules/@types"],
-    "types": ["orca", "orca-host", "orca-frame", "orca-services", "node"]
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "#panel": [
+        "../src/runtime.ts"
+      ],
+      "#host": [
+        "../src/host.ts"
+      ]
+    },
+    "typeRoots": [
+      "./node_modules/@types"
+    ],
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src", "vite.config.ts", "orca-bridge.ts"]
+  "include": [
+    "src",
+    "vite.config.ts"
+  ]
 }

@@ -1,7 +1,7 @@
 // Your own rules for the rewriter (for every project or one), and prompt structures: the sections a
 // prompt is written in. Kept in the plugin's storage under RULES_KEY; the panel edits them, the worker
 // reads them for every run and for auto-enhance. No Node imports: both sides load this file.
-import type { JsonValue } from 'orca'
+import type { JsonValue } from '#panel'
 
 export const RULES_KEY = 'rules'
 // Rules are short and few in practice; this only guards storage against runaway growth.
@@ -12,7 +12,7 @@ export const MAX_SECTIONS = 12
 
 /**
  * `scope` says where a rule is followed: '' in every project, `project:<name>` in one project, or
- * (saved before 2.6.5) a workspace's name. A project is named by its repository's name in Orca: the
+ * (saved before 2.6.5) a workspace's name. A project is named by its repository's name in the host: the
  * workspace's own name is "main" for the first checkout of every project, so a rule kept under it
  * was followed in all of them.
  */
@@ -25,7 +25,7 @@ export const projectScope = (project: string) => `${PROJECT_SCOPE}${project.trim
 export const scopeName = (scope: string) => (scope.startsWith(PROJECT_SCOPE) ? scope.slice(PROJECT_SCOPE.length) : scope)
 /**
  * Where a run happens: the focused workspace's name and its project's name. The project is null
- * when it is not known which project this is (several share the workspace's name and Orca has not
+ * when it is not known which project this is (several share the workspace's name and Copilot has not
  * said which is open): a rule of one project is then followed in none.
  */
 export type RuleWhere = { workspace: string | null; project: string | null }

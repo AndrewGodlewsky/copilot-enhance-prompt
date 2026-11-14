@@ -1,7 +1,7 @@
 // History, Models, Rules and Settings (privacy) sections of the web panel: the panel's state and
 // actions (src/panel/*), drawn with shadcn/ReUI.
 import { Fragment, useState } from 'react'
-import { read, set, update } from 'orca'
+import { read, set, update } from '#panel'
 import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, RotateCcwIcon, CheckIcon, CopyIcon, DownloadIcon, EllipsisVerticalIcon, ExternalLinkIcon, PencilIcon, PlugZapIcon, PlusIcon, RefreshCwIcon, Settings2Icon, Trash2Icon } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { currentLanguage, t } from '../../src/i18n.ts'
@@ -89,6 +89,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { Field, Group, Hint, IconAction, Pick, Row, Section, Segmented } from './common'
 import { WorkspacePicker } from './enhance'
+import { UNSUPPORTED_SETTINGS } from '../../src/capabilities.ts'
+import { Preferences } from './preferences'
 
 const ago = (at: number) => {
   const minutes = Math.round((Date.now() - at) / 60_000)
@@ -403,7 +405,7 @@ export function ModelsSection() {
       {view.keysUnavailable ? (
         <Alert variant="warning">
           <AlertTitle>{t('API keys cannot be saved on this machine')}</AlertTitle>
-          <AlertDescription>{t('Orca found no key store here to keep them in. Use a key from an environment variable (the switch for it is in Settings), or a subscription CLI.')}</AlertDescription>
+          <AlertDescription>{t('Copilot found no key store here to keep them in. Use a key from an environment variable (the switch for it is in Settings), or a subscription CLI.')}</AlertDescription>
         </Alert>
       ) : null}
       <Section title={t('Your models')} hint={t('Models are tried top to bottom. Disabled models are skipped.')}>
@@ -661,7 +663,7 @@ export function RulesSection() {
 
 // ---------------------------------------------------------------- Settings (privacy)
 
-/** Choices offered for the amounts (a value set in Orca's Settings is added when it is not one of them). */
+/** Choices offered for the amounts (a value set in Copilot's Settings is added when it is not one of them). */
 const AGENT_CHOICES = [1, 2, 3, 4, 5, 6, 7, 8]
 const LINE_CHOICES = [10, 20, 40, 80, 120, 200, 300]
 const withValue = (choices: number[], value: number) => [...new Set([...choices, value])].sort((a, b) => a - b)
@@ -696,7 +698,7 @@ function OtherAgentsAmounts({ active }: { active: boolean }) {
 
 /**
  * "Send right after enhancing": a switch of the panel's own, drawn like the Privacy switches. It
- * turns on only from its dialog, and says so when "Send to terminals", which it needs, is off.
+ * turns on only from its dialog, and says so when "Send to Copilot", which it needs, is off.
  */
 function SendAfterRow({ onRead, onAsk }: { onRead: () => void; onAsk: () => void }) {
   const row = SEND_AFTER_ROW
@@ -715,7 +717,7 @@ function SendAfterRow({ onRead, onAsk }: { onRead: () => void; onAsk: () => void
           <button type="button" className="hover:text-foreground underline underline-offset-2" onClick={onRead}>
             {t('Risk and when to use it')}
           </button>
-          {on && !allowed('allowTerminalSend') ? <span className="text-warning-foreground mt-1 block">{t('It does nothing while "Send to terminals" is off.')}</span> : null}
+          {on && !allowed('allowTerminalSend') ? <span className="text-warning-foreground mt-1 block">{t('It does nothing while "Send to Copilot" is off.')}</span> : null}
         </>
       }
       control={<Switch checked={on} aria-label={t(row.label)} onCheckedChange={(value) => (value ? onAsk() : setSendAfterEnhance(false))} />}
@@ -789,7 +791,7 @@ function SwitchDialog({ keyName, confirm, onClose }: { keyName: string | null; c
   )
 }
 
-/** What auto-enhance did with the last prompt Orca sent, in one line (a prompt left as it was says why). */
+/** What auto-enhance did with the last prompt Copilot sent, in one line (a prompt left as it was says why). */
 function hookLastText(last: HookRecord): string {
   const when = ago(last.at)
   const agent = last.agent ?? t('an agent')
@@ -811,10 +813,11 @@ export function SettingsSection() {
   const hookOptions = hookModels()
   return (
     <div className="flex flex-col gap-4">
-      <Group title={t('Auto-enhance')} hint={t('Launch, task and orchestration prompts. Prompts you type yourself are never changed. The text for Rules is in Settings → Plugins → Enhance Prompt.')}>
+      <Preferences />
+      <Group title={t('Auto-enhance')} hint={t('Changes the text Copilot receives; the chat still shows your original message. Off by default. Ambiguous prompts are left unchanged.')}>
         <Row>
           <Segmented
-            label={t('Auto-enhance prompts Orca sends to agents')}
+            label={t('Auto-enhance Copilot session prompts')}
             value={prefs.autoEnhanceMode}
             options={[
               { value: 'off', label: t('Off') },
@@ -853,12 +856,13 @@ export function SettingsSection() {
       <Group
         key={group.id}
         title={t(group.title)}
-        hint={index === 0 ? t('Orca asks once for everything this plugin may do. These switches decide what it actually uses; the plugin checks them every time.') : undefined}
+        hint={index === 0 ? t('These switches control what Enhance Prompt reads, sends and stores. They are checked for every run.') : undefined}
       >
         {PRIVACY_ROWS.filter((row) => row.group === group.id).map((row) => {
+          const unavailable = UNSUPPORTED_SETTINGS.has(row.key)
           const needs = NEEDS_CONSENT.has(row.key)
           const on = flags[row.key] === true
-          // On in Orca's Settings but never confirmed here: the worker keeps it off until confirmed.
+          // On in Copilot's Settings but never confirmed here: the worker keeps it off until confirmed.
           const waiting = needs && on && !read(consents).includes(row.key)
           return (
             <Fragment key={row.key}>
@@ -866,12 +870,13 @@ export function SettingsSection() {
               title={
                 <span className="flex flex-wrap items-center gap-1.5">
                   {t(row.label)}
-                  {needs ? <Badge variant="outline">{t('asks to confirm')}</Badge> : null}
+                  {unavailable ? <Badge variant="outline">{t('Unavailable in Copilot')}</Badge> : needs ? <Badge variant="outline">{t('asks to confirm')}</Badge> : null}
                 </span>
               }
               description={
                 <>
-                  {t(row.hint)}{' '}
+                  {unavailable ? t('The current canvas SDK does not provide this capability.') : t(row.hint)}{' '}
+                  {!unavailable ? <>
                   <button type="button" className="hover:text-foreground underline underline-offset-2" onClick={() => setReading(row.key)}>
                     {t('Risk and when to use it')}
                   </button>
@@ -884,10 +889,12 @@ export function SettingsSection() {
                       </Button>
                     </span>
                   ) : null}
+                  </> : null}
                 </>
               }
               control={
                 <Switch
+                  disabled={unavailable}
                   checked={on && !waiting}
                   aria-label={t(row.label)}
                   onCheckedChange={(value) => {
@@ -911,8 +918,8 @@ export function SettingsSection() {
       <Group title={t('Notifications')}>
         <Row
           title={t('Notify when a long enhance finishes')}
-          description={t('A desktop notification when a run takes more than 8 s. It names the model and the time, never your prompt.')}
-          control={<Switch checked={prefs.notifyWhenDone} aria-label={t('Notify when a long enhance finishes')} onCheckedChange={(value) => void setSetting('notifyWhenDone', value)} />}
+          description={t('The current canvas SDK does not provide this capability.')}
+          control={<Switch disabled checked={false} aria-label={t('Notify when a long enhance finishes')} />}
         />
       </Group>
       <SwitchDialog
@@ -928,7 +935,7 @@ export function SettingsSection() {
           [
             [t('History'), data.history, () => void clearData('history'), t('Clear history')],
             [t('Saved models'), data.profiles, null, ''],
-            [t('API keys (encrypted by Orca)'), data.keys, null, ''],
+            [t('API keys (protected by Windows)'), data.keys, null, ''],
             [t('Cached model lists'), data.catalogs, () => void clearData('catalogs'), t('Clear model lists')]
           ].map(([label, value, clear, clearLabel]) => (
             <Row

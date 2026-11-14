@@ -1,7 +1,7 @@
 // testing.ts: the panel for tests. Its state, actions and wiring (state.ts, actions.ts, view.ts,
-// setup.ts) run on Orca's panel runtime with nothing drawn: a test calls the actions and reads the
-// atoms, which is the code the web panel (web/src) runs under its buttons. Orca never loads this file.
-import { mount, type MockHost, type MountOptions, type TestPanel } from 'orca/testing'
+// setup.ts) run on Copilot's panel runtime with nothing drawn: a test calls the actions and reads the
+// atoms, which is the code the web panel (web/src) runs under its buttons. Copilot never loads this file.
+import { mount, type MockHost, type MountOptions, type TestPanel } from '#testing'
 import { closePanel, wirePanel } from './setup.ts'
 
 /**

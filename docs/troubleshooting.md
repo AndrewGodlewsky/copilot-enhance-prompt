@@ -1,112 +1,15 @@
-# Troubleshooting & FAQ
+# Troubleshooting
 
-## I can't find the panel
+**Canvas missing:** check Customize for both the plugin and extension. Restart the session after installing or updating. The desktop runtime must support canvas extensions; ordinary editor Copilot integrations do not host this package.
 
-- Press `Ctrl+L` (`⌘L` on macOS) to open the right sidebar, then click the **lightbulb** tab.
-- Make sure the plugin is enabled under **Settings → Plugins → Enhance Prompt**.
+**Canvas fails to load:** rebuild with `npm run build`, then update the local plugin. Inspect the extension's logs through Copilot. A stale canvas should reconnect after extension reload; close and reopen if needed. The SDK is experimental, so report the installed app/runtime version with an issue.
 
-## Where do I update it?
+**No rewriting model:** add one in Models. The plugin does not automatically consume Copilot's selected chat model. A subscription CLI must already be installed and signed in.
 
-It depends on how you installed it.
+**API key unavailable:** Windows DPAPI protects saved keys for the current Windows account. Moving encrypted files to another account will not decrypt them. On other platforms use a subscription CLI or an environment key the host makes available.
 
-- **From the catalog** (Settings → Plugins, or **Open in Orca**): Orca updates it by itself while its setting **Update plugins automatically** is on. A new version installs about 12 hours after Orca first sees it in the catalog; Orca looks at startup and every 6 hours. To have it sooner, open **Settings → Plugins → Enhance Prompt** and click **Update**.
-- **From the GitHub link** (`orca plugin install cattfan/orca-enhance-prompt`, or the repository's address): Orca never updates it by itself. Run the command below, or install the same link again: both move it to the newest release.
+**Send refused:** finish the current turn or answer Copilot's pending question in Copilot itself. Then try Send again. The plugin cannot override a blocked session. A canvas stays bound to the session that opened it.
 
-```bash
-orca plugin update cattfan.enhance-prompt
-# If it prints an --approve command, run that command to confirm.
-```
+**No project context:** confirm the session has a local working directory and that project/Git reads are enabled. Remote workspaces and inaccessible paths are omitted. Context level Off intentionally sends only your prompt and chosen instructions.
 
-An update that asks for nothing new keeps your approval. One that adds commands or settings waits for you: Orca shows **Update needs review**, and the command above prints what it asks for instead of installing. Open the plugin and approve it.
-
-## It asks which folder the project is in
-
-Orca tells a plugin the open workspace's name and branch, not its folder. When several of your projects share both (every project's first checkout is "main" on "main"), that is not enough to tell them apart.
-
-- The plugin knows the folder as soon as an agent has run in one of that workspace's terminals: Orca reports which workspace an agent's terminal is in, and the plugin remembers it.
-- Until then it asks once. Pick the project in the list (each entry is the project's name and its folder); the answer is kept for that workspace's terminals.
-- Before 2.6.4 it kept asking, also in a project you had already picked: update the plugin.
-
-## The status bar menu has no entry for Enhance Prompt
-
-Orca's status bar right-click menu lists only Orca's own items. Use **Status bar item** in [Settings](settings.md#status-bar), or the command **Enhance Prompt: Show / hide status bar item**.
-
-## "No model yet" or "No API key yet"
-
-Open the **Models** tab and add a model: click a CLI under **Use your subscription**, or **Add model** with an API key. See [Models](models.md).
-
-## A subscription CLI fails
-
-- Run it once in a terminal (`claude`, `codex`, `gemini`) and sign in. An error ending in "run it once in a terminal to sign in" means exactly that.
-- "was not found": Orca can't see the CLI on its `PATH`. Edit the model and set the full path in **Command** (for example `~/.local/bin/claude`).
-- A quota or rate-limit error comes from your plan. With [fallback](models.md#fallback), the next model answers.
-
-## "… did not answer within … s"
-
-The model took longer than the run could wait. A run in the panel may take up to 5 minutes in all (it is not held to the 2 minutes Orca gives one request: the panel keeps asking until the prompt is there, and **Cancel** stops it at any time). A model with another one after it gets **Timeout per model** (60 s by default, in [Settings](settings.md#models)) so the next still has time, and the last one to try gets what is left.
-
-- Press **Try again**: a model that usually answers in half a minute can be slow for one run.
-- Pick a lower context level (the Max level sends the most), or a faster model for this prompt.
-- With several models, raise **Timeout per model** if the first one is cut too early.
-
-## "… reached its limit of … tokens before it finished"
-
-The answer stopped at the model's **Max tokens**. Models that think before they answer use part of that limit for thinking. Open the model in the **Models** tab (⋮ → **Edit**) and raise **Max tokens**; models added before 2.5.4 were created with 2,000, new ones get 8,000.
-
-## The model list is empty or old
-
-- API presets need a key before they can list models: paste it in the form, or save it and reopen.
-- Click **Refresh model list** (↻). Lists are cached for a day.
-- You can always pick **Other (type the id)…**.
-
-## The prompt names the wrong files
-
-- Use **Deep** or **Max** and write the names you know, such as `` `LoginForm` `` or `src/auth/`.
-- Untick unrelated items in the context list (**Options**) and enhance again.
-- For a remote (SSH or WSL) workspace, project files are not readable; see [Remote workspaces](context-levels.md#remote-workspaces).
-
-## Sending puts each line in a separate message
-
-Your agent's terminal doesn't support bracketed paste. Set **How to send multi-line prompts** to **Single line** in [Settings](settings.md#sending).
-
-## Auto-enhance does nothing
-
-- It only changes prompts Orca sends (launch, task, orchestration). Prompts you type are never hooked.
-- In AI mode, the hook model must answer within 2 seconds, and CLI models are skipped. The panel's **Settings** section says, under the mode, what happened to the last prompt and why; the same is in `orca plugin logs cattfan.enhance-prompt`.
-- A prompt you started an agent with from the panel is left alone on purpose: it is enhanced already.
-
-## "API keys cannot be saved on this machine"
-
-Orca keeps a plugin's keys in the system's key store, and found none here (some Linux setups have none). The Models tab says so, and saving a model with a key answers "Orca could not store the API key". Put the key in an environment variable instead (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`…, with **Use API keys from environment variables** on), or use a subscription CLI, which needs no key.
-
-## Send says the agent "is waiting for an answer from you"
-
-The agent in that terminal asked you something (a permission, a question), and whatever is typed now could be taken as the answer. Answer it in the terminal first, or press **Type it without Enter** in the note: the prompt is put in its input and you press Enter when it is ready.
-
-## "Not sent by itself"
-
-With **Send right after enhancing** on, a prompt goes to the agent unread, so the panel sends it only when nothing is in doubt, and says which doubt it was otherwise. The enhanced prompt is in the box either way: read it and press **Send**.
-
-| The note says | What it means |
-| --- | --- |
-| Orca could not tell which project this is | Several projects share this workspace's name and branch, and Orca had not yet said which one this is. Pick its folder when the panel asks; once an agent of the project has reported in, it is known. |
-| The project in focus changed while it ran | You opened another project before the prompt was ready. It waits in the project it was written in. |
-| The terminal picked when you started is closed or no longer the one picked | The prompt was written for that terminal, so it is not sent to another one. |
-| … is a plain terminal, not an agent | A shell would run the prompt's first line as a command. |
-| … is still working / is waiting for an answer from you | A working agent can ask for an answer at any moment, and what is typed then could be taken as that answer. |
-| Orca does not say whether … is idle | The agent has not reported a state yet. |
-| The text changed while it ran | You edited the request or the result meanwhile, so the result is no longer the one for the box. |
-
-## Save as a file does nothing
-
-Orca shows its save dialog only right after a press in the panel, and only in the desktop app. If the dialog does not open, the panel says "The file could not be saved"; press the button again. A dialog you close without saving leaves no note.
-
-## The status bar's tooltip is in English
-
-With the panel's language on **Auto**, the tooltip follows Orca's language once the panel has opened (the panel tells the plugin which language Orca runs in). Open the panel once, or pick a language in the menu at its top.
-
-## Where are the logs?
-
-```bash
-orca plugin logs cattfan.enhance-prompt
-```
+**Feature unavailable:** the current adapter does not read terminal scrollback, inspect other agents, launch separate CLI agents, observe editor saves, open editor tabs or show native notifications. Their controls are disabled. Copy and download remain available.

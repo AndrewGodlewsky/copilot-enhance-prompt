@@ -1,6 +1,6 @@
 // view.ts: what the panel shows, as plain data (labels, options, progress text, the small decisions
 // about what to offer). The web panel (web/src) draws it; the tests check it.
-import { read, set } from 'orca'
+import { read, set } from '#panel'
 import { CONTEXT_LEVEL_LABELS, CONTEXT_LEVELS, isContextLevel, type ContextItemView, type ProfileView } from '../presets.ts'
 import { isStyle, STYLE_LABELS, STYLES } from '../prompts.ts'
 import { t } from '../i18n.ts'
@@ -21,9 +21,9 @@ export const SECTION_LABELS: Record<string, string> = { history: 'History', mode
 
 /** What each auto-enhance mode does, said under its switch. */
 export const AUTO_MODE_HINTS: Record<string, string> = {
-  off: 'Prompts Orca sends to agents go out as they are.',
-  rules: 'Adds your fixed text to the end of each prompt Orca sends to an agent. Instant, no model. The text is in Orca Settings → Plugins → Enhance Prompt.',
-  ai: 'A fast API model rewrites each prompt Orca sends to an agent (a new agent with a task, the task board, orchestration). Orca waits at most 2 s, then sends the original.'
+  off: 'Copilot prompts are left unchanged.',
+  rules: 'Appends the text from Prompt preferences when Copilot invokes the prompt hook. No model call.',
+  ai: 'A fast API model rewrites hooked prompts with a two-second budget. Failures preserve the original. Prompts sent from this panel are skipped.'
 }
 
 export const UI_LANGUAGE_LABELS: Record<string, string> = { auto: 'Auto', en: 'EN', vi: 'VI', zh: '中文' }
@@ -174,7 +174,7 @@ export function stepShare(entry: Step, now: number): string {
 /** The word before ":" in a level label: "Deep: + git…" → "Deep". */
 export const shortLabel = (label: string) => label.split(/[:：]/)[0].trim()
 
-/** An agent's state as Orca reports it, in words for the terminal picker. */
+/** An agent's state as the host reports it, in words for the terminal picker. */
 export const AGENT_STATE_LABELS: Record<string, string> = { working: 'working', blocked: 'needs you', waiting: 'waiting', done: 'done' }
 
 /** A terminal as the picker and the notices name it: an agent by its title and its state, in the panel's language. */
@@ -368,24 +368,24 @@ export const PRIVACY_ROWS: SwitchRow<PrivacyKey>[] = [
     key: 'allowAgentActivity',
     group: 'reads',
     label: 'Watch what agents do',
-    hint: 'Deep and Max levels: each tool an agent runs in Orca (its name and its target: a file path or a command, never its output) and how sessions end. Kept in memory for 45 minutes, never saved to disk.',
-    risk: 'Tool names, file paths and command lines of every agent in Orca are kept in memory and sent with Deep and Max prompts. A command line can carry more than you expect.',
+    hint: 'Deep and Max levels: each tool an agent runs in Copilot (its name and its target: a file path or a command, never its output) and how sessions end. Kept in memory for 45 minutes, never saved to disk.',
+    risk: 'Tool names, file paths and command lines of every agent in Copilot are kept in memory and sent with Deep and Max prompts. A command line can carry more than you expect.',
     when: 'On when prompts should follow on from what the agents just did. Off when command lines may hold secrets.'
   },
   {
     key: 'allowEditorSaves',
     group: 'reads',
     label: 'Notice files you save',
-    hint: "Deep and Max levels: the paths of files you save in Orca's editor (never their text), kept in memory for 45 minutes; they rank first in the code search.",
+    hint: "Deep and Max levels: the paths of files you save in Copilot's editor (never their text), kept in memory for 45 minutes; they rank first in the code search.",
     risk: 'Only paths are noted, never the text of a file. A path can still say what you are working on.',
-    when: 'On when you edit in Orca and want those files found first. It changes nothing if you edit elsewhere.'
+    when: 'On when you edit in Copilot and want those files found first. It changes nothing if you edit elsewhere.'
   },
   {
     key: 'allowTerminalSend',
     group: 'acts',
-    label: 'Send to terminals',
-    hint: 'Type the prompt into the terminal you pick when you click Send. Off: use Copy instead.',
-    risk: 'Text is typed into a terminal for you, and with Enter on the agent starts on it at once. An agent that is waiting for an answer from you is never typed into unasked.',
+    label: 'Send to Copilot',
+    hint: 'Send a new message to the attached Copilot session when you click Send. Off: use Copy instead.',
+    risk: 'Send starts a new Copilot turn. Busy, blocked, disconnected and unknown sessions refuse the message.',
     when: 'On for the normal flow. Off to be sure nothing is ever typed for you: Copy still works.'
   },
   {
@@ -399,17 +399,17 @@ export const PRIVACY_ROWS: SwitchRow<PrivacyKey>[] = [
   {
     key: 'allowOpenFiles',
     group: 'acts',
-    label: 'Open files in Orca',
+    label: 'Open files in Copilot',
     hint: 'Clicking a file in the context list opens it in an editor tab.',
-    risk: "An editor tab opens in Orca's window. Nothing is read or changed by it.",
-    when: 'On to look at what was read before you send. Off if the panel should never change what Orca shows.'
+    risk: "An editor tab opens in Copilot's window. Nothing is read or changed by it.",
+    when: 'On to look at what was read before you send. Off if the panel should never change what Copilot shows.'
   },
   {
     key: 'saveHistory',
     group: 'keeps',
     label: 'Save history',
     hint: 'Keep your prompts and enhanced prompts in the History tab, on this machine only.',
-    risk: "Your prompts and the enhanced prompts are kept as plain text in Orca's data for this plugin, and so are the draft and the result of each project.",
+    risk: "Prompts, results and context are saved as plain text in the plugin data folder. Drafts are separated by Copilot session.",
     when: 'On to reuse earlier prompts and to find your draft again after a restart. Off on a shared machine, or when prompts hold things that must not be kept.'
   },
   {
@@ -433,14 +433,14 @@ export const PRIVACY_ROWS: SwitchRow<PrivacyKey>[] = [
 /**
  * "Send right after enhancing": drawn like the switches above, under "What it may do", and it always
  * asks to confirm. The panel keeps it itself (state.ts: sendAfterEnhance): a new setting in the
- * manifest would make Orca ask every user to approve the update again.
+ * manifest would make the host ask every user to approve the update again.
  */
 export const SEND_AFTER_ROW: SwitchRow<'sendAfterEnhance'> = {
   key: 'sendAfterEnhance',
   group: 'acts',
   label: 'Send right after enhancing',
-  hint: 'Ctrl+Enter, or the button next to Enhance, enhances the prompt and types it into the agent in one go, without showing it to you first. Enter alone still stops at the result. Off until you turn it on.',
-  risk: 'The agent gets a prompt you have not read. A model can misread a request, add a step you did not ask for, or answer with something that is not a prompt at all; with Enter on, the agent starts on it at once.',
+  hint: 'Ctrl+Enter, or the button next to Enhance, enhances and sends a new Copilot message without review. Enter alone stops at the result. Off until you turn it on.',
+  risk: 'Copilot acts on a prompt you have not read. A model can misunderstand your request or add an unwanted step.',
   when: 'On for small, low-risk requests, with an agent that asks before it does anything hard to undo. Leave it off when the agent runs with wide permissions, or when a wrong instruction would be costly.'
 }
 
@@ -453,10 +453,10 @@ export const switchRow = (key: string | null): SwitchRow | null => [...PRIVACY_R
  */
 export const DISCLOSURES: Partial<Record<PrivacyKey | 'sendAfterEnhance', string[]>> = {
   sendAfterEnhance: [
-    'Adds a second button next to Enhance, and changes what Ctrl+Enter does in the composer: the prompt is enhanced and the result is typed into the terminal you picked, with or without Enter as your Enter switch says. Enter alone still only enhances.',
-    'It sends by itself only when the terminal is still open and still the one picked, Orca can tell which project this is and it is the one you started in, the agent there is idle (not working, not waiting for an answer from you), and you did not change the text meanwhile.',
+    'Adds a second button next to Enhance. Ctrl+Enter enhances the prompt and sends the result as a new Copilot message. Enter alone only enhances.',
+    'Automatic sending requires the same attached session and project, an idle session, and unchanged input. Closing or cancelling the run prevents sending.',
     'Whenever one of these does not hold, nothing is sent: the result stays in the composer with a note that says why, and you send it yourself.',
-    'It needs "Send to terminals" to be on, and the checks of that switch still apply.'
+    'It needs "Send to Copilot" to be on, and the checks of that switch still apply.'
   ],
   allowOtherAgents: [
     'Reads which other agents run in this workspace (kind, title, state) and the last lines of each one\'s terminal, every time you enhance at the Max level: as many agents and lines as you set below the switch (4 agents and 80 lines by default, at most 8 and 300).',
@@ -465,8 +465,8 @@ export const DISCLOSURES: Partial<Record<PrivacyKey | 'sendAfterEnhance', string
     'Nothing of it is saved by the plugin. You can untick it in the context list for one run, or turn this switch off at any time.'
   ],
   allowAgentActivity: [
-    'Orca tells the plugin each tool an agent runs in its terminals: the tool name and what it acted on (a file path, a command line, a search pattern or a URL), never the tool\'s output. Orca also tells it when a session finishes and how.',
-    'This is kept in the plugin\'s memory only, for 45 minutes and 60 entries per workspace, and forgotten when you turn this off, delete everything, or Orca restarts.',
+    'Copilot tells the plugin each tool an agent runs in its terminals: the tool name and what it acted on (a file path, a command line, a search pattern or a URL), never the tool\'s output. Copilot also tells it when a session finishes and how.',
+    'This is kept in the plugin\'s memory only, for 45 minutes and 60 entries per workspace, and forgotten when you turn this off, delete everything, or Copilot restarts.',
     'At the Deep and Max levels, the recent entries of the focused workspace are sent with your prompt to the model you run. Command lines are masked for obvious keys and passwords.',
     'The plugin only watches: it never changes or blocks what an agent does.'
   ],
@@ -477,8 +477,8 @@ export const DISCLOSURES: Partial<Record<PrivacyKey | 'sendAfterEnhance', string
   ]
 }
 
-/** The plugin's issue page, in the browser (Orca asks before opening a site the first time). */
-export const ISSUES_URL = 'https://github.com/cattfan/orca-enhance-prompt/issues/new'
+/** The plugin's issue page, in the browser (the host asks before opening a site the first time). */
+export const ISSUES_URL = 'https://github.com/AndrewGodlewsky/copilot-enhance-prompt/issues/new'
 
 /**
  * The note that asks for ideas and feedback: first once someone has enhanced this many prompts (they

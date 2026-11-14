@@ -1,225 +1,123 @@
-<h1 align="center">
-  <img src="assets/icon.png" alt="Enhance Prompt" width="64" valign="middle" /> Enhance Prompt
-</h1>
+# Enhance Prompt for GitHub Copilot
 
-<p align="center">
-  <a href="https://github.com/cattfan/orca-enhance-prompt/releases"><img src="https://img.shields.io/github/v/release/cattfan/orca-enhance-prompt?style=flat&amp;label=release&amp;color=08C" alt="Latest release" /></a>
-  <a href="https://orca.dev/plugins/cattfan/orca-enhance-prompt"><img src="https://img.shields.io/badge/Orca-plugin-4493F8?style=flat" alt="Orca plugin" /></a>
-  <img src="https://img.shields.io/badge/license-MIT-08C?style=flat" alt="License: MIT" />
-  <img src="https://img.shields.io/badge/macOS%20%7C%20Windows%20%7C%20Linux-4493F8?style=flat-square" alt="Supported platforms: macOS, Windows, and Linux" />
-</p>
+Turn a rough request into a clear prompt using the project's files, rules and Git changes. Review the result in a native GitHub Copilot desktop canvas, then send it to that canvas's attached session.
 
-<p align="center">
-  <sub><a href="docs/readme/README.vi.md">Tiếng Việt</a> · <a href="docs/readme/README.zh-CN.md">中文</a></sub>
-</p>
+[![End-to-end flow: user text and allowed context become a rewrite request; the configured model returns a prompt for review and delivery to Copilot. A separate optional hook transforms chat prompts.](docs/assets/prompt-workflow.svg)](docs/assets/prompt-workflow.svg)
 
-<p align="center">
-  <strong>Rough idea in, project-aware prompt out.</strong><br/>
-  An <a href="https://github.com/stablyai/orca">Orca</a> plugin that rewrites what you want into a clear prompt grounded in your repo's real files, rules and commands, then sends it straight to Claude Code, Codex, or any agent terminal.
-</p>
+[Read the complete workflow and editable diagrams](docs/prompt-workflow.md). The rewriting model produces the task prompt; Copilot receives that prompt and does the work. Optional chat auto-enhance changes the model-facing text while the visible chat keeps your original message.
 
-<h3 align="center"><a href="#install"><ins>Install Enhance Prompt</ins></a></h3>
+The React panel retains model chains and fallback, prompt styles, reusable rules and structures, attachments, context preview, history, and English, Vietnamese and Chinese translations. Copilot is the destination; rewriting uses the API or subscription CLI models you configure in **Models**.
 
-<p align="center"><a href="https://orca.dev/plugins/cattfan.enhance-prompt?catalog=community"><img src="https://img.shields.io/badge/Open%20in%20Orca-community%20catalog-4493F8?style=for-the-badge" alt="Open in Orca" /></a></p>
+[Tiếng Việt](docs/readme/README.vi.md) · [简体中文](docs/readme/README.zh-CN.md) · [User guide](docs/user-guide.md) · [Changes](CHANGELOG.md)
 
-<p align="center">
-  <img src="assets/cover.jpg" alt="The Enhance Prompt panel turning “login page is broken on mobile” into a structured bug-fix prompt that names the files and the test command" width="960" />
-</p>
+## Download and install
 
-## Features
+**Development preview, version 0.1.0.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub or download a local copy using the instructions below. The package includes the root `plugin.json` and `com.github.copilot/` directory.
 
-<table>
-<tr>
-<td width="50%" valign="middle">
+### Requirements
 
-### Enhance and Send
+- [GitHub Copilot desktop](https://github.com/features/copilot) with canvas extension support, signed in to your account. This port targets the experimental SDK bundled with the Windows app on November 14, 2026.
+- Node.js **22.18 or newer** on `PATH`; the packaged chat hook starts `node`.
+- Copilot CLI available as `copilot` for the command-line installation below. If the command is missing, follow [GitHub's CLI setup instructions](https://docs.github.com/en/copilot/how-tos/copilot-cli/cli-getting-started).
+- One rewrite model: an API provider, a local model endpoint, or an installed and authenticated subscription CLI. Configure it after installation. External API costs belong to that provider, separately from Copilot.
 
-Write what you want in a sentence. Enhance rewrites it into a prompt with a goal, requirements and a clear "done when", then sends it to the agent terminal you pick, without pressing Enter until you say so.
+Windows supports encrypted saved API keys through DPAPI. On other systems, use a key available in the extension's environment or a subscription CLI; saved keys are unavailable. Desktop environments may omit shell environment variables. Other platforms have not been verified.
 
-[Docs →](docs/getting-started.md)
+### Get the plugin folder
 
-</td>
-<td width="50%">
-  <a href="docs/getting-started.md"><img src="docs/assets/readme-features/enhance-and-send.jpg" alt="A one-line request and the enhanced prompt it became, with the terminal to send it to" width="100%" /></a>
-</td>
-</tr>
-<tr>
-<td width="50%" valign="middle">
+If you already have this Copilot checkout, use it directly. Otherwise, [download the main branch as a ZIP](https://github.com/AndrewGodlewsky/copilot-enhance-prompt/archive/refs/heads/main.zip) and extract it, or clone it with Git:
 
-### Grounded in Your Repo
-
-Five context levels, from the prompt alone to your agent rules, stack, git changes and the code that matches the request. See every item that was sent, and untick what you don't want.
-
-[Docs →](docs/context-levels.md)
-
-</td>
-<td width="50%">
-  <a href="docs/context-levels.md"><img src="docs/assets/readme-features/project-context.jpg" alt="The options: style, context level, output language and structure, then every item of context sent, from the workspace and AGENTS.md to git changes and two relevant files" width="100%" /></a>
-</td>
-</tr>
-<tr>
-<td width="50%" valign="middle">
-
-### Use Your Subscription
-
-Claude Code, Codex and Gemini CLI are detected on your machine and added in one click. Enhance runs them one-shot on the plan you already pay for. No API key.
-
-[Docs →](docs/models.md#subscription-clis)
-
-</td>
-<td width="50%">
-  <a href="docs/models.md#subscription-clis"><img src="docs/assets/readme-features/subscription.jpg" alt="The Models tab: Claude Code on your subscription, an OpenAI key, and Codex found on this machine, to add without an API key" width="100%" /></a>
-</td>
-</tr>
-<tr>
-<td width="50%" valign="middle">
-
-### Any Model, With Fallback
-
-Add OpenAI, Anthropic, OpenRouter, Gemini, Groq, DeepSeek, Mistral, Ollama, LM Studio or any OpenAI-compatible endpoint. Model lists stay current on their own. When one model fails, the next one answers.
-
-[Docs →](docs/models.md)
-
-</td>
-<td width="50%">
-  <a href="docs/models.md"><img src="docs/assets/readme-features/models-fallback.jpg" alt="A result in the dark theme that fell back to the next model after the first one failed" width="100%" /></a>
-</td>
-</tr>
-<tr>
-<td width="50%" valign="middle">
-
-### English, Tiếng Việt, 中文
-
-The panel follows Orca's language or your pick. The enhanced prompt can be written in the language of your request, or in English, Vietnamese or Chinese, per prompt.
-
-[Docs →](docs/settings.md#language)
-
-</td>
-<td width="50%">
-  <a href="docs/settings.md#language"><img src="docs/assets/readme-features/languages.jpg" alt="The panel in Vietnamese next to the history tab in Chinese" width="100%" /></a>
-</td>
-</tr>
-<tr>
-<td width="50%" valign="middle">
-
-### History
-
-Every enhanced prompt is kept with its style and model. Search it, open it again, or copy it.
-
-[Docs →](docs/getting-started.md#5-reuse-from-history)
-
-</td>
-<td width="50%">
-  <a href="docs/getting-started.md#5-reuse-from-history"><img src="docs/assets/readme-features/history.jpg" alt="The History tab with five past prompts" width="100%" /></a>
-</td>
-</tr>
-</table>
-
-**Also in the box:**
-
-- **[Files and screenshots](docs/user-guide.md#2-attach-files-and-screenshots)**: paste a screenshot, drop files or attach them; models that read images see them, text files join the context (a long one as its beginning and its end), and the prompt lists every path for the agent.
-- **[Your rules and prompt structures](docs/rules-and-fixes.md)**: rules for the project you are in, and the headings you want prompts written under (the built-in ones can be edited).
-- **[What's new](docs/user-guide.md#8-whats-new)**: click the version in the panel for this version's notes and the full changelog.
-- **[Auto-enhance](docs/auto-enhance.md)**: rewrite the prompts Orca itself sends to agents (launch, task and orchestration prompts), with your rules or a fast model.
-- **[Agent-aware prompts](docs/context-levels.md#agent-aware-prompts)**: shaped for Claude Code, Codex, Gemini CLI or Aider when you pick the target terminal.
-- **[Nine styles](docs/getting-started.md#styles)**: Balanced, Concise, Detailed spec, Bug fix, New feature, Refactor, Code review, Plan first, or only your own instructions.
-- **[See the context](docs/context-levels.md#see-what-is-sent)**: the options list what would be sent before any model is called.
-- **[In one go](docs/user-guide.md#in-one-go-enhance-and-send-without-reading)**: for small requests, one press enhances the prompt and sends it to the agent. Off until you turn it on, and it holds a prompt back whenever the terminal, the project or the agent's state is in doubt.
-- **[Keep a prompt](docs/user-guide.md#1-write-enhance-send)**: save an enhanced prompt, or the history you see, as a Markdown file.
-- **[Safe by default](docs/privacy.md)**: `.env` files, keys and credentials are never read; prompts go only to the models you set up.
-
----
-
-## Supported Models
-
-Works with **your subscription CLI** or **any API key**.
-
-<p>
-  <kbd>Claude Code (Pro / Max)</kbd> &nbsp;
-  <kbd>Codex CLI (ChatGPT)</kbd> &nbsp;
-  <kbd>Gemini CLI (Google)</kbd> &nbsp;
-  <kbd>OpenAI</kbd> &nbsp;
-  <kbd>Anthropic</kbd> &nbsp;
-  <kbd>OpenRouter</kbd> &nbsp;
-  <kbd>Google Gemini</kbd> &nbsp;
-  <kbd>Groq</kbd> &nbsp;
-  <kbd>DeepSeek</kbd> &nbsp;
-  <kbd>Mistral</kbd> &nbsp;
-  <kbd>Ollama</kbd> &nbsp;
-  <kbd>LM Studio</kbd> &nbsp;
-  <kbd>+ any OpenAI-compatible endpoint or stdin CLI</kbd>
-</p>
-
----
-
-## Install
-
-### From Orca
-
-**[Open in Orca](https://orca.dev/plugins/cattfan.enhance-prompt?catalog=community)** takes you straight to the plugin's page in Orca. Or by hand:
-
-1. Open **Settings → Plugins**. Once, add the community catalog with **Add marketplace**: URL `https://github.com/stablyai/orca-community-plugins.git`, ref `main`. Turn on the setting that allows full-access plugins.
-2. Search for **Enhance Prompt** and click **Install**.
-3. Review what it asks for and approve it.
-4. Open the right sidebar with `Ctrl+L` (`⌘L` on macOS) and click the **lightbulb** tab. Clicking **Enhance** in the status bar does the same.
-
-### From the CLI
-
-```bash
-orca plugin install cattfan/orca-enhance-prompt
-# Update later
-orca plugin update cattfan.enhance-prompt
+```sh
+git clone --branch main https://github.com/AndrewGodlewsky/copilot-enhance-prompt.git
 ```
 
-Installed this way, the plugin comes straight from this repository and Orca does not update it by itself: run the update command when a new version is out. Installed from Orca's catalog, it updates by itself. See [Where do I update it?](docs/troubleshooting.md#where-do-i-update-it)
+Built extension and panel files are included; users do not need `npm install` or a build step.
 
-Then follow **[Your first enhanced prompt](docs/getting-started.md)**.
+### Add the local marketplace, then install
 
-> [!NOTE]
-> Requires Orca 1.4.248 or later.
+Open PowerShell in the extracted repository root, the folder containing `plugin.json`. Run:
 
----
+```powershell
+copilot plugin marketplace add (Get-Location).Path
+copilot plugin install enhance-prompt@copilot-enhance-prompt
+copilot plugin list
+```
 
-## Docs
+The first command registers the marketplace. The second installs and enables the plugin. Check that `enhance-prompt` appears in the list. From another shell, replace `(Get-Location).Path` with the quoted absolute path to the folder.
 
-| Page | What's in it |
+Keep that folder: plugins installed from a local marketplace load directly from it. To use changes, start a new session or restart the existing one. [GitHub's plugin command reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference).
+
+### Install from GitHub
+
+You can add the repository without downloading it yourself:
+
+```sh
+copilot plugin marketplace add AndrewGodlewsky/copilot-enhance-prompt
+copilot plugin install enhance-prompt@copilot-enhance-prompt
+```
+
+To select a published branch or tag, use `"AndrewGodlewsky/copilot-enhance-prompt#COPILOT_REF"` as the marketplace source. Use either the local or GitHub marketplace source for this name; you do not need both.
+
+The desktop route is **Customize → marketplace settings** next to the marketplace dropdown. Add `https://github.com/AndrewGodlewsky/copilot-enhance-prompt.git`, find **Enhance Prompt** under Browse, and click **Install**. [GitHub's desktop installation guide](https://docs.github.com/en/copilot/how-tos/github-copilot-app/customize-github-copilot-app#adding-plugins).
+
+### Open the canvas
+
+In **Customize → Installed**, check that Enhance Prompt is enabled. Open a session for your project, then ask Copilot to **open the installed Enhance Prompt canvas**. You can also look for it in Customize's Canvas view. Use the installed canvas, rather than `/create-canvas`, which creates a new extension. Start a new session if the newly installed extension has not appeared. [Canvas documentation](https://docs.github.com/en/copilot/how-tos/github-copilot-app/working-with-canvas-extensions).
+
+To update a local install, replace or update the files in its existing folder and start a new session; rebuild first if you changed source code. For a GitHub install, run `copilot plugin update enhance-prompt@copilot-enhance-prompt`. Remove either installation with `copilot plugin uninstall enhance-prompt@copilot-enhance-prompt`.
+
+## Use it
+
+1. In **Models**, add an API provider, local model, custom CLI, or detected subscription CLI. API calls use that provider's account and billing; installing this plugin does not give them access to your Copilot subscription.
+2. Write a prompt and select its style and context level. Preview the context, exclude items, and attach files when useful.
+3. Click **Enhance**. Progress reports the context and model steps; Cancel stops the run.
+4. Review or edit the result. **Send** submits a new message to the attached Copilot session. **Copy** keeps the handoff manual. File exports start a browser download.
+
+Send refuses busy, blocked, queued, disconnected or unknown sessions. It never answers a pending permission request. Copilot's SDK has no atomic “send only if still idle” operation: the plugin checks immediately before sending and uses the normal queue, never immediate steering. If work starts between those operations, the message waits in the queue.
+
+**Send right after enhancing** is optional, off by default, and requires its confirmation dialog. It checks that the session, project and input are unchanged and that the session is idle. [Details](docs/settings.md).
+
+## Platform differences
+
+| Capability | Copilot behavior |
 | --- | --- |
-| [User guide](docs/user-guide.md) | Every feature with pictures: enhance and send, files and screenshots, progress, options, rules, models, history, what's new |
-| [Your first enhanced prompt](docs/getting-started.md) | Open the panel, add a model, enhance, send |
-| [Context levels](docs/context-levels.md) | What each level reads and how to control it |
-| [Models](docs/models.md) | Subscription CLIs, API keys, live model lists, fallback |
-| [Rules and prompt structures](docs/rules-and-fixes.md) | Your rules, prompt headings (editable), how prompts are written |
-| [Auto-enhance](docs/auto-enhance.md) | Rewriting prompts Orca sends to agents |
-| [Settings](docs/settings.md) | Every option, with defaults |
-| [Privacy & permissions](docs/privacy.md) | What runs, what is read, where it goes |
-| [Troubleshooting & FAQ](docs/troubleshooting.md) | Common problems and fixes |
+| Prompt editor, rewrite models, fallback, rules, history, attachments | Retained in the canvas |
+| Destination picker | The canvas's attached Copilot session |
+| Optional Enter after paste | Replaced by explicit Send as a new chat message |
+| Automatic prompt rewriting | Optional transformed-prompt hook; changes model-facing text while the chat shows the original; off by default |
+| Terminal scrollback and other-agent context | Unavailable with the current adapter |
+| New external CLI agent, editor-save events, opening editor tabs | Unavailable with the current canvas SDK |
+| Desktop notifications | Unavailable; progress and completion appear in the panel |
+| Save dialog | Browser download |
 
----
+Unavailable settings are disabled and explained. Switching the visible desktop tab does not retarget an existing canvas. Open the canvas in the intended session.
 
-## Community &amp; Support
+## Data and privacy
 
-- **Bugs &amp; ideas:** [Open an issue](https://github.com/cattfan/orca-enhance-prompt/issues/new). Any feedback helps: something broken, confusing, slow, or a prompt that came out wrong. The panel links here too (gear icon → Feedback).
-- **Changelog:** [CHANGELOG.md](CHANGELOG.md) and [releases](https://github.com/cattfan/orca-enhance-prompt/releases).
-- **Privacy:** no tracking or analytics. See [Privacy &amp; permissions](docs/privacy.md).
-- **Show support:** [Star](https://github.com/cattfan/orca-enhance-prompt) this repo.
+The worker reads the project directory from Copilot session metadata, never from its session-artifact directory. Remote workspaces expose no local project files. Project reads obey privacy switches and reject sensitive filenames and escaping symlinks. Recognized secrets in source excerpts and Git diffs are masked before trimming; other context is not uniformly masked. Explicit attachments, your request and custom instructions are not automatically secret-masked. Preview and exclude context before enhancing. Fallback can send the payload to multiple configured providers; Max's file selector can use a separate model. [Exact data flow](docs/prompt-workflow.md).
 
----
+Preferences, profiles, rules and history are local. Saved prompt history is not encrypted; drafts and results are scoped to the Copilot session. Windows API keys use DPAPI under the current Windows account; they are never saved as plain text. The default data directory is `%LOCALAPPDATA%/copilot-enhance-prompt` on Windows and `~/.local/share/copilot-enhance-prompt` elsewhere. `ENHANCE_PROMPT_DATA_DIR` overrides it for tests or a separate installation.
 
-## Developing
+The canvas uses an authenticated loopback server with origin and path checks. It exposes no agent-callable send, credential or consent action. There is no tracking or analytics. [Privacy details](docs/privacy.md).
 
-```bash
-npm install          # TypeScript and Node types, for type checking only
-orca plugin types .  # writes .orca/types
-npx tsc -p .
-orca plugin test .
-orca plugin check .
-orca plugin dev watch . --check
+## Development
+
+Install dependencies and rebuild the packaged extension and panel after changing source:
+
+```sh
+npm ci
+npm --prefix web ci
+npm run typecheck
+npm test
+npm run build
+npm run check
+npm run web:dev
 ```
 
-**Live UI preview:** `npm run web:install` once, then `npm run web:dev` opens the panel at http://localhost:5174 on sample data and redraws on every save. Add `?lang=vi&theme=dark&width=360` for the language, the theme and a sidebar's width, `?tab=models` for a section, `?demo=<prompt>` to type a prompt and run it. To see the real panel in Orca instead, run `orca plugin dev watch .`: the development folder replaces the installed copy while it runs.
+The development panel runs at `http://localhost:5174` with sample data, without model calls or real sends. Use `?lang=vi&theme=dark&width=380`, `?tab=models`, or `?demo=fix+the+login+page` to preview states.
 
-The panel is built from `web/` into `src/web-dist` (`npm run web:build`); the worker has no build step. `node scripts/make-listing.mjs` regenerates the listing pictures from the web panel's sample data (with `npm run web:dev` running). Releases follow [AGENTS.md](AGENTS.md).
+`scripts/e2e.mjs` loads the built package in an isolated installed Copilot runtime and exercises canvas discovery, project metadata, context preview, enhancement, sending and the packaged prompt hook. Its disposable session uses a local model fixture; no external model is called. Set `COPILOT_SDK_DIR` and `COPILOT_CLI_PATH` to the desktop SDK directory and runtime executable. See [AGENTS.md](AGENTS.md) for the architecture and behavioral invariants.
 
-## License
+The current port has passed unit tests, type checks, package checks and that installed-runtime integration test. Desktop visual verification remains unfinished; the preview is not a published stable release.
 
-Enhance Prompt is free and open source under the [MIT License](LICENSE). Not affiliated with Orca, Anthropic, OpenAI or Google.
+Enhance Prompt is free under the [MIT License](LICENSE). Original copyright remains with cattfan. This fork is not affiliated with GitHub or the model providers. [Report an issue](https://github.com/AndrewGodlewsky/copilot-enhance-prompt/issues).

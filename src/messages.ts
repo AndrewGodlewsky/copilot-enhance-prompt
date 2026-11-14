@@ -41,17 +41,19 @@ export const MESSAGES = {
   'error.file_too_large': '{name} is {size}; an attachment can be at most {max}.',
   'note.images_paths_only': 'This model cannot see images: it got their paths only, and the prompt lists them for the agent.',
   'error.cancelled': 'Cancelled.',
-  'error.send_off': 'Sending to terminals is off in Settings.',
+  'error.send_off': 'Sending to Copilot is off in Settings.',
+  'error.session_not_idle': 'Copilot is busy, waiting for your answer, or disconnected. Wait until the session is idle before sending.',
+  'error.send_pending': 'A prompt was just sent. Wait for Copilot before sending again.',
   'error.launch_off': 'Starting new agents is off in Settings, or not confirmed yet.',
-  'error.open_off': 'Opening files in Orca is off in Settings.',
+  'error.open_off': 'Opening files in Copilot is off in Settings.',
   // Shown inside "Could not load the list (…)": no capital, no full stop.
   'error.lists_off': 'online model lists are off in Settings',
-  'error.key_not_saved': 'Orca could not store the API key: this machine has no key store for it. Use a key from an environment variable, or a subscription CLI.',
+  'error.key_not_saved': 'Copilot could not store the API key: this machine has no key store for it. Use a key from an environment variable, or a subscription CLI.',
   'error.agent_blocked': '{name} is waiting for an answer from you, and what is typed now could be taken as that answer.',
   // Why auto-enhance let a prompt through unchanged (the Settings section shows the last one).
   'hook.no_model': 'No enabled API model: a subscription CLI starts too slowly for the 2 s auto-enhance has.',
   'hook.empty': 'The model returned no prompt.',
-  'error.unsupported': 'This version of Orca cannot do that yet.',
+  'error.unsupported': 'This version of Copilot cannot do that yet.',
   'error.invalid_request': 'Invalid request.',
   'error.nothing_to_send': 'Nothing to send.',
   'error.invalid_profile': 'Invalid model profile.',
@@ -94,7 +96,7 @@ export type MessageParam = string | number | Message | MessageParam[]
 export type Message = { code: MessageCode; params?: Record<string, MessageParam> }
 
 /**
- * A thrown error reaches the panel as its code and its text only: Orca passes no other field on.
+ * A thrown error reaches the panel as its code and its text only: the host passes no other field on.
  * So the message travels inside the text: the English sentence (for logs and the command line),
  * then the message itself between these marks, as percent-encoded JSON: it then holds no bracket
  * and no space, so whatever a provider's own text contains, the marks are found again. The panel

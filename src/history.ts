@@ -1,5 +1,5 @@
 // History entries, shared by the panel and the worker (no Node imports here).
-import type { JsonValue } from 'orca'
+import type { JsonValue } from '#panel'
 
 export type HistoryEntry = {
   id: string
@@ -9,7 +9,7 @@ export type HistoryEntry = {
   style: string
   model: string
   source: 'panel' | 'hook'
-  /** The project it was written in (its name in Orca), where that was known; older entries have none. */
+  /** The project it was written in (its name in the host), where that was known; older entries have none. */
   project?: string
 }
 

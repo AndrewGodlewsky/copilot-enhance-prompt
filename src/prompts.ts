@@ -89,6 +89,10 @@ const STYLE_RULES: Record<Style, string> = {
 /** How each agent CLI likes its prompts. Keys match `agents.list`'s `agent`, loosely. */
 const AGENT_HINTS: { match: RegExp; hint: string }[] = [
   {
+    match: /copilot/i,
+    hint: 'Target is GitHub Copilot in the attached project: state the requested change, relevant paths, acceptance criteria and verification commands. Do not assume a separate terminal agent or claim the project is unavailable.'
+  },
+  {
     match: /claude/i,
     hint: 'Target is Claude Code: write sections as Markdown headings (do not mix in XML tags) and state the exact verification command. Leave how it plans and tracks the work to it.'
   },
@@ -184,7 +188,7 @@ export function cleanOutput(text: string): string {
   return out.trim()
 }
 
-/** Orca's `terminal.sendText` takes at most 4096 characters per call; stay safely below it. */
+/** the host's `terminal.sendText` takes at most 4096 characters per call; stay safely below it. */
 export const SEND_CHUNK = 4000
 
 /**

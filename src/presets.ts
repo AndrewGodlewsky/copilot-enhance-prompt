@@ -1,6 +1,6 @@
 // Model presets and profile parsing, shared by the panel and the worker (no Node imports).
 import type { Message } from './messages.ts'
-import type { JsonValue } from 'orca'
+import type { JsonValue } from '#panel'
 
 /** `cli` runs an installed agent CLI (Claude Code, Codex, Gemini CLI) on the person's subscription. */
 export type Provider = 'openai' | 'anthropic' | 'cli'

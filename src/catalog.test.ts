@@ -1,4 +1,4 @@
-import { afterEach, assert, mockHost, mountWorker, test } from 'orca/testing'
+import { afterEach, assert, mockHost, mountWorker, test } from '#testing'
 import { aliasesFromText, parseCatalog, parseClaudeModelTable } from './catalog.ts'
 import * as main from './worker.ts'
 

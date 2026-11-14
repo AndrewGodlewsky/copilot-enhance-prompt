@@ -1,0 +1,58 @@
+import { homedir } from 'node:os'
+import { join } from 'node:path'
+import { createHash } from 'node:crypto'
+import { DEFAULTS } from '../defaults.ts'
+import type { EnhanceWorker } from '../host.ts'
+import type { JsonValue, KeyValueStore, SettingsStore } from '../runtime.ts'
+import { persistentStore } from './storage.ts'
+import { protectedSecrets } from './secrets.ts'
+import { sessionAdapter, type CopilotSession } from './session.ts'
+import { UNSUPPORTED_SETTINGS } from '../capabilities.ts'
+import { sentKey } from './sent.ts'
+
+// These services have no equivalent on the current canvas SDK. Do not silently emulate them.
+export function createServices(session: CopilotSession, directory = process.env.ENHANCE_PROMPT_DATA_DIR || join(process.env.LOCALAPPDATA || join(homedir(), '.local', 'share'), 'copilot-enhance-prompt')) {
+  const data = persistentStore(join(directory, 'data'))
+  const prefs = persistentStore(join(directory, 'preferences'))
+  const secrets = protectedSecrets(persistentStore(join(directory, 'credentials')))
+  const adapter = sessionAdapter({ sessionId: session.sessionId, rpc: session.rpc, send: async options => {
+    const key = sentKey(session.sessionId, options.prompt)
+    await data.transaction(async () => {
+      for (const old of (await data.keys()).filter(key => key.startsWith('sent:'))) {
+        if (Number(await data.get(old)) < Date.now()) await data.delete(old)
+      }
+      await data.set(key, Date.now() + 120_000)
+    })
+    try { return await session.send(options) }
+    catch (error) { await data.delete(key); throw error }
+  } })
+  const settings: SettingsStore = {
+    get: (async (key?: string) => {
+      const values: Record<string, JsonValue> = { ...DEFAULTS }
+      for (const name of await prefs.keys()) if (Object.hasOwn(DEFAULTS, name)) values[name] = (await prefs.get(name))!
+      for (const name of UNSUPPORTED_SETTINGS) values[name] = false
+      return key === undefined ? values : values[key]
+    }) as SettingsStore['get'],
+    set: async (key, value) => {
+      if (!Object.hasOwn(DEFAULTS, key) || typeof value !== typeof DEFAULTS[key]) throw new Error('Invalid setting.')
+      if (UNSUPPORTED_SETTINGS.has(key) && value) throw new Error('This setting is unavailable in the Copilot canvas.')
+      await prefs.set(key, value)
+    },
+    onDidChange: listener => prefs.onDidChange(listener)
+  }
+  const scope = createHash('sha256').update(session.sessionId).digest('hex').slice(0, 24)
+  const scopeKey = (key: string) => key.startsWith('panel:') ? `session:${scope}:${key}` : key
+  const storage: KeyValueStore = {
+    get: key => data.get(scopeKey(key)), set: (key, value) => data.set(scopeKey(key), value), delete: key => data.delete(scopeKey(key)),
+    keys: async () => (await data.keys()).filter(key => !key.startsWith('session:') || key.startsWith(`session:${scope}:`)).map(key => key.replace(`session:${scope}:`, '')),
+    onDidChange: listener => data.onDidChange(({ key }) => { if (!key.startsWith('session:') || key.startsWith(`session:${scope}:`)) listener({ key: key.replace(`session:${scope}:`, '') }) }),
+    transaction: data.transaction
+  }
+  const host: EnhanceWorker['host'] = {
+    has: name => name === 'secrets.protection' || adapter.has(name),
+    call: async (name, input, options) => name === 'secrets.protection'
+      ? { status: secrets.available ? 'os-keyring' : 'unavailable', backend: 'DPAPI' } as never
+      : adapter.call(name, input, options)
+  }
+  return { storage, settings, secrets, host, adapter, directory, data }
+}

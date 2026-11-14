@@ -1,9 +1,9 @@
-// Runs src/worker.ts's activate(orca) over a mock host, with fetch stubbed (no network).
+// Runs src/worker.ts's activate(host) over a mock host, with fetch stubbed (no network).
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { after } from 'node:test'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, assert, mockHost, mountWorker, test } from 'orca/testing'
+import { afterEach, assert, mockHost, mountWorker, test } from '#testing'
 import { findFocusedWorkspace } from './context/index.ts'
 import { forgetTerminals, terminalsSaved } from './context/terminals.ts'
 import * as main from './worker.ts'
@@ -319,7 +319,7 @@ test('cycle command switches auto-enhance mode', async () => {
   assert.equal(host.data().settings.autoEnhanceMode, 'rules')
   assert.equal(await worker.command('auto-enhance.off'), 'Auto-enhance is off.')
   await worker.deactivate()
-  // Orca shows a command's answer: it is in the panel's language, like the status bar's tooltip.
+  // Copilot shows a command's answer: it is in the panel's language, like the status bar's tooltip.
   const vietnamese = await mountWorker(main, { host: mockHost({ settings: { uiLanguage: 'vi' }, results: { 'statusBar.update': { ok: true } } }) })
   assert.equal(await vietnamese.command('auto-enhance.ai'), 'Tự cải thiện đang bật (AI).')
   assert.equal(await vietnamese.command('status-bar.toggle'), 'Đã ẩn mục trên thanh trạng thái.')
@@ -327,13 +327,13 @@ test('cycle command switches auto-enhance mode', async () => {
   await vietnamese.deactivate()
 })
 
-test('with the panel\'s language on Auto, the worker speaks Orca\'s language once a panel has told it which', async () => {
+test('with the panel\'s language on Auto, the worker speaks Copilot\'s language once a panel has told it which', async () => {
   const settled = () => new Promise((resolve) => setTimeout(resolve, 30))
   const host = mockHost({ results: { 'statusBar.update': { ok: true } } })
   const tooltip = () => (host.callsOf('statusBar.update').at(-1) as { tooltip: string }).tooltip
   const worker = await mountWorker(main, { host })
   await settled()
-  // A worker cannot see Orca's language: English until a panel has opened.
+  // A worker cannot see Copilot's language: English until a panel has opened.
   assert.match(tooltip(), /Auto-enhance is off\./)
   assert.equal(await worker.command('auto-enhance.rules'), 'Auto-enhance is on (rules).')
   // The panel reports it (src/panel/setup.ts): the status bar follows at once, and so do the answers.
@@ -353,7 +353,7 @@ test('with the panel\'s language on Auto, the worker speaks Orca\'s language onc
   await settled()
   assert.match((again.callsOf('statusBar.update').at(-1) as { tooltip: string }).tooltip, /自动优化：关/)
   await second.deactivate()
-  // A picked language wins over what Orca runs in.
+  // A picked language wins over what Copilot runs in.
   const picked = mockHost({ settings: { uiLanguage: 'en' }, storage: { [main.LOCALE_KEY]: 'vi-VN' }, results: { 'statusBar.update': { ok: true } } })
   const third = await mountWorker(main, { host: picked })
   assert.equal(await third.command('auto-enhance.rules'), 'Auto-enhance is on (rules).')
@@ -452,16 +452,16 @@ test('when the panel stops waiting, a late answer is dropped and not saved to hi
     return new Response(JSON.stringify(openaiAnswer('late answer')), { status: 200 })
   }) as typeof fetch
   const host = mockHost({ storage: { models: { profiles: [profile('one', 'openai')] } }, secrets: { 'apiKey.one': 'k1' } })
-  let orca: Parameters<typeof main.default>[0] | null = null
-  const worker = await mountWorker({ default: (api: Parameters<typeof main.default>[0]) => { orca = api; main.default(api) } }, { host })
+  let capturedHost: Parameters<typeof main.default>[0] | null = null
+  const worker = await mountWorker({ default: (api: Parameters<typeof main.default>[0]) => { capturedHost = api; main.default(api) } }, { host })
   const controller = new AbortController()
   setTimeout(() => controller.abort(), 10)
-  await assert.rejects(main.enhanceRequest(orca!, { prompt: 'fix it', level: 'off' }, controller.signal, 'enhance'), /Cancelled/)
+  await assert.rejects(main.enhanceRequest(capturedHost!, { prompt: 'fix it', level: 'off' }, controller.signal, 'enhance'), /Cancelled/)
   assert.equal(host.data().storage.history, undefined)
   await worker.deactivate()
 })
 
-// A run is not tied to one request: Orca ends a panel's request after 120 s, and a slow model on a
+// A run is not tied to one request: Copilot ends a panel's request after 120 s, and a slow model on a
 // large context can take longer. The limits are shortened here; the model answers after `delay`.
 async function longRuns(delay: number, body: (ctx: { ask: (input: Record<string, unknown>, signal?: AbortSignal) => Promise<Awaited<ReturnType<typeof main.enhanceRequest>>>; calls: () => number; stopped: () => number; host: ReturnType<typeof mockHost> }) => Promise<void>) {
   const saved = { ...main.RUN_LIMITS }
@@ -479,10 +479,10 @@ async function longRuns(delay: number, body: (ctx: { ask: (input: Record<string,
       })
     })) as typeof fetch
   const host = mockHost({ storage: { models: { profiles: [profile('one', 'openai')] } }, secrets: { 'apiKey.one': 'k1' }, results: { 'workspace.readContext': null } })
-  let orca: Parameters<typeof main.default>[0] | null = null
-  const worker = await mountWorker({ default: (api: Parameters<typeof main.default>[0]) => { orca = api; main.default(api) } }, { host })
+  let capturedHost: Parameters<typeof main.default>[0] | null = null
+  const worker = await mountWorker({ default: (api: Parameters<typeof main.default>[0]) => { capturedHost = api; main.default(api) } }, { host })
   try {
-    await body({ ask: (input, signal) => main.enhanceRequest(orca!, input as never, signal ?? new AbortController().signal, 'enhance'), calls: () => calls, stopped: () => stopped, host })
+    await body({ ask: (input, signal) => main.enhanceRequest(capturedHost!, input as never, signal ?? new AbortController().signal, 'enhance'), calls: () => calls, stopped: () => stopped, host })
   } finally {
     Object.assign(main.RUN_LIMITS, saved)
     await worker.deactivate()
@@ -566,7 +566,7 @@ test('a run lives only while the panel waits for it: cancelled, or nobody asking
     assert.equal(host.data().storage.history, undefined)
   }))
 
-test("a workspace on this machine is read even when Orca names its host 'local' (Orca 1.4.25x)", async () => {
+test("a workspace on this machine is read even when Copilot names its host 'local' (Copilot 1.4.25x)", async () => {
   const root = project()
   stubFetch(() => openaiAnswer('ok'))
   const host = mockHost({
@@ -621,11 +621,11 @@ test('several workspaces named "main" on branch main: the panel\'s hint or the p
     }
   })
   const worker = await mountWorker(main, { host })
-  // Nothing known: Orca cannot tell, so the panel gets the folders to pick from.
+  // Nothing known: Copilot cannot tell, so the panel gets the folders to pick from.
   const unknown = await worker.request('targets.list', {})
   assert.equal(unknown.workspaceId, null)
   assert.deepEqual(unknown.choices?.map((choice) => choice.id), ['ws-1', 'ws-2'])
-  // The panel knows term-2 is in ws-2 (from Orca's agent events, or the pick).
+  // The panel knows term-2 is in ws-2 (from Copilot's agent events, or the pick).
   const known = await worker.request('targets.list', { known: { 'term-2': 'ws-2' } })
   assert.equal(known.workspaceId, 'ws-2')
   assert.equal(known.choices, undefined)
@@ -644,7 +644,7 @@ test('several workspaces named "main" on branch main: the panel\'s hint or the p
   await worker.deactivate()
 })
 
-// What the real Orca answers (host API 1.5, seen on Windows): workspace.list names a Git worktree
+// What the real Copilot answers (host API 1.5, seen on Windows): workspace.list names a Git worktree
 // "identity:…" and writes its path with forward slashes; agent events and tool hooks carry the
 // worktree's own id, "<repository id>::<path>", with the platform's slashes. Every project's first
 // checkout is named after its branch, so seven projects were "main" on "main".
@@ -667,7 +667,7 @@ function twoMains(one: string, two: string, terminals: { id: string; title: stri
   })
 }
 
-test('several projects named "main": Orca\'s agent event tells which one is open, with nothing to pick', async () => {
+test('several projects named "main": Copilot\'s agent event tells which one is open, with nothing to pick', async () => {
   const one = project()
   const two = project()
   writeFileSync(join(two, 'AGENTS.md'), '# Rules\nThis is the second checkout.')
@@ -677,7 +677,7 @@ test('several projects named "main": Orca\'s agent event tells which one is open
     { id: 'term_shell', title: 'pwsh' }
   ])
   const worker = await mountWorker(main, { host })
-  // Orca has said nothing yet: the folders to pick from, each with its project's name.
+  // Copilot has said nothing yet: the folders to pick from, each with its project's name.
   const before = await worker.request('targets.list', {})
   assert.equal(before.workspaceId, null)
   // Which project this is cannot be said yet: its rules are kept under its own name, not under "main".
@@ -698,7 +698,7 @@ test('several projects named "main": Orca\'s agent event tells which one is open
   assert.match(JSON.stringify(calls.at(-1)?.body), /second checkout/)
   assert.match(JSON.stringify(calls.at(-1)?.body), /Reup: main \(branch main\)/)
   assert.ok(!answer.notes.some((note) => note.code === 'note.workspace_unknown'))
-  // The folder the person once picked by mistake does not win over what Orca said.
+  // The folder the person once picked by mistake does not win over what Copilot said.
   const mistaken = await worker.request('targets.list', { known: { term_agent: 'identity:wt2:local:1111', term_shell: 'identity:wt2:local:1111' } })
   assert.equal(mistaken.workspaceId, 'identity:wt2:local:2222')
   // The pairing is kept (two ids per terminal, nothing else), the plain shell of that project too.
@@ -706,7 +706,7 @@ test('several projects named "main": Orca\'s agent event tells which one is open
   assert.deepEqual(host.data().storage.terminalWorkspaces, { term_agent: `repo-two::${two}`, term_shell: `repo-two::${two}` })
   await worker.deactivate()
 
-  // A new worker (Orca restarted, or the plugin was updated) with only the shell left open: known.
+  // A new worker (Copilot restarted, or the plugin was updated) with only the shell left open: known.
   await forgetTerminals()
   host.respond('workspace.readContext', { branch: 'main', displayName: 'main', terminals: [{ id: 'term_shell', title: 'pwsh' }] })
   const restarted = await mountWorker(main, { host })
@@ -718,13 +718,13 @@ test('several projects named "main": Orca\'s agent event tells which one is open
   await restarted.deactivate()
 })
 
-test('several projects named "main": a newer Orca names the focused workspace itself, in either shape of id', async () => {
+test('several projects named "main": a newer Copilot names the focused workspace itself, in either shape of id', async () => {
   const one = project()
   const two = project()
-  // The test host answers as the installed Orca does and refuses a field that Orca does not know,
-  // so the Orca of tomorrow is a stand-in here: the two calls the lookup makes, and a storage.
+  // The test host answers as the installed Copilot does and refuses a field that Copilot does not know,
+  // so the Copilot of tomorrow is a stand-in here: the two calls the lookup makes, and a storage.
   const kept = new Map<string, unknown>()
-  const orca = {
+  const host = {
     host: {
       has: () => true,
       call: async (name: string) =>
@@ -742,23 +742,23 @@ test('several projects named "main": a newer Orca names the focused workspace it
     log: () => undefined
   } as never
   const focus = (workspaceId?: string) => ({ branch: 'main', displayName: 'main', terminals: [{ id: 'term_shell' }], ...(workspaceId ? { workspaceId } : {}) })
-  await forgetTerminals(orca)
-  // The Orca of today: no id with the focus, and nothing else says which of the two it is.
-  assert.equal(await findFocusedWorkspace(orca, focus()), null)
+  await forgetTerminals(host)
+  // The Copilot of today: no id with the focus, and nothing else says which of the two it is.
+  assert.equal(await findFocusedWorkspace(host, focus()), null)
   // As workspace.list names it.
-  assert.equal((await findFocusedWorkspace(orca, focus('identity:wt2:local:2222')))?.project, 'Reup')
+  assert.equal((await findFocusedWorkspace(host, focus('identity:wt2:local:2222')))?.project, 'Reup')
   // Its terminals are known from then on: the next lookup needs no id.
-  assert.equal((await findFocusedWorkspace(orca, focus()))?.project, 'Reup')
+  assert.equal((await findFocusedWorkspace(host, focus()))?.project, 'Reup')
   await terminalsSaved()
-  await forgetTerminals(orca)
+  await forgetTerminals(host)
   // As events name it: the worktree's own id, with the platform's slashes.
-  assert.equal((await findFocusedWorkspace(orca, focus(`repo-one::${one}`)))?.project, 'Shop')
+  assert.equal((await findFocusedWorkspace(host, focus(`repo-one::${one}`)))?.project, 'Shop')
   await terminalsSaved()
-  await forgetTerminals(orca)
+  await forgetTerminals(host)
   // An id that names no listed workspace decides nothing.
-  assert.equal(await findFocusedWorkspace(orca, focus('identity:wt2:local:9999')), null)
+  assert.equal(await findFocusedWorkspace(host, focus('identity:wt2:local:9999')), null)
   await terminalsSaved()
-  await forgetTerminals(orca)
+  await forgetTerminals(host)
 })
 
 test('auto-enhance takes the rules and the name of the project its prompt goes to, not of the one in focus', async () => {
@@ -795,7 +795,7 @@ test('auto-enhance takes the rules and the name of the project its prompt goes t
   await worker.emit('agent.status.changed', { workspaceId: `repo-one::${one}`, paneKey: 'p1', terminalId: 'term_shop', state: 'waiting', receivedAt: Date.now() })
   await worker.emit('agent.status.changed', { workspaceId: `repo-two::${two}`, paneKey: 'p2', terminalId: 'term_reup', state: 'working', receivedAt: Date.now() })
   const body = () => JSON.stringify(calls.at(-1)?.body)
-  // Orca sends a task to the agent of Reup, which is not in focus.
+  // Copilot sends a task to the agent of Reup, which is not in focus.
   const other = await worker.hooks.fire('agent.prompt.before', { agent: 'claude', terminalId: 'term_reup', prompt: 'add a health check endpoint', inputKind: 'orchestration' as const })
   assert.equal(other.kind === 'continue' && other.event.prompt, 'Rewritten.')
   assert.match(body(), /Reup: use bun\./)
@@ -805,7 +805,7 @@ test('auto-enhance takes the rules and the name of the project its prompt goes t
   await worker.hooks.fire('agent.prompt.before', { agent: 'claude', terminalId: 'term_shop', prompt: 'add a health check endpoint', inputKind: 'driving' as const })
   assert.match(body(), /Shop: use pnpm\./)
   assert.ok(!body().includes('Reup: use bun.'))
-  // A new agent Orca has said nothing about yet, in a terminal of the focused workspace: that project.
+  // A new agent Copilot has said nothing about yet, in a terminal of the focused workspace: that project.
   await worker.hooks.fire('agent.prompt.before', { agent: 'codex', terminalId: 'term_shop_new', prompt: 'add a health check endpoint', inputKind: 'launch' as const })
   assert.match(body(), /Shop: use pnpm\./)
   assert.match(body(), /Shop: main \(branch main\)/)
@@ -819,7 +819,7 @@ test('auto-enhance takes the rules and the name of the project its prompt goes t
   await forgetTerminals()
 })
 
-test('a kept pairing of a terminal is dropped when Orca now lists that terminal in a workspace it does not fit', async () => {
+test('a kept pairing of a terminal is dropped when Copilot now lists that terminal in a workspace it does not fit', async () => {
   const shop = project()
   const docs = project()
   const calls = stubFetch(() => openaiAnswer('Rewritten.'))
@@ -839,7 +839,7 @@ test('a kept pairing of a terminal is dropped when Orca now lists that terminal 
     },
     secrets: { 'apiKey.fast': 'g' },
     results: {
-      // Now Orca lists a terminal of that id in the focused workspace, which is Shop.
+      // Now Copilot lists a terminal of that id in the focused workspace, which is Shop.
       'workspace.readContext': { branch: 'main', displayName: 'shop', terminals: [{ id: 'term_1', title: 'Claude' }] },
       'workspace.list': {
         workspaces: [

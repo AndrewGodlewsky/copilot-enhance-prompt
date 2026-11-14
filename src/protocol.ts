@@ -3,7 +3,7 @@ import type { Message } from './messages.ts'
 import type { RulesConfig } from './rules.ts'
 import type { ContextItemView, ProfileView, Preset, Provider } from './presets.ts'
 
-/** The longest a panel may wait for its worker (Orca caps `timeoutMs` at 120000). */
+/** The longest a panel may wait for its worker (the host caps `timeoutMs` at 120000). */
 export const PANEL_REQUEST_LIMIT_MS = 120_000
 
 export type AttemptView = { profileId: string; name: string; model: string; ok: boolean; error?: string; errorText?: Message; ms: number }
@@ -23,10 +23,10 @@ export type ProfileInput = {
   /** New API key; undefined keeps the current one, '' removes it. */
   apiKey?: string
 }
-/** What auto-enhance last did with a prompt Orca was sending (kept in the worker's memory). */
+/** What auto-enhance last did with a prompt the host was sending (kept in the worker's memory). */
 export type HookRecord = { at: number; outcome: 'rewritten' | 'appended' | 'skipped'; agent: string | null; model?: string; reason?: Message }
 export type ModelsView = {
-  /** This machine has no OS key store: Orca cannot save an API key (`secrets.protection`). */
+  /** This machine has no OS key store: the host cannot save an API key (`secrets.protection`). */
   keysUnavailable?: boolean
   profiles: ProfileView[]
   hookProfileId: string | null
@@ -35,9 +35,9 @@ export type ModelsView = {
   presets: Preset[]
 }
 
-declare module 'orca' {
+
   // oxlint-disable-next-line typescript/consistent-type-definitions -- declaration merging needs an interface
-  interface PluginRequests {
+export interface PluginRequests {
     /** Rewrites `prompt` with the model chain (or one profile), with context at `level`. */
     'prompt.enhance': {
       input: {
@@ -55,12 +55,12 @@ declare module 'orca' {
         runId?: string
         /** A prompt structure (Rules tab) whose sections replace the style's shape. */
         structureId?: string
-        /** Orca's id of the workspace the panel is in (several can share a name and branch). */
+        /** the host's id of the workspace the panel is in (several can share a name and branch). */
         workspaceId?: string
         /** Attached files of any kind, by the paths attachments.put answered (the worker reads no other path). */
         files?: string[]
         /**
-         * The panel keeps waiting (needs `runId`): Orca ends a request after 120 s, so a run that
+         * The panel keeps waiting (needs `runId`): the host ends a request after 120 s, so a run that
          * takes longer answers `pending`, and the panel asks again with `resume`, as often as it takes.
          */
         resumable?: boolean
@@ -90,7 +90,7 @@ declare module 'orca' {
       input: { terminalId: string; text: string; enter?: boolean; force?: boolean }
       output: { accepted: boolean }
     }
-    /** Copies `text` to the OS clipboard of the Orca host. */
+    /** Copies `text` to the OS clipboard of host. */
     'prompt.copy': { input: { text: string }; output: { copied: boolean; error?: string } }
     /** One chunk (base64, in order) of a file pasted, dropped or picked in the web panel; the last answers with its path. */
     'attachments.put': { input: { id: string; name: string; index: number; total: number; data: string; size?: number }; output: { path: string; bytes: number } | { received: number } }
@@ -102,17 +102,17 @@ declare module 'orca' {
     'consent.set': { input: { key: string; granted: boolean }; output: { granted: string[] } }
     /** Starts a new agent (`agent`: claude, codex…) in the focused workspace with this prompt. */
     'agent.launch': { input: { agent: string; prompt: string; workspaceId?: string }; output: { terminalId: string } }
-    /** Opens a file of the focused workspace (a path relative to it) in Orca's editor. */
+    /** Opens a file of the focused workspace (a path relative to it) in the host's editor. */
     'editor.open': { input: { path: string; workspaceId?: string }; output: { opened: true } }
     /** Agent terminals of the focused workspace, agents first. */
     'targets.list': {
-      /** `known`: the workspace id of terminals the panel has seen (Orca's agent events, or the person's pick). */
+      /** `known`: the workspace id of terminals the panel has seen (the host's agent events, or the person's pick). */
       input: { known?: Record<string, string> }
       /** `choices`: the folders the focused workspace could be when several share its name and branch
-       *  (`project`: its repository's name, where Orca gives one). */
+       *  (`project`: its repository's name, where the host gives one). */
       /** `workspace`: the focused workspace's name. `project`: the name its project's rules are kept
-       *  under (the repository's name in Orca), null while it is not known which project this is. */
-      /** `workspaceId`: Orca's id of the focused workspace (null when it cannot tell): the panel keeps each
+       *  under (the repository's name in the host), null while it is not known which project this is. */
+      /** `workspaceId`: the host's id of the focused workspace (null when it cannot tell): the panel keeps each
        *  project's draft and result apart by it. `workspacePath`: its folder. */
       output: {
         /** `title` and `state` (an agent's: working, blocked, waiting, done) are what `label` is made of, for the panel's language. */
@@ -163,7 +163,7 @@ declare module 'orca' {
     /** Undo of history.remove: brings back the entry of that id, if this worker removed it a moment ago. */
     'history.restore': { input: { id: string }; output: { restored: boolean } }
     /**
-     * Orca's own language (the panel sees it, the worker does not): what the worker itself says, the
+     * the host's own language (the panel sees it, the worker does not): what the worker itself says, the
      * status bar's tooltip and its commands' answers, follows it while the panel's language is Auto.
      */
     'ui.locale': { input: { locale: string }; output: { ok: true } }
@@ -181,8 +181,8 @@ declare module 'orca' {
     'models.detect': { output: { found: { preset: string; label: string; path: string; added: boolean }[] } }
   }
   // oxlint-disable-next-line typescript/consistent-type-definitions -- declaration merging needs an interface
-  interface PluginPanelEvents {
-    /** The auto-enhance hook rewrote a prompt Orca was sending. */
+export interface PluginPanelEvents {
+    /** The auto-enhance hook rewrote a prompt the host was sending. */
     'hook.enhanced': { agent: string | null; mode: string; model?: string }
     /** Auto-enhance (AI) let a prompt through unchanged, and why. */
     'hook.skipped': { agent: string | null; reason: Message }
@@ -193,4 +193,3 @@ declare module 'orca' {
       steps: { key: string; status: 'pending' | 'running' | 'done' | 'skipped' | 'failed'; detail?: string }[]
     }
   }
-}

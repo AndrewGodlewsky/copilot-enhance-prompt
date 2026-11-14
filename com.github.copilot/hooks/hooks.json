@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "hooks": {
+    "userPromptTransformed": [
+      {
+        "type": "command",
+        "exec": "node",
+        "args": ["--input-type=module", "-e", "import { join } from 'node:path'; import { pathToFileURL } from 'node:url'; await import(pathToFileURL(join(process.env.COPILOT_HOOK_DIR, 'hook.mjs')).href)"],
+        "timeoutSec": 5
+      }
+    ]
+  }
+}

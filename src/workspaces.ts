@@ -1,7 +1,7 @@
-// Telling Orca's workspaces apart, shared by the worker and the panel (no Node imports).
+// Telling the host's workspaces apart, shared by the worker and the panel (no Node imports).
 //
-// Orca names one workspace two ways. `workspace.list` answers `identity:<key>` for a Git worktree
-// (and `<key>::<path>` for a folder), while Orca's events and hooks (agent.status.changed,
+// the host names one workspace two ways. `workspace.list` answers `identity:<key>` for a Git worktree
+// (and `<key>::<path>` for a folder), while the host's events and hooks (agent.status.changed,
 // agent.tool.after, editor.save.before, workspace.removed) carry the worktree's own id,
 // `<repository id>::<path>`. Neither can be made from the other, so two ids are never compared with
 // `===`: the id of an event ends with the workspace's path, and the list gives that path too.
@@ -13,7 +13,7 @@ export function pathInWorkspaceId(id: string): string | null {
 }
 
 /**
- * A path as a key: one kind of slash, no trailing slash, lower case. Orca answers the same folder
+ * A path as a key: one kind of slash, no trailing slash, lower case. the host answers the same folder
  * as `C:/Users/me/App` in one place and `C:\Users\me\App` in another. Folding the case can make two
  * folders of a case-sensitive system look alike; callers treat more than one match as "cannot tell".
  */
@@ -29,7 +29,7 @@ export function namesWorkspace(id: string, workspace: { id: string; path: string
 }
 
 /**
- * One key for a workspace whichever way Orca named it: its path when the id carries one, else the
+ * One key for a workspace whichever way the host named it: its path when the id carries one, else the
  * id itself. What is kept per workspace (what its agents did, the files saved in it) is kept under it.
  */
 export function workspaceKey(id: string): string {
@@ -49,7 +49,7 @@ export function projectLabel(choice: { path: string; project?: string | null }):
 }
 
 /**
- * The workspace as the rewriter and the run card read it. Orca's name for a project's first checkout
+ * The workspace as the rewriter and the run card read it. the host's name for a project's first checkout
  * is its branch ("main"), which says nothing: the project's name comes first when it is another one.
  */
 export function workspaceTitle(displayName: string, project?: string | null): string {

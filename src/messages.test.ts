@@ -1,6 +1,6 @@
-// A worker's error reaches the panel as a code and a text, nothing else: that is what Orca passes on
+// A worker's error reaches the panel as a code and a text, nothing else: that is what the host passes on
 // when a handler throws. The message the panel translates therefore travels inside the text.
-import { assert, test } from 'orca/testing'
+import { assert, test } from '#testing'
 import { english, messageIn, msg, plainText, raw, withMessage } from './messages.ts'
 
 test('a message travels inside an error\'s text and is read back whole; a log reads the sentence', () => {
@@ -21,7 +21,7 @@ test('a provider\'s own text cannot break it, and a text that carries nothing is
   const odd = raw('weird ]] text [[message: not json ]]')
   assert.deepEqual(messageIn(withMessage(odd)), odd)
   assert.equal(plainText(withMessage(odd)), 'weird ]] text [[message: not json ]]')
-  // Nothing carried: an error of Orca itself, or of an older worker.
+  // Nothing carried: an error of the host itself, or of an older worker.
   assert.equal(messageIn('The worker could not start.'), null)
   assert.equal(plainText('The worker could not start.'), 'The worker could not start.')
   // Cut short on the way: no message, and the sentence alone is still what is shown.

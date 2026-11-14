@@ -1,7 +1,7 @@
 // Pieces every section of the web panel uses: notices as toasts, section headings, help icons, and a
 // small Select wrapper over shadcn's.
 import { useEffect, type ReactNode } from 'react'
-import { read, set } from 'orca'
+import { read, set } from '#panel'
 import { InfoIcon } from 'lucide-react'
 import { toast, Toaster } from 'sonner'
 import { t } from '../../src/i18n.ts'

@@ -1,6 +1,6 @@
 // The look: flat colours only, in the logo and in everything that draws pictures of the panel.
 import { readdirSync, readFileSync } from 'node:fs'
-import { assert, test } from 'orca/testing'
+import { assert, test } from '#testing'
 
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 

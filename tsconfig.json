@@ -1,8 +1,24 @@
 {
-  "extends": "./.orca/types/tsconfig.json",
   "compilerOptions": {
-    "typeRoots": ["./.orca/types", "./node_modules/@types"],
-    "types": ["orca", "orca-host", "orca-frame", "orca-worker", "orca-services", "orca-testing", "node"]
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "src/web-dist"
+  ]
 }

@@ -5,7 +5,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { after } from 'node:test'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { assert, mockHost, mountWorker, test } from 'orca/testing'
+import { assert, mockHost, mountWorker, test } from '#testing'
 import * as main from '../worker.ts'
 import { git } from './git.ts'
 import { gatherContext } from './index.ts'
@@ -33,8 +33,8 @@ function repo(): string {
   return root
 }
 
-async function orcaFor(root: string) {
-  let orca: Parameters<typeof main.default>[0] | null = null
+async function workerFor(root: string) {
+  let capturedHost: Parameters<typeof main.default>[0] | null = null
   const host = mockHost({
     results: {
       'workspace.readContext': { branch: 'main', displayName: 'demo', terminals: [] },
@@ -42,8 +42,8 @@ async function orcaFor(root: string) {
       'agents.list': { agents: [] }
     }
   })
-  const worker = await mountWorker({ default: (api: Parameters<typeof main.default>[0]) => { orca = api } }, { host })
-  return { orca: orca!, worker }
+  const worker = await mountWorker({ default: (api: Parameters<typeof main.default>[0]) => { capturedHost = api } }, { host })
+  return { host: capturedHost!, worker }
 }
 
 test('a cancelled git command is stopped at once and gives nothing', async () => {
@@ -60,11 +60,11 @@ test('a cancelled git command is stopped at once and gives nothing', async () =>
 
 test('cancel during the git step: the gather stops there, later steps never start', async () => {
   const root = repo()
-  const { orca, worker } = await orcaFor(root)
+  const { host, worker } = await workerFor(root)
   const controller = new AbortController()
   const seen: string[] = []
   await assert.rejects(
-    gatherContext(orca, {
+    gatherContext(host, {
       level: 'deep',
       prompt: 'fix validateSession',
       terminalLines: 0,
@@ -86,11 +86,11 @@ test('cancel during the git step: the gather stops there, later steps never star
 
 test('cancel while the project is read: nothing half-read is cached for the next run', async () => {
   const root = repo()
-  const { orca, worker } = await orcaFor(root)
+  const { host, worker } = await workerFor(root)
   const options = { level: 'standard' as const, prompt: 'x', terminalLines: 0, exclude: new Set<string>(), extraFiles: [], excludePatterns: '' }
   const controller = new AbortController()
   await assert.rejects(
-    gatherContext(orca, {
+    gatherContext(host, {
       ...options,
       signal: controller.signal,
       onStep: (key, status) => {
@@ -99,7 +99,7 @@ test('cancel while the project is read: nothing half-read is cached for the next
     }),
     /Cancelled/
   )
-  const full = await gatherContext(orca, options)
+  const full = await gatherContext(host, options)
   assert.ok(full.items.some((item) => item.id === 'rules:AGENTS.md'), full.items.map((item) => item.id).join(','))
   assert.ok(full.items.some((item) => item.kind === 'tree'))
   await worker.deactivate()

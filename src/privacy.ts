@@ -1,7 +1,7 @@
-// What the plugin may actually do. Orca approves a plugin's capabilities as a whole; these switches
-// (Orca's Settings and the panel's own Settings tab) narrow what the worker uses, and the worker checks them
+// What the plugin may actually do. the host approves a plugin's capabilities as a whole; these switches
+// (the host's Settings and the panel's own Settings tab) narrow what the worker uses, and the worker checks them
 // before every read, send, save or download.
-import type { JsonValue } from 'orca'
+import type { JsonValue } from '#panel'
 
 export const PRIVACY_KEYS = [
   'allowProjectFiles',
@@ -29,7 +29,7 @@ export const OFF_BY_DEFAULT: ReadonlySet<PrivacyKey> = new Set<PrivacyKey>(['all
 /**
  * Switches that also need the person's confirmation in the panel, after reading what they allow:
  * they send other sessions' output or every agent action to the model, or start programs. Turned on
- * in Orca's Settings alone, they stay off until confirmed.
+ * in the host's Settings alone, they stay off until confirmed.
  */
 export const NEEDS_CONSENT: ReadonlySet<PrivacyKey> = new Set<PrivacyKey>(['allowOtherAgents', 'allowAgentActivity', 'allowAgentLaunch'])
 

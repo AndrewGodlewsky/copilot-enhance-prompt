@@ -1,106 +1,104 @@
-// End-to-end check in the real Orca on this machine: loads this folder as a development plugin
-// (local.enhance-prompt, beside the installed cattfan.enhance-prompt, with its own empty storage and
-// settings), drives its worker, hook and panel through Orca itself, then unloads it.
-//
-//   node scripts/e2e.mjs                    # prints the approval fingerprint Orca asks for
-//   node scripts/e2e.mjs --approve <fp>     # runs the checks
-//
-// It only reads: no model is called, nothing is sent to a terminal, nothing is saved.
-import { spawnSync } from 'node:child_process'
+// Loads the package in an isolated Copilot runtime. All model traffic goes to a local fixture.
+import assert from 'node:assert/strict'
+import { mkdtemp, rm, mkdir, writeFile, cp } from 'node:fs/promises'
+import { join, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
+import { tmpdir } from 'node:os'
+import { createServer } from 'node:http'
 
-const approveAt = process.argv.indexOf('--approve')
-const fingerprint = approveAt > 0 ? process.argv[approveAt + 1] : null
-/** The folder: Orca loads it as its own development plugin (local.enhance-prompt). */
-const KEY = '.'
-
-/** Runs `orca plugin …` and parses its --json output. */
-function orca(args) {
-  // No shell: the --data JSON must reach Orca exactly as written (orca.exe is found on PATH).
-  const run = spawnSync('orca', ['plugin', ...args, '--json'], { encoding: 'utf8', timeout: 150_000 })
-  const text = (run.stdout ?? '').trim()
-  let json = null
-  try {
-    json = JSON.parse(text.slice(text.indexOf('{')))
-  } catch {
-    // not JSON (an error line)
-  }
-  return { code: run.status, json, text: `${text}\n${run.stderr ?? ''}`.trim() }
-}
-
-const results = []
-function check(name, ok, detail = '') {
-  results.push(ok)
-  console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${detail ? ` — ${detail}` : ''}`)
-}
-/** What a command answered: { ok, result: … }. */
-const call = (run) => run.json?.result ?? null
-/** A request's answer: { ok, result: { pluginKey, name, result } }. */
-const result = (run) => run.json?.result?.result ?? null
-
-const loaded = orca(['dev', 'load', '.', ...(fingerprint ? ['--approve', fingerprint] : [])])
-if (loaded.code === 3) {
-  console.log(loaded.text)
-  console.log('\nOrca asks for approval (the same access as the installed plugin). Re-run with --approve <fingerprint>.')
-  orca(['dev', 'unload', '.'])
-  process.exit(3)
-}
-check('dev load', loaded.code === 0, loaded.code === 0 ? '' : loaded.text.slice(0, 300))
-
+const sdkDirectory = process.env.COPILOT_SDK_DIR
+const cli = process.env.COPILOT_CLI_PATH
+if (!sdkDirectory || !cli) throw new Error('Set COPILOT_SDK_DIR and COPILOT_CLI_PATH to the installed desktop SDK and runtime.')
+const { CopilotClient, RuntimeConnection } = await import(pathToFileURL(join(sdkDirectory, 'index.js')).href)
+const temporary = await mkdtemp(join(tmpdir(), 'enhance-copilot-e2e-'))
+const project = join(temporary, 'project')
+const captured = []
+const fixture = createServer(async (req, res) => {
+  let data = ''
+  for await (const chunk of req) data += chunk
+  captured.push(JSON.parse(data))
+  res.setHeader('content-type', 'application/json')
+  res.end(JSON.stringify({ id: 'fixture', object: 'chat.completion', choices: [{ index: 0, message: { role: 'assistant', content: 'Fixture enhanced prompt' }, finish_reason: 'stop' }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } }))
+})
+await new Promise(resolve => fixture.listen(0, '127.0.0.1', resolve))
+const baseUrl = `http://127.0.0.1:${fixture.address().port}/v1`
+await mkdir(project)
+await writeFile(join(project, 'README.md'), '# Disposable canvas test project\n')
+const client = new CopilotClient({
+  mode: 'empty', baseDirectory: join(temporary, 'copilot'), workingDirectory: project,
+  builtinPluginDirectories: [resolve('.')],
+  connection: RuntimeConnection.forStdio({ path: cli, args: ['--no-auto-update'], env: { ...process.env, ENHANCE_PROMPT_DATA_DIR: join(temporary, 'plugin-data') } })
+})
+let session
+const deadline = setTimeout(() => { console.error('Runtime smoke test timed out.'); void client.forceStop() }, 45_000)
 try {
-  if (loaded.code === 0) {
-    const models = orca(['dev', 'request', KEY, 'models.get'])
-    check('models.get answers with the profiles', models.code === 0 && Array.isArray(result(models)?.profiles), models.code === 0 ? `${result(models).profiles.length} profiles` : models.text.slice(0, 200))
-
-    const targets = orca(['dev', 'request', KEY, 'targets.list'])
-    check('targets.list answers', targets.code === 0 && Array.isArray(result(targets)?.targets), targets.code === 0 ? `${result(targets).targets.length} terminals` : targets.text.slice(0, 200))
-
-    const summary = orca(['dev', 'request', KEY, 'data.summary'])
-    check('data.summary answers', summary.code === 0 && typeof result(summary)?.history === 'number', summary.text.slice(0, 120))
-
-    const preview = orca(['dev', 'request', KEY, 'context.preview', '--data', JSON.stringify({ prompt: 'e2e check', level: 'basic' })])
-    const notes = result(preview)?.notes ?? []
-    check(
-      'context.preview (Basic) answers with coded notes',
-      preview.code === 0 && Array.isArray(result(preview)?.context) && notes.every((note) => typeof note === 'object' && typeof note.code === 'string'),
-      preview.code === 0 ? `${result(preview).context.length} items` : preview.text.slice(0, 200)
-    )
-
-    const empty = orca(['dev', 'request', KEY, 'prompt.enhance', '--data', JSON.stringify({ prompt: '   ' })])
-    check('an empty prompt is refused with a coded error', empty.code !== 0 && /Write a prompt first/.test(empty.text), empty.text.slice(0, 160))
-
-    // An action that is switched off is refused with its code, and its text sends the person to the
-    // panel's Settings. Nothing can start here: starting agents is off until the person confirms it
-    // (a development plugin begins with nothing confirmed), and "not a kind" is no agent at all.
-    const launch = orca(['dev', 'request', KEY, 'agent.launch', '--data', JSON.stringify({ agent: 'not a kind', prompt: 'e2e check' })])
-    check(
-      'a switched-off action is refused: its code and a text that names Settings',
-      launch.code !== 0 && /not_permitted/.test(launch.text) && /Starting new agents is off in Settings/.test(launch.text),
-      launch.text.replace(/\s+/g, ' ').slice(0, 200)
-    )
-
-    // A prompt shorter than the minimum length passes the hook unchanged, whatever the mode.
-    const hook = orca(['dev', 'hook', KEY, 'agent.prompt.before', '--data', JSON.stringify({ agent: 'claude', terminalId: 'e2e', prompt: 'hi', inputKind: 'launch' })])
-    check('the auto-enhance hook passes a short prompt unchanged', hook.code === 0 && call(hook)?.decision?.kind === 'continue', hook.text.slice(0, 200))
-
-    // shot takes the plugin key Orca gave the folder (local.enhance-prompt).
-    // Right after loading, Orca may not have the panel ready yet: try a few times.
-    let shot = null
-    for (let attempt = 0; attempt < 4; attempt++) {
-      if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 3000))
-      shot = orca(['shot', call(loaded)?.pluginKey ?? 'local.enhance-prompt', '--panel', 'enhance', '--out', '.orca/shots/e2e-enhance.png'])
-      if (shot.code === 0) break
-    }
-    // The first picture after loading can be taken before the worker's first answers have drawn; the
-    // panel is open now, so take the one that counts.
-    if (shot.code === 0) shot = orca(['shot', call(loaded)?.pluginKey ?? 'local.enhance-prompt', '--panel', 'enhance', '--out', '.orca/shots/e2e-enhance.png'])
-    const drawn = call(shot)
-    check('the panel draws without errors', shot.code === 0 && drawn?.settled !== false && (drawn?.errors ?? []).length === 0, shot.code === 0 ? `${drawn?.path} ${JSON.stringify(drawn?.errors ?? [])}` : shot.text.slice(0, 200))
+  await client.start()
+  console.log('Runtime started.')
+  session = await client.createSession({ workingDirectory: project, availableTools: [], requestExtensions: true, requestCanvasRenderer: true, extensionSdkPath: sdkDirectory, pluginDirectories: [resolve('.')], model: 'gpt-4o', provider: { type: 'openai', baseUrl, apiKey: 'fixture', wireApi: 'completions' } })
+  console.log('Disposable session created.')
+  await new Promise(resolve => setTimeout(resolve, 2000))
+  let canvases
+  console.log('Waiting for canvas registration.')
+  for (let attempt = 0; attempt < 40; attempt++) {
+    canvases = await session.rpc.canvas.list()
+    if (JSON.stringify(canvases).includes('enhance-prompt')) break
+    await new Promise(resolve => setTimeout(resolve, 250))
   }
+  console.log('Registered canvases:', JSON.stringify(canvases))
+  if (!JSON.stringify(canvases).includes('enhance-prompt')) {
+    console.error(JSON.stringify(await session.rpc.extensions.list(), null, 2))
+    throw new Error('The runtime did not discover Enhance Prompt.')
+  }
+  const opened = await session.rpc.canvas.open({ canvasId: 'enhance-prompt', instanceId: 'enhance-smoke' })
+  console.log('Canvas opened.')
+  assert.ok(opened.url, 'canvas returned a URL')
+  const page = await fetch(opened.url)
+  assert.equal(page.status, 200)
+  assert.match(await page.text(), /Enhance Prompt/)
+  const token = new URL(opened.url).pathname.split('/')[2]
+  const request = async (name, input = {}) => {
+    const response = await fetch(opened.url + 'api', { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ method: 'request', name, input }) })
+    assert.equal(response.status, 200, await response.clone().text())
+    return (await response.json()).result
+  }
+  const targets = await request('targets.list')
+  assert.equal(targets.targets[0].terminalId, session.sessionId)
+  assert.equal(targets.workspacePath.toLowerCase(), project.toLowerCase())
+  assert.equal((await request('models.get')).profiles.length, 0)
+  const preview = await request('context.preview', { prompt: 'Read the project README', level: 'standard' })
+  assert.ok(Array.isArray(preview.context))
+  const setting = async (key, value) => {
+    const response = await fetch(opened.url + 'api', { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ method: 'settings.set', input: { key, value } }) })
+    assert.equal(response.status, 200)
+  }
+  await setting('autoEnhanceMode', 'rules')
+  await setting('autoEnhanceAppend', 'HOOK FIXTURE: verify the result.')
+  await session.sendAndWait({ prompt: 'Inspect the disposable project README' }, 15_000)
+  assert.ok(JSON.stringify(captured.at(-1)).includes('HOOK FIXTURE: verify the result.'), 'packaged transformed hook reaches the model')
+  console.log('Packaged prompt hook verified against local model fixture.')
+  await request('models.save', { name: 'Local fixture', preset: 'ollama', provider: 'openai', baseUrl, model: 'fixture', maxTokens: 2000, enabled: true })
+  const enhanced = await request('prompt.enhance', { prompt: 'Improve this test request', level: 'standard' })
+  assert.equal(enhanced.enhanced, 'Fixture enhanced prompt')
+  const beforeSend = captured.length
+  const sent = await request('prompt.send', { terminalId: session.sessionId, text: enhanced.enhanced })
+  assert.equal(sent.accepted, true)
+  for (let i = 0; i < 40 && captured.length === beforeSend; i++) await new Promise(resolve => setTimeout(resolve, 100))
+  assert.ok(captured.length > beforeSend, 'panel Send reached the attached session')
+  const latestUser = captured.at(-1).messages.filter(message => message.role === 'user').at(-1)
+  assert.ok(JSON.stringify(latestUser).includes(enhanced.enhanced))
+  assert.ok(!JSON.stringify(latestUser).includes('HOOK FIXTURE:'), 'panel send bypasses automatic enhancement')
+  console.log('Manual enhancement, session submission and hook bypass verified.')
+  await session.rpc.canvas.close({ instanceId: 'enhance-smoke' })
+  console.log('PASS: installed runtime discovered the canvas, read session metadata and context, and applied its packaged hook. No external model called.')
+} catch (error) {
+  await mkdir('.artifacts', { recursive: true })
+  await cp(join(temporary, 'copilot', 'logs'), '.artifacts/runtime-logs', { recursive: true }).catch(() => {})
+  throw error
 } finally {
-  const unloaded = orca(['dev', 'unload', '.'])
-  check('dev unload', unloaded.code === 0, unloaded.code === 0 ? '' : unloaded.text.slice(0, 200))
+  clearTimeout(deadline)
+  await session?.disconnect().catch(() => {})
+  await client.forceStop()
+  fixture.closeAllConnections()
+  fixture.close()
+  await rm(temporary, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 })
 }
-
-const failed = results.filter((ok) => !ok).length
-console.log(failed ? `\n${failed} check(s) failed` : '\nAll end-to-end checks passed')
-process.exit(failed ? 1 : 0)

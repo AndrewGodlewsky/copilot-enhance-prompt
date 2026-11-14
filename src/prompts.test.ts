@@ -1,4 +1,4 @@
-import { assert, test } from 'orca/testing'
+import { assert, test } from '#testing'
 import { buildSystemPrompt, buildUserMessage, cleanOutput, formatForTerminal } from './prompts.ts'
 
 test('cleanOutput strips fences and preambles', () => {
@@ -58,7 +58,7 @@ test('terminalChunks: edge cases (empty, at the limit, Vietnamese, tiny max)', a
   // Exactly the piece size: one write; one more character: two.
   assert.equal(terminalChunks('a'.repeat(4000), 'raw').length, 1)
   assert.equal(terminalChunks('a'.repeat(4001), 'raw').length, 2)
-  // 4096 characters (Orca's own limit) still goes in pieces of at most 4000.
+  // 4096 characters (Copilot's own limit) still goes in pieces of at most 4000.
   for (const piece of terminalChunks('b'.repeat(4096), 'raw')) assert.ok(piece.length <= 4000)
   // Vietnamese text, precomposed and with combining marks, survives the cuts unchanged.
   const vi = 'Sửa lỗi đăng nhập trên điện thoại.\n'.repeat(400) + 'Tie\u0302\u0301ng Vie\u0323\u0302t'

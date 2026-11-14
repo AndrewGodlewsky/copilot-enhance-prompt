@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 960 2360" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="prompt-workflow-title prompt-workflow-desc" id="prompt-workflow-root">
+<title id="prompt-workflow-title">Enhance Prompt: from user text to Copilot task</title>
+<desc id="prompt-workflow-desc">Three connected stages show how user text, allowed context and rules become a rewrite request, how a reviewed result is sent to Copilot, and how the optional chat hook transforms an existing turn.</desc>
+<defs>
+      <style>#prompt-workflow-root { color-scheme: light; }
+      #prompt-workflow-root { color: #171717; font-family: ui-sans-serif, system-ui, 'Segoe UI', sans-serif; }
+      #prompt-workflow-root .diagram-container { width:100%; overflow-x:auto; }
+      #prompt-workflow-root text { font-family:ui-sans-serif, system-ui, 'Segoe UI', sans-serif; fill:#171717; }
+      #prompt-workflow-root .body { font-size:12px; font-weight:400; }
+      #prompt-workflow-root .node-name { font-size:16px; font-weight:600; }
+      #prompt-workflow-root .group-title { font-size:14px; font-weight:600; }
+      #prompt-workflow-root .diagram-title { font-size:40px; font-weight:600; letter-spacing:-1.2px; }
+      #prompt-workflow-root .section-title { font-size:28px; font-weight:600; letter-spacing:-.6px; }
+      #prompt-workflow-root .section-number { font-size:28px; font-weight:400; fill:#686868; }
+      #prompt-workflow-root .kicker, #prompt-workflow-root .technical { font-family:ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size:12px; }
+      #prompt-workflow-root .kicker { letter-spacing:1.4px; }
+      #prompt-workflow-root .arrow-label { font-family:ui-monospace, 'Cascadia Mono', Consolas, monospace; font-size:10px; fill:#686868; }
+      #prompt-workflow-root .legend { font-size:10px; fill:#686868; }
+      #prompt-workflow-root .separator { stroke:#d4d4d4; stroke-width:1; }
+      #prompt-workflow-root .step, #prompt-workflow-root .input, #prompt-workflow-root .artifact, #prompt-workflow-root .optional-box { fill:#fafafa; stroke:#d4d4d4; stroke-width:1.3; }
+      #prompt-workflow-root .input { stroke:#686868; }
+      #prompt-workflow-root .artifact { fill:#f5f5f5; }
+      #prompt-workflow-root .optional-box { stroke:#686868; stroke-dasharray:5 4; }
+      #prompt-workflow-root .payload { fill:#f5f5f5; stroke:#686868; stroke-width:1.3; }
+      #prompt-workflow-root .focal { fill:#ededed; stroke:#171717; stroke-width:1.5; }
+      #prompt-workflow-root .connector { fill:none; stroke:#686868; stroke-width:1.5; }
+      #prompt-workflow-root .optional { stroke-dasharray:5 4; }
+      #prompt-workflow-root a { color:inherit; }
+      @media print {
+#prompt-workflow-root .diagram-container { overflow:visible; }
+}</style><marker id="prompt-workflow-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 8 4 L 0 8 Z" fill="#686868"/></marker></defs>
+<rect width="960" height="2360" fill="#fafafa"/>
+<text x="40" y="52" class="kicker" >ENHANCE PROMPT / GITHUB COPILOT</text>
+<text x="40" y="108" class="diagram-title" >From rough request to an actionable prompt</text>
+<text x="40" y="144" class="body" >Your rewrite model creates the prompt. Copilot receives it and carries out the task.</text>
+<line x1="40" x2="920" y1="180" y2="180" class="separator"/><text x="40" y="224" class="section-number" >01</text><text x="84" y="224" class="section-title" >Build the rewrite request</text><text x="84" y="252" class="body" >In the native canvas, click Enhance after choosing the input, context and model.</text>
+<path d="M 162 400 V 448" class="connector" marker-end="url(#prompt-workflow-arrow)"/>
+<path d="M 462 400 V 448" class="connector" marker-end="url(#prompt-workflow-arrow)"/>
+<path d="M 780 400 V 448" class="connector" marker-end="url(#prompt-workflow-arrow)"/>
+<path d="M 312 608 V 664" class="connector" marker-end="url(#prompt-workflow-arrow)"/>
+<path d="M 584 728 H 640" class="connector" marker-end="url(#prompt-workflow-arrow)"/>
+<g><rect x="586" y="696" width="52" height="20" fill="#fafafa"/><text x="612" y="710" class="arrow-label" text-anchor="middle">RESULT</text></g>
+<g class="node"><rect x="40" y="284" width="244" height="116" rx="6" class="input"/><text x="60" y="316" class="node-name" >Your request</text><text x="60" y="340" class="body" >Rough text + explicit attachments</text><text x="60" y="358" class="body" >Text excerpts, images and paths</text><text x="60" y="376" class="body" >Preview context; exclude items</text></g>
+<g class="node"><rect x="320" y="284" width="284" height="116" rx="6" class="step"/><text x="340" y="316" class="node-name" >Allowed project context</text><text x="340" y="340" class="body" >Off → Max, with privacy switches</text><text x="340" y="358" class="body" >Safe paths; selective secret masking</text><text x="340" y="376" class="body" >Max: selector sees task + file paths</text></g>
+<g class="node"><rect x="640" y="284" width="280" height="116" rx="6" class="step"/><text x="660" y="316" class="node-name" >How to rewrite</text><text x="660" y="340" class="body" >Global + project rules; custom text</text><text x="660" y="358" class="body" >Style or structure; output language</text><text x="660" y="376" class="body" >Optional Copilot-specific guidance</text></g>
+<g class="node"><rect x="40" y="448" width="880" height="160" rx="6" class="payload"/>
+  <text x="60" y="480" class="node-name" >One enhancement request, two parts</text>
+  <line x1="472" y1="504" x2="472" y2="588" class="separator"/>
+  <text x="60" y="520" class="group-title" >System instructions</text>
+  <text x="60" y="544" class="body" >Preserve intent; use grounded details.</text><text x="60" y="564" class="body" >Apply the selected rules, shape and language.</text><text x="60" y="584" class="body" >Return only the final prompt.</text>
+  <text x="496" y="520" class="group-title" >User payload + supported images</text>
+  <text x="496" y="544" class="technical" >&lt;project_context&gt; allowed context &lt;/project_context&gt;</text><text x="496" y="564" class="technical" >&lt;request&gt; original text &lt;/request&gt;</text>
+  <text x="496" y="584" class="body" >Attached text and file paths; image input where supported.</text>
+</g>
+<g class="node"><rect x="40" y="664" width="544" height="128" rx="6" class="focal"/><text x="60" y="696" class="node-name" >Your configured rewrite model</text><text x="60" y="720" class="body" >API / local endpoint / authenticated subscription or custom CLI</text><text x="60" y="738" class="body" >CLI runs in an empty temporary folder with the supplied payload.</text><text x="60" y="756" class="body" >Permitted fallback retries other profiles within the run budget.</text><text x="60" y="774" class="body" >The Copilot subscription is separate from this rewrite step.</text></g>
+<g class="node"><rect x="640" y="664" width="280" height="128" rx="6" class="artifact"/><text x="660" y="696" class="node-name" >Enhanced task prompt</text><text x="660" y="720" class="body" >Remove common model wrappers.</text><text x="660" y="738" class="body" >Keep attached-file paths.</text><text x="660" y="756" class="body" >Return the result to the canvas.</text><text x="660" y="774" class="body" >Save prompt history if enabled.</text></g>
+<text x="40" y="832" class="body" >Selector failure → keep heuristic file selection. Fatal validation/model failure or cancellation → no send.</text>
+<text x="40" y="856" class="body" >The selector can use a different provider. Fallback may send a payload to multiple configured providers.</text>
+<line x1="40" x2="920" y1="892" y2="892" class="separator"/><text x="40" y="936" class="section-number" >02</text><text x="84" y="936" class="section-title" >Review, then hand the prompt to Copilot</text><text x="84" y="964" class="body" >A successful rewrite is still text. Sending is a separate action.</text>
+<path d="M 136 1096 V 1152" class="connector" marker-end="url(#prompt-workflow-arrow)"/>
+<path d="M 320 1096 V 1120 Q 320 1128 328 1128 H 432 Q 440 1128 440 1136 V 1152" class="connector" marker-end="url(#prompt-workflow-arrow)"/>
+<path d="M 720 1096 V 1120 Q 720 1128 712 1128 H 608 Q 600 1128 600 1136 V 1152" class="connector optional" marker-end="url(#prompt-workflow-arrow)"/>
+<path d="M 680 1220 H 720" class="connector" marker-end="url(#prompt-workflow-arrow)"/>
+<path d="M 520 1288 V 1352" class="connector" marker-end="url(#prompt-workflow-arrow)"/>
+<g><rect x="154" y="1114" width="100" height="20" fill="#fafafa"/><text x="204" y="1128" class="arrow-label" text-anchor="middle">COPY / SAVE</text></g>
+<g><rect x="336" y="1096" width="100" height="20" fill="#fafafa"/><text x="386" y="1110" class="arrow-label" text-anchor="middle">CLICK SEND</text></g>
+<g><rect x="600" y="1096" width="104" height="20" fill="#fafafa"/><text x="652" y="1110" class="arrow-label" text-anchor="middle">CHECKS PASS</text></g>
+<g><rect x="678" y="1188" width="44" height="20" fill="#fafafa"/><text x="700" y="1202" class="arrow-label" text-anchor="middle">HOLD</text></g>
+<g><rect x="548" y="1310" width="52" height="20" fill="#fafafa"/><text x="574" y="1324" class="arrow-label" text-anchor="middle">IDLE</text></g>
+<g class="node"><rect x="40" y="992" width="360" height="104" rx="6" class="input"/><text x="60" y="1024" class="node-name" >Review and edit the result</text><text x="60" y="1048" class="body" >Read the generated task prompt.</text><text x="60" y="1066" class="body" >Make any corrections before Send.</text><text x="60" y="1084" class="body" >Normal Send uses this reviewed text.</text></g>
+<g class="node"><rect x="520" y="992" width="400" height="104" rx="6" class="optional-box"/><text x="540" y="1024" class="node-name" >Optional: send right after enhancing</text><text x="540" y="1048" class="body" >Off by default; requires explicit opt-in.</text><text x="540" y="1066" class="body" >Recheck unchanged input, project and target.</text><text x="540" y="1084" class="body" >Cancel, closing or switching it off stops the send.</text></g>
+<g class="node"><rect x="40" y="1152" width="240" height="96" rx="6" class="artifact"/><text x="60" y="1184" class="node-name" >Copy or download</text><text x="60" y="1208" class="body" >Keep the prompt for manual use.</text><text x="60" y="1226" class="body" >No Copilot message is sent.</text></g>
+<g class="node"><rect x="360" y="1152" width="320" height="136" rx="6" class="step"/><text x="380" y="1184" class="node-name" >Check the attached session</text><text x="380" y="1208" class="body" >Send permission must be on.</text><text x="380" y="1226" class="body" >Exact session; idle; no permission</text><text x="380" y="1244" class="body" >request or queued work pending.</text><text x="380" y="1262" class="body" >Unknown or busy state refuses Send.</text></g>
+<g class="node"><rect x="720" y="1172" width="200" height="96" rx="6" class="artifact"/><text x="740" y="1204" class="node-name" >Keep for review</text><text x="740" y="1228" class="body" >No message submitted.</text><text x="740" y="1246" class="body" >Explain the hold reason.</text></g>
+<g class="node"><rect x="360" y="1352" width="560" height="104" rx="6" class="focal"/><text x="380" y="1384" class="node-name" >Enqueue a new message for Copilot</text><text x="380" y="1408" class="body" >Mark the send so the chat hook skips a second enhancement.</text><text x="380" y="1426" class="body" >Copilot adds its own context and processes the task.</text><text x="380" y="1444" class="body" >Its own tools and permissions govern the work that follows.</text></g>
+<text x="40" y="1380" class="group-title" >State stays local</text>
+<text x="40" y="1404" class="body" >Profiles, preferences, rules, history.</text><text x="40" y="1424" class="body" >Session-scoped drafts and results.</text><text x="40" y="1444" class="body" >Windows keys: DPAPI encryption.</text>
+<text x="40" y="1496" class="body" >The idle check and send are not atomic: if work starts between them, the new message waits in the queue.</text>
+<line x1="40" x2="920" y1="1532" y2="1532" class="separator"/><text x="40" y="1576" class="section-number" >03</text><text x="84" y="1576" class="section-title" >Optional chat auto-enhance</text><text x="84" y="1604" class="body" >Off by default. Transforms the existing turn without sending an extra message.</text>
+<path d="M 280 1700 H 328" class="connector" marker-end="url(#prompt-workflow-arrow)"/>
+<path d="M 608 1700 H 656" class="connector" marker-end="url(#prompt-workflow-arrow)"/>
+<path d="M 432 1760 V 1788 Q 432 1796 424 1796 H 168 Q 160 1796 160 1804 V 1888" class="connector" marker-end="url(#prompt-workflow-arrow)"/>
+<path d="M 704 1824 V 1844 Q 704 1852 696 1852 H 248 Q 240 1852 240 1860 V 1888" class="connector" marker-end="url(#prompt-workflow-arrow)"/>
+<path d="M 832 1824 V 1888" class="connector" marker-end="url(#prompt-workflow-arrow)"/>
+<path d="M 160 2000 V 2064" class="connector" marker-end="url(#prompt-workflow-arrow)"/>
+<path d="M 640 2000 V 2064" class="connector" marker-end="url(#prompt-workflow-arrow)"/>
+<g><rect x="616" y="1668" width="32" height="20" fill="#fafafa"/><text x="632" y="1682" class="arrow-label" text-anchor="middle">YES</text></g>
+<g><rect x="234" y="1764" width="124" height="20" fill="#fafafa"/><text x="296" y="1778" class="arrow-label" text-anchor="middle">SKIP / BYPASS</text></g>
+<g><rect x="408" y="1820" width="112" height="20" fill="#fafafa"/><text x="464" y="1834" class="arrow-label" text-anchor="middle">NO NEW TEXT</text></g>
+<g><rect x="842" y="1850" width="76" height="20" fill="#fafafa"/><text x="880" y="1864" class="arrow-label" text-anchor="middle">REWRITE</text></g>
+<g class="node"><rect x="40" y="1640" width="240" height="120" rx="6" class="input"/><text x="60" y="1672" class="node-name" >User submits chat text</text><text x="60" y="1696" class="body" >Copilot adds runtime context.</text><text x="60" y="1714" class="body" >The packaged hook receives</text><text x="60" y="1732" class="body" >both text versions, session ID</text><text x="60" y="1750" class="body" >and project directory.</text></g>
+<g class="node"><rect x="328" y="1640" width="280" height="120" rx="6" class="step"/><text x="348" y="1672" class="node-name" >Check hook eligibility</text><text x="348" y="1696" class="body" >Enabled; valid input; long enough.</text><text x="348" y="1714" class="body" >No subagent or panel-send bypass.</text><text x="348" y="1732" class="body" >Original text must appear exactly</text><text x="348" y="1750" class="body" >once in the transformed prompt.</text></g>
+<g class="node"><rect x="656" y="1640" width="264" height="184" rx="6" class="optional-box"/><text x="676" y="1672" class="node-name" >Choose configured mode</text><text x="676" y="1696" class="body" >Rules: append dedicated text.</text><text x="676" y="1714" class="body" >No model call in Rules mode.</text><text x="676" y="1750" class="body" >AI: API rewrite chain only.</text><text x="676" y="1768" class="body" >Rules + optional static context.</text><text x="676" y="1786" class="body" >No CLI or canvas attachments.</text></g>
+<g class="node"><rect x="40" y="1888" width="240" height="112" rx="6" class="artifact"/><text x="60" y="1920" class="node-name" >Leave content unchanged</text><text x="60" y="1944" class="body" >Off, short or ambiguous input;</text><text x="60" y="1962" class="body" >bypass, error, timeout, empty</text><text x="60" y="1980" class="body" >or unchanged rewrite.</text></g>
+<g class="node"><rect x="360" y="1888" width="560" height="112" rx="6" class="artifact"/><text x="380" y="1920" class="node-name" >Replace only the original-text span</text><text x="380" y="1944" class="body" >Retain the surrounding Copilot context byte for byte.</text><text x="380" y="1962" class="body" >Return modifiedTransformedPrompt to the runtime.</text><text x="380" y="1980" class="body" >The hook itself cannot call Send.</text></g>
+<g class="node"><rect x="40" y="2064" width="880" height="100" rx="6" class="artifact"/><text x="60" y="2096" class="node-name" >Copilot processes the same chat turn</text><text x="60" y="2120" class="body" >Its model receives the resulting text, changed only when the hook succeeds.</text><text x="60" y="2138" class="body" >The visible chat still shows the user’s original message.</text></g>
+<text x="40" y="2204" class="body" >AI chain budget: 1.7 s minus setup. Outer process deadline: 4.5 s. Failure leaves original content intact.</text>
+<text x="40" y="2228" class="body" >AI responses can enter history if enabled. Rules mode records an outcome only; reporting is best effort.</text>
+<text x="40" y="2264" class="body" >Masking is selective: typed text, attachments and some context remain unmasked. Preview before sharing.</text>
+<line x1="40" y1="2300" x2="920" y2="2300" class="separator"/>
+<path d="M 40 2332 H 72" class="connector" marker-end="url(#prompt-workflow-arrow)"/><text x="88" y="2336" class="legend" >Data or action flow</text>
+<path d="M 288 2332 H 320" class="connector optional" marker-end="url(#prompt-workflow-arrow)"/><text x="336" y="2336" class="legend" >Optional path</text>
+<text x="572" y="2336" class="legend" >Full branches and code references: docs/prompt-workflow.md</text>
+</svg>

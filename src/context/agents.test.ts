@@ -1,6 +1,6 @@
 // The other agents' sessions: secrets are masked, the newest output is kept, the target is left out.
-import { assert, mockHost, mountWorker, test } from 'orca/testing'
-import type { OrcaWorkerApi } from 'orca/worker'
+import { assert, mockHost, mountWorker, test } from '#testing'
+import type { EnhanceWorker } from '#host'
 import { agentsSummary, otherAgents, readSession, redactSecrets, SESSION_CHARS } from './agents.ts'
 import { redactCode } from './secrets.ts'
 
@@ -140,13 +140,13 @@ test('other agents: busiest first, without the target or agents with no terminal
       'terminal.read': { lines: Array.from({ length: 80 }, (_, index) => `line ${index} ${'x'.repeat(60)}`), truncated: true }
     }
   })
-  let captured: OrcaWorkerApi | null = null
-  const worker = await mountWorker({ default: (api: OrcaWorkerApi) => void (captured = api) }, { host })
-  const orca = captured as unknown as OrcaWorkerApi
-  const agents = await otherAgents(orca, 'target')
+  let captured: EnhanceWorker | null = null
+  const worker = await mountWorker({ default: (api: EnhanceWorker) => void (captured = api) }, { host })
+  const api = captured as unknown as EnhanceWorker
+  const agents = await otherAgents(api, 'target')
   assert.deepEqual(agents.map((entry) => entry.terminalId), ['busy', 'done'])
   assert.match(agentsSummary(agents, 63_000), /claude · Busy · working for 1 min/)
-  const session = await readSession(orca, 'busy')
+  const session = await readSession(api, 'busy')
   assert.ok(session.length <= SESSION_CHARS + 2)
   assert.match(session, /line 79/)
   await worker.deactivate()

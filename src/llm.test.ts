@@ -1,5 +1,5 @@
 // What a model is sent, and what happens to an answer that stopped at the token limit.
-import { afterEach, assert, mockHost, mountWorker, test } from 'orca/testing'
+import { afterEach, assert, mockHost, mountWorker, test } from '#testing'
 import { parseHistory } from './history.ts'
 import { complete, LlmError, tokenLimitField, type LlmConfig } from './llm.ts'
 import { DEFAULT_MAX_TOKENS, normalizeProfile } from './presets.ts'

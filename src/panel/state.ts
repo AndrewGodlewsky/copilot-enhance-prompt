@@ -1,7 +1,7 @@
 // state.ts: what the panel knows (its atoms), with no UI in it. The web panel (web/src) draws it and
 // the tests read it; actions.ts changes it, view.ts turns it into labels and options, setup.ts wires
-// Orca's events to it.
-import { atom, derived, read, set, type Atom, type JsonValue } from 'orca'
+// the host's events to it.
+import { atom, derived, read, set, type Atom, type JsonValue } from '#panel'
 import { HISTORY_KEY, parseHistory } from '../history.ts'
 import type { RulesConfig } from '../rules.ts'
 import { isMessage, messageIn, plainText, render, type Message } from '../messages.ts'
@@ -55,16 +55,16 @@ export const structureDraft = atom({ name: '', sections: '' })
 /** The structure picked in the composer's options; '' = the style's own shape. */
 export const structureChoice = atom('structureChoice', '', { persist: 'plugin' })
 /**
- * Which workspace a terminal belongs to, by Orca's id: learnt from Orca's agent events and from the
+ * Which workspace a terminal belongs to, by the host's id: learnt from the host's agent events and from the
  * person's pick, since several workspaces can share a name and branch (all "main", say).
  */
 export const terminalWorkspaces = atom<Record<string, string>>('terminalWorkspaces', {}, { persist: 'plugin' })
-/** The folders the focused workspace could be, when Orca cannot tell (the person picks one). */
+/** The folders the focused workspace could be, when the host cannot tell (the person picks one). */
 export const workspaceChoices = atom<{ id: string; path: string; project?: string }[]>([])
-/** The focused workspace's name as Orca gives it; several projects can share it ("main"). */
+/** The focused workspace's name as the host gives it; several projects can share it ("main"). */
 export const workspaceName = atom<string | null>(null)
 /**
- * The focused project's own name (its repository's name in Orca): what its rules are kept under,
+ * The focused project's own name (its repository's name in the host): what its rules are kept under,
  * and what the panel calls it. Null while it is not known which of several same-named projects this is.
  */
 export const projectName = atom<string | null>(null)
@@ -129,7 +129,7 @@ export type FeedbackAsk = { runs: number; shownAt: number }
 export const feedbackAsk = atom<FeedbackAsk>('feedbackAsk', { runs: 0, shownAt: 0 }, { persist: 'plugin' })
 /**
  * The person turned the note off ("Don't ask again" in the note, or the switch under Feedback). Kept
- * here and not as a setting in the manifest: Orca counts a new setting as more access and asks every
+ * here and not as a setting in the manifest: the host counts a new setting as more access and asks every
  * user to approve the update again, and until they do, they get no update at all.
  */
 export const feedbackOff = atom('feedbackOff', false, { persist: 'plugin' })
@@ -143,8 +143,8 @@ export type AttachedFile = { path: string; name: string; bytes: number; type: st
 export const files = atom<AttachedFile[]>([])
 
 /**
- * Which project (workspace) the composer below belongs to: its key (Orca's workspace id, or its name
- * and branch when Orca cannot tell the id) and name. The draft, the result and what the last run used
+ * Which project (workspace) the composer below belongs to: its key (the host's workspace id, or its name
+ * and branch when the host cannot tell the id) and name. The draft, the result and what the last run used
  * belong to that project; switching projects parks them under its key and brings back the new one's.
  */
 export const workspaceKey = atom<string | null>(null)
@@ -165,7 +165,7 @@ export const parked = atom<Record<string, Slot>>({})
 export const MAX_PARKED = 20
 
 /**
- * The draft, the last result and what the last run used are kept across panel runs (Orca writes
+ * The draft, the last result and what the last run used are kept across panel runs (the host writes
  * `persist: 'plugin'` atoms to panel-state.json in the plugin's data folder) only while "Save history"
  * is on. The panel works on the in-memory atoms above; `put` mirrors them into these saved copies,
  * or empties the copies when saving is off. Same keys as before, so earlier saved values still load.
@@ -206,7 +206,7 @@ export const resultFor = atom<string | null>(null)
  * "Send right after enhancing": Ctrl+Enter (or the button next to Enhance) enhances and types the
  * result into the agent with no read in between (actions.ts: enhanceAndSend). Off until the person
  * has read what it does and turned it on in Settings. A preference of the panel, not a setting in
- * the manifest: Orca counts a new setting as more access and asks every user to approve again.
+ * the manifest: the host counts a new setting as more access and asks every user to approve again.
  */
 export const sendAfterEnhance = atom('sendAfterEnhance', false, { persist: 'plugin' })
 /** What auto-enhance did with the last prompt it saw (the worker keeps it in memory), for the Settings section. */
@@ -250,7 +250,7 @@ export function say(text: Message | string): string {
 }
 
 /**
- * An error in the panel's language. The worker's message comes inside the error's text (Orca passes
+ * An error in the panel's language. The worker's message comes inside the error's text (the host passes
  * on a thrown error's code and text only; see messages.ts); without one, the text is shown as it is.
  */
 export const message = (error: unknown) => {
@@ -259,7 +259,7 @@ export const message = (error: unknown) => {
   return error instanceof Error ? plainText(error.message) : String(error)
 }
 
-/** The worker's message an error carries (as a field under the test host, inside its text in Orca), or null. */
+/** The worker's message an error carries (as a field under the test host, inside its text in the host), or null. */
 export function errorMessage(error: unknown): Message | null {
   const text = error && typeof error === 'object' && 'text' in error ? (error as { text: unknown }).text : null
   if (isMessage(text)) return text

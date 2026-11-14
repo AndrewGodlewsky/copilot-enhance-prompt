@@ -1,6 +1,6 @@
 // History: size limits, and edits from the panel going through the worker's queue.
-import { read, set } from 'orca'
-import { afterEach, assert, mockHost, mountWorker, test, type MockRequests } from 'orca/testing'
+import { read, set } from '#panel'
+import { afterEach, assert, mockHost, mountWorker, test, type MockRequests } from '#testing'
 import { capHistory, HISTORY_ENTRY_CHARS, HISTORY_TOTAL_CHARS, parseHistory, trimForHistory, type HistoryEntry } from './history.ts'
 import { clearData, clearHistory, removeEntry, reuse } from './panel/actions.ts'
 import { confirmClearHistory, confirmWipe, draft, filteredHistory, history, historyFilter, HISTORY_PAGE, historyShown, notice, put, result, tab } from './panel/state.ts'
