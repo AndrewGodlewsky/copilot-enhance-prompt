@@ -49,3 +49,5 @@ Build after changing backend, panel, translations or release notes. The normal t
 Keep `plugin.json`, `src/version.ts`, and all three changelogs in sync. Rebuild and check the generated package. Do not commit scratch scripts, test data, private logs or credentials.
 
 Commit and push completed, verified work to `main` unless the owner requests otherwise. Never force-push. Tagging and creating releases remain separate owner decisions; the build/check scripts publish nothing.
+
+For this project, every completion report must state the plugin version, whether changes were pushed, the destination branch and commit, and any verification still pending.
