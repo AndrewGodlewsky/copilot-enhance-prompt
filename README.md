@@ -138,6 +138,8 @@ The development panel runs at `http://localhost:5174` with sample data, without 
 
 `scripts/e2e.mjs` loads the built package in an isolated installed Copilot runtime and exercises canvas discovery, project metadata, context preview, enhancement, sending and the packaged prompt hook. Its disposable session uses a local model fixture; no external model is called. Set `COPILOT_SDK_DIR` and `COPILOT_CLI_PATH` to the desktop SDK directory and runtime executable. See [AGENTS.md](AGENTS.md) for the architecture and behavioral invariants.
 
+`node scripts/e2e-model-access.mjs` uses the same environment variables to compare native workflow and headless SDK rewriting against a local model fixture. It checks model choice, tool/context isolation and cancellation; it does not enable a Copilot rewrite provider in the plugin. See the [model-access validation findings](docs/research/copilot-model-access-validation.md) for the result and remaining desktop checks.
+
 The current port has passed unit tests, type checks, package checks and that installed-runtime integration test. Desktop visual verification remains unfinished; the preview is not a published stable release.
 
 ## License and attribution

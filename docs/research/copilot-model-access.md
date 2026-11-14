@@ -4,6 +4,8 @@ Researched 2026-11-14 against official GitHub documentation and `github/copilot-
 
 ## Finding
 
+**Validation update:** the native workflow executes, but adds unselected project metadata. The headless SDK passed the local isolation and cancellation checks. See [the validation results and implementation recommendation](copilot-model-access-validation.md). The sections below preserve the initial investigation.
+
 **Copilot can perform enhancement programmatically without opening a chat UI.** The supported SDK path creates a session and sends a prompt through the runtime; the CLI also accepts `-p` and exits after completion. Programmatic execution does not establish that a request leaves no session history or desktop activity. The CLI even prints a resume hint for programmatic sessions. [SDK/CLI compatibility](https://docs.github.com/en/copilot/how-tos/copilot-sdk/troubleshooting/compatibility), [CLI command reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-command-reference)
 
 Owner clarification: **a history entry is acceptable; opening a new chat window is not.** The rewrite must return to the Enhance Prompt panel. This is a research note, not an approved implementation design.
