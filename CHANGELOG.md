@@ -1,5 +1,10 @@
 # Changes
 
+## [0.1.8] - 2026-11-14
+
+### Changed
+- Replace the prompt-and-spark icon with the green Lift speech bubble and upward arrow. Keep the compact SVG for Copilot plugin metadata and a matching PNG favicon.
+
 ## [0.1.7] - 2026-11-14
 
 ### Fixed

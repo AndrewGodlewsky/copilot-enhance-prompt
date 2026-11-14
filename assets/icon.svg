@@ -1,7 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
-  <!-- Compact vector mark for Copilot plugin metadata. The panel uses icon.png. -->
-  <rect x="8" y="8" width="240" height="240" rx="56" fill="#0A0A0A"/>
-  <path d="M70 100 L108 130 L70 160" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
-  <rect x="122" y="152" width="62" height="16" rx="8" fill="#FFFFFF"/>
-  <path d="M150 62 C152.5 80 156 83.5 174 86 C156 88.5 152.5 92 150 110 C147.5 92 144 88.5 126 86 C144 83.5 147.5 80 150 62 Z" fill="#FFFFFF"/>
+  <!-- Compact Lift mark for Copilot plugin metadata; icon.png is its favicon export. -->
+  <rect x="8" y="8" width="240" height="240" rx="48" fill="#182024"/>
+  <path d="M80 49 H176 C197 49 214 66 214 87 V144 C214 165 197 182 176 182 H104 L63 210 C58 214 53 210 55 204 L64 179 C51 173 42 160 42 144 V87 C42 66 59 49 80 49 Z" fill="#4CCB78"/>
+  <path d="M126 76 Q128 74 130 76 L171 118 Q173 120 170 120 H144 V160 H112 V120 H86 Q83 120 85 118 Z" fill="#182024"/>
 </svg>

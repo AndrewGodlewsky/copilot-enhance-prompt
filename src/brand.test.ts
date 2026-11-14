@@ -9,8 +9,8 @@ test('no gradients in the logo or the picture scripts', () => {
   for (const path of ['assets/icon.svg', ...scripts.map((name) => `scripts/${name}`)]) {
     assert.ok(!/gradient/i.test(read(path)), `${path} has a gradient`)
   }
-  // The logo is the flat, monochrome tile with the prompt and the spark.
+  // The Lift logo uses a green speech bubble and a charcoal tile and arrow.
   const icon = read('assets/icon.svg')
-  assert.match(icon, /fill="#0A0A0A"/)
-  assert.match(icon, /fill="#FFFFFF"/)
+  assert.match(icon, /fill="#182024"/)
+  assert.match(icon, /fill="#4CCB78"/)
 })

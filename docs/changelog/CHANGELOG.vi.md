@@ -1,5 +1,10 @@
 # Thay đổi
 
+## [0.1.8] - 2026-11-14
+
+### Thay đổi
+- Thay biểu tượng dấu nhắc và tia sáng bằng bong bóng hội thoại Lift màu xanh lá với mũi tên hướng lên. Giữ SVG nhỏ gọn cho siêu dữ liệu plugin Copilot và favicon PNG đồng bộ.
+
 ## [0.1.7] - 2026-11-14
 
 ### Sửa lỗi
