@@ -1,5 +1,10 @@
 var e=`# Changes
 
+## [0.1.4] - 2026-11-14
+
+### Changed
+- Use the compact SVG for Copilot's plugin logo, matching the Usage Insights manifest setup. Keep the PNG in the panel and canvas SDK metadata. The desktop tab's appearance still needs manual confirmation.
+
 ## [0.1.3] - 2026-11-14
 
 ### Fixed

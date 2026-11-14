@@ -12,7 +12,7 @@ The React panel retains model chains and fallback, prompt styles, reusable rules
 
 ## Download and install
 
-**Development preview, version 0.1.3.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub or download a local copy using the instructions below. The package includes the root `plugin.json` and `com.github.copilot/` directory.
+**Development preview, version 0.1.4.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub or download a local copy using the instructions below. The package includes the root `plugin.json` and `com.github.copilot/` directory.
 
 ### Requirements
 
@@ -66,7 +66,7 @@ In **Customize → Installed**, check that Enhance Prompt is enabled. Open a ses
 
 To update a local install, replace or update the files in its existing folder and start a new session; rebuild first if you changed source code. For a GitHub install, run `copilot plugin update enhance-prompt@copilot-enhance-prompt`. Remove either installation with `copilot plugin uninstall enhance-prompt@copilot-enhance-prompt`.
 
-After updating to 0.1.3 or later, open the canvas in a new session to load its tab icon. Existing sessions can retain the previous canvas registration.
+Version 0.1.4 uses the compact SVG as the plugin logo. After updating, restart Copilot and open the canvas in a new session to reload its metadata. Existing sessions can retain the previous canvas registration. The desktop tab's appearance still needs manual confirmation; runtime tests verify the icon metadata only.
 
 ## Use it
 

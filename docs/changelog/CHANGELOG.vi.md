@@ -1,5 +1,10 @@
 # Thay đổi
 
+## [0.1.4] - 2026-11-14
+
+### Thay đổi
+- Dùng SVG nhỏ gọn làm biểu tượng plugin trong Copilot, theo cách khai báo của Usage Insights. Giữ PNG trong bảng điều khiển và siêu dữ liệu canvas của SDK. Biểu tượng trên tab ứng dụng vẫn cần được kiểm tra trực tiếp.
+
 ## [0.1.3] - 2026-11-14
 
 ### Sửa lỗi

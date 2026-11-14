@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
-  <!-- Legacy vector mark. The current Copilot listing and panel use assets/icon.png. -->
+  <!-- Compact vector mark for Copilot plugin metadata. The panel uses icon.png. -->
   <rect x="8" y="8" width="240" height="240" rx="56" fill="#0A0A0A"/>
   <path d="M70 100 L108 130 L70 160" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
   <rect x="122" y="152" width="62" height="16" rx="8" fill="#FFFFFF"/>
