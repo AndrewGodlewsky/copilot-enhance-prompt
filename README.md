@@ -12,7 +12,7 @@ The React panel retains model chains and fallback, prompt styles, reusable rules
 
 ## Download and install
 
-**Development preview, version 0.1.0.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub or download a local copy using the instructions below. The package includes the root `plugin.json` and `com.github.copilot/` directory.
+**Development preview, version 0.1.1.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub or download a local copy using the instructions below. The package includes the root `plugin.json` and `com.github.copilot/` directory.
 
 ### Requirements
 

@@ -1,5 +1,10 @@
 var e=`# Thay đổi
 
+## [0.1.1] - 2026-11-14
+
+### Thêm
+- Biểu tượng prompt và tia sáng đơn sắc mới, được khai báo trong metadata plugin Copilot và hiển thị ở đầu canvas cùng favicon.
+
 ## [0.1.0] - 2026-11-14
 
 ### Thêm

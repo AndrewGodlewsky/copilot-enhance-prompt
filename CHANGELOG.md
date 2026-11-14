@@ -1,5 +1,10 @@
 # Changes
 
+## [0.1.1] - 2026-11-14
+
+### Added
+- New monochrome prompt-and-spark icon, declared in Copilot's plugin metadata and shown in the canvas header and favicon.
+
 ## [0.1.0] - 2026-11-14
 
 ### Added

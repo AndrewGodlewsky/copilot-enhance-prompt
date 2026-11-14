@@ -17,7 +17,7 @@ import { closePanel, wirePanel } from '../../src/panel/setup.ts'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { IconAction, Notices } from './common'
 import { WhatsNew } from './whats-new'
-import logo from '../../assets/art/logo-64.png'
+import logo from '../../assets/icon.png'
 import { ready, usePanel } from './panel-runtime'
 import { EnhanceSection } from './enhance'
 import { connectCanvas } from './transport'
@@ -78,7 +78,7 @@ function App() {
       <div className="flex min-h-screen flex-col gap-3 p-3">
         <header className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-1.5">
-            <img src={logo} alt="" className="size-5 shrink-0 dark:invert" />
+            <img src={logo} alt="" className="size-5 shrink-0" />
             {/* The app's name stays; the highlighted icon says which section is open. */}
             <h1 className="truncate text-sm font-semibold">{BRAND}</h1>
             <WhatsNew />
