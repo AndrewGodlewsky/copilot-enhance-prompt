@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Enhance Prompt — banner concepts</title>
+<style>
+/* Review-only mockups. No production imports, services, storage, or animation. */
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--background,#fff); color: var(--foreground,#171717); font: 14px/1.5 var(--font-sans,"Segoe UI",sans-serif); }
+main { max-width: 980px; margin: auto; padding: 8px 0; }
+h1,h2,p { margin: 0; }
+button,select { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible,select:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+.concept + .concept { margin-top: 32px; }
+.intro { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px 20px; margin-bottom:8px; }
+.intro h2 { font-size: 19px; font-weight: 650; }
+.intro p,.explanation { color:var(--muted-foreground,#606060); }
+.prototype-controls { display:flex; align-items:center; gap:10px 16px; flex-wrap:wrap; margin:14px 0 10px; }
+.prototype-controls label { display:flex; align-items:center; gap:8px; }
+.prototype-controls select { color:var(--foreground,#171717); background:var(--background,#fff); border:1px solid var(--border,#ccc); border-radius:6px; padding:7px 28px 7px 10px; min-height:38px; }
+.prototype-controls .sample { font-size:12px; color:var(--muted-foreground,#606060); }
+.mockup { --app-bg:#101112; --app-fg:#f3f3f0; --app-muted:#b1b6b5; --app-line:#363c3c; --app-raised:#222728; --hero:#143239; --hero-ink:#f3f0e6; --hero-muted:#becfcf; --hero-line:#5c777b; --art-ink:#254d55; --art-muted:#679a9b; --art-paper:#ece9db; --art-accent:#e9ba64; --art-back:#21454d; --art-bright:#9cc8bb; border:1px solid var(--border,#ccc); padding:16px; border-radius:12px; background:var(--app-bg); color:var(--app-fg); font-family:"Segoe UI",system-ui,sans-serif; }
+.mockup[data-theme=light] { --app-bg:#fafbfa; --app-fg:#1c2627; --app-muted:#5d6667; --app-line:#d6dedd; --app-raised:#e9eeee; --hero:#e1edeb; --hero-ink:#163c41; --hero-muted:#47656b; --hero-line:#8caaaa; --art-ink:#244f58; --art-muted:#69938e; --art-paper:#fff9e9; --art-accent:#b88430; --art-back:#c4d9d4; --art-bright:#407f72; }
+.hero { position:relative; isolation:isolate; display:grid; grid-template-columns:minmax(0,1fr) minmax(260px,44%); min-height:206px; overflow:hidden; border-radius:9px; background:var(--hero); color:var(--hero-ink); }
+.hero-copy { padding:24px 0 24px 24px; align-self:center; z-index:1; }
+.brand { display:flex; gap:9px; align-items:center; margin-bottom:8px; }
+.brand img { width:26px; height:26px; }
+.brand span { font-size:12px; color:var(--hero-muted); }
+.hero h1 { font-size:28px; font-weight:650; line-height:1.2; letter-spacing:-.6px; }
+.tagline { margin-top:7px; color:var(--hero-muted); font-size:14px; }
+.status { display:flex; align-items:center; gap:8px; margin-top:19px; font-size:13px; font-weight:600; min-height:20px; }
+.status-dot { width:7px; height:7px; background:var(--art-accent); flex:none; }
+.status[data-status=ready] .status-dot { background:var(--art-bright); }
+.status[data-status=error] .status-dot { background:var(--art-accent); transform:rotate(45deg); }
+.scene { align-self:end; height:155px; margin:45px 12px 6px 0; }
+.scene svg { display:block; width:100%; height:100%; }
+.theme-switch { position:absolute; z-index:2; top:12px; right:12px; display:flex; padding:3px; border:1px solid var(--hero-line); border-radius:7px; background:var(--hero); }
+.theme-switch button { min-height:32px; padding:3px 9px; border:0; border-radius:4px; background:transparent; color:var(--hero-ink); font-size:12px; display:flex; align-items:center; gap:5px; }
+.theme-switch button[aria-pressed=true] { background:var(--hero-ink); color:var(--hero); }
+.theme-switch button:hover { outline:1px solid var(--hero-line); }
+.nav { display:flex; align-items:center; flex-wrap:wrap; gap:4px; padding:12px 0; border-bottom:1px solid var(--app-line); font-size:13px; }
+.nav span { padding:7px 10px; color:var(--app-muted); }
+.nav .selected { background:var(--app-raised); color:var(--app-fg); border-radius:6px; font-weight:600; }
+.nav .language { margin-left:auto; font-size:12px; }
+.composer { padding:14px 0 2px; }
+.composer strong { font-size:14px; font-weight:600; }
+.input-sample { margin-top:7px; padding:10px 12px; background:var(--app-raised); color:var(--app-muted); border-radius:6px; font-size:13px; }
+.explanation { margin-top:10px; font-size:13px; }
+.desk { --hero:#242b3c; --hero-ink:#f0eee8; --hero-muted:#c0c7d5; --hero-line:#697186; --art-ink:#263044; --art-muted:#748299; --art-paper:#ede8d8; --art-accent:#e1b86b; --art-back:#3c495f; --art-bright:#9abaaa; }
+.desk[data-theme=light] { --hero:#e6ebf4; --hero-ink:#29344c; --hero-muted:#53617a; --hero-line:#a0adbf; --art-ink:#39445d; --art-muted:#7e8da3; --art-paper:#fff9e9; --art-accent:#a97228; --art-back:#ccd5e4; --art-bright:#487d6d; }
+.desk .hero { grid-template-columns:minmax(0,1fr) minmax(280px,48%); }
+.desk .scene { height:164px; margin:41px 12px 0 0; }
+@media(max-width:640px) {
+  .mockup { padding:10px; }
+  .hero,.desk .hero { grid-template-columns:1fr; }
+  .hero-copy { padding:20px 20px 0; }
+  .brand { margin-bottom:17px; padding-right:120px; min-height:28px; }
+  .hero h1 { font-size:25px; }
+  .status { margin-top:12px; }
+  .scene,.desk .scene { width:100%; height:130px; margin:4px 0 0; padding:0 12px; }
+  .nav span { padding:6px 8px; }
+  .nav .language { margin-left:0; }
+}
+</style>
+</head>
+<body>
+<main>
+  <section class="concept" aria-labelledby="press-heading">
+    <div class="intro"><h2 id="press-heading">A · Prompt Press</h2><p>Loose thoughts, carefully set.</p></div>
+    <div class="prototype-controls">
+      <label for="press-state">Preview state <select id="press-state"><option value="draft">Draft entered</option><option value="idle">Empty draft</option><option value="running">Enhancing</option><option value="ready">Prompt ready</option><option value="error">Enhancement failed</option><option value="cancelled">Cancelled</option></select></label>
+      <span class="sample">Sample states only</span>
+    </div>
+    <div class="mockup press" id="press" data-theme="dark">
+      <header class="hero">
+        <div class="hero-copy">
+          <div class="brand"><img class="brand-logo" alt=""><span>v0.1.5 concept</span></div>
+          <h1>Enhance Prompt</h1>
+          <p class="tagline">Give your ideas a clearer shape.</p>
+          <p class="status" data-status="draft"><span class="status-dot" aria-hidden="true"></span><span class="status-text">Draft ready to enhance</span></p>
+        </div>
+        <div class="theme-switch" role="group" aria-label="Prompt Press color theme"><button type="button" data-theme="light" aria-pressed="false"><span aria-hidden="true">☀</span> Light</button><button type="button" data-theme="dark" aria-pressed="true"><span aria-hidden="true">◐</span> Dark</button></div>
+        <div class="scene" aria-hidden="true"></div>
+      </header>
+      <div class="nav" aria-label="Sample navigation"><span class="selected">Enhance</span><span>History</span><span>Models</span><span>Rules</span><span>Settings</span><span class="language">English</span></div>
+      <div class="composer"><strong>Write a request</strong><div class="input-sample">Add search to the settings page.</div></div>
+    </div>
+    <p class="explanation" id="press-explanation" aria-live="polite"></p>
+  </section>
+  <section class="concept" aria-labelledby="desk-heading">
+    <div class="intro"><h2 id="desk-heading">B · Quiet Desk</h2><p>A small writing room that follows your day.</p></div>
+    <div class="prototype-controls">
+      <label for="desk-time">Local time <select id="desk-time"><option value="morning">Morning</option><option value="afternoon">Afternoon</option><option value="night" selected>Night</option></select></label>
+      <label for="desk-state">Preview state <select id="desk-state"><option value="draft">Draft entered</option><option value="running">Enhancing</option><option value="ready" selected>Prompt ready</option><option value="error">Enhancement failed</option></select></label>
+      <span class="sample">Sample states only</span>
+    </div>
+    <div class="mockup desk" id="desk" data-theme="dark">
+      <header class="hero">
+        <div class="hero-copy">
+          <div class="brand"><img class="brand-logo" alt=""><span>v0.1.5 concept</span></div>
+          <h1>Enhance Prompt</h1>
+          <p class="tagline">A little more thought. A clearer prompt.</p>
+          <p class="status" data-status="ready"><span class="status-dot" aria-hidden="true"></span><span class="status-text">Prompt ready to review</span></p>
+        </div>
+        <div class="theme-switch" role="group" aria-label="Quiet Desk color theme"><button type="button" data-theme="light" aria-pressed="false"><span aria-hidden="true">☀</span> Light</button><button type="button" data-theme="dark" aria-pressed="true"><span aria-hidden="true">◐</span> Dark</button></div>
+        <div class="scene" aria-hidden="true"></div>
+      </header>
+      <div class="nav" aria-label="Sample navigation"><span class="selected">Enhance</span><span>History</span><span>Models</span><span>Rules</span><span>Settings</span><span class="language">English</span></div>
+      <div class="composer"><strong>Write a request</strong><div class="input-sample">Add search to the settings page.</div></div>
+    </div>
+    <p class="explanation" id="desk-explanation" aria-live="polite"></p>
+  </section>
+</main>
+<script>
+'use strict';
+// Original flat-color illustrations. The logo is embedded from the project's existing SVG.
+const brandLogo = '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256"><rect x="8" y="8" width="240" height="240" rx="56" fill="#0A0A0A"/><path d="M70 100 L108 130 L70 160" fill="none" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/><rect x="122" y="152" width="62" height="16" rx="8" fill="#FFFFFF"/><path d="M150 62 C152.5 80 156 83.5 174 86 C156 88.5 152.5 92 150 110 C147.5 92 144 88.5 126 86 C144 83.5 147.5 80 150 62 Z" fill="#FFFFFF"/></svg>';
+document.querySelectorAll('.brand-logo').forEach(img => { img.src = 'data:image/svg+xml,' + encodeURIComponent(brandLogo); });
+const labels = { idle:'A fresh page for your next idea', draft:'Draft ready to enhance', running:'Enhancing your request…', ready:'Prompt ready to review', error:'Enhancement failed — review the error below', cancelled:'Enhancement cancelled' };
+const pressNotes = {
+  idle:'A blank sheet and an empty composing tray. The scene waits for a draft.',
+  draft:'Text fragments sit in the composing tray. This changes once when the draft becomes nonempty, not on every keystroke.',
+  running:'The sheet is seated in the press. This is one still illustration for the entire run; there is no simulated progress.',
+  ready:'The press produces an organized page with a finished mark. This means a result exists, not that it has been checked or sent.',
+  error:'The unfinished sheet stays in the press with an amber marker. The actual error and recovery action remain in the panel.',
+  cancelled:'The press is open with an unfinished sheet. Your draft stays available.'
+};
+function pageLines(x,y,finished) {
+  return `<g fill="var(--art-ink)"><rect x="${x}" y="${y}" width="${finished?45:31}" height="5"/>${[0,1,2].map(i=>`<rect x="${x}" y="${y+14+i*7}" width="${finished?[53,46,50][i]:[37,52,29][i]}" height="2"/>`).join('')}${finished?`<rect x="${x}" y="${y+45}" width="32" height="4"/><rect x="${x}" y="${y+56}" width="49" height="2"/><rect x="${x}" y="${y+63}" width="39" height="2"/>`:''}</g>`;
+}
+function pressArt(state) {
+  const ready=state==='ready', empty=state==='idle', working=state==='running', error=state==='error';
+  const fragments = empty?'':`<g fill="var(--art-paper)"><rect x="22" y="83" width="37" height="8" transform="rotate(-9 22 83)"/><rect x="69" y="78" width="29" height="8" transform="rotate(6 69 78)"/><rect x="31" y="101" width="55" height="8" transform="rotate(-3 31 101)"/></g><rect x="83" y="99" width="13" height="8" fill="var(--art-accent)"/>`;
+  return `<svg viewBox="0 0 350 165" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 139H350V165H0Z" fill="var(--art-back)"/>
+    <path d="M14 132H109L119 145H23Z" fill="var(--art-muted)"/><path d="M23 145H119V151H23Z" fill="var(--art-ink)"/>
+    ${fragments}
+    <rect x="130" y="52" width="11" height="88" fill="var(--art-muted)"/><rect x="223" y="52" width="11" height="88" fill="var(--art-muted)"/>
+    <path d="M134 38H229L241 52H122Z" fill="var(--art-accent)"/>
+    <rect x="122" y="52" width="119" height="13" fill="var(--art-ink)"/>
+    <rect x="174" y="16" width="13" height="22" fill="var(--art-muted)"/><rect x="156" y="12" width="48" height="5" rx="2" fill="var(--art-paper)"/>
+    <rect x="151" y="${working?80:72}" width="61" height="${working?48:56}" fill="var(--art-paper)"/>
+    ${empty?'':`<g fill="var(--art-ink)"><rect x="159" y="85" width="31" height="4"/><rect x="159" y="97" width="44" height="2"/><rect x="159" y="104" width="35" height="2"/></g>`}
+    <rect x="143" y="${working?109:120}" width="77" height="8" rx="3" fill="var(--art-accent)"/>
+    <rect x="122" y="135" width="119" height="10" rx="2" fill="var(--art-ink)"/><rect x="130" y="145" width="13" height="7" fill="var(--art-muted)"/><rect x="221" y="145" width="13" height="7" fill="var(--art-muted)"/>
+    ${ready?`<g transform="rotate(8 289 96)"><rect x="256" y="51" width="77" height="102" fill="var(--art-muted)"/><rect x="250" y="45" width="77" height="102" fill="var(--art-paper)"/>${pageLines(260,59,true)}<rect x="303" y="128" width="12" height="5" fill="var(--art-bright)"/></g><path d="M313 11L317 23L329 27L317 31L313 43L309 31L297 27L309 23Z" fill="var(--art-accent)"/>`:`<path d="M266 141H332M273 136H328M281 131H324" fill="none" stroke="var(--art-muted)" stroke-width="3"/>`}
+    ${error?'<path d="M223 82L237 106H209Z" fill="var(--art-accent)"/><path d="M223 89V97M223 100V102" stroke="var(--art-ink)" stroke-width="2"/>':''}
+    ${state==='cancelled'?'<path d="M164 116H198" stroke="var(--art-muted)" stroke-width="4"/>':''}
+  </svg>`;
+}
+function deskArt(time,state) {
+  const night=time==='night', morning=time==='morning', ready=state==='ready';
+  const sky=night?'#293b60':morning?'#efc99a':'#a9cfe1';
+  const hills=night?'#384969':morning?'#c09a7c':'#81b6bd';
+  const celestial=night?'<path d="M287 14A13 13 0 1 0 303 31A13 13 0 0 1 287 14Z" fill="#f1dfb2"/><g fill="#cbd5df"><rect x="224" y="19" width="2" height="2"/><rect x="258" y="33" width="2" height="2"/><rect x="315" y="50" width="2" height="2"/></g>':`<circle cx="${morning?235:291}" cy="${morning?51:25}" r="13" fill="#fff0be"/><path d="M229 26H252M222 31H263M283 56H309" stroke="#f2f5ea" stroke-width="4"/>`;
+  return `<svg viewBox="0 0 360 165" xmlns="http://www.w3.org/2000/svg">
+    <rect x="196" y="4" width="146" height="98" rx="3" fill="var(--art-back)"/>
+    <rect x="202" y="10" width="134" height="86" fill="${sky}"/>${celestial}
+    <path d="M202 81L229 67L249 77L274 63L303 76L336 63V96H202Z" fill="${hills}"/>
+    <path d="M202 93L241 83L281 91L313 78L336 85V96H202Z" fill="var(--art-back)"/>
+    <path d="M269 10V96M202 55H336" stroke="var(--art-muted)" stroke-width="4"/>
+    <rect x="192" y="100" width="154" height="6" fill="var(--art-muted)"/>
+    ${night?'<path d="M82 73L41 138H147L103 73Z" fill="#504a3d"/>':''}
+    <path d="M0 138H360V151H0Z" fill="var(--art-muted)"/><path d="M0 151H360V165H0Z" fill="var(--art-back)"/>
+    <path d="M20 136H63M41 134V85L83 52" fill="none" stroke="var(--art-ink)" stroke-width="7"/>
+    <circle cx="42" cy="85" r="6" fill="var(--art-accent)"/>
+    <path d="M72 50L89 43L114 71L78 83Z" fill="var(--art-accent)"/><path d="M79 83L113 72" stroke="var(--art-paper)" stroke-width="4"/>
+    <path d="M123 119H230L242 136H111Z" fill="var(--art-ink)"/><rect x="120" y="108" width="112" height="13" rx="3" fill="var(--art-muted)"/>
+    <rect x="135" y="47" width="82" height="66" fill="var(--art-paper)"/>
+    ${pageLines(147,58,false)}
+    <path d="M127 126H219M133 132H224" stroke="var(--art-paper)" stroke-width="3" stroke-dasharray="5 3"/>
+    ${ready?`<g transform="rotate(8 270 119)"><rect x="247" y="67" width="57" height="73" fill="var(--art-paper)"/><g fill="var(--art-ink)"><rect x="254" y="77" width="25" height="4"/><rect x="254" y="89" width="41" height="2"/><rect x="254" y="96" width="36" height="2"/><rect x="254" y="103" width="40" height="2"/><rect x="254" y="114" width="28" height="3"/></g><path d="M284 126L288 130L297 120" fill="none" stroke="var(--art-bright)" stroke-width="3"/></g>`:''}
+    ${state==='error'?'<rect x="199" y="51" width="14" height="18" fill="var(--art-accent)"/><path d="M206 55V61M206 63V65" stroke="var(--art-ink)" stroke-width="2"/>':''}
+    ${state==='running'?'<rect x="134" y="101" width="84" height="5" fill="var(--art-accent)"/>':''}
+    <path d="M325 117V82M325 102Q303 101 309 87Q325 88 325 102M325 94Q341 93 340 77Q326 78 325 94" fill="var(--art-bright)" stroke="var(--art-bright)" stroke-width="3"/>
+    <path d="M311 116H340L337 138H315Z" fill="var(--art-accent)"/>
+    <rect x="73" y="119" width="19" height="17" rx="2" fill="var(--art-paper)"/><path d="M92 122H98V131H92" fill="none" stroke="var(--art-paper)" stroke-width="3"/>
+  </svg>`;
+}
+function renderPress() {
+  const state=document.getElementById('press-state').value;
+  const mock=document.getElementById('press');
+  mock.querySelector('.scene').innerHTML=pressArt(state);
+  mock.querySelector('.status').dataset.status=state;
+  mock.querySelector('.status-text').textContent=labels[state];
+  mock.querySelector('.input-sample').textContent=state==='idle'?'Describe what you want Copilot to do…':'Add search to the settings page.';
+  document.getElementById('press-explanation').textContent=pressNotes[state];
+}
+function renderDesk() {
+  const time=document.getElementById('desk-time').value;
+  const state=document.getElementById('desk-state').value;
+  const mock=document.getElementById('desk');
+  mock.querySelector('.scene').innerHTML=deskArt(time,state);
+  mock.querySelector('.status').dataset.status=state;
+  mock.querySelector('.status-text').textContent=labels[state];
+  const scene={morning:'Morning brings a low sun and warm hills.',afternoon:'Afternoon brings a high sun and blue daylight.',night:'At night, the moon appears and the desk lamp is on.'}[time];
+  const work={draft:'The draft sits in the typewriter.',running:'The typewriter has one still working state.',ready:'A finished page rests beside the typewriter, ready for review.',error:'An amber marker identifies the unfinished page; the error details stay in the panel.'}[state];
+  document.getElementById('desk-explanation').textContent=scene+' '+work+' Window time and the chosen light/dark theme are independent.';
+}
+document.querySelectorAll('.theme-switch button').forEach(button=>{
+  button.addEventListener('click',()=>{
+    const mock=button.closest('.mockup');
+    mock.dataset.theme=button.dataset.theme;
+    mock.querySelectorAll('.theme-switch button').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));
+  });
+});
+document.getElementById('press-state').addEventListener('change',renderPress);
+document.getElementById('desk-time').addEventListener('change',renderDesk);
+document.getElementById('desk-state').addEventListener('change',renderDesk);
+renderPress();
+renderDesk();
+</script>
+</body>
+</html>
