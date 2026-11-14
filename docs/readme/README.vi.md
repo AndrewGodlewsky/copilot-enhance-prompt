@@ -7,3 +7,9 @@ Giữ lại trình soạn prompt, chuỗi model và dự phòng, luật, cấu t
 Canvas gửi tin nhắn mới, không gõ vào terminal. Phiên bận hoặc chờ trả lời sẽ từ chối gửi. Tự cải thiện mặc định tắt và có thể ảnh hưởng prompt nhập trong Copilot. API key lưu bằng DPAPI trên Windows; nền tảng khác chưa hỗ trợ lưu key.
 
 Xem [hướng dẫn cài đặt và phát triển](../../README.md), [quyền riêng tư](../privacy.md) và [thay đổi](../changelog/CHANGELOG.vi.md).
+
+## Giấy phép và ghi nhận tác giả
+
+Enhance Prompt được [cattfan](https://github.com/cattfan) tạo ra trong [dự án gốc](https://github.com/cattfan/orca-enhance-prompt). Bản fork này kế thừa thiết kế và phần triển khai của tác giả cùng những người đóng góp, rồi điều chỉnh cho GitHub Copilot.
+
+Bản fork được phân phối theo [Giấy phép MIT](../../LICENSE), giữ nguyên toàn bộ giấy phép gốc và dòng `Copyright (c) 2026 cattfan`. Hãy kèm giấy phép này khi sao chép hoặc phân phối plugin, kể cả bản đã đóng gói.

@@ -124,4 +124,10 @@ The development panel runs at `http://localhost:5174` with sample data, without 
 
 The current port has passed unit tests, type checks, package checks and that installed-runtime integration test. Desktop visual verification remains unfinished; the preview is not a published stable release.
 
-Enhance Prompt is free under the [MIT License](LICENSE). Original copyright remains with cattfan. This fork is not affiliated with GitHub or the model providers. [Report an issue](https://github.com/AndrewGodlewsky/copilot-enhance-prompt/issues).
+## License and attribution
+
+This is a fork of [Enhance Prompt](https://github.com/cattfan/orca-enhance-prompt), originally created by [cattfan](https://github.com/cattfan). It adapts that work for GitHub Copilot. Credit for the original plugin's design and implementation belongs to its original author and contributors.
+
+This fork is distributed under the [MIT License](LICENSE). The complete original license, including `Copyright (c) 2026 cattfan`, is preserved unchanged. Include that license with copies or distributions of this plugin, including packaged builds.
+
+This fork is not affiliated with GitHub or the model providers. [Report an issue](https://github.com/AndrewGodlewsky/copilot-enhance-prompt/issues).

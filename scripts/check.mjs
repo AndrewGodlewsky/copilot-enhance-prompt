@@ -25,11 +25,14 @@ async function compare(folder, target) {
 }
 await compare('src/web-dist', `${built}/web`)
 const retiredHost = new RegExp(String.fromCharCode(111, 114, 99, 97), 'i')
+// Preserve source attribution while rejecting references to the retired host integration.
+const upstreamAttribution = 'https://github.com/cattfan/orca-enhance-prompt'
 const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], { encoding: 'utf8' }).split('\0').filter(Boolean)
 for (const file of files) {
   if (!/\.(?:[cm]?[jt]sx?|json|md|css|html|ya?ml|ps1|svg)$/.test(file)) continue
   if (!await access(file).then(() => true, () => false)) continue
   assert.ok(!retiredHost.test(file), `Retired host in filename: ${file}`)
-  assert.ok(!retiredHost.test(await readFile(file, 'utf8')), `Retired host reference: ${file}`)
+  const content = (await readFile(file, 'utf8')).replaceAll(upstreamAttribution, '')
+  assert.ok(!retiredHost.test(content), `Retired host reference: ${file}`)
 }
 console.log('PASS: types, manifest, catalog, packaged assets and platform-reference checks.')
