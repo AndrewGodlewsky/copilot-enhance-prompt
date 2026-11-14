@@ -1,5 +1,10 @@
 var e=`# Changes
 
+## [0.1.7] - 2026-11-14
+
+### Fixed
+- Make light/dark changes immediate across the request card, shared controls, and notification close buttons by removing color fades that lagged behind the banner.
+
 ## [0.1.6] - 2026-11-14
 
 ### Added

@@ -1,5 +1,10 @@
 var e=`# Thay đổi
 
+## [0.1.7] - 2026-11-14
+
+### Sửa lỗi
+- Chuyển sáng/tối ngay lập tức trên khung nhập yêu cầu, các điều khiển dùng chung và nút đóng thông báo, bỏ hiệu ứng đổi màu chậm hơn banner.
+
 ## [0.1.6] - 2026-11-14
 
 ### Mới

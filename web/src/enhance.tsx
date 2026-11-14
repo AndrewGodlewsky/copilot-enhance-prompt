@@ -197,7 +197,7 @@ function Composer({ refresh }: { refresh: () => void }) {
 
   return (
     <div
-      className={cn('bg-card relative flex flex-col gap-3 rounded-xl border p-4 transition-colors duration-150 focus-within:border-ring', dragging && 'border-primary bg-primary/5')}
+      className={cn('bg-card relative flex flex-col gap-3 rounded-xl border p-4 focus-within:border-ring', dragging && 'border-primary bg-primary/5')}
       onDragOver={(event) => {
         if (Array.from(event.dataTransfer.types).includes('Files')) {
           event.preventDefault()

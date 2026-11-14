@@ -37,7 +37,7 @@ export function Notices() {
       theme={document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
       closeButton
       containerAriaLabel={t('Notifications')}
-      toastOptions={{ className: 'text-sm', closeButtonAriaLabel: t('Close') }}
+      toastOptions={{ className: 'text-sm', closeButtonAriaLabel: t('Close'), classNames: { closeButton: 'transition-opacity!' } }}
       style={
         {
           '--normal-bg': 'var(--popover)',
@@ -170,7 +170,7 @@ export function Segmented({ value, options, onChange, label }: { value: string; 
             ;(event.currentTarget.parentElement?.children[next] as HTMLButtonElement | undefined)?.focus()
           }}
           className={cn(
-            'min-h-8 rounded-md px-2 py-1 text-xs font-medium transition-colors duration-150',
+            'min-h-8 rounded-md px-2 py-1 text-xs font-medium',
             option.value === value ? 'bg-background text-foreground shadow-sm ring-1 ring-border' : 'text-muted-foreground hover:text-foreground'
           )}
         >
