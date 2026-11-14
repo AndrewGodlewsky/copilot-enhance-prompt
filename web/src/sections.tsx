@@ -135,14 +135,14 @@ export function HistorySection() {
       {list.length === 0 ? <p className="text-muted-foreground py-4 text-center text-sm">{t('Nothing here matches.')}</p> : null}
       <div className="flex flex-col gap-1.5">
         {list.slice(0, shown).map((entry) => (
-          <div key={entry.id} className="flex flex-col gap-1 rounded-lg border p-2">
+          <div key={entry.id} className="flex flex-col gap-3 rounded-lg border p-3">
             {/* Read in place: opening an entry in the Enhance tab replaces what the composer holds. */}
             <button
               type="button"
               aria-expanded={open === entry.id}
               aria-label={open === entry.id ? t('Hide the enhanced prompt') : t('Show the enhanced prompt')}
               onClick={() => set(historyOpen, open === entry.id ? null : entry.id)}
-              className="flex min-w-0 items-start gap-1 text-left"
+              className="flex min-h-8 min-w-0 items-start gap-2 rounded-md py-1 text-left hover:bg-accent"
             >
               <ChevronRightIcon className={cn('text-muted-foreground mt-0.5 size-3.5 shrink-0 transition-transform', open === entry.id && 'rotate-90')} />
               <span className={cn('min-w-0 text-sm font-medium', open === entry.id ? 'break-words whitespace-pre-wrap' : 'truncate')}>
@@ -150,19 +150,21 @@ export function HistorySection() {
               </span>
             </button>
             {open === entry.id ? (
-              <div className="bg-muted/50 max-h-64 overflow-y-auto rounded-md border p-2 text-[13px] break-words whitespace-pre-wrap">{entry.enhanced}</div>
+              <div className="bg-muted/50 max-h-64 overflow-y-auto rounded-md border p-3 text-sm break-words whitespace-pre-wrap">{entry.enhanced}</div>
             ) : null}
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground truncate text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-muted-foreground min-w-0 text-xs break-words">
                 {`${t(STYLE_LABELS[isStyle(entry.style) ? entry.style : 'balanced'])} · ${entry.model}${entry.source === 'hook' ? ` · ${t('auto')}` : ''}${entry.project && scope === 'all' ? ` · ${entry.project}` : ''} · ${ago(entry.at)}`}
               </span>
-              <div className="flex shrink-0">
-                <IconAction label={t('Open in Enhance tab')} onClick={() => reuse(entry)}>
+              <div className="ml-auto flex shrink-0 gap-1">
+                <Button size="sm" variant="ghost" title={t('Open in Enhance tab')} onClick={() => reuse(entry)}>
                   <PencilIcon />
-                </IconAction>
-                <IconAction label={t('Copy enhanced prompt')} onClick={() => void copy(entry.enhanced)}>
+                  {t('Reuse')}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => void copy(entry.enhanced)}>
                   <CopyIcon />
-                </IconAction>
+                  {t('Copy')}
+                </Button>
                 <IconAction label={t('Delete')} onClick={() => void removeEntry(entry.id)}>
                   <Trash2Icon />
                 </IconAction>
@@ -176,9 +178,9 @@ export function HistorySection() {
           {t('Show more')}
         </Button>
       ) : null}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-muted-foreground text-xs">{t('{shown} of {total}', { shown: Math.min(shown, list.length), total: all.length })}</span>
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-2">
           {/* What the list shows goes into the file: the search and the project filter apply. */}
           <Button size="sm" variant="ghost" onClick={() => void exportHistory()} disabled={list.length === 0}>
             <DownloadIcon />
@@ -186,6 +188,7 @@ export function HistorySection() {
           </Button>
           <Button
             size="sm"
+            className="h-auto min-h-8 whitespace-normal py-1"
             variant={read(confirmClearHistory) ? 'destructive' : 'ghost'}
             onClick={() => (read(confirmClearHistory) ? void clearHistory() : set(confirmClearHistory, true))}
           >
@@ -331,7 +334,7 @@ function ProfileCard({ profile, index, count, fromEnv }: { profile: ProfileView;
   const options = [...(profile.provider === 'cli' ? [{ value: CLI_DEFAULT, label: t('CLI default') }] : []), ...listed]
   const testing = read(busy) === 'test'
   return (
-    <div className={cn('bg-card flex flex-col gap-2 rounded-xl border p-2.5', !profile.enabled && 'bg-muted/40')}>
+    <div className={cn('bg-card flex flex-col gap-3 rounded-xl border p-3', !profile.enabled && 'bg-muted/40')}>
       <div className="flex items-center gap-2">
         <div className="min-w-0 flex-1">
           <div className={cn('flex items-center gap-1.5 text-sm font-medium', !profile.enabled && 'text-muted-foreground')}>
@@ -343,13 +346,10 @@ function ProfileCard({ profile, index, count, fromEnv }: { profile: ProfileView;
           </div>
         </div>
         {fromEnv ? null : <Switch checked={profile.enabled} aria-label={profile.enabled ? t('Disable') : t('Enable')} onCheckedChange={(enabled) => void toggleProfile(profile, enabled)} />}
-        <IconAction label={`${t('Test')} · ${where}`} onClick={() => void testProfile(profile.id)} disabled={testing}>
-          {testing ? <Spinner /> : <PlugZapIcon />}
-        </IconAction>
         {fromEnv ? null : (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="icon" variant="ghost" className="size-7" aria-label={t('More')}>
+            <Button size="icon" variant="ghost" className="size-8" aria-label={t('More')}>
               <EllipsisVerticalIcon />
             </Button>
           </DropdownMenuTrigger>
@@ -384,9 +384,13 @@ function ProfileCard({ profile, index, count, fromEnv }: { profile: ProfileView;
         {fromEnv ? (
           <span className="truncate text-xs">{profile.effectiveModel || t('CLI default')}</span>
         ) : (
-          <Pick label={t('Model')} value={profile.effectiveModel || CLI_DEFAULT} options={options} onChange={(value) => void switchModel(profile, toModel(value))} className="h-7" />
+          <Pick label={t('Model')} value={profile.effectiveModel || CLI_DEFAULT} options={options} onChange={(value) => void switchModel(profile, toModel(value))} className="h-8" />
         )}
       </div>
+      <Button size="sm" variant="outline" className="self-end" title={where} onClick={() => void testProfile(profile.id)} disabled={testing}>
+        {testing ? <Spinner /> : <PlugZapIcon />}
+        {t('Test')}
+      </Button>
     </div>
   )
 }
@@ -441,6 +445,7 @@ export function ModelsSection() {
           description={t('Models are tried top to bottom. Disabled models are skipped.')}
           control={
             <Switch
+              aria-label={t('Fallback to the next model when one fails')}
               checked={prefs.fallbackEnabled}
               onCheckedChange={(value) => {
                 // On: any error falls back (a bad key or an unknown model too), with no second choice to make.
@@ -605,7 +610,7 @@ export function RulesSection() {
         hint={t("Pick one under Options in the composer: the prompt is written under these headings instead of the style's shape.")}
         action={
           editing ? null : (
-            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => startEditing('new')} disabled={config.structures.length >= MAX_STRUCTURES}>
+            <Button size="sm" variant="ghost" className="h-8 px-2 text-xs" onClick={() => startEditing('new')} disabled={config.structures.length >= MAX_STRUCTURES}>
               <PlusIcon />
               {t('Add structure')}
             </Button>
@@ -714,7 +719,7 @@ function SendAfterRow({ onRead, onAsk }: { onRead: () => void; onAsk: () => void
       description={
         <>
           {t(row.hint)}{' '}
-          <button type="button" className="hover:text-foreground underline underline-offset-2" onClick={onRead}>
+          <button type="button" className="hover:text-foreground block min-h-8 rounded-md text-left underline underline-offset-2" onClick={onRead}>
             {t('Risk and when to use it')}
           </button>
           {on && !allowed('allowTerminalSend') ? <span className="text-warning-foreground mt-1 block">{t('It does nothing while "Send to Copilot" is off.')}</span> : null}
@@ -744,7 +749,7 @@ function SwitchDialog({ keyName, confirm, onClose }: { keyName: string | null; c
         </DialogHeader>
         <div className="flex flex-col gap-2.5 overflow-y-auto text-sm leading-relaxed">
           <div className="flex flex-col gap-1">
-            <h4 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t('What it does')}</h4>
+            <h4 className="text-sm font-semibold">{t('What it does')}</h4>
             {/* Padding, not a margin: the box scrolls, and a scrolling box cuts off bullets drawn outside it. */}
             <ul className="list-disc space-y-1.5 pl-5">
               {points.map((point) => (
@@ -753,11 +758,11 @@ function SwitchDialog({ keyName, confirm, onClose }: { keyName: string | null; c
             </ul>
           </div>
           <div className="flex flex-col gap-1">
-            <h4 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t('What can go wrong')}</h4>
+            <h4 className="text-sm font-semibold">{t('What can go wrong')}</h4>
             <p>{row ? t(row.risk) : ''}</p>
           </div>
           <div className="flex flex-col gap-1">
-            <h4 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t('When to turn it on')}</h4>
+            <h4 className="text-sm font-semibold">{t('When to turn it on')}</h4>
             <p>{row ? t(row.when) : ''}</p>
           </div>
         </div>
@@ -877,14 +882,14 @@ export function SettingsSection() {
                 <>
                   {unavailable ? t('The current canvas SDK does not provide this capability.') : t(row.hint)}{' '}
                   {!unavailable ? <>
-                  <button type="button" className="hover:text-foreground underline underline-offset-2" onClick={() => setReading(row.key)}>
+                  <button type="button" className="hover:text-foreground block min-h-8 rounded-md text-left underline underline-offset-2" onClick={() => setReading(row.key)}>
                     {t('Risk and when to use it')}
                   </button>
                   {row.key === 'allowOtherAgents' ? <OtherAgentsAmounts active={on && !waiting && flags.allowTerminalRead !== false} /> : null}
                   {waiting ? (
                     <span className="text-warning-foreground mt-1 flex items-center gap-2">
                       {t('Turned on in Settings, but not confirmed here yet: still off.')}
-                      <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={() => setAsking(row.key)}>
+                      <Button size="sm" variant="outline" className="h-8 px-2 text-xs" onClick={() => setAsking(row.key)}>
                         {t('Read and confirm')}
                       </Button>
                     </span>

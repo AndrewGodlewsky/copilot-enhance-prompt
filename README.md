@@ -12,7 +12,7 @@ The React panel retains model chains and fallback, prompt styles, reusable rules
 
 ## Download and install
 
-**Development preview, version 0.1.1.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub or download a local copy using the instructions below. The package includes the root `plugin.json` and `com.github.copilot/` directory.
+**Development preview, version 0.1.2.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub or download a local copy using the instructions below. The package includes the root `plugin.json` and `com.github.copilot/` directory.
 
 ### Requirements
 
@@ -69,9 +69,11 @@ To update a local install, replace or update the files in its existing folder an
 ## Use it
 
 1. In **Models**, add an API provider, local model, custom CLI, or detected subscription CLI. API calls use that provider's account and billing; installing this plugin does not give them access to your Copilot subscription.
-2. Write a prompt and select its style and context level. Preview the context, exclude items, and attach files when useful.
+2. In **Enhance → Write a request**, describe the task and choose a model. **Options** opens style, context, output language and structure settings. Preview the context and uncheck items to exclude them; use **Attach files** for explicit attachments.
 3. Click **Enhance**. Progress reports the context and model steps; Cancel stops the run.
-4. Review or edit the result. **Send** submits a new message to the attached Copilot session. **Copy** keeps the handoff manual. File exports start a browser download.
+4. In **Review and send**, edit the enhanced prompt. **Send to Copilot** submits a new message to the attached session shown in **Send to**. **Copy** keeps the handoff manual. The download icon saves a file; the up-arrow uses the result as a new input for refinement.
+
+In the request box, **Enter** enhances and **Shift+Enter** adds a line. **Ctrl+Enter** (or **⌘+Enter**) sends a current result, or enhances first when one is not ready. In the result box it sends your edited text. If you explicitly enable **Send right after enhancing**, the request-box shortcut and separate **Enhance and send** button can skip review; **Enhance** still stops at the result. Navigation has visible labels, controls have keyboard focus indicators, and segmented choices support arrow keys.
 
 Send refuses busy, blocked, queued, disconnected or unknown sessions. It never answers a pending permission request. Copilot's SDK has no atomic “send only if still idle” operation: the plugin checks immediately before sending and uses the normal queue, never immediate steering. If work starts between those operations, the message waits in the queue.
 

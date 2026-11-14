@@ -107,20 +107,44 @@
   html,
   body {
     @apply bg-background text-foreground;
-    font-size: 13px;
   }
+  html { font-size: 16px; }
   body {
     margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
     font-family: var(--enhance-font-family, ui-sans-serif, system-ui, "Segoe UI", sans-serif);
   }
 }
 
-/* No scrollbars (the panel and its boxes still scroll with the wheel, touch and keys). */
+/* Scrolling, selection and keyboard focus are visible even on custom controls. */
 @layer base {
   * {
-    scrollbar-width: none;
+    scrollbar-width: thin;
+    scrollbar-color: var(--muted-foreground) transparent;
   }
-  *::-webkit-scrollbar {
-    display: none;
+  button:not(:disabled), [role="radio"] { cursor: pointer; }
+  .lucide { stroke-width: 1.5; }
+  kbd {
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    padding: 0 4px;
+    font: inherit;
+    font-size: 12px;
+    opacity: 0.8;
+  }
+}
+
+/* Outside Tailwind layers so an outline-none utility cannot hide keyboard focus. */
+:where(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

@@ -15,7 +15,8 @@ import { previews } from './attach'
 import { changeUiLanguage, enhanceAndSend, enhanceNow, refreshDataSummary, refreshHookLast, refreshTargets } from '../../src/panel/actions.ts'
 import { closePanel, wirePanel } from '../../src/panel/setup.ts'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { IconAction, Notices } from './common'
+import { Notices } from './common'
+import { Button } from '@/components/ui/button'
 import { WhatsNew } from './whats-new'
 import logo from '../../assets/icon.png'
 import { ready, usePanel } from './panel-runtime'
@@ -44,7 +45,7 @@ function LanguagePicker() {
       <SelectTrigger
         size="sm"
         aria-label={t('Panel language')}
-        className="h-7 w-auto gap-1 border-transparent bg-transparent px-1.5 text-xs shadow-none hover:bg-accent dark:bg-transparent"
+        className="w-auto gap-2 border-transparent bg-transparent px-2 text-xs shadow-none hover:bg-accent dark:bg-transparent"
       >
         <LanguagesIcon className="size-3.5" />
         <SelectValue />
@@ -75,25 +76,30 @@ function App() {
   const current = SECTIONS.find((section) => section.value === read(tab)) ?? SECTIONS[0]
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex min-h-screen flex-col gap-3 p-3">
-        <header className="flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <img src={logo} alt="" className="size-5 shrink-0" />
-            {/* The app's name stays; the highlighted icon says which section is open. */}
+      <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-4 p-3 sm:p-4">
+        <header className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <img src={logo} alt="" className="size-6 shrink-0" />
             <h1 className="truncate text-sm font-semibold">{BRAND}</h1>
             <WhatsNew />
           </div>
-          <nav className="flex shrink-0 items-center">
-            <LanguagePicker />
+          <LanguagePicker />
+          </div>
+          <nav aria-label={t('Plugin sections')} className="flex flex-wrap gap-1 border-b pb-3">
             {SECTIONS.map(({ value, Icon }) => (
-              <IconAction
+              <Button
                 key={value}
-                label={value === 'history' ? `${t(SECTION_LABELS.history)} (${read(history).length})` : value === 'enhance' ? BRAND : t(SECTION_LABELS[value])}
+                size="sm"
+                aria-current={value === current.value ? 'page' : undefined}
                 variant={value === current.value ? 'secondary' : 'ghost'}
+                className={`h-9 gap-1 px-2 text-xs sm:gap-2 sm:px-3 sm:text-sm ${value === current.value ? 'ring-1 ring-border' : 'text-muted-foreground'}`}
                 onClick={() => openSection(value)}
               >
-                <Icon />
-              </IconAction>
+                <Icon className="hidden sm:block" />
+                {value === 'enhance' ? t('Enhance') : t(SECTION_LABELS[value])}
+                {value === 'history' && read(history).length > 0 ? <span className="text-muted-foreground text-xs tabular-nums">{read(history).length}</span> : null}
+              </Button>
             ))}
           </nav>
         </header>

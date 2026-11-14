@@ -118,7 +118,7 @@ function Attachments() {
   return (
     <div className="flex flex-wrap gap-1.5">
       {list.map((file) => (
-        <div key={file.path} className="bg-muted/60 group relative flex max-w-44 items-center gap-1.5 rounded-md border py-1 pr-6 pl-1" title={file.path}>
+        <div key={file.path} className="bg-muted/60 group relative flex max-w-56 items-center gap-2 rounded-md border py-1 pr-10 pl-1" title={file.path}>
           {previews.get(file.path) ? (
             <img src={previews.get(file.path)} alt="" className="size-7 shrink-0 rounded object-cover" />
           ) : (
@@ -128,15 +128,15 @@ function Attachments() {
           )}
           <span className="min-w-0 leading-tight">
             <span className="block truncate text-xs font-medium">{file.name}</span>
-            <span className="text-muted-foreground block text-[10px]">{megabytes(file.bytes)}</span>
+            <span className="text-muted-foreground block text-xs tabular-nums">{megabytes(file.bytes)}</span>
           </span>
           <button
             type="button"
             aria-label={t('Remove {name}', { name: file.name })}
             onClick={() => removeFile(file.path)}
-            className="text-muted-foreground hover:text-foreground absolute top-1 right-1 rounded p-0.5"
+            className="text-muted-foreground hover:text-foreground absolute top-1 right-1 grid size-8 place-items-center rounded-md hover:bg-accent"
           >
-            <XIcon className="size-3" />
+            <XIcon className="size-4" />
           </button>
         </div>
       ))}
@@ -160,7 +160,7 @@ function ModelPicker() {
       value={options.some((option) => option.value === value) ? value : 'auto'}
       options={options}
       onChange={pickModel}
-      className="h-7 border-transparent bg-transparent px-2 shadow-none hover:bg-accent dark:bg-transparent"
+      className="bg-background"
     />
   )
 }
@@ -197,7 +197,7 @@ function Composer({ refresh }: { refresh: () => void }) {
 
   return (
     <div
-      className={cn('bg-card relative flex flex-col gap-2 rounded-xl border p-2 shadow-xs transition-colors focus-within:border-ring', dragging && 'border-primary bg-primary/5')}
+      className={cn('bg-card relative flex flex-col gap-3 rounded-xl border p-4 transition-colors duration-150 focus-within:border-ring', dragging && 'border-primary bg-primary/5')}
       onDragOver={(event) => {
         if (Array.from(event.dataTransfer.types).includes('Files')) {
           event.preventDefault()
@@ -209,30 +209,37 @@ function Composer({ refresh }: { refresh: () => void }) {
       }}
       onDrop={onDrop}
     >
+      <h2 className="text-base font-semibold">{t('Write a request')}</h2>
       <Attachments />
       <Textarea
         aria-label={t('Your prompt')}
+        aria-describedby="composer-help"
         placeholder={t('Describe what you want the agent to do…')}
         value={text}
         rows={3}
         onChange={(event) => put(draft, event.target.value)}
         onKeyDown={onKeyDown}
         onPaste={onPaste}
-        className="max-h-80 min-h-16 resize-none border-0 bg-transparent p-1 shadow-none focus-visible:ring-0 dark:bg-transparent"
+        className="max-h-80 min-h-28 resize-y bg-background shadow-none dark:bg-background"
       />
+      <p id="composer-help" className="text-muted-foreground text-xs">{t('Enter to enhance · Shift+Enter for a new line')}</p>
       {dragging ? (
         <div className="border-primary text-primary pointer-events-none absolute inset-1 grid place-items-center rounded-lg border-2 border-dashed text-sm font-medium">
           {t('Drop files to attach')}
         </div>
       ) : null}
-      <div className="flex items-center justify-between gap-1">
-        <div className="flex min-w-0 flex-1 items-center gap-0.5">
+      <div className="flex items-end gap-2">
+        <Field label={t('Model')} className="flex-1">
           <ModelPicker />
-          <IconAction label={`${t('Options')}: ${optionsSummary()}`} variant={read(optionsOpen) ? 'secondary' : 'ghost'} onClick={() => update(optionsOpen, (open) => !open)}>
-            <SlidersHorizontalIcon />
-          </IconAction>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
+        </Field>
+        <Button size="sm" variant="outline" aria-expanded={read(optionsOpen)} aria-controls={read(optionsOpen) ? 'prompt-options' : undefined} onClick={() => update(optionsOpen, (open) => !open)}>
+          <SlidersHorizontalIcon />
+          {t('Options')}
+        </Button>
+      </div>
+      <p className="text-muted-foreground text-xs">{optionsSummary()}</p>
+      <PromptOptions />
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
           <input
             ref={picker}
             type="file"
@@ -243,29 +250,34 @@ function Composer({ refresh }: { refresh: () => void }) {
               event.target.value = ''
             }}
           />
-          <IconAction label={t('Attach files')} onClick={() => picker.current?.click()} disabled={attachedCount >= MAX_FILES}>
+          <Button size="sm" variant="ghost" onClick={() => picker.current?.click()} disabled={attachedCount >= MAX_FILES}>
             <PaperclipIcon />
-          </IconAction>
+            {t('Attach files')}
+          </Button>
+        <div className="ml-auto flex flex-wrap justify-end gap-2">
           {working === 'enhance' ? (
-            <IconAction label={t('Cancel')} variant="outline" onClick={cancel}>
-              <SquareIcon className="fill-current" />
-            </IconAction>
+            <Button size="sm" variant="outline" onClick={cancel}>
+              <SquareIcon />
+              {t('Cancel')}
+            </Button>
           ) : (
             <>
               {/* "Send right after enhancing" is on: the one-step button sits next to Enhance, which still stops at the result. */}
               {sendsAfterEnhance() ? (
-                <IconAction label={t('Enhance and send without reading (Ctrl+Enter)')} variant="outline" onClick={() => void enhanceAndSend()} disabled={!text.trim() || working !== null || !read(target)}>
+                <Button size="sm" title={t('Enhance and send without reading (Ctrl+Enter)')} variant="outline" onClick={() => void enhanceAndSend()} disabled={!text.trim() || working !== null || !read(target)}>
                   <SendIcon />
-                </IconAction>
+                  {t('Enhance and send')}
+                </Button>
               ) : null}
-              <IconAction label={t('Enhance (Enter) · Shift+Enter for a new line')} variant="default" onClick={() => void enhanceNow()} disabled={!text.trim() || working !== null}>
-                <CornerDownLeftIcon />
-              </IconAction>
+              <Button size="sm" onClick={() => void enhanceNow()} disabled={!text.trim() || working !== null}>
+                {t('Enhance')}
+                <kbd aria-hidden="true"><CornerDownLeftIcon className="size-3" /></kbd>
+              </Button>
             </>
           )}
         </div>
       </div>
-      <PromptOptions />
+      {sendsAfterEnhance() ? <p className="text-muted-foreground text-xs">{t('Enhance and send skips review. Enhance lets you edit first.')}</p> : null}
     </div>
   )
 }
@@ -298,8 +310,8 @@ function CustomInstructions() {
 function PromptOptions() {
   if (!read(optionsOpen)) return null
   return (
-    <div className="bg-muted/50 flex flex-col gap-2 rounded-lg border p-2">
-      <div className="grid grid-cols-2 gap-2">
+    <div id="prompt-options" className="bg-muted/50 flex flex-col gap-3 rounded-lg border p-3">
+      <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-2">
         <Field label={t('Style')}>
           <Pick label={t('Style')} value={read(effectiveStyle)} options={styleOptions()} onChange={(value) => set(style, value)} />
         </Field>
@@ -314,6 +326,10 @@ function PromptOptions() {
         </Field>
       </div>
       {read(effectiveStyle) === 'custom' ? <CustomInstructions /> : null}
+      <div>
+        <h3 className="text-sm font-medium">{t('Context to include')}</h3>
+        <p className="text-muted-foreground text-xs">{t('Uncheck anything you do not want sent to the rewriting model.')}</p>
+      </div>
       <ContextList />
     </div>
   )
@@ -343,7 +359,7 @@ function RunCard() {
   const title = running ? (active ? stepText(active) : idle) : current.status === 'cancelled' ? t('Cancelled') : t('Enhance failed')
   const failed = current.status === 'error'
   return (
-    <div className={cn('flex flex-col gap-2 rounded-lg border p-2.5', failed && 'border-destructive/40')}>
+    <div className={cn('flex flex-col gap-2 rounded-lg border p-3', failed && 'border-destructive/40')}>
       <div className="flex items-center justify-between gap-2 text-sm">
         <div className="flex min-w-0 items-center gap-2 font-semibold">
           {running ? <Spinner className="text-primary" /> : null}
@@ -414,7 +430,7 @@ function ContextList() {
     ) : null
   }
   return (
-    <div className="bg-background flex flex-col gap-1.5 rounded-lg border px-2.5 py-2">
+    <div className="bg-background flex max-h-72 flex-col gap-3 overflow-y-auto rounded-md border p-3">
       {shown.map((item) => (
         <div key={item.id} className="flex items-start gap-1">
           <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2">
@@ -429,7 +445,7 @@ function ContextList() {
           </label>
           {/* Outside the label: a press here must not tick or untick the item. */}
           {item.id.startsWith('file:') && allowed('allowOpenFiles') ? (
-            <IconAction label={t('Open in Copilot')} className="size-6 shrink-0" onClick={() => void openFile(item.id.slice('file:'.length))}>
+            <IconAction label={t('Open in Copilot')} className="shrink-0" onClick={() => void openFile(item.id.slice('file:'.length))}>
               <ExternalLinkIcon />
             </IconAction>
           ) : null}
@@ -448,7 +464,7 @@ function ContextList() {
 function TargetPicker() {
   const list = read(targets)
   return (
-    <div className="min-w-0 flex-1">
+    <Field label={t('Send to')}>
       <Pick
         label={t('Send to')}
         value={read(target) ?? undefined}
@@ -457,7 +473,7 @@ function TargetPicker() {
         onChange={(value) => set(target, value)}
         onOpen={() => void refreshTargets()}
       />
-    </div>
+    </Field>
   )
 }
 
@@ -466,35 +482,15 @@ function ResultCard({ output }: { output: string }) {
   const info = read(lastRun)
   const failed = info?.attempts.filter((attempt) => !attempt.ok) ?? []
   return (
-    <div className="bg-card flex flex-col gap-2 rounded-xl border p-2.5">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm font-semibold">{t('Enhanced prompt')}</span>
+    <div className="bg-card flex flex-col gap-3 rounded-xl border p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-semibold">{t('Review and send')}</h2>
           {info ? <Badge variant="success-light">{`${t('Done')} · ${seconds(info.ms)}`}</Badge> : null}
-        </div>
-        <div className="flex">
-          <IconAction label={t('Copy')} onClick={() => void copy(output)}>
-            <CopyIcon />
-          </IconAction>
-          <IconAction label={t('Save as a file')} onClick={() => void savePrompt(output)}>
-            <DownloadIcon />
-          </IconAction>
-          <IconAction
-            label={t('Refine: use the enhanced prompt as the new input')}
-            onClick={() => {
-              put(draft, output)
-              put(result, '')
-            }}
-          >
-            <ArrowUpToLineIcon />
-          </IconAction>
-          <IconAction label={t('Clear')} onClick={() => put(result, '')}>
-            <Trash2Icon />
-          </IconAction>
-        </div>
       </div>
+      <p id="result-help" className="text-muted-foreground text-xs">{t('Edit the enhanced prompt below, then copy it or send it to Copilot.')}</p>
       <Textarea
         aria-label={t('Enhanced prompt')}
+        aria-describedby="result-help"
         value={output}
         rows={10}
         onChange={(event) => put(result, event.target.value)}
@@ -505,8 +501,16 @@ function ResultCard({ output }: { output: string }) {
             void send(output)
           }
         }}
-        className="max-h-[60vh] text-[13px]"
+        className="max-h-[60vh] min-h-48 text-sm leading-relaxed"
       />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Button size="sm" variant="outline" onClick={() => void copy(output)}><CopyIcon />{t('Copy')}</Button>
+        <div className="flex gap-1">
+          <IconAction label={t('Save as a file')} onClick={() => void savePrompt(output)}><DownloadIcon /></IconAction>
+          <IconAction label={t('Refine: use the enhanced prompt as the new input')} onClick={() => { put(draft, output); put(result, '') }}><ArrowUpToLineIcon /></IconAction>
+          <IconAction label={t('Clear')} onClick={() => put(result, '')}><Trash2Icon /></IconAction>
+        </div>
+      </div>
       {failed.length > 0 ? (
         <p className="text-warning-foreground text-xs">
           {t('Fell back after: {list}', {
@@ -514,17 +518,18 @@ function ResultCard({ output }: { output: string }) {
           })}
         </p>
       ) : null}
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-col gap-3 border-t pt-3">
         <TargetPicker />
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button size="sm" onClick={() => void send(output)} disabled={!read(target) || working !== null}>
+            <Button className="self-end" size="sm" onClick={() => void send(output)} disabled={!allowed('allowTerminalSend') || !read(target) || working !== null}>
               <SendIcon />
-              {t('Send')}
+              {t('Send to Copilot')}
             </Button>
           </TooltipTrigger>
           <TooltipContent>{t('Send to Copilot (Ctrl+Enter)')}</TooltipContent>
         </Tooltip>
+        {!allowed('allowTerminalSend') ? <p className="text-muted-foreground text-xs">{t('Send to Copilot is off in Settings. You can still copy or save this prompt.')}</p> : !read(target) ? <p className="text-muted-foreground text-xs">{t('Copilot session unavailable. You can still copy or save this prompt.')}</p> : working !== null ? <p className="text-muted-foreground text-xs">{t('Wait for the current operation to finish before sending.')}</p> : null}
       </div>
       {allowed('allowAgentLaunch') ? <NewAgent output={output} /> : null}
     </div>
@@ -546,7 +551,7 @@ function NewAgent({ output }: { output: string }) {
   return (
     <div className="flex items-center gap-1.5">
       <span className="text-muted-foreground shrink-0 text-xs">{t('Or start a new agent')}</span>
-      <Pick label={t('Agent')} value={kind} options={kinds.map((value) => ({ value, label: value }))} onChange={setKind} className="h-7 w-28" />
+      <Pick label={t('Agent')} value={kind} options={kinds.map((value) => ({ value, label: value }))} onChange={setKind} className="h-8 w-28" />
       <Button size="sm" variant="outline" onClick={() => void launchAgent(kind, output)} disabled={read(busy) !== null}>
         <BotIcon />
         {t('Start')}
@@ -575,7 +580,7 @@ function FeedbackNote() {
           </Button>
         </div>
       </div>
-      <IconAction label={t('Close')} className="size-6 shrink-0" onClick={closeFeedback}>
+      <IconAction label={t('Close')} className="size-8 shrink-0" onClick={closeFeedback}>
         <XIcon />
       </IconAction>
     </div>

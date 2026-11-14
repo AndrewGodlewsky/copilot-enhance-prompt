@@ -1,5 +1,13 @@
 var e=`# Thay đổi
 
+## [0.1.2] - 2026-11-14
+
+### Thay đổi
+- Điều hướng có nhãn, các bước “Viết yêu cầu” / “Xem lại và gửi”, cùng các nút Cải thiện, Sao chép và Gửi tới Copilot rõ ràng.
+- Chữ và nút lớn hơn; tùy chọn model/ngữ cảnh, trạng thái focus bàn phím, thanh cuộn và điều hướng bằng phím mũi tên dễ dùng hơn.
+- Các mục Lịch sử, Model, Quy tắc và Cài đặt dễ đọc hơn; giải thích khi không thể gửi và khi chọn cải thiện rồi gửi không qua xem lại.
+- Cập nhật giao diện tiếng Anh, Việt và Trung. Giữ nguyên phím tắt, kiểm tra quyền riêng tư và yêu cầu chủ động bật gửi tự động.
+
 ## [0.1.1] - 2026-11-14
 
 ### Thêm

@@ -1,5 +1,13 @@
 var e=`# Changes
 
+## [0.1.2] - 2026-11-14
+
+### Changed
+- Labeled navigation and “Write a request” / “Review and send” stages, with visible Enhance, Copy and Send to Copilot actions.
+- Larger text and controls, clearer model/context options, keyboard focus, scrollbars and arrow-key navigation for segmented choices.
+- More readable History, Models, Rules and Settings; explicit explanations for unavailable sending and optional enhancement without review.
+- Updated English, Vietnamese and Chinese interface text. Existing shortcuts, privacy checks and opt-in sending remain in place.
+
 ## [0.1.1] - 2026-11-14
 
 ### Added

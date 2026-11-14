@@ -37,7 +37,7 @@ export function Notices() {
       theme={document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
       closeButton
       containerAriaLabel={t('Notifications')}
-      toastOptions={{ className: 'text-[13px]', closeButtonAriaLabel: t('Close') }}
+      toastOptions={{ className: 'text-sm', closeButtonAriaLabel: t('Close') }}
       style={
         {
           '--normal-bg': 'var(--popover)',
@@ -70,7 +70,7 @@ export function IconAction({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button type="button" size="icon" variant={variant} aria-label={label} disabled={disabled} onClick={onClick} className={cn('size-7', className)}>
+        <Button type="button" size="icon" variant={variant} aria-label={label} disabled={disabled} onClick={onClick} className={cn('size-8', className)}>
           {children}
         </Button>
       </TooltipTrigger>
@@ -83,8 +83,8 @@ export function Hint({ text }: { text: string }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button type="button" aria-label={text} className="text-muted-foreground hover:text-foreground inline-flex">
-          <InfoIcon className="size-3.5" />
+        <button type="button" aria-label={text} className="text-muted-foreground hover:text-foreground inline-flex size-8 shrink-0 items-center justify-center rounded-md">
+          <InfoIcon className="size-4" />
         </button>
       </TooltipTrigger>
       <TooltipContent className="max-w-64">{text}</TooltipContent>
@@ -95,8 +95,8 @@ export function Hint({ text }: { text: string }) {
 export function Section({ title, hint, children }: { title: string; hint?: string; children?: ReactNode }) {
   return (
     <section className="flex flex-col gap-2">
-      <div className="flex items-center gap-1.5 px-0.5">
-        <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{title}</h3>
+      <div className="flex items-center gap-2">
+        <h3 className="text-sm font-semibold">{title}</h3>
         {hint ? <Hint text={hint} /> : null}
       </div>
       {children}
@@ -116,11 +116,11 @@ export function Field({ label, children, className }: { label: string; children:
 /** A settings card: a title over a bordered list of rows (divided). */
 export function Group({ title, hint, action, children }: { title?: string; hint?: string; action?: ReactNode; children?: ReactNode }) {
   return (
-    <section className="flex flex-col gap-1.5">
+    <section className="flex flex-col gap-2">
       {title ? (
         <div className="flex items-center justify-between gap-2 px-0.5">
-          <div className="flex items-center gap-1.5">
-            <h3 className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{title}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold">{title}</h3>
             {hint ? <Hint text={hint} /> : null}
           </div>
           {action}
@@ -134,7 +134,7 @@ export function Group({ title, hint, action, children }: { title?: string; hint?
 /** One row of a Group: what it is (and a muted line under it), the control on the right. */
 export function Row({ title, description, control, className, children }: { title?: ReactNode; description?: ReactNode; control?: ReactNode; className?: string; children?: ReactNode }) {
   return (
-    <div className={cn('flex flex-col gap-2 px-3 py-2.5', className)}>
+    <div className={cn('flex flex-col gap-2 p-3', className)}>
       {title || control ? (
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
@@ -153,16 +153,25 @@ export function Row({ title, description, control, className, children }: { titl
 export function Segmented({ value, options, onChange, label }: { value: string; options: Option[]; onChange: (value: string) => void; label: string }) {
   return (
     <div role="radiogroup" aria-label={label} className="bg-muted grid gap-0.5 rounded-lg p-0.5" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
-      {options.map((option) => (
+      {options.map((option, index) => (
         <button
           key={option.value}
           type="button"
           role="radio"
           aria-checked={option.value === value}
+          tabIndex={option.value === value || (!options.some((entry) => entry.value === value) && index === 0) ? 0 : -1}
           onClick={() => onChange(option.value)}
+          onKeyDown={(event) => {
+            const offset = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1 : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0
+            if (!offset && event.key !== 'Home' && event.key !== 'End') return
+            event.preventDefault()
+            const next = event.key === 'Home' ? 0 : event.key === 'End' ? options.length - 1 : (index + offset + options.length) % options.length
+            onChange(options[next].value)
+            ;(event.currentTarget.parentElement?.children[next] as HTMLButtonElement | undefined)?.focus()
+          }}
           className={cn(
-            'truncate rounded-md px-2 py-1 text-xs font-medium transition-colors',
-            option.value === value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            'min-h-8 rounded-md px-2 py-1 text-xs font-medium transition-colors duration-150',
+            option.value === value ? 'bg-background text-foreground shadow-sm ring-1 ring-border' : 'text-muted-foreground hover:text-foreground'
           )}
         >
           {option.label}

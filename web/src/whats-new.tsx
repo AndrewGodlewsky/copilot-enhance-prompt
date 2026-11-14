@@ -57,7 +57,7 @@ function ReleaseBody({ body }: { body: string }) {
     else if (/^\s{2,}\S/.test(line) && bullets.length > 0) bullets[bullets.length - 1] += ` ${line.trim()}`
     else {
       flush()
-      if (line.startsWith('### ')) blocks.push(<h4 key={`h${blocks.length}`} className="text-muted-foreground mt-2 text-xs font-semibold tracking-wide uppercase">{line.slice(4)}</h4>)
+      if (line.startsWith('### ')) blocks.push(<h4 key={`h${blocks.length}`} className="mt-2 text-sm font-semibold">{line.slice(4)}</h4>)
       else if (line.trim()) blocks.push(<p key={`p${blocks.length}`}>{inline(line)}</p>)
     }
   }
@@ -105,7 +105,7 @@ export function WhatsNew() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {versionHidden ? null : (
-        <button type="button" onClick={() => setOpen(true)} title={t("What's new")} className="text-muted-foreground hover:text-foreground text-xs">
+        <button type="button" onClick={() => setOpen(true)} aria-label={t("What's new in {version}", { version: VERSION })} title={t("What's new")} className="text-muted-foreground hover:text-foreground min-h-8 rounded-md px-1 text-xs hover:bg-accent">
           {`v${VERSION}`}
         </button>
       )}
