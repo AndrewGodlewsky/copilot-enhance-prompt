@@ -1,5 +1,10 @@
 var e=`# Changes
 
+## [0.1.3] - 2026-11-14
+
+### Fixed
+- Register the brand icon on the canvas itself so Copilot can display it in the native tab. Keep the icon field when older bundled SDKs omit it, and verify it through discovery and tab-opening events.
+
 ## [0.1.2] - 2026-11-14
 
 ### Changed

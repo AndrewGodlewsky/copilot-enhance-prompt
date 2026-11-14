@@ -7050,9 +7050,11 @@ var initialized = new Promise((resolve4) => {
 var services;
 var worker;
 var server;
+var canvasIcon = "./web/assets/icon.png";
 var canvas = createCanvas({
   id: "enhance-prompt",
   displayName: "Enhance Prompt",
+  icon: canvasIcon,
   description: "Rewrite a prompt with project context, model chains, and reusable rules. The user reviews and sends from the panel.",
   inputSchema: { type: "object", properties: { prompt: { type: "string", maxLength: 1e5 } }, additionalProperties: false },
   // No agent-callable send, consent, credential or configuration actions are exposed.
@@ -7069,6 +7071,7 @@ var canvas = createCanvas({
     server.closeCanvas(context.instanceId);
   }
 });
+Object.assign(canvas.declaration, { icon: canvasIcon });
 var session = await joinSession({ canvases: [canvas] });
 services = createServices(session);
 process.stderr.write("[Enhance Prompt] Session connected.\n");

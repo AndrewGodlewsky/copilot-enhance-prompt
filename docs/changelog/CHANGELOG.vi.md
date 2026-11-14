@@ -1,5 +1,10 @@
 # Thay đổi
 
+## [0.1.3] - 2026-11-14
+
+### Sửa lỗi
+- Đăng ký biểu tượng thương hiệu trực tiếp trên canvas để Copilot hiển thị trong tab. Giữ trường biểu tượng khi SDK đi kèm phiên bản cũ bỏ qua nó, và kiểm tra qua danh sách canvas cùng sự kiện mở tab.
+
 ## [0.1.2] - 2026-11-14
 
 ### Thay đổi

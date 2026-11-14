@@ -13,8 +13,10 @@ let services: ReturnType<typeof createServices>
 let worker: ReturnType<typeof createWorkerHost>
 let server: Awaited<ReturnType<typeof createCanvasServer>>
 
+const canvasIcon = './web/assets/icon.png'
 const canvas = createCanvas({
   id: 'enhance-prompt', displayName: 'Enhance Prompt',
+  icon: canvasIcon,
   description: 'Rewrite a prompt with project context, model chains, and reusable rules. The user reviews and sends from the panel.',
   inputSchema: { type: 'object', properties: { prompt: { type: 'string', maxLength: 100000 } }, additionalProperties: false },
   // No agent-callable send, consent, credential or configuration actions are exposed.
@@ -28,6 +30,10 @@ const canvas = createCanvas({
   },
   async onClose(context: { instanceId: string }) { await initialized; server.closeCanvas(context.instanceId) }
 })
+
+// Older desktop-bundled SDKs drop the icon option in createCanvas even though their runtime
+// supports it. Preserve the standard wire field until those SDKs include it in the declaration.
+Object.assign(canvas.declaration, { icon: canvasIcon })
 
 const session = await joinSession({ canvases: [canvas] })
 services = createServices(session)

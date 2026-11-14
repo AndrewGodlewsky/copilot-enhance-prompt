@@ -1,6 +1,6 @@
 // Loads the package in an isolated Copilot runtime. All model traffic goes to a local fixture.
 import assert from 'node:assert/strict'
-import { mkdtemp, rm, mkdir, writeFile, cp } from 'node:fs/promises'
+import { mkdtemp, rm, mkdir, writeFile, readFile, cp } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { tmpdir } from 'node:os'
@@ -49,9 +49,21 @@ try {
     console.error(JSON.stringify(await session.rpc.extensions.list(), null, 2))
     throw new Error('The runtime did not discover Enhance Prompt.')
   }
+  const discovered = canvases.canvases.find(canvas => canvas.canvasId === 'enhance-prompt')
+  assert.ok(discovered?.icon, 'canvas discovery must include the icon used by the desktop tab')
+  assert.deepEqual(await readFile(discovered.icon), await readFile('assets/icon.png'), 'canvas icon resolves to the packaged brand image')
+  const openedEvent = new Promise(resolve => {
+    const unsubscribe = session.on('session.canvas.opened', event => {
+      if (event.data.instanceId === 'enhance-smoke') { unsubscribe(); resolve(event.data) }
+    })
+  })
   const opened = await session.rpc.canvas.open({ canvasId: 'enhance-prompt', instanceId: 'enhance-smoke' })
   console.log('Canvas opened.')
   assert.ok(opened.url, 'canvas returned a URL')
+  const live = await session.rpc.canvas.listOpen()
+  assert.equal((await openedEvent).icon, discovered.icon, 'the tab-opening event includes the canvas icon')
+  assert.equal(live.openCanvases.find(canvas => canvas.instanceId === 'enhance-smoke')?.icon, discovered.icon, 'the open canvas retains its icon')
+  console.log('Canvas discovery, tab-opening event and open state carry the packaged icon.')
   const page = await fetch(opened.url)
   assert.equal(page.status, 200)
   assert.match(await page.text(), /Enhance Prompt/)
