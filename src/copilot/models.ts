@@ -29,11 +29,13 @@ const cancelled = () => new LlmError(msg('error.cancelled'), 'cancelled')
 export function hostRuntime(executable = process.execPath, argv = process.argv, parentPid = process.ppid, environment = process.env, probe?: DiscoveryProbe): string {
   const checks = {
     executableAllowed: isAbsolute(executable) && ['copilot.exe', 'copilot', 'copilot-runtime.exe', 'copilot-runtime'].includes(basename(executable).toLowerCase()),
-    bootstrapPresent: argv.some(arg => isAbsolute(arg) && basename(arg) === 'extension_bootstrap.mjs'),
+    // The packaged desktop uses a built-in entry name; SDK launches can use the preload's absolute path.
+    bootstrapPresent: argv.some(arg => arg === 'extension_bootstrap.mjs' || (isAbsolute(arg) && basename(arg) === 'extension_bootstrap.mjs')),
     sdkPathPresent: Boolean(environment.COPILOT_SDK_PATH),
     parentMatches: Number.isSafeInteger(parentPid) && parentPid > 0 && String(parentPid) === environment.COPILOT_EXTENSION_PARENT_PID
   }
   for (const key of Object.keys(checks) as (keyof typeof checks)[]) probe?.check(key, checks[key])
+  probe?.check('bootstrapEmbedded', argv.includes('extension_bootstrap.mjs'))
   probe?.check('extensionSandboxed', environment.COPILOT_EXTENSION_SANDBOXED === '1')
   if (!Object.values(checks).every(Boolean)) throw new LlmError(msg('error.copilot_runtime'), 'unavailable')
   return executable

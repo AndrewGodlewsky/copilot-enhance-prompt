@@ -12,7 +12,7 @@ The React panel retains model chains and fallback, prompt styles, reusable rules
 
 ## Download and install
 
-**Development preview, version 0.2.2.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
+**Development preview, version 0.2.3.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
 
 ### Requirements
 
@@ -145,6 +145,8 @@ npm run web:dev
 The development panel runs at `http://localhost:5174` with sample data, without model calls or real sends. Use `?lang=vi&theme=dark&width=380`, `?tab=models`, or `?demo=fix+the+login+page` to preview states.
 
 `scripts/e2e.mjs` loads the built package in an isolated installed Copilot runtime and exercises canvas discovery, project metadata, context preview, enhancement, sending and the packaged prompt hook. Its disposable session uses a local model fixture; no external model is called. Set `COPILOT_SDK_DIR` and `COPILOT_CLI_PATH` to the desktop SDK directory and runtime executable. See [AGENTS.md](AGENTS.md) for the architecture and behavioral invariants.
+
+`node scripts/e2e-runtime-identity.mjs` uses those same paths to check both the desktop's embedded bootstrap and the SDK's absolute-path bootstrap. It verifies SDK loading and repeated model-list refreshes against a synthetic catalog, without accessing an account or existing session. It also checks that the embedded bootstrap ignores a same-named file in the working directory.
 
 `node scripts/e2e-model-access.mjs` compares the native workflow and headless SDK against a local fixture. `node scripts/e2e-copilot-provider.mjs` exercises the production helper's output, model selection, tool/context isolation, cancellation and temporary-state cleanup with the installed SDK. Both use the same environment variables. Account/catalog identity is synthetic in the production-helper fixture, and inference never reaches a paid provider. Read-only authentication discovery has also been checked in a disposable extension, but an actual account-backed rewrite and desktop behavior require user validation. See the [model-access validation findings](docs/research/copilot-model-access-validation.md).
 

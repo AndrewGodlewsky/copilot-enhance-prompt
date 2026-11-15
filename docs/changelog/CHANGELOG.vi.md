@@ -1,5 +1,11 @@
 # Thay đổi
 
+## [0.2.3] - 2026-11-14
+
+### Sửa lỗi
+- Sửa việc khám phá mô hình Copilot và Làm mới bị chặn khi ứng dụng khởi chạy điểm vào tích hợp `extension_bootstrap.mjs`. Nhận diện đúng tên này cùng đường dẫn tuyệt đối của SDK, vẫn giữ kiểm tra tệp thực thi, SDK và tiến trình cha.
+- Thêm cờ chẩn đoán an toàn `bootstrapEmbedded` và kiểm thử hồi quy bằng môi trường chạy đã cài cho cả hai cách khởi chạy. Kiểm thử dùng danh sách mô hình giả lập, không gửi yêu cầu đến mô hình trả phí.
+
 ## [0.2.2] - 2026-11-14
 
 ### Thay đổi

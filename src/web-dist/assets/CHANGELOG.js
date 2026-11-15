@@ -1,5 +1,11 @@
 var e=`# Changes
 
+## [0.2.3] - 2026-11-14
+
+### Fixed
+- Fix Copilot model discovery and Refresh being blocked by runtime verification when the desktop launches its embedded \`extension_bootstrap.mjs\` entry. Recognize that exact entry name as well as the SDK's absolute preload path, preserving executable, SDK and parent-process checks.
+- Add a safe \`bootstrapEmbedded\` diagnostic flag and installed-runtime regression coverage for both launch forms. The checks use a synthetic catalog and make no paid model requests.
+
 ## [0.2.2] - 2026-11-14
 
 ### Changed

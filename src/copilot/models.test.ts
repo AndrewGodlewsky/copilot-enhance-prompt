@@ -51,6 +51,22 @@ test('runtime discovery accepts only the running Copilot bootstrap, never PATH o
   assert.equal(clean.GH_TOKEN, 'existing-auth')
 })
 
+test('runtime discovery recognizes the embedded bootstrap but rejects other relative scripts and unverified hosts', () => {
+  const executable = '/app/copilot.exe'
+  const argv = [executable, 'extension_bootstrap.mjs']
+  const env = { COPILOT_EXTENSION_PARENT_PID: '17', COPILOT_SDK_PATH: '/app/sdk' }
+  const diagnostics = createDiagnostics()
+  assert.equal(hostRuntime(executable, argv, 17, env, diagnostics.beginModelDiscovery()), executable)
+  assert.equal(diagnostics.snapshot().copilotModelDiscovery?.checks.bootstrapPresent, true)
+  assert.equal(diagnostics.snapshot().copilotModelDiscovery?.checks.bootstrapEmbedded, true)
+  for (const script of ['./extension_bootstrap.mjs', '../extension_bootstrap.mjs', 'project/extension_bootstrap.mjs', 'extension_bootstrap.mjs.js']) {
+    assert.throws(() => hostRuntime(executable, [executable, script], 17, env))
+  }
+  assert.throws(() => hostRuntime('/app/node.exe', argv, 17, env))
+  assert.throws(() => hostRuntime(executable, argv, 18, env))
+  assert.throws(() => hostRuntime(executable, argv, 17, { ...env, COPILOT_SDK_PATH: '' }))
+})
+
 test('Copilot rewrite uses an empty helper, returns text, and removes its temporary home', async () => {
   const { provider, state } = fixture()
   assert.equal((await provider.catalog()).models[0].id, 'model-a')

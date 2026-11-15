@@ -6506,7 +6506,7 @@ function activate(host) {
 import { EventEmitter } from "node:events";
 
 // src/version.ts
-var VERSION = "0.2.2";
+var VERSION = "0.2.3";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([
@@ -6581,7 +6581,7 @@ var CODES = /* @__PURE__ */ new Set([
   ...Object.keys(MESSAGES).filter((code) => code.startsWith("error."))
 ]);
 var DISCOVERY_STAGES = ["runtime_identity", "runtime_path", "sdk_import", "sdk_api", "session_api", "model_list", "filter", "complete", "privacy"];
-var DISCOVERY_CHECKS = ["executableAllowed", "bootstrapPresent", "sdkPathPresent", "parentMatches", "extensionSandboxed", "runtimePathResolved", "sdkImported", "clientAvailable", "stdioAvailable", "modelListAvailable", "responseIsList"];
+var DISCOVERY_CHECKS = ["executableAllowed", "bootstrapPresent", "bootstrapEmbedded", "sdkPathPresent", "parentMatches", "extensionSandboxed", "runtimePathResolved", "sdkImported", "clientAvailable", "stdioAvailable", "modelListAvailable", "responseIsList"];
 var DISCOVERY_COUNTS = ["received", "eligible", "invalid", "otherProvider", "unattributed", "policyBlocked"];
 function diagnosticError(error) {
   const value = error;

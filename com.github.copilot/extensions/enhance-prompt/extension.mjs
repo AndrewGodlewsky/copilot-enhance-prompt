@@ -6512,7 +6512,7 @@ function activate(host) {
 import { EventEmitter } from "node:events";
 
 // src/version.ts
-var VERSION = "0.2.2";
+var VERSION = "0.2.3";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([
@@ -6587,7 +6587,7 @@ var CODES = /* @__PURE__ */ new Set([
   ...Object.keys(MESSAGES).filter((code) => code.startsWith("error."))
 ]);
 var DISCOVERY_STAGES = ["runtime_identity", "runtime_path", "sdk_import", "sdk_api", "session_api", "model_list", "filter", "complete", "privacy"];
-var DISCOVERY_CHECKS = ["executableAllowed", "bootstrapPresent", "sdkPathPresent", "parentMatches", "extensionSandboxed", "runtimePathResolved", "sdkImported", "clientAvailable", "stdioAvailable", "modelListAvailable", "responseIsList"];
+var DISCOVERY_CHECKS = ["executableAllowed", "bootstrapPresent", "bootstrapEmbedded", "sdkPathPresent", "parentMatches", "extensionSandboxed", "runtimePathResolved", "sdkImported", "clientAvailable", "stdioAvailable", "modelListAvailable", "responseIsList"];
 var DISCOVERY_COUNTS = ["received", "eligible", "invalid", "otherProvider", "unattributed", "policyBlocked"];
 function diagnosticError(error) {
   const value = error;
@@ -7315,11 +7315,13 @@ var cancelled = () => new LlmError(msg("error.cancelled"), "cancelled");
 function hostRuntime(executable = process.execPath, argv = process.argv, parentPid = process.ppid, environment = process.env, probe) {
   const checks = {
     executableAllowed: isAbsolute4(executable) && ["copilot.exe", "copilot", "copilot-runtime.exe", "copilot-runtime"].includes(basename3(executable).toLowerCase()),
-    bootstrapPresent: argv.some((arg) => isAbsolute4(arg) && basename3(arg) === "extension_bootstrap.mjs"),
+    // The packaged desktop uses a built-in entry name; SDK launches can use the preload's absolute path.
+    bootstrapPresent: argv.some((arg) => arg === "extension_bootstrap.mjs" || isAbsolute4(arg) && basename3(arg) === "extension_bootstrap.mjs"),
     sdkPathPresent: Boolean(environment.COPILOT_SDK_PATH),
     parentMatches: Number.isSafeInteger(parentPid) && parentPid > 0 && String(parentPid) === environment.COPILOT_EXTENSION_PARENT_PID
   };
   for (const key of Object.keys(checks)) probe?.check(key, checks[key]);
+  probe?.check("bootstrapEmbedded", argv.includes("extension_bootstrap.mjs"));
   probe?.check("extensionSandboxed", environment.COPILOT_EXTENSION_SANDBOXED === "1");
   if (!Object.values(checks).every(Boolean)) throw new LlmError(msg("error.copilot_runtime"), "unavailable");
   return executable;

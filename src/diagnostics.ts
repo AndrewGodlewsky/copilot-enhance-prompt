@@ -18,7 +18,7 @@ const CODES = new Set(['aborted', 'cancelled', 'timeout', 'unavailable', 'invali
 export type DiagnosticOutcome = 'started' | 'ok' | 'failed' | 'cancelled' | 'pending'
 export type DiagnosticEntry = { at: string; operation: string; outcome: DiagnosticOutcome; ms?: number; code?: string; status?: number }
 const DISCOVERY_STAGES = ['runtime_identity', 'runtime_path', 'sdk_import', 'sdk_api', 'session_api', 'model_list', 'filter', 'complete', 'privacy'] as const
-const DISCOVERY_CHECKS = ['executableAllowed', 'bootstrapPresent', 'sdkPathPresent', 'parentMatches', 'extensionSandboxed', 'runtimePathResolved', 'sdkImported', 'clientAvailable', 'stdioAvailable', 'modelListAvailable', 'responseIsList'] as const
+const DISCOVERY_CHECKS = ['executableAllowed', 'bootstrapPresent', 'bootstrapEmbedded', 'sdkPathPresent', 'parentMatches', 'extensionSandboxed', 'runtimePathResolved', 'sdkImported', 'clientAvailable', 'stdioAvailable', 'modelListAvailable', 'responseIsList'] as const
 const DISCOVERY_COUNTS = ['received', 'eligible', 'invalid', 'otherProvider', 'unattributed', 'policyBlocked'] as const
 export type ModelDiscovery = {
   attempt: number; startedAt: string; completedAt?: string; stage: typeof DISCOVERY_STAGES[number]
