@@ -1,18 +1,27 @@
 # Word crew character concepts
 
-Status: awaiting character approval. This is a static design exploration, not a shipped feature. The plugin remains at version 0.4.0.
+Status: exploring stick figures; awaiting character approval. This is a static design exploration, not a shipped feature. The plugin remains at version 0.4.0.
 
-![Three miniature human character options: Printshop worker, Line-drawn helper, and Pixel porter. Each has an enlarged front and side view and a small comparison among words on dark and light backgrounds.](character-concepts.png)
+The owner rejected the first three character concepts, preferred the middle line-drawn helper, and requested a range of stick figures. These eight variations explore that direction. No individual design has been approved yet.
+
+![Eight stick figures: Classic, Round hands, Long legs, Big head, Bent limbs, Green ink, Doodle, and Solid head. Each is shown standing, carrying a word, and alongside text on light and dark backgrounds.](stick-figure-variations.png)
 
 The proposed app height is **28 CSS pixels**, approximately two stacked 14-pixel text lines. The enlarged views show the character design; the small text strips illustrate relative size, not a pixel-accurate screenshot of the plugin. Exact scale and silhouette will be checked in the animation prototype.
 
-| Option | Character | Design reason |
+| Option | Character | Distinguishing feature |
 | --- | --- | --- |
-| A | Printshop worker | Green overalls, a cap, visible hands and short legs. Recommended because the silhouette suggests someone physically carrying words and fits the existing desk artwork. |
-| B | Line-drawn helper | A minimal human with articulated limbs and round hands. Use light limbs on dark surfaces and dark limbs on light surfaces. |
-| C | Pixel porter | A small retro worker with square hands and a green cap. A deliberately different, pixel-art direction. |
+| A | Classic | Hollow round head and plain strokes for body, hands and feet. |
+| B | Round hands | Dot eyes, small green round hands and short feet make contact with a carried word visible. |
+| C | Long legs | Smaller head and longer legs give a light, lanky silhouette. |
+| D | Big head | Large expressive head with a short body and limbs. |
+| E | Bent limbs | Articulated elbows and knees suggest lifting and carrying; green palms mark the grip. |
+| F | Green ink | Simple figure drawn entirely in green. |
+| G | Doodle | Curved, slightly irregular lines and a small smile. |
+| H | Solid head | Filled head and bold limbs provide a strong minimal silhouette. |
 
-Use the existing Lift green and flat colors for the eventual character assets. Keep the approved plugin icon and still Quiet Desk banner unchanged. The generated sheet is an art-direction reference; it is not a production sprite sheet.
+Options B and E are the suggested starting points for readable word handling. Features can be combined at the owner's request. All options use a line for the torso rather than clothing or a filled body. For dark surfaces, adapt dark outlines to a light color while retaining green accents.
+
+Use the existing Lift green and flat colors for the eventual character assets. Keep the approved plugin icon and still Quiet Desk banner unchanged. The generated sheet is an art-direction reference; it is not a production sprite sheet. The earlier [three-character sheet](character-concepts.png) is retained only as the previous exploration.
 
 ## Approval order
 
