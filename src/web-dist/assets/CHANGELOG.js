@@ -1,5 +1,15 @@
 var e=`# Changes
 
+## [0.3.2] - 2026-11-14
+
+### Changed
+- Rename Balanced to General across the interface and history exports while preserving its saved identifier and existing default selections. Keep the composer dropdown named Context.
+- Review and document all nine styles. Keep each style's purpose when a Structure replaces its headings.
+- Make Plan first stop after the plan unless the current task explicitly requests implementation. Preserve Code review's review-only boundary against saved instructions.
+- Keep important details in Concise prompts, ground verification commands, and prevent agent-format hints from overriding the selected style.
+- Clarify scope and evidence in Detailed spec, Bug fix, New feature and Refactor. Remove implementation boilerplate from Concise, Code review, Plan first and Custom only.
+- Fall back to General when Custom only has no instructions, and explain how shared custom instructions apply.
+
 ## [0.3.1] - 2026-11-14
 
 ### Changed

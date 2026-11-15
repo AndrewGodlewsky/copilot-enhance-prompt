@@ -49,6 +49,11 @@ const PATH = /\b(?:src|scripts|docs)\/[\w./-]+\.\w+/g
 const known = new Set(context.flatMap((block) => [block.label, ...(block.content.match(PATH) ?? [])]))
 
 const CASES = [
+  { name: 'refactor preserves behavior', style: 'refactor', prompt: 'Simplify src/prompts.ts without changing the exported functions or output.', keep: ['src/prompts.ts'] },
+  { name: 'review with a structure', style: 'review', prompt: 'Review src/worker.ts for cancellation bugs. Do not edit code.', keep: ['src/worker.ts'], structure: { name: 'Mine', sections: ['Task', 'Findings'] } },
+  { name: 'plan stops for approval', style: 'plan', prompt: 'Plan adding search to the history panel. Wait for my approval before implementation.', keep: ['history'], bare: true },
+  { name: 'custom checklist', style: 'custom', prompt: 'Improve the error messages in src/llm.ts.', customInstructions: 'Write a numbered checklist. Preserve quoted error text exactly.', keep: ['src/llm.ts'] },
+
   { name: 'vague bug, Vietnamese input', style: 'bugfix', prompt: 'panel mở chậm quá, sửa đi', keep: [] },
   { name: 'feature, nothing in context about it', style: 'feature', prompt: 'add a dark mode toggle to the settings', keep: ['dark mode'], noise: ['zz-'] },
   { name: 'concise rename', style: 'concise', prompt: 'rename the History tab to Log everywhere in the UI', keep: ['History', 'Log'], maxChars: 800, noise: ['zz-', 'PANEL_REQUEST_LIMIT_MS'] },
@@ -85,7 +90,7 @@ const GIVEN = new RegExp(
 )
 /** One case through the model once: what is wrong with the prompt it wrote (nothing, when it is right). */
 async function runCase(item) {
-  const system =buildSystemPrompt({ style: item.style, agent: 'claude', structure: item.structure ?? null })
+  const system =buildSystemPrompt({ style: item.style, agent: 'claude', structure: item.structure ?? null, customInstructions: item.customInstructions })
   const user = buildUserMessage(item.prompt, item.bare ? [] : context)
   const started = Date.now()
   let text

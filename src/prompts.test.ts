@@ -101,9 +101,9 @@ test('the rewriter is told not to copy rule files, to keep checks and length in 
   // Concise is said in lines and words, which a model can count, not only in characters, which it
   // cannot: measured with `scripts/eval-prompts.mjs --only concise --runs 20`, a length in
   // characters alone was kept in half the runs.
-  assert.match(system, /at most four lines, each a single sentence of at most about 25 words/)
-  assert.match(system, /names the one command that checks the change/)
-  assert.match(system, /Markdown headings \(do not mix in XML tags\)/)
+  assert.match(system, /at most four short sentences, roughly 25 words each/)
+  assert.match(system, /Prefer one relevant verification command supplied in the request or context/)
+  assert.match(system, /keep the selected style and structure/)
 })
 
 test('the rewriter writes nothing about what it was or was not given: the agent has the whole project', async () => {
@@ -147,7 +147,7 @@ test('the rewriter follows the Fable 5.2 guidance: finish the task, named approv
   assert.match(system, /stops early only for a deliberate blocker/)
   assert.match(system, /A small change \(one edit in one place, such as a typo or a rename in one file\) gets none of these three/)
   // Concise prompts stay concise.
-  assert.match(buildSystemPrompt({ style: 'concise' }), /and the "Larger tasks" additions/)
+  assert.doesNotMatch(buildSystemPrompt({ style: 'concise' }), /Complete every part of this task/)
   assert.match(system, /Name the actions that apply to this task/)
   assert.match(system, /write it as approved/)
   assert.match(system, /Avoid a bare "never" or "always"/)
@@ -156,6 +156,6 @@ test('the rewriter follows the Fable 5.2 guidance: finish the task, named approv
   assert.match(system, /no request to show or write out its reasoning/)
   assert.match(system, /no instruction to delegate to subagents/)
   // Restructuring is offered only where the person asked for it.
-  assert.match(buildSystemPrompt({ style: 'refactor' }), /inside the target code the agent may merge repeated code/)
+  assert.match(buildSystemPrompt({ style: 'refactor' }), /Inside the target code the agent may merge repeated code/)
   assert.ok(!/may merge repeated code and reshape/.test(buildSystemPrompt({ style: 'bugfix' })))
 })

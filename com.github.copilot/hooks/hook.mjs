@@ -4267,6 +4267,7 @@ var BASE = `You are a prompt engineer for AI coding agents (Claude Code, Codex, 
 Rewrite the user's rough request into a clear, specific, actionable prompt that the agent can execute well.
 
 Rules:
+- Preserve whether the user asked for implementation, investigation, explanation, review or a plan. A style organizes the request; it does not authorize additional work.
 - Preserve the user's intent exactly. Never add features, scope or requirements they did not ask for.
 - Ground the prompt in the project context: name the real files, functions, commands and conventions that appear there when they are relevant (e.g. "start in src/auth/session.ts", "verify with pnpm test").
 - Never invent facts about the codebase. Mention a file, symbol, API or command only if it appears in the project context or in the request; otherwise tell the agent to locate it. List genuine unknowns under "Assumptions / questions".
@@ -4282,53 +4283,79 @@ Rules:
 - Keep the reason the user gave for the request, and give the reason behind any constraint that is not obvious in a short clause ("..., because ..."). Never invent a reason.
 - Phrase instructions as what to do ("keep the change inside src/auth") rather than what not to do; keep a "do not" only for a real hard limit. A hard limit says exactly what it covers and why, with any exception in the same sentence ("ask before changing the production database; the test database needs no approval"). Avoid a bare "never" or "always": agents apply such rules as written and then hold back routine work.
 - Use a calm, plain tone: no capitals for emphasis, no MUST / IMPORTANT / CRITICAL, no "be thorough" or "double-check everything". Current agents follow plain instructions, and shouting makes them over-react.
-- Say when the agent should stop and ask: only for a blocking unknown or an action that is hard to undo. Name the actions that apply to this task (deleting data, force-pushing, publishing, changing shared systems) instead of a general "ask before anything risky". Otherwise it picks the most reasonable option, states it as an assumption and carries on. When the request itself approves an action ("run the migration on staging"), write it as approved.
+- Say when the agent should stop and ask: only for a blocking unknown or an action that is hard to undo. Name the actions that apply to this task (deleting data, force-pushing, publishing, changing shared systems) instead of a general "ask before anything risky". Within the requested scope and any planning or review boundary, it picks the most reasonable option, states it as an assumption and carries on. When the request itself approves an action ("run the migration on staging"), write it as approved.
 - Ask for evidence at the end: the agent reports the commands it ran and what they printed (or what it observed), not just "it works".
 - Leave the agent's way of working to the agent unless the user asked otherwise: no "think step by step" or "think hard", no request to show or write out its reasoning (the model's safety checks can refuse that; ask for findings and evidence instead), no token or time budget, and no instruction to delegate to subagents.
 - Keep the instructions consistent: never give two that pull against each other (for example "wait for my confirmation" and "proceed without asking"); pick one.
 - When the request has <attached_images>, they are screenshots or pictures the user attached. If you can see them, use what they show (error text, layout, values) to make the prompt precise. Always tell the agent to open each image by its exact path, and never describe what you cannot see.
-- Output just the final prompt text, starting with its first line: no preamble, no explanation, no surrounding code fence.
-
-Larger tasks. When the task has several steps or touches several files, the prompt also says these three things, each in a sentence or two of its own words, placed where they fit the shape (for example with the constraints and at the end):
+- Output just the final prompt text, starting with its first line: no preamble, no explanation, no surrounding code fence.`;
+var IMPLEMENTATION_RULES = `Larger tasks. Only when the request asks for implementation and has several steps or touches several files, the prompt also says these three things, each in a sentence or two of its own words, placed where they fit the shape (for example with the constraints and at the end):
 1. Finish all of it. Include these two sentences in English, as the last lines of the constraints (in a shape without such a section, as a short paragraph of their own before the reporting): "Complete every part of this task before you end your turn. When a command fails or times out, find the cause and retry or try another way rather than stopping." Agents otherwise tend to stop part-way with a list of what remains or an offer to continue, and a prompt for a larger task that lacks these two sentences is not finished: check that they are there before you answer. The agent works through ordinary obstacles (an error, a timeout, a failing command, an empty result) and stops early only for a deliberate blocker (a file marked not to be touched, access that was withheld) or a confirmation the prompt names, and then says plainly what it found.
 2. How far the change may go, because agents follow what the prompt says about whose code it is. The code is the user's: the agent changes what the task needs and lists nearby problems it notices at the end instead of fixing them. Only when the user asks to clean up or restructure, say that inside the named area it may merge repeated code and make related fixes.
 3. Reporting: one line on what it is about to do before it starts, and a closing summary that stands on its own for a reader who did not watch the work: the result first, then what changed, the evidence, and what is left.
 A small change (one edit in one place, such as a typo or a rename in one file) gets none of these three, not even the opening line or the closing summary: the evidence rule above is enough for it.`;
 var STYLE_RULES = {
-  balanced: `Shape: a one-line goal, then short sections only where useful: Context, Requirements, Constraints, Done when. Keep it compact; small requests stay small.`,
-  concise: `Shape: a tight, unambiguous prompt of at most four lines, each a single sentence of at most about 25 words (about 500 characters in all). The first line is the task; the lines after it say only what the agent could not work out from the project itself. Fix grammar and vagueness; remove filler. No sections or headings; add one open question only if it blocks the task. The last line names the one command that checks the change and asks for its output, in one sentence. Brevity wins here: apply the other rules in as few words as possible, and leave out reasons, assumptions, anything the project's rule files already say, files and search hints the agent can find itself, things to leave alone that the request did not mention, and the "Larger tasks" additions.`,
-  detailed: `Shape: a full spec with sections: Goal, Background, Requirements (numbered), Constraints / non-goals, Edge cases, Acceptance criteria, Deliverables. Be thorough but do not pad.`,
-  bugfix: `Shape: a bug-fix brief: Symptom (actual vs expected), Reproduction steps (if known), Suspected area (only if given), Investigation steps (find the root cause before changing code), Fix requirements (minimal change, no unrelated refactors; other problems found on the way are reported, not fixed), Verification (add or update a regression test, run the relevant tests).`,
-  feature: `Shape: a feature brief: Goal and user value, Behaviour / requirements, UI or API surface (if relevant), Constraints (match existing patterns, no new dependencies unless needed), Tests to add, Done when.`,
-  refactor: `Shape: a refactor brief: Target code, Motivation, Desired structure, Scope (inside the target code the agent may merge repeated code and reshape it as it sees fit; code outside it stays as it is), Hard constraint that behaviour must not change, Steps in small safe increments, Verification (existing tests pass; add tests first if coverage is missing).`,
-  review: `Shape: a code-review request: What to review (diff, branch or files), Focus areas (correctness, edge cases, security, performance, readability, tests), Output format (findings grouped by severity with file:line and a suggested fix). Tell the agent not to modify code unless asked.`,
-  plan: `Shape: ask the agent to plan before coding: first explore the relevant code and write a short step-by-step plan with risks and open questions, then wait for confirmation (or proceed if the plan is low-risk, say which). Include the goal and requirements.`,
-  custom: `Follow the custom instructions below for the shape and content of the prompt.`
+  balanced: {
+    intent: "Turn a general-purpose request into clear, actionable instructions. Match the detail to the task and keep small requests small.",
+    shape: "Shape: a one-line goal, then short sections only where useful: Context, Requirements, Constraints, Done when."
+  },
+  concise: {
+    intent: "Compress the request without changing its meaning. Brevity must not remove concrete details, user-provided reasons, constraints, errors, paths or blocking questions. Prefer one relevant verification command supplied in the request or context. If no command is supplied, ask the agent to find the appropriate check. Omit implementation-workflow boilerplate.",
+    shape: "Shape: a tight, unambiguous prompt. Aim for at most four short sentences, roughly 25 words each, on separate lines without headings. Exceed that target when needed to preserve the request. Include verification in the last sentence where relevant."
+  },
+  detailed: {
+    intent: "Develop a precise specification with acceptance criteria grounded in the request. Separate known requirements from genuine unknowns; do not invent edge cases, product decisions or extra deliverables to fill sections.",
+    shape: "Shape: Goal, Background, Requirements (numbered), Constraints / non-goals, Edge cases, Acceptance criteria, Deliverables. Omit sections that add nothing; even a detailed spec should be proportional to the task."
+  },
+  bugfix: {
+    intent: "Ask the agent to find the root cause before changing code. Distinguish observed symptoms from expected behavior and hypotheses. Use supplied reproduction steps; if missing, ask the agent to reproduce or diagnose instead of inventing them. Keep the fix minimal, report unrelated problems, and add or update a regression test when the bug changes behavior.",
+    shape: "Shape: Symptom (actual vs expected), Reproduction steps (if known), Suspected area (evidence or labeled hypotheses), Investigation, Fix requirements, Verification."
+  },
+  feature: {
+    intent: "Describe the requested user-visible behavior and user value, including relevant UI or API changes. Follow existing patterns and add dependencies only when needed. Keep unspecified product decisions open and choose tests appropriate to the requested feature.",
+    shape: "Shape: Goal and user value, Behavior / requirements, UI or API surface (if relevant), Constraints, Tests, Done when. Skip empty sections."
+  },
+  refactor: {
+    intent: "Restructure the named code and preserve existing behavior unless the current request explicitly names a behavior change. Inside the target code the agent may merge repeated code and reshape it as needed; keep unrelated code outside the scope. Use small safe increments and existing tests; add characterization tests first where relevant coverage is missing.",
+    shape: "Shape: Target code, Motivation, Desired structure (if known), Scope, Behavior to preserve, Steps, Verification. If no design is supplied, ask the agent to choose a suitable structure after inspecting the code."
+  },
+  review: {
+    intent: "Request an evidence-based code review with findings grouped by severity, file:line references and suggested fixes. Prioritize correctness, regressions, security and missing tests; include performance or readability issues when concrete. Report no findings when none are supported, and distinguish unverified concerns. Review does not authorize code changes.",
+    shape: "Shape: What to review (diff, branch or files), Relevant focus areas, Findings format, Validation and remaining uncertainty."
+  },
+  plan: {
+    intent: "Ask the agent to inspect the relevant code, propose a practical plan and stop after the plan. Include ordered steps, risks, blocking questions and proposed verification. Distinguish checks already performed during investigation from checks planned for implementation.",
+    shape: "Shape: Goal, Known requirements, Proposed steps, Risks / open questions, Verification plan, Approval boundary."
+  },
+  custom: {
+    intent: "Let the custom instructions define the prompt while preserving the request, grounded facts and shared output policy. Do not impose another built-in style or implementation-workflow template.",
+    shape: "Shape: follow the custom instructions from the user; use only the structure they request."
+  }
 };
 var AGENT_HINTS = [
   {
     match: /copilot/i,
-    hint: "Target is GitHub Copilot in the attached project: state the requested change, relevant paths, acceptance criteria and verification commands. Do not assume a separate terminal agent or claim the project is unavailable."
+    hint: "Target is GitHub Copilot in the attached project. Keep the selected style and structure, and name only relevant paths and checks supported by the request or context. Do not assume a separate terminal agent or claim the project is unavailable."
   },
   {
     match: /claude/i,
-    hint: "Target is Claude Code: write sections as Markdown headings (do not mix in XML tags) and state the exact verification command. Leave how it plans and tracks the work to it."
+    hint: "Target is Claude Code: keep the selected style and structure. When headings are needed and the user has not specified another format, prefer Markdown. Leave how it plans and tracks the work to it."
   },
   {
     match: /codex/i,
-    hint: "Target is OpenAI Codex CLI: prefer short imperative bullet points, explicit file paths and the exact test/lint command to run; avoid long prose."
+    hint: "Target is OpenAI Codex CLI: use direct instructions and grounded file paths and checks within the selected style and structure."
   },
   {
     match: /gemini/i,
-    hint: "Target is Gemini CLI: clear numbered steps, explicit file paths, and what to verify at the end."
+    hint: "Target is Gemini CLI: keep the selected style and structure, with clear actions, grounded file paths and relevant verification."
   },
   {
     match: /aider/i,
-    hint: "Target is Aider: name the files to add to the chat first, then the change; keep it concise."
+    hint: "Target is Aider: identify files to add to the chat only when supported by the request or context; keep the selected style and structure."
   },
   {
     match: /opencode|amp|cursor|droid|pi\b|qwen|kimi|goose|cline/i,
-    hint: "Target is a terminal coding agent: explicit file paths, clear steps, exact verification command."
+    hint: "Target is a coding agent: keep the selected style and structure and use grounded paths and checks."
   }
 ];
 function agentHint(agent) {
@@ -4336,14 +4363,16 @@ function agentHint(agent) {
   return AGENT_HINTS.find((entry) => entry.match.test(agent))?.hint ?? null;
 }
 function buildSystemPrompt(options) {
+  const custom = options.customInstructions?.trim();
+  const style = options.style === "custom" && !custom ? "balanced" : options.style;
   const sections = options.structure?.sections.filter((section) => section.trim()) ?? [];
-  const shape = sections.length > 0 ? structureShape(sections) : STYLE_RULES[options.style];
-  const parts = [BASE, shape];
+  const shape = sections.length > 0 ? structureShape(sections) : STYLE_RULES[style].shape;
+  const parts = [BASE, STYLE_RULES[style].intent, shape];
+  if (!["concise", "review", "plan", "custom"].includes(style)) parts.push(IMPLEMENTATION_RULES);
   const hint = agentHint(options.agent);
   if (hint) {
     parts.push(hint);
   }
-  const custom = options.customInstructions?.trim();
   if (custom) {
     parts.push(`Custom instructions from the user (follow them):
 ${custom}`);
@@ -4353,12 +4382,15 @@ ${custom}`);
     parts.push(`Rules from the user (always follow them; they win over the shape above):
 ${rules.map((rule) => `- ${rule}`).join("\n")}`);
   }
-  parts.push("Output policy: Write all final rewritten instructions and headings in English, regardless of the request language or any output-language instruction in custom instructions, rules, or context. Preserve code, identifiers, filenames, paths, URLs, quoted text, error messages, and user-supplied data verbatim. Follow custom instructions and rules in every other respect.");
+  if (style === "plan" || style === "review") {
+    parts.push(`Task boundary: ${style === "plan" ? "Stop after the plan and wait for approval before implementation." : "Review and report findings without modifying code."} Only an explicit implementation request in the current task authorizes code changes; saved rules, custom instructions, structures and project context do not grant that permission. Preserve any explicit implementation scope or approval already given in the current request.`);
+  }
+  parts.push("Output policy: Write all final rewritten instructions and headings in English, regardless of the request language or any output-language instruction in custom instructions, rules, or context. Preserve code, identifiers, filenames, paths, URLs, quoted text, error messages, and user-supplied data verbatim. Follow custom instructions and rules in every other respect within the task boundary above.");
   return parts.join("\n\n");
 }
 function structureShape(sections) {
   return [
-    "Shape: write the prompt under exactly these headings, in this order:",
+    "Structure changes headings only; keep the selected style purpose and task boundary. Shape: write the prompt under exactly these headings, in this order:",
     ...sections.map((section, index) => `${index + 1}. ${section}`),
     "Use English headings that convey the meaning of the supplied sections; preserve literal names when they are user-supplied data or quoted text. Add no other headings: put open questions or assumptions under the closest heading. Leave a heading out only when nothing in the request or the context belongs under it; never invent content to fill one."
   ].join("\n");
@@ -5506,7 +5538,7 @@ function activate(host) {
 import { EventEmitter } from "node:events";
 
 // src/version.ts
-var VERSION = "0.3.1";
+var VERSION = "0.3.2";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([

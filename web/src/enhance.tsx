@@ -305,6 +305,7 @@ function CustomInstructions() {
         onBlur={() => void setSetting('customInstructions', text.slice(0, 4000))}
         className="bg-background"
       />
+      <p className="text-muted-foreground text-xs">Saved instructions apply to every style. Custom only also uses them for the format; when blank, it uses General. Shared accuracy and English-output rules still apply.</p>
     </Field>
   )
 }

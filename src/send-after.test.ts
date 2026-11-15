@@ -317,7 +317,7 @@ test('a saved history is one Markdown document whose code blocks hold the texts 
     new Date(2026, 10, 13, 14, 5).getTime()
   )
   assert.match(text, /^# Enhance Prompt: History\n\nSaved 2026-11-13 14:05 · 2 prompts\n/)
-  assert.ok(text.includes('## 2026-11-13 09:05 · Shop · Balanced · sonnet\n\n### Your prompt\n\n```text\nfix login\n```\n\n### Enhanced prompt\n\n```text\n## Goal\nFix the login page.\n```'))
+  assert.ok(text.includes('## 2026-11-13 09:05 · Shop · General · sonnet\n\n### Your prompt\n\n```text\nfix login\n```\n\n### Enhanced prompt\n\n```text\n## Goal\nFix the login page.\n```'))
   // An entry of auto-enhance says so; one without a project has no empty place for it.
   assert.ok(text.includes('## 2026-11-13 09:05 · Concise · sonnet · auto\n'))
   assert.ok(text.endsWith('```\n'))

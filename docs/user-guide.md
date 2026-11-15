@@ -20,6 +20,8 @@ Reports include the plugin version, runtime version, OS/architecture, timestamps
 
 Write the request, choose style and context level, and optionally select a structure. Paste, drop or pick attachments. Preview the context and exclude anything unnecessary before running a model. Cancel stops the current run. Refine moves the result back into the composer. The rewritten instructions and headings use English while preserving your code, paths, quoted text and other supplied data.
 
+The dropdown is named **Context**. **General** is the default style; the other eight offer shorter prompts, specifications, task-specific workflows or custom formatting. Structures change headings while keeping the style's purpose. **Plan first** stops after the plan unless the current task explicitly requests implementation. [Style guide and review](styles.md).
+
 Send creates a new message in the attached Copilot session. It checks the session again immediately before submitting. Copy and file download are available for manual handoff. A failed send leaves the result available.
 
 ## Models and rules

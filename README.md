@@ -84,6 +84,8 @@ The native tab uses the compact SVG declared in `plugin.json`. Version 0.1.5 rem
 
 ## Use it
 
+**General** is the default style. Use **Context** to choose how much project information to include, and **Style** to choose how the task should be expressed. [Guide to all nine styles](docs/styles.md).
+
 Choose **Relevant code** for most coding tasks: it adds local source matches without an extra model call. **Project overview** stays the default for quick orientation; **AI-assisted** adds model-based file selection when needed. **Off** keeps only the inputs you supply. Saved Basic selections remain compatible. [Context choices and limits](docs/context-levels.md).
 
 The Quiet Desk banner changes its still scene with local time and the current enhancement state. Use the single button at its top right to toggle light/dark mode; your choice is remembered across sessions. The footer links to this repository, Settings, Show Logs and Feedback, with the version in plain gray text. Release notes appear once after an update. See the [user guide](docs/user-guide.md) for the scene's triggers and support logs.

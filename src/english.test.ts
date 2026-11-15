@@ -36,7 +36,7 @@ test('the interface stays English with a non-English environment and legacy save
   t.after(() => view.unmount())
   assert.deepEqual(read(contextNotes).map(say), ['以前保存的内容'])
   assert.equal(SECTION_LABELS.privacy, 'Settings')
-  assert.equal(styleOptions()[0].label, 'Balanced')
+  assert.equal(styleOptions()[0].label, 'General')
   assert.equal(structureOptions()[0].label, 'By style')
   const input = 'sửa lỗi "无法读取" trong src/你好.ts 🧪'
   put(draft, input)
