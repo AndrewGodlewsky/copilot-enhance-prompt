@@ -20,6 +20,7 @@ import {
   workspaceRemoved
 } from './actions.ts'
 import { notice, restoreSaved, say, tab } from './state.ts'
+import { watchContextPreview, cancelContextPreview } from './context-preview.ts'
 
 /**
  * Brings back what the last panel run saved, follows the events and loads the models, terminals,
@@ -27,6 +28,7 @@ import { notice, restoreSaved, say, tab } from './state.ts'
  */
 export function wirePanel(): () => void {
   restoreSaved()
+  const stopPreview = watchContextPreview()
   const subscriptions = [
     settings.onDidChange(() => void refreshDefaults()),
     on('workspace.changed', () => void refreshTargets()),
@@ -65,12 +67,14 @@ export function wirePanel(): () => void {
     void refreshHookLast()
   }
   return () => {
+    stopPreview()
     for (const subscription of subscriptions) subscription.dispose()
   }
 }
 
 /** The panel is closing or reloading: its run ends, and the request's signal stops the worker's model call too. */
 export function closePanel(): void {
+  cancelContextPreview()
   cancel()
   stopTicking()
 }

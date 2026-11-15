@@ -464,10 +464,10 @@ export function ModelsSection() {
         />
       </Group>
       {view.profiles.length > 1 && !view.fromEnv ? (
-        <Group title={'Max context level'}>
-          <Row title={'File picker model (Max context level)'}>
+        <Group title={'AI-assisted context level'}>
+          <Row title={'File picker model (AI-assisted context level)'}>
             <Pick
-              label={'File picker model (Max context level)'}
+              label={'File picker model (AI-assisted context level)'}
               value={view.selectorProfileId ?? 'chain'}
               options={roleOptions}
               onChange={(value) => void setRoles({ selectorProfileId: value === 'chain' ? null : value })}

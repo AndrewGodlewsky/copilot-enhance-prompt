@@ -13,9 +13,9 @@ flowchart TD
     C --> D["Click Enhance; capture input and target session/project"]
     D --> E["Authenticated local transport → enhancement worker"]
     E --> F["Resolve attached session's actual project directory; read privacy settings"]
-    F --> G["Gather allowed context for Off / Basic / Standard / Deep / Max"]
+    F --> G["Gather allowed context for Off / Project overview / Relevant code / AI-assisted"]
     G --> H["Safe project paths and size limits; mask recognized secrets in source excerpts and diffs; apply exclusions"]
-    G -. "Max" .-> P["Selector model/chain gets original task + candidate file paths"]
+    G -. "AI-assisted" .-> P["Selector model/chain gets original task + candidate file paths"]
     P -- "Selected paths" --> H
     P -- "Failure / timeout: keep heuristic selection" --> H
     G -- "Fatal validation error / cancellation" --> X
@@ -63,14 +63,14 @@ For example, a request might be `Fix the login button overlapping the password f
 | Context level | What this adapter can include, subject to privacy switches |
 | --- | --- |
 | Off | No gathered project context; explicit attachments and user rewrite rules still apply |
-| Basic | Workspace/session identity and destination-agent information |
-| Standard | Basic plus project instructions, README, stack/commands, file tree and configured extra context files |
-| Deep | Standard plus allowed Git information and relevant source excerpts |
-| Max | Deep plus a larger file selection and optional model-assisted file picking; this can make an extra model request |
+| Basic (saved selections only) | Workspace/session identity and destination-agent information |
+| Project overview | Identity plus project instructions, README, stack/commands, file tree and configured extra context files |
+| Relevant code | Project overview plus allowed Git information and relevant source excerpts |
+| AI-assisted | Relevant code plus model-assisted file picking, capped at ten source files total; adds a selector request when candidates exist |
 
-Preview does not call the model-assisted file picker. At Max, a selector profile/chain receives the original request and candidate file paths. Copilot rewrites use only Copilot selector profiles; a saved external selector is replaced for that run by the chosen Copilot profile. External rewrites can use a different external selector provider. Picker errors or timeouts retain heuristic file selection and let enhancement continue with a note. Files may change between preview and enhancement, so preview is not an immutable copy of the eventual request. Exclusions are applied to the enhancement run too. Turning off project-file access limits gathered context; it does not remove text the user explicitly attached or typed.
+Preview does not call the model-assisted file picker. With AI-assisted context, a selector profile/chain receives the original request and candidate file paths. Copilot rewrites use only Copilot selector profiles; a saved external selector is replaced for that run by the chosen Copilot profile. External rewrites can use a different external selector provider. Picker errors or timeouts retain heuristic file selection and let enhancement continue with a note. Files may change between preview and enhancement, so preview is not an immutable copy of the eventual request. Exclusions are applied to the enhancement run too. Turning off project-file access limits gathered context; it does not remove text the user explicitly attached or typed.
 
-Project file reads reject sensitive filenames and escaping symlinks. Recognized secrets in relevant source excerpts and Git diffs are masked before truncation. This is not a blanket filter: project instructions, README/extra context, stack summaries and Git metadata are not uniformly secret-masked. Preview the context and exclude material you do not want sent.
+Project file reads reject sensitive filenames and escaping symlinks. Recognized secrets in automatically gathered project instructions, README/extra context, stack information, source excerpts and Git metadata/diffs are masked before truncation. File exclusions apply across automatic context routes and resolved link targets. Masking cannot identify every secret. Preview the context and exclude material you do not want sent.
 
 Explicit attachments follow a separate path: the panel uploads them into the plugin's temporary attachment directory; only those copies can be loaded. Images are identified from their bytes. Attached text is excerpted, but it is not automatically secret-masked. The request and custom instructions are also supplied as written. Excluding an attached text item removes its content from the payload while its path remains listed. Treat text, images and paths you provide as data the configured providers may receive.
 
@@ -114,7 +114,7 @@ flowchart TD
 
 Auto-enhance is off by default and can affect chat prompts in sessions where this plugin's hook is active, even without an open canvas. The runtime supplies the target session and project directory; switching desktop tabs does not choose the hook's project. Plugin or organization policy can prevent hooks from running.
 
-**Rules mode** appends the dedicated auto-enhance text; it does not run the rewriting model or automatically append the Rules tab's contents. **AI mode** reuses the rewrite instructions and applicable user rules, but only takes optional static project context. It does not run Deep/Max context gathering, the file picker, canvas attachment loading, Copilot helpers or subscription CLIs. Short prompts below the configured minimum are left unchanged in both modes.
+**Rules mode** appends the dedicated auto-enhance text; it does not run the rewriting model or automatically append the Rules tab's contents. **AI mode** reuses the rewrite instructions and applicable user rules, but only takes optional static project context. It does not run Relevant code or AI-assisted context gathering, the file picker, canvas attachment loading, Copilot helpers or subscription CLIs. Short prompts below the configured minimum are left unchanged in both modes.
 
 The worker gives the AI chain a 1.7-second budget minus setup time; key retrieval can add wall-clock time outside individual model timers. The command process has a 4.5-second outer deadline and the host configuration allows 5 seconds. An absent or ambiguous original-text span, error, empty answer or timeout preserves the original model-facing content. Surrounding runtime-added context is preserved byte for byte when replacement succeeds.
 
@@ -127,7 +127,7 @@ The hook uses the packaged command integration because registering an SDK prompt
 - The canvas and worker communicate through an authenticated loopback HTTP/SSE server. Copilot session access stays in the extension process.
 - Profiles, preferences, user rules and history live in the plugin's local data directory. Project rules use canonical project paths; drafts and results are scoped to the session. Prompt text in saved history is not encrypted. Disabling history also stops persistence of sensitive panel fields.
 - Saved API keys use Windows DPAPI. Other platforms currently need an available environment key or a CLI's own authentication; saved API-key storage is unavailable there.
-- Copilot or configured external providers/CLIs receive the enhancement payload. External fallback can send it to more than one external provider; Copilot runs stay within Copilot for rewriting and Max file selection. On Send, the attached Copilot session receives the enhanced task prompt, including retained attachment paths. The hook can also make an API rewrite request when AI mode is enabled.
+- Copilot or configured external providers/CLIs receive the enhancement payload. External fallback can send it to more than one external provider; Copilot runs stay within Copilot for rewriting and AI-assisted file selection. On Send, the attached Copilot session receives the enhanced task prompt, including retained attachment paths. The hook can also make an API rewrite request when AI mode is enabled.
 - The adapter does not gather terminal scrollback, other-agent context, tool activity or editor-save events. It cannot start an external agent or issue desktop notifications; those controls are shown as unavailable.
 
 ## Implementation map

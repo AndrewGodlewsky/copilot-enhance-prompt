@@ -36,7 +36,7 @@ export function modelOptions(catalog: Catalog | undefined, current: string) {
 }
 
 export const styleOptions = () => STYLES.map((value) => ({ value, label: STYLE_LABELS[value] }))
-export const levelOptions = () => CONTEXT_LEVELS.map((value) => ({ value, label: CONTEXT_LEVEL_LABELS[value] }))
+export const levelOptions = (current?: string) => CONTEXT_LEVELS.filter(value => value !== 'basic' || current === 'basic').map((value) => ({ value, label: CONTEXT_LEVEL_LABELS[value] }))
 export const KEY_LABEL: Record<ProfileView['keySource'], string> = {
   secret: 'key saved',
   env: 'key from env',

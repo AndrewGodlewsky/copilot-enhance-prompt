@@ -1,38 +1,61 @@
-﻿# Context levels
+# Context choices
 
 Context comes from the working directory of the Copilot session that opened the canvas.
-Choose a level per prompt, or set its default in the panel's Settings.
+Choose it per prompt, or set a default in Settings. Existing defaults are preserved.
 
-| Level | Context |
-| --- | --- |
-| Off | Your prompt and instructions, without project context |
-| Basic | Project and destination agent identity |
-| Standard | Agent rules, README digest, stack, commands, repository tree and explicitly included files |
-| Deep | Standard plus git status, recent commits, diff and up to six relevant files |
-| Max | Deep with up to ten files and optional model-assisted file selection |
+| Choice | Best use | Automatically gathered context | Approximate character budget |
+| --- | --- | --- | --- |
+| Off | General requests or context you supply yourself | None; saved rewrite instructions and explicit attachments still apply | 0 |
+| Project overview | Fast project orientation; the default for new installations | Project/agent identity, project instructions, README digest, stack, commands, file overview and configured extra files | 12,000 |
+| Relevant code | Most coding tasks | Project overview plus Git status, six recent commits, a bounded diff and up to six relevant source snippets | 28,000 |
+| AI-assisted | Tasks where local search misses the right files | Relevant code with larger snippets/diff and up to ten files in total, chosen with model assistance | 45,000 |
 
-## Files and git
+Relevant code performs local search without an extra model request. AI-assisted sends the
+request and allowed candidate file paths to a selector model, adding time and possible usage
+charges. Its choices come first, with local matches filling remaining slots. If selection
+fails, local matches still work. Empty candidate lists skip the selector.
 
-Standard reads instruction files such as `AGENTS.md`, `CLAUDE.md`, and
-`.github/copilot-instructions.md`. It extracts project commands from package manifests,
-build files and CI configuration. Deep searches for identifiers, paths and keywords in
-your request, then includes numbered snippets around relevant matches.
+Saved Basic selections still work and appear as **Basic (saved): project identity only**.
+They are not offered for new selections. The stored identifiers `standard`, `deep`, and
+`max` remain compatible with older preferences and request clients.
 
-Max's file picker uses a configured model and can incur an additional model call.
-Opening the context preview itself does not call a model. Untick context items to omit
-them from the next enhancement. Budgets limit each level's context size.
+## Preview and file selection
 
-Project-file and git privacy switches apply to previews and enhancement.
-Secret filenames, binary files and configured exclusions are skipped.
-Secret values are masked before snippets and diffs are shortened.
+The visible preview refreshes after changes to the request, level, target, exclusions or
+context preferences. **Refresh context** rereads files after edits outside the panel.
+Preview makes no model calls; AI-assisted files are finalized during enhancement.
+Each enhancement also rereads static context, so preview is not a frozen copy of its payload.
 
-## Copilot availability
+Unchecked project files and Excluded paths are filtered from instructions, summaries,
+file lists, source snippets, Git changes and AI candidates. Resolved link targets obey
+the same policy; deletions under missing directories are omitted when their original
+location cannot be verified. Turning off project-file access limits collection to project identity.
+Explicit attachments, typed text and saved rewrite rules are separate inputs.
+
+Project instructions include `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`
+and supported rule files. Commands come from manifests and build files; CI workflow
+filenames are listed as hints. Instructions and README share a 9,000-character allowance,
+with individual instruction files limited to 4,000 characters.
+
+Relevant code prioritizes filenames, identifiers, content matches and changed files.
+With Git unavailable or disabled, local search still works and reads supported hidden
+instruction directories. The fallback searches up to 300 candidate files, 4 MB of text,
+or 1.5 seconds, whichever comes first. A note appears when it stops early. Naming files
+in the request prioritizes them. Individual source reads are limited to 200 KB; snippets
+include line numbers around matches. These are excerpts, not the whole repository.
+
+Recognized secrets in automatically collected instructions, README/extra context, stack
+information, source excerpts and Git metadata/diffs are masked before shortening.
+Masking cannot identify every secret. Sensitive filenames, binary files and paths outside
+the project are refused. See [Privacy](privacy.md) for attachment and explicit-input handling.
+
+## Copilot availability and chat auto-enhance
 
 Terminal output, other agents' sessions, editor-save events and agent activity are
-unavailable in the installed canvas SDK. Their controls explain this limitation.
-They do not contribute context at any level.
+unavailable in the installed canvas SDK and contribute no context. Remote sessions
+provide no local project files; the extension never substitutes its own directory.
 
-Remote sessions provide no local project files. The plugin must not substitute the
-extension's own working directory or Copilot's session-artifact directory.
-
-See [Privacy](privacy.md) for file and attachment handling.
+Chat auto-enhance uses its separate **Include context in auto-enhance** switch, not this
+menu. It can include project identity, instructions, README/extra files and stack details,
+subject to privacy and exclusions. It does not perform source selection or include the
+file tree or Git changes. Its cached context must match the current file preferences.

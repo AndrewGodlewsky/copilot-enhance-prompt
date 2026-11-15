@@ -20,7 +20,7 @@ export function Preferences() {
   const save = (key: string) => { void setSetting(key, values[key]) }
   return <Group title={'Prompt preferences'}>
     <Row title={'Default style'}><Pick label={'Default style'} value={String(values.defaultStyle ?? 'balanced')} options={styleOptions()} onChange={value => void setSetting('defaultStyle', value)} /></Row>
-    <Row title={'Default context level'}><Pick label={'Default context level'} value={String(values.contextLevel ?? 'standard')} options={levelOptions()} onChange={value => void setSetting('contextLevel', value)} /></Row>
+    <Row title={'Default context level'}><Pick label={'Default context level'} value={String(values.contextLevel ?? 'standard')} options={levelOptions(String(values.contextLevel ?? 'standard'))} onChange={value => void setSetting('contextLevel', value)} /></Row>
     <Row title={'Custom instructions'}><Textarea aria-label={'Custom instructions'} value={String(values.customInstructions ?? '')} onChange={event => edit('customInstructions', event.target.value)} onBlur={() => save('customInstructions')} /></Row>
     <Row title={'Additional context files'}><Textarea aria-label={'Additional context files'} value={String(values.extraContextFiles ?? '')} onChange={event => edit('extraContextFiles', event.target.value)} onBlur={() => save('extraContextFiles')} /></Row>
     <Row title={'Excluded paths'}><Textarea aria-label={'Excluded paths'} value={String(values.excludePatterns ?? '')} onChange={event => edit('excludePatterns', event.target.value)} onBlur={() => save('excludePatterns')} /></Row>

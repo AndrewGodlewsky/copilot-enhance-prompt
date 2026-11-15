@@ -118,6 +118,10 @@ export const lastRun = atom<LastRun>(null)
 export const contextShown = atom<ContextItemView[]>([])
 /** Notes are Messages; an older version saved plain strings. */
 export const contextNotes = atom<(Message | string)[]>([])
+export const contextFor = atom<string | null>(null)
+export const contextLoading = atom(false)
+export const contextError = atom<string | null>(null)
+export const contextPreferences = atom('')
 /**
  * The note that asks for ideas and feedback, under a result now and then (view.ts says when): how
  * many prompts were enhanced before it first showed, and when it last showed. Kept by the panel on

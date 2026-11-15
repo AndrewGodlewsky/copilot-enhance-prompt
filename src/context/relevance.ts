@@ -71,7 +71,7 @@ export function contentScores(
   perWord.forEach((counts, index) => {
     const df = counts.size
     if (df === 0 || df > Math.max(20, totalFiles * 0.05)) return
-    const idf = Math.log((totalFiles + 1) / (df + 1))
+    const idf = Math.log(1 + (totalFiles + 1) / (df + 1))
     const k = keywordFactor(weights[index] ?? 4)
     for (const [file, count] of counts) {
       scores.set(file, (scores.get(file) ?? 0) + k * idf * (1 + Math.log(count)))

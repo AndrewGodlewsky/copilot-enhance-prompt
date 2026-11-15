@@ -156,11 +156,18 @@ export function newProfileId(name: string): string {
 export const CONTEXT_LEVELS = ['off', 'basic', 'standard', 'deep', 'max'] as const
 export type ContextLevel = (typeof CONTEXT_LEVELS)[number]
 export const CONTEXT_LEVEL_LABELS: Record<ContextLevel, string> = {
-  off: 'Off: prompt only',
-  basic: 'Basic: workspace + agent',
-  standard: 'Standard: + rules, stack, tree',
-  deep: 'Deep: + git + relevant code',
-  max: 'Max: + AI-picked files + terminal'
+  off: 'Off',
+  basic: 'Basic (saved): project identity only',
+  standard: 'Project overview',
+  deep: 'Relevant code',
+  max: 'AI-assisted'
+}
+export const CONTEXT_LEVEL_HINTS: Record<ContextLevel, string> = {
+  off: 'No automatic project context. Your instructions and explicit attachments still apply.',
+  basic: 'Keeps your saved Basic selection: project and Copilot identity, without reading project files.',
+  standard: 'Quick project orientation: instructions, README, stack, commands, and a file overview. No extra model call.',
+  deep: 'Best for coding tasks: project overview plus relevant code and Git changes. No extra model call.',
+  max: 'Lets a model help choose up to 10 relevant files. Adds a model request and may take longer. Preview shows local matches; AI choices appear after enhancement.'
 }
 export function isContextLevel(value: unknown): value is ContextLevel {
   return typeof value === 'string' && (CONTEXT_LEVELS as readonly string[]).includes(value)

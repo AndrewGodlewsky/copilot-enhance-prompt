@@ -37,7 +37,7 @@ sequenceDiagram
     end
 ```
 
-The background session does not inherit the chat history or discover the project. The plugin's existing context pipeline controls what it receives. At Max, a separate helper request can select files from the allowed candidate list; this stays on the Copilot route even when an older external selector profile is saved. Fallback can try other saved Copilot profiles, but cannot cross to an external API or subscription CLI. External runs likewise do not automatically fall back into Copilot.
+The background session does not inherit the chat history or discover the project. The plugin's existing context pipeline controls what it receives. With AI-assisted context, a separate helper request can select files from the allowed candidate list; this stays on the Copilot route even when an older external selector profile is saved. Fallback can try other saved Copilot profiles, but cannot cross to an external API or subscription CLI. External runs likewise do not automatically fall back into Copilot.
 
 Models come from the attached session's live catalog, filtered to entries explicitly attributed to Copilot and allowed by their published policy. Before sending, the plugin verifies the selected entry in both catalogs, matching authenticated GitHub login and host, and the helper's actual model, directory and empty tool list. Account identifiers remain in memory; credentials are not requested from desktop storage or copied into profile settings. The SDK resolves existing authentication through its own supported mechanisms.
 
@@ -45,7 +45,7 @@ Validation on this machine found the same account via an existing GitHub CLI log
 
 ## Usage visibility
 
-Enhance Prompt **0.2.4** retains each helper's reported usage in a durable local source. **Usage Insights 0.1.64** automatically discovers it and groups the sessions in the **Enhanced Prompt** project. This label is a Usage Insights grouping, not a new project or chat in the desktop application. Each helper gets a unique session with a timestamped name. Max's file selector, each fallback attempt and the Models tab's Test action are separate helpers, so one enhancement can produce multiple sessions.
+Enhance Prompt **0.2.4** retains each helper's reported usage in a durable local source. **Usage Insights 0.1.64** automatically discovers it and groups the sessions in the **Enhanced Prompt** project. This label is a Usage Insights grouping, not a new project or chat in the desktop application. Each helper gets a unique session with a timestamped name. AI-assisted context's file selector, each fallback attempt and the Models tab's Test action are separate helpers, so one enhancement can produce multiple sessions.
 
 Update both plugins in Copilot's **Customize → Installed → Update**, restart the desktop and reopen their canvases. Run an enhancement with a GitHub Copilot model, then refresh Usage Insights and choose a date range containing the run. If you disabled its source in Usage Insights settings, enable it again. External API and subscription CLI profiles are not included in this Copilot ledger.
 

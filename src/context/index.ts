@@ -3,18 +3,18 @@
 //   basic     workspace name/branch, target agent
 //   standard  + agent rule files, README digest, stack & commands, repo tree
 //   deep      + git status/log/diff, files relevant to the prompt (paths, grep, snippets)
-//   max       + AI-picked files from the tree, recent output of the agent terminal, and (Privacy
-//             "Read other agents' sessions", off by default) the other agents and their sessions
+//   max       + AI selection within a ten-file limit. Copilot has no terminal/session-output API.
 import type { EnhanceWorker } from '#host'
 import { LlmError, messageOf } from '../llm.ts'
 import { english, msg, raw, type Message } from '../messages.ts'
 import type { ContextItemView, ContextLevel } from '../presets.ts'
 import type { StepReporter } from '../progress.ts'
-import { compilePatterns, isBinaryPath, isExcluded, isSensitive, readText, snippet, treeSummary, walkFiles } from './files.ts'
+import { projectFileAllowed, filterAllowed, isSensitive, readText, snippet, treeSummary, walkFiles, type FilePolicy } from './files.ts'
 import { changedPaths, gitDiff, gitFiles, gitGrep, gitGrepCount, gitLog, gitStatus, isGitRepo, statusLinePaths } from './git.ts'
 import { readRuleFiles } from './instructions.ts'
 import { contentScores, scoreFiles, weightedKeywords } from './relevance.ts'
 import { detectStack } from './stack.ts'
+import { searchFiles } from './search.ts'
 import { agentsSummary, MAX_SESSIONS, otherAgents, readSession, SESSION_LINES } from './agents.ts'
 import { redactCode, redactSecrets } from './secrets.ts'
 import { agentActivity, savedFiles } from './activity.ts'
@@ -237,13 +237,16 @@ export async function focusedProject(host: EnhanceWorker, hint?: string | readon
 
 // ---- prompt-independent parts, cached per workspace root (also what the hook uses) ----
 
-type StaticParts = { at: number; files: string[]; isGit: boolean; items: ContextItem[] }
+type StaticParts = { at: number; key: string; files: string[]; refused: string[]; isGit: boolean; items: ContextItem[] }
 const staticCache = new Map<string, StaticParts>()
 const STATIC_TTL_MS = 90_000
 
-export function cachedStatic(root: string): StaticParts | null {
-  const hit = staticCache.get(`git:${root}`) ?? staticCache.get(`nogit:${root}`)
-  return hit && Date.now() - hit.at < STATIC_TTL_MS * 4 ? hit : null
+const staticKey = (extraFiles: string[], allowGit: boolean, policy: FilePolicy) => JSON.stringify([extraFiles, allowGit, policy.excludePatterns ?? '', [...policy.exclude ?? []].sort()])
+
+export function cachedStatic(root: string, settings?: { extraContextFiles: string[]; privacy: { allowGit: boolean }; excludePatterns: string }): StaticParts | null {
+  const hit = staticCache.get(root)
+  const key = settings && staticKey(settings.extraContextFiles, settings.privacy.allowGit, settings)
+  return hit && (!key || hit.key === key) && Date.now() - hit.at < STATIC_TTL_MS ? hit : null
 }
 
 export async function staticParts(
@@ -253,29 +256,33 @@ export async function staticParts(
   allowGit = true,
   signal?: AbortSignal,
   /** How far the read has got, 0-1 (progress bar). */
-  onProgress: (fraction: number) => void = () => undefined
+  onProgress: (fraction: number) => void = () => undefined,
+  policy: FilePolicy = {}
 ): Promise<StaticParts> {
-  const cacheKey = `${allowGit ? 'git' : 'nogit'}:${root}`
-  const hit = staticCache.get(cacheKey)
-  if (hit && !fresh && Date.now() - hit.at < STATIC_TTL_MS) return hit
+  const key = staticKey(extraFiles, allowGit, policy)
+  const hit = staticCache.get(root)
+  if (hit?.key === key && !fresh && Date.now() - hit.at < STATIC_TTL_MS) return hit
+  const allow = await projectFileAllowed(root, policy)
   const isGit = allowGit && (await isGitRepo(root, signal))
   onProgress(0.15)
-  const listed = (isGit ? await gitFiles(root, signal) : null) ?? (await walkFiles(root, undefined, undefined, signal))
+  const listed = (isGit ? await gitFiles(root, signal) : null) ?? (await walkFiles(root, undefined, undefined, signal, allow))
   // A cancelled read is incomplete: never cache it.
   stopIfCancelled(signal)
   onProgress(0.5)
-  const files = listed.filter((file) => !isSensitive(file))
+  const files = await filterAllowed([...new Set(listed)], allow, signal)
+  const permitted = new Set(files)
+  const refused = listed.filter(path => !permitted.has(path))
   const items: ContextItem[] = []
-  for (const rule of await readRuleFiles(root, files, extraFiles, 9000)) {
+  for (const rule of await readRuleFiles(root, files, extraFiles, 9000, allow)) {
     items.push(item(`rules:${rule.name}`, 'rules', raw(rule.name), rule.content))
   }
   onProgress(0.8)
-  const stack = await detectStack(root, files)
+  const stack = policy.exclude?.has('stack') ? null : await detectStack(root, files, allow)
   if (stack) items.push(item('stack', 'stack', msg('label.stack'), stack))
-  if (files.length > 0) items.push(item('tree', 'tree', msg('label.tree', { count: files.length }), treeSummary(files)))
+  if (files.length > 0 && !policy.exclude?.has('tree')) items.push(item('tree', 'tree', msg('label.tree', { count: files.length }), redactSecrets(treeSummary(files))))
   stopIfCancelled(signal)
-  const parts = { at: Date.now(), files, isGit, items }
-  staticCache.set(cacheKey, parts)
+  const parts = { at: Date.now(), key, files, refused, isGit, items }
+  staticCache.set(root, parts)
   return parts
 }
 
@@ -328,7 +335,7 @@ export async function gatherContext(host: EnhanceWorker, options: GatherOptions)
 
   if (root) {
     stopIfCancelled(signal)
-    const parts = await staticParts(root, options.extraFiles, false, options.allowGit !== false, signal, (fraction) => step('project', 'running', undefined, fraction))
+    const parts = await staticParts(root, options.extraFiles, true, options.allowGit !== false, signal, (fraction) => step('project', 'running', undefined, fraction), options)
     items.push(...parts.items)
     step('project', 'done', String(parts.files.length))
     if (atLeast(level, 'deep')) {
@@ -394,12 +401,12 @@ async function dynamicParts(
   saved: string[] = []
 ): Promise<ContextItem[]> {
   const out: ContextItem[] = []
-  const patterns = compilePatterns(options.excludePatterns)
+  const allow = await projectFileAllowed(root, options)
   const alreadyIncluded = new Set(parts.items.filter((entry) => entry.kind === 'rules').map((entry) => entry.label))
   // Prose files compete with code only when they live under docs/; rule files are already in.
   const isProse = (file: string) => /\.(md|mdx|rst|txt)$/i.test(file)
-  const files = parts.files.filter((file) => {
-    if (isExcluded(file, patterns) || isBinaryPath(file) || alreadyIncluded.has(file)) return false
+  const files = (await filterAllowed(parts.files, allow, options.signal)).filter((file) => {
+    if (alreadyIncluded.has(file)) return false
     return !isProse(file) || file.startsWith('docs/')
   })
   let changed = new Set<string>()
@@ -424,26 +431,29 @@ async function dynamicParts(
     const [status, log, diff] = await Promise.all([
       counted(gitStatus(root, signal)),
       counted(skip('git:log') ? null : gitLog(root, 6, signal)),
-      counted(skip('git:diff') ? null : gitDiff(root, diffChars, (path) => !isExcluded(path, patterns), signal))
+      counted(skip('git:diff') ? null : gitDiff(root, diffChars, allow, signal))
     ])
     stopIfCancelled(signal)
     if (status && !skip('git:status') && (status.changed.length > 0 || status.branchLine)) {
-      const shown = status.changed.filter((line) => !statusLinePaths(line).some((path) => isSensitive(path) || isExcluded(path, patterns)))
+      const shown = await filterAllowed(status.changed, async line => {
+        const paths = statusLinePaths(line)
+        return (await filterAllowed(paths, allow, signal)).length === paths.length
+      }, signal)
       out.push(
         item(
           'git:status',
           'git',
           msg('label.status', { count: shown.length }),
-          [status.branchLine && `## ${status.branchLine}`, ...shown.slice(0, 60)].filter(Boolean).join('\n')
+          redactSecrets([status.branchLine && `## ${status.branchLine}`, ...shown.slice(0, 60)].filter(Boolean).join('\n'))
         )
       )
     }
     if (status) changed = new Set([...changedPaths(status.changed), ...saved])
-    if (log?.trim()) out.push(item('git:log', 'git', msg('label.log'), log.trim()))
+    if (log?.trim()) out.push(item('git:log', 'git', msg('label.log'), redactSecrets(log.trim())))
     if (diff) out.push(item('git:diff', 'git', msg('label.diff'), `${diff.stat}\n\n${diff.diff}`))
     step('git', 'done', String(changed.size))
   } else {
-    notes.push(msg('note.not_git'))
+    notes.push(msg(options.allowGit === false ? 'note.git_off' : 'note.not_git'))
     step('git', 'skipped')
     changed = new Set(saved)
   }
@@ -456,37 +466,39 @@ async function dynamicParts(
   const grepWords = grepTargets.map((entry) => entry.word)
   // Each word searched is a share of the step; ranking the files is the last tenth.
   let searched = 0
-  const perWord = parts.isGit
+  // Avoid oversized Windows argument lists. The fallback reads only permitted files.
+  const useGitSearch = parts.isGit && parts.refused.join('').length < 5000 && parts.refused.length < 100
+  const likely = scoreFiles(files, weighted, new Map(), changed, true).map(entry => entry.path)
+  const local = !useGitSearch ? await searchFiles(root, [...new Set([...likely, ...files])], grepWords, allow, signal) : null
+  if (local?.limited) notes.push(msg('note.search_limited'))
+  const perWord = useGitSearch
     ? await Promise.all(
         grepWords.map((word) =>
-          gitGrepCount(root, word, signal).then((counts) => {
+          gitGrepCount(root, word, signal, parts.refused).then((counts) => {
             searched++
             step('search', 'running', undefined, (searched / grepWords.length) * 0.9)
             return counts
           })
         )
       )
-    : []
+    : local?.counts ?? []
   stopIfCancelled(signal)
   const content = contentScores(perWord, files.length, grepTargets.map((entry) => entry.weight))
   const mentionsTests = /\btest|spec|kiểm thử/i.test(options.prompt)
   const scored = scoreFiles(files, weighted, content, changed, mentionsTests)
-  const picked: { path: string; hits: number[]; why: Message }[] = scored
+  let picked: { path: string; hits: number[]; why: Message }[] = scored
     .slice(0, RELEVANT_FILES[options.level])
     .map((entry) => ({ path: entry.path, hits: [], why: msg('why.keyword') }))
 
   step('search', 'done', String(picked.length))
-  if (options.level === 'max' && !options.pickFiles) step('pick', 'skipped')
-  if (options.level === 'max' && options.pickFiles) {
+  if (options.level === 'max' && (!options.pickFiles || files.length === 0)) step('pick', 'skipped')
+  if (options.level === 'max' && options.pickFiles && files.length > 0) {
     step('pick', 'running')
     try {
       const shortlist = [...new Set([...scored.slice(0, 150).map((s) => s.path), ...files])].slice(0, 600)
       const chosen = await options.pickFiles(shortlist, options.prompt)
-      for (const path of chosen.filter((p) => files.includes(p)).slice(0, 8)) {
-        if (!picked.some((entry) => entry.path === path)) {
-          picked.push({ path, hits: [], why: msg('why.ai') })
-        }
-      }
+      const ai = [...new Set(chosen.filter(path => files.includes(path)))].slice(0, 8)
+      picked = [...ai.map(path => ({ path, hits: [] as number[], why: msg('why.ai') })), ...picked.filter(entry => !ai.includes(entry.path))].slice(0, RELEVANT_FILES.max)
       step('pick', 'done', String(picked.length))
     } catch (error) {
       stopIfCancelled(signal)
@@ -497,14 +509,14 @@ async function dynamicParts(
 
   // Line numbers of the keywords inside the chosen files, for focused snippets.
   stopIfCancelled(signal)
-  const lines = parts.isGit ? await gitGrep(root, grepWords, picked.map((entry) => entry.path), undefined, signal) : new Map<string, number[]>()
+  const lines = useGitSearch ? await gitGrep(root, grepWords, picked.map((entry) => entry.path), undefined, signal) : local?.hits ?? new Map<string, number[]>()
   stopIfCancelled(signal)
   for (const entry of picked) entry.hits = lines.get(entry.path) ?? []
 
   const perFile = options.level === 'max' ? 1800 : 1400
   for (const entry of picked) {
     if (options.exclude.has(`file:${entry.path}`)) continue
-    const text = await readText(root, entry.path)
+    const text = await readText(root, entry.path, undefined, allow)
     if (!text) continue
     // A key that sits in a source file is masked where it is certainly one; the code around it
     // stays. Before the lines are picked and cut to width: a key the cut would split is not

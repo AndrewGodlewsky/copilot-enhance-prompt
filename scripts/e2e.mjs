@@ -1,7 +1,7 @@
 // Loads the package in an isolated Copilot runtime. All model traffic goes to a local fixture.
 import assert from 'node:assert/strict'
 import { mkdtemp, rm, mkdir, writeFile, readFile, cp } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { join, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { tmpdir } from 'node:os'
 import { createServer } from 'node:http'
@@ -24,6 +24,10 @@ await new Promise(resolve => fixture.listen(0, '127.0.0.1', resolve))
 const baseUrl = `http://127.0.0.1:${fixture.address().port}/v1`
 await mkdir(project)
 await writeFile(join(project, 'README.md'), '# Disposable canvas test project\n')
+await mkdir(join(project, 'src'))
+await mkdir(join(project, '.github'))
+await writeFile(join(project, '.github/copilot-instructions.md'), 'CONTEXT_RULE_FIXTURE')
+await writeFile(join(project, 'src/service.ts'), `${'// header\n'.repeat(50)}export const validateSession = true`)
 const client = new CopilotClient({
   mode: 'empty', baseDirectory: join(temporary, 'copilot'), workingDirectory: project,
   builtinPluginDirectories: [resolve('.')],
@@ -102,12 +106,28 @@ try {
   assert.equal((await request('logs.get')).copilotModelDiscovery.attempt, discovery.attempt + 1)
   assert.equal(captured.length, beforeRefresh, 'refresh performs no model inference')
   console.log('Copilot refresh exercises desktop runtime/SDK checks and reports the empty fixture catalog without inference.')
-  const preview = await request('context.preview', { prompt: 'Read the project README', level: 'standard' })
-  assert.ok(Array.isArray(preview.context))
   const setting = async (key, value) => {
     const response = await fetch(opened.url + 'api', { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ method: 'settings.set', input: { key, value } }) })
     assert.equal(response.status, 200)
   }
+  const beforePreviews = captured.length
+  for (const level of ['off', 'basic', 'standard', 'deep', 'max']) {
+    const preview = await request('context.preview', { prompt: 'Fix validateSession', level })
+    if (level === 'off') assert.deepEqual(preview.context, [])
+    else assert.ok(preview.context.some(item => item.kind === 'workspace'), `${level} identifies the attached project`)
+    assert.equal(preview.context.some(item => item.id === 'rules:.github/copilot-instructions.md'), ['standard', 'deep', 'max'].includes(level))
+    assert.equal(preview.context.some(item => item.id === 'file:src/service.ts'), ['deep', 'max'].includes(level))
+  }
+  assert.equal(captured.length, beforePreviews, 'previews never call a model, including AI-assisted')
+  await setting('allowProjectFiles', false)
+  const privatePreview = await request('context.preview', { prompt: 'Fix validateSession', level: 'max' })
+  assert.ok(privatePreview.context.every(item => ['workspace', 'agent'].includes(item.kind)))
+  await setting('allowProjectFiles', true)
+  await writeFile(join(project, '.github/copilot-instructions.md'), 'UPDATED_CONTEXT_RULE_FIXTURE')
+  const freshPreview = await request('context.preview', { prompt: 'Fix validateSession', level: 'deep', exclude: ['file:src/service.ts'] })
+  assert.ok(freshPreview.context.some(item => item.id === 'rules:.github/copilot-instructions.md' && item.chars === 'UPDATED_CONTEXT_RULE_FIXTURE'.length))
+  assert.ok(!freshPreview.context.some(item => item.id === 'file:src/service.ts'))
+  console.log('All context levels, fresh file edits, file exclusions, non-Git source search and privacy verified through the packaged adapter.')
   await setting('autoEnhanceMode', 'rules')
   await setting('autoEnhanceAppend', 'HOOK FIXTURE: verify the result.')
   await session.sendAndWait({ prompt: 'Inspect the disposable project README' }, 15_000)
@@ -116,6 +136,7 @@ try {
   await request('models.save', { name: 'Local fixture', preset: 'ollama', provider: 'openai', baseUrl, model: 'fixture', maxTokens: 2000, enabled: true })
   const enhanced = await request('prompt.enhance', { prompt: 'Improve this test request', level: 'standard' })
   assert.equal(enhanced.enhanced, 'Fixture enhanced prompt')
+  assert.match(JSON.stringify(captured.at(-1)), /UPDATED_CONTEXT_RULE_FIXTURE/)
   const beforeSend = captured.length
   const sent = await request('prompt.send', { terminalId: session.sessionId, text: enhanced.enhanced })
   assert.equal(sent.accepted, true)
@@ -144,5 +165,6 @@ try {
   await client.forceStop()
   fixture.closeAllConnections()
   fixture.close()
+  assert.ok(resolve(temporary).startsWith(resolve(tmpdir()) + sep) && temporary.includes('enhance-copilot-e2e-'))
   await rm(temporary, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 })
 }

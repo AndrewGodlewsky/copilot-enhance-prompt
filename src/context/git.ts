@@ -1,7 +1,7 @@
 // Read-only git helpers. Fixed argument arrays, no shell; every call has a timeout and size cap.
 import { execFile } from 'node:child_process'
 import { killTree } from '../cli.ts'
-import { isSensitive } from './files.ts'
+import { isSensitive, filterAllowed, type FileFilter } from './files.ts'
 import { redactCode } from './secrets.ts'
 
 export function git(
@@ -119,22 +119,22 @@ export function parseNameStatus(out: string): string[][] {
 export async function gitDiff(
   root: string,
   maxChars: number,
-  allow: (path: string) => boolean = () => true,
+  allow: FileFilter = () => true,
   signal?: AbortSignal
 ): Promise<{ stat: string; diff: string } | null> {
   const names = await git(root, ['diff', 'HEAD', '--name-status', '-z', '-M', '--', ...SAFE_PATHSPECS], { signal })
   if (names === null) return null
   const refused = new Set<string>()
   for (const paths of parseNameStatus(names)) {
-    if (paths.some((path) => isSensitive(path) || !allow(path))) paths.forEach((path) => refused.add(path))
+    if ((await filterAllowed(paths, path => !isSensitive(path) && allow(path), signal)).length !== paths.length) paths.forEach((path) => refused.add(path))
   }
   if (refused.size > MAX_DIFF_EXCLUSIONS) return null
   const pathspecs = [...SAFE_PATHSPECS, ...[...refused].map((path) => `:(exclude,literal)${path}`)]
-  const stat = await git(root, ['diff', 'HEAD', '-M', '--stat=100', '--', ...pathspecs], { signal })
+  const stat = await git(root, ['diff', 'HEAD', '-M', '--stat=100', '--no-ext-diff', '--no-textconv', '--', ...pathspecs], { signal })
   if (stat === null || !stat.trim()) {
     return null
   }
-  const diff = (await git(root, ['diff', 'HEAD', '-M', '-U2', '--no-ext-diff', '--', ...pathspecs], { maxBytes: 4_000_000, signal })) ?? ''
+  const diff = (await git(root, ['diff', 'HEAD', '-M', '-U2', '--no-ext-diff', '--no-textconv', '--', ...pathspecs], { maxBytes: 4_000_000, signal })) ?? ''
   // A key pasted into a source file is in the diff too: masked where it is certainly one.
   return { stat: stat.trim(), diff: diff.length > maxChars ? `${maskedStart(diff, maxChars)}\n…(diff truncated)` : redactCode(diff) }
 }
@@ -164,9 +164,9 @@ export async function gitFiles(root: string, signal?: AbortSignal): Promise<stri
 }
 
 /** Per file, how many lines contain `word` (case-insensitive, fixed string). */
-export async function gitGrepCount(root: string, word: string, signal?: AbortSignal): Promise<Map<string, number>> {
+export async function gitGrepCount(root: string, word: string, signal?: AbortSignal, refused: string[] = []): Promise<Map<string, number>> {
   const counts = new Map<string, number>()
-  const out = await git(root, ['grep', '-c', '-I', '-i', '-F', '--untracked', '--exclude-standard', '-e', word, '--', ...SAFE_PATHSPECS], {
+  const out = await git(root, ['grep', '-c', '-I', '-i', '-F', '--untracked', '--exclude-standard', '-e', word, '--', ...SAFE_PATHSPECS, ...refused.map(path => `:(exclude,literal)${path}`)], {
     maxBytes: 4_000_000,
     timeoutMs: 5000,
     signal

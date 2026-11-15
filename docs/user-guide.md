@@ -26,7 +26,7 @@ Send creates a new message in the attached Copilot session. It checks the sessio
 
 Models supports GitHub Copilot, API providers, local endpoints, subscription CLIs, custom commands, model catalogs, testing and ordered fallback. To use your Copilot account, add a model with the **GitHub Copilot** preset and choose from its live list. Select that profile in Enhance. The helper reuses the desktop SDK/runtime without npm or another download. Claude models in this preset use Copilot; the separate Claude Code preset uses Claude Code. **Test** makes a small, billable model request.
 
-The selected rewriting provider receives the prompt and permitted context. The attached chat receives the result only when sent. Copilot runs remain within Copilot for fallback and Max's file picker. Account mismatches, unavailable models, or missing runtime controls stop the request. [Background rewriting and troubleshooting](copilot-background-rewriting.md).
+The selected rewriting provider receives the prompt and permitted context. The attached chat receives the result only when sent. Copilot runs remain within Copilot for fallback and the AI-assisted file picker. Account mismatches, unavailable models, or missing runtime controls stop the request. [Background rewriting and troubleshooting](copilot-background-rewriting.md).
 
 Rules contains reusable instructions and structures. Global rules apply everywhere; project rules use the canonical project path so same-named folders remain separate. The original prompting and model features are described in [Models](models.md) and [Context levels](context-levels.md).
 

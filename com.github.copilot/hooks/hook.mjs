@@ -1637,8 +1637,10 @@ var MESSAGES = {
   "note.workspace_unknown": "Could not tell which folder the workspace is in; project files skipped.",
   "note.remote": "Remote (SSH/WSL) workspace: project files are not readable from the plugin.",
   "note.terminal_off": "Terminal output is off in Settings.",
-  "note.not_git": "Not a git repository: no git context.",
+  "note.not_git": "Git context is unavailable for this project. Local file search still works.",
+  "note.git_off": "Git access is off. Local file search still works.",
   "note.no_files": "No files matched the prompt; the agent will be told to locate them.",
+  "note.search_limited": "Local content search reached its file, size, or time limit. Name relevant files in your request to prioritize them.",
   "note.project_files_off": "Project files are off in Settings: workspace and agent only.",
   "note.preview_no_picker": "Preview skips the AI file picker.",
   "note.picker_skipped": "AI file picker skipped: {reason}",
@@ -2665,7 +2667,7 @@ function savedFiles(workspace, now = Date.now()) {
 
 // src/context/files.ts
 import { readdir, readFile as readFile3, realpath, stat as stat2 } from "node:fs/promises";
-import { isAbsolute, join as join3, relative, sep } from "node:path";
+import { basename, dirname, isAbsolute, join as join3, relative, sep } from "node:path";
 var WALK_SKIP = /* @__PURE__ */ new Set([
   ".git",
   "node_modules",
@@ -2710,7 +2712,62 @@ function compilePatterns(lines) {
 function isExcluded(path, patterns) {
   return patterns.some((pattern) => pattern.test(path));
 }
-async function walkFiles(root, maxFiles = 8e3, maxDepth = 6, signal) {
+function fileAllowed(policy = {}) {
+  const patterns = compilePatterns(policy.excludePatterns ?? "");
+  const normalize = (path) => process.platform === "win32" ? path.toLowerCase() : path;
+  const unchecked = new Set([...policy.exclude ?? []].filter((id2) => /^(file|rules):/.test(id2)).map((id2) => normalize(id2.slice(id2.indexOf(":") + 1).replace(/\\/g, "/"))));
+  return (path) => {
+    path = path.replace(/\\/g, "/");
+    return !isSensitive(path) && !isBinaryPath(path) && !isExcluded(path, patterns) && !unchecked.has(normalize(path));
+  };
+}
+async function projectFileAllowed(root, policy = {}) {
+  const exclude = new Set(policy.exclude);
+  const base = await realpath(root).catch(() => null);
+  if (!base) return () => false;
+  const resolved = /* @__PURE__ */ new Map();
+  const canonical = (full) => {
+    let value = resolved.get(full);
+    if (!value) {
+      value = realpath(full).catch(async (error) => {
+        if (error.code !== "ENOENT" || full === base || dirname(full) === full) return null;
+        const parent = await realpath(dirname(full)).catch(() => null);
+        return parent ? join3(parent, basename(full)) : null;
+      });
+      resolved.set(full, value);
+    }
+    return value;
+  };
+  const localPath = async (path) => {
+    if (isAbsolute(path) || path.split(/[\\/]/).includes("..")) return null;
+    const actual = await canonical(join3(base, path));
+    if (!actual) return null;
+    const local = relative(base, actual).split(sep).join("/");
+    return local.startsWith("..") || isAbsolute(local) ? null : local;
+  };
+  for (const id2 of policy.exclude ?? []) {
+    if (!/^(file|rules):/.test(id2)) continue;
+    const local = await localPath(id2.slice(id2.indexOf(":") + 1));
+    if (local !== null) exclude.add(`file:${local}`);
+  }
+  const lexical = fileAllowed({ ...policy, exclude });
+  return async (path) => {
+    if (!lexical(path)) return false;
+    const local = await localPath(path);
+    return local !== null && lexical(local + (path.endsWith("/") ? "/" : ""));
+  };
+}
+async function filterAllowed(paths, allow, signal) {
+  const result = [];
+  for (let i = 0; i < paths.length; i += 64) {
+    signal?.throwIfAborted();
+    const batch = paths.slice(i, i + 64);
+    const allowed = await Promise.all(batch.map(allow));
+    result.push(...batch.filter((_, index) => allowed[index]));
+  }
+  return result;
+}
+async function walkFiles(root, maxFiles = 8e3, maxDepth = 6, signal, allow = () => true) {
   const out = [];
   async function visit(dir, depth) {
     if (out.length >= maxFiles || depth > maxDepth || signal?.aborted) {
@@ -2726,12 +2783,13 @@ async function walkFiles(root, maxFiles = 8e3, maxDepth = 6, signal) {
       if (out.length >= maxFiles) {
         return;
       }
+      const path = relative(root, join3(dir, entry.name)).split(sep).join("/");
       if (entry.isDirectory()) {
-        if (!WALK_SKIP.has(entry.name) && !entry.name.startsWith(".")) {
+        if (await allow(`${path}/`) && !WALK_SKIP.has(entry.name) && (!entry.name.startsWith(".") || path === ".github" || path === ".cursor")) {
           await visit(join3(dir, entry.name), depth + 1);
         }
-      } else if (entry.isFile()) {
-        out.push(relative(root, join3(dir, entry.name)).split(sep).join("/"));
+      } else if (entry.isFile() && await allow(path)) {
+        out.push(path);
       }
     }
   }
@@ -2758,8 +2816,8 @@ function treeSummary(files, maxLines = 70) {
   return all.length > maxLines ? `${all.slice(0, maxLines).join("\n")}
 \u2026(${all.length - maxLines} more)` : all.join("\n");
 }
-async function readText(root, path, maxBytes = 2e5) {
-  if (isSensitive(path) || isBinaryPath(path) || path.includes("..")) {
+async function readText(root, path, maxBytes = 2e5, allow = () => true) {
+  if (!await allow(path) || isSensitive(path) || isBinaryPath(path) || path.includes("..")) {
     return null;
   }
   try {
@@ -2769,7 +2827,7 @@ async function readText(root, path, maxBytes = 2e5) {
       return null;
     }
     const actual = relative(await realpath(root), await realpath(full)).split(sep).join("/");
-    if (actual.startsWith("..") || isAbsolute(actual) || isSensitive(actual)) {
+    if (actual.startsWith("..") || isAbsolute(actual) || isSensitive(actual) || !await allow(actual)) {
       return null;
     }
     const text = await readFile3(full, "utf8");
@@ -2892,15 +2950,15 @@ async function gitDiff(root, maxChars, allow = () => true, signal) {
   if (names === null) return null;
   const refused = /* @__PURE__ */ new Set();
   for (const paths of parseNameStatus(names)) {
-    if (paths.some((path) => isSensitive(path) || !allow(path))) paths.forEach((path) => refused.add(path));
+    if ((await filterAllowed(paths, (path) => !isSensitive(path) && allow(path), signal)).length !== paths.length) paths.forEach((path) => refused.add(path));
   }
   if (refused.size > MAX_DIFF_EXCLUSIONS) return null;
   const pathspecs = [...SAFE_PATHSPECS, ...[...refused].map((path) => `:(exclude,literal)${path}`)];
-  const stat4 = await git(root, ["diff", "HEAD", "-M", "--stat=100", "--", ...pathspecs], { signal });
+  const stat4 = await git(root, ["diff", "HEAD", "-M", "--stat=100", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { signal });
   if (stat4 === null || !stat4.trim()) {
     return null;
   }
-  const diff = await git(root, ["diff", "HEAD", "-M", "-U2", "--no-ext-diff", "--", ...pathspecs], { maxBytes: 4e6, signal }) ?? "";
+  const diff = await git(root, ["diff", "HEAD", "-M", "-U2", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { maxBytes: 4e6, signal }) ?? "";
   return { stat: stat4.trim(), diff: diff.length > maxChars ? `${maskedStart(diff, maxChars)}
 \u2026(diff truncated)` : redactCode(diff) };
 }
@@ -2918,9 +2976,9 @@ async function gitFiles(root, signal) {
   const out = await git(root, ["ls-files", "-co", "--exclude-standard"], { maxBytes: 16e6, timeoutMs: 6e3, signal });
   return out === null ? null : out.split("\n").filter(Boolean).slice(0, 5e4);
 }
-async function gitGrepCount(root, word, signal) {
+async function gitGrepCount(root, word, signal, refused = []) {
   const counts = /* @__PURE__ */ new Map();
-  const out = await git(root, ["grep", "-c", "-I", "-i", "-F", "--untracked", "--exclude-standard", "-e", word, "--", ...SAFE_PATHSPECS], {
+  const out = await git(root, ["grep", "-c", "-I", "-i", "-F", "--untracked", "--exclude-standard", "-e", word, "--", ...SAFE_PATHSPECS, ...refused.map((path) => `:(exclude,literal)${path}`)], {
     maxBytes: 4e6,
     timeoutMs: 5e3,
     signal
@@ -3001,7 +3059,7 @@ ${section.body.join("\n").trim()}`);
   }
   return cap(parts.filter(Boolean).join("\n\n"), max);
 }
-async function readRuleFiles(root, fileList, extra, budget) {
+async function readRuleFiles(root, fileList, extra, budget, allow = () => true) {
   const present = new Set(fileList);
   const cursorRules = fileList.filter((f) => f.startsWith(".cursor/rules/") && /\.mdc?$/.test(f)).slice(0, 4);
   const names = [.../* @__PURE__ */ new Set([...extra, ...RULE_FILES, ...cursorRules])];
@@ -3009,18 +3067,20 @@ async function readRuleFiles(root, fileList, extra, budget) {
   let used = 0;
   for (const name of names) {
     if (used >= budget) break;
+    if (!await allow(name)) continue;
     if (!present.has(name) && !extra.includes(name)) continue;
-    const text = await readText(root, name);
+    const text = await readText(root, name, void 0, allow);
     if (!text?.trim()) continue;
-    const content = cap(text.trim(), Math.min(4e3, budget - used));
+    const mask = /\.(md|mdc|rst|txt)$/i.test(name) || RULE_FILES.includes(name) ? redactSecrets : redactCode;
+    const content = cap(mask(text.trim()), Math.min(4e3, budget - used));
     used += content.length;
     out.push({ name, content });
   }
   const readme = fileList.find((f) => /^readme(\.md|\.rst|\.txt)?$/i.test(f));
   if (readme && used < budget) {
-    const text = await readText(root, readme);
+    const text = await readText(root, readme, void 0, allow);
     if (text?.trim()) {
-      out.push({ name: readme, content: readmeDigest(text, Math.min(3500, budget - used)) });
+      out.push({ name: readme, content: readmeDigest(redactSecrets(text), Math.min(3500, budget - used)) });
     }
   }
   return out;
@@ -3066,7 +3126,7 @@ function contentScores(perWord, totalFiles, weights = []) {
   perWord.forEach((counts, index) => {
     const df = counts.size;
     if (df === 0 || df > Math.max(20, totalFiles * 0.05)) return;
-    const idf = Math.log((totalFiles + 1) / (df + 1));
+    const idf = Math.log(1 + (totalFiles + 1) / (df + 1));
     const k = keywordFactor(weights[index] ?? 4);
     for (const [file, count] of counts) {
       scores.set(file, (scores.get(file) ?? 0) + k * idf * (1 + Math.log(count)));
@@ -3108,17 +3168,17 @@ function packageJson(text, files) {
   const out = [];
   try {
     const pkg = JSON.parse(text);
-    const manager = pkg.packageManager?.split("@")[0] ?? (files.has("pnpm-lock.yaml") ? "pnpm" : files.has("yarn.lock") ? "yarn" : files.has("bun.lockb") || files.has("bun.lock") ? "bun" : "npm");
-    out.push(`Node project${pkg.name ? ` "${pkg.name}"` : ""}, package manager: ${manager}${pkg.workspaces ? " (monorepo workspaces)" : ""}`);
+    const manager = pkg.packageManager?.split("@")[0] ?? (files.has("pnpm-lock.yaml") ? "pnpm" : files.has("yarn.lock") ? "yarn" : files.has("bun.lockb") || files.has("bun.lock") ? "bun" : files.has("package-lock.json") ? "npm" : null);
+    out.push(`Node project${pkg.name ? ` "${pkg.name}"` : ""}, package manager: ${manager ?? "not established from permitted files"}${pkg.workspaces ? " (monorepo workspaces)" : ""}`);
     const deps = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies });
     if (deps.length > 0) {
       out.push(`Key dependencies: ${deps.slice(0, 30).join(", ")}${deps.length > 30 ? ", \u2026" : ""}`);
     }
     const scripts = Object.entries(pkg.scripts ?? {});
     if (scripts.length > 0) {
-      out.push(`Scripts (run with "${manager} run <name>"):`);
+      out.push(manager ? `Scripts (run with "${manager} run <name>"):` : "Scripts (package manager unspecified):");
       for (const [name, command] of scripts.slice(0, 25)) {
-        out.push(`  ${name}: ${truncate(command, 120)}`);
+        out.push(`  ${name}: ${truncate(redactSecrets(command), 120)}`);
       }
     }
   } catch {
@@ -3147,10 +3207,13 @@ function tomlSection(text, section, maxLines = 25) {
   return body.length > 0 ? `[${section}]
 ${body.join("\n")}` : null;
 }
-async function detectStack(root, fileList) {
+async function detectStack(root, fileList, allow = () => true) {
   const files = new Set(fileList.filter((file) => !file.includes("/")));
   const out = [];
-  const read = (name) => files.has(name) ? readText(root, name, 3e5) : Promise.resolve(null);
+  const read = async (name) => {
+    const text = files.has(name) ? await readText(root, name, 3e5, allow) : null;
+    return text === null ? null : name === "package.json" ? redactCode(text) : redactSecrets(text);
+  };
   const pkg = await read("package.json");
   if (pkg) out.push(...packageJson(pkg, files));
   if (files.has("tsconfig.json")) out.push("TypeScript (tsconfig.json)");
@@ -3190,6 +3253,36 @@ async function detectStack(root, fileList) {
   const ci = fileList.filter((f) => f.startsWith(".github/workflows/")).slice(0, 5);
   if (ci.length > 0) out.push(`CI workflows: ${ci.join(", ")}`);
   return out.length > 0 ? out.join("\n") : null;
+}
+
+// src/context/search.ts
+async function searchFiles(root, files, words, allow, signal) {
+  const counts = words.map(() => /* @__PURE__ */ new Map());
+  const hits = /* @__PURE__ */ new Map();
+  let read = 0;
+  let bytes = 0;
+  const started = Date.now();
+  for (const file of words.length ? files : []) {
+    if (signal?.aborted || read >= 300 || bytes >= 4e6 || Date.now() - started >= 1500) break;
+    read++;
+    const text = await readText(root, file, Math.min(2e5, 4e6 - bytes), allow);
+    if (text === null) continue;
+    bytes += Buffer.byteLength(text);
+    const lines = [];
+    text.split(/\r?\n/).forEach((line, index) => {
+      const lower = line.toLowerCase();
+      let matched = false;
+      words.forEach((word, wordIndex) => {
+        if (lower.includes(word.toLowerCase())) {
+          counts[wordIndex].set(file, (counts[wordIndex].get(file) ?? 0) + 1);
+          matched = true;
+        }
+      });
+      if (matched && lines.length < 20) lines.push(index + 1);
+    });
+    if (lines.length) hits.set(file, lines);
+  }
+  return { counts, hits, limited: words.length > 0 && read < files.length };
 }
 
 // src/context/terminals.ts
@@ -3352,31 +3445,36 @@ async function focusedProject(host, hint) {
 }
 var staticCache = /* @__PURE__ */ new Map();
 var STATIC_TTL_MS = 9e4;
-function cachedStatic(root) {
-  const hit = staticCache.get(`git:${root}`) ?? staticCache.get(`nogit:${root}`);
-  return hit && Date.now() - hit.at < STATIC_TTL_MS * 4 ? hit : null;
+var staticKey = (extraFiles, allowGit, policy) => JSON.stringify([extraFiles, allowGit, policy.excludePatterns ?? "", [...policy.exclude ?? []].sort()]);
+function cachedStatic(root, settings) {
+  const hit = staticCache.get(root);
+  const key = settings && staticKey(settings.extraContextFiles, settings.privacy.allowGit, settings);
+  return hit && (!key || hit.key === key) && Date.now() - hit.at < STATIC_TTL_MS ? hit : null;
 }
-async function staticParts(root, extraFiles, fresh = false, allowGit = true, signal, onProgress = () => void 0) {
-  const cacheKey = `${allowGit ? "git" : "nogit"}:${root}`;
-  const hit = staticCache.get(cacheKey);
-  if (hit && !fresh && Date.now() - hit.at < STATIC_TTL_MS) return hit;
+async function staticParts(root, extraFiles, fresh = false, allowGit = true, signal, onProgress = () => void 0, policy = {}) {
+  const key = staticKey(extraFiles, allowGit, policy);
+  const hit = staticCache.get(root);
+  if (hit?.key === key && !fresh && Date.now() - hit.at < STATIC_TTL_MS) return hit;
+  const allow = await projectFileAllowed(root, policy);
   const isGit = allowGit && await isGitRepo(root, signal);
   onProgress(0.15);
-  const listed = (isGit ? await gitFiles(root, signal) : null) ?? await walkFiles(root, void 0, void 0, signal);
+  const listed = (isGit ? await gitFiles(root, signal) : null) ?? await walkFiles(root, void 0, void 0, signal, allow);
   stopIfCancelled(signal);
   onProgress(0.5);
-  const files = listed.filter((file) => !isSensitive(file));
+  const files = await filterAllowed([...new Set(listed)], allow, signal);
+  const permitted = new Set(files);
+  const refused = listed.filter((path) => !permitted.has(path));
   const items = [];
-  for (const rule of await readRuleFiles(root, files, extraFiles, 9e3)) {
+  for (const rule of await readRuleFiles(root, files, extraFiles, 9e3, allow)) {
     items.push(item(`rules:${rule.name}`, "rules", raw(rule.name), rule.content));
   }
   onProgress(0.8);
-  const stack = await detectStack(root, files);
+  const stack = policy.exclude?.has("stack") ? null : await detectStack(root, files, allow);
   if (stack) items.push(item("stack", "stack", msg("label.stack"), stack));
-  if (files.length > 0) items.push(item("tree", "tree", msg("label.tree", { count: files.length }), treeSummary(files)));
+  if (files.length > 0 && !policy.exclude?.has("tree")) items.push(item("tree", "tree", msg("label.tree", { count: files.length }), redactSecrets(treeSummary(files))));
   stopIfCancelled(signal);
-  const parts = { at: Date.now(), files, isGit, items };
-  staticCache.set(cacheKey, parts);
+  const parts = { at: Date.now(), key, files, refused, isGit, items };
+  staticCache.set(root, parts);
   return parts;
 }
 async function gatherContext(host, options) {
@@ -3416,7 +3514,7 @@ async function gatherContext(host, options) {
   const saved = root && workspace && options.allowEditorSaves === true && atLeast(level, "deep") ? savedFiles(workspace).map((path) => relativeTo(root, path)).filter((path) => path !== null && !isSensitive(path)) : [];
   if (root) {
     stopIfCancelled(signal);
-    const parts = await staticParts(root, options.extraFiles, false, options.allowGit !== false, signal, (fraction) => step("project", "running", void 0, fraction));
+    const parts = await staticParts(root, options.extraFiles, true, options.allowGit !== false, signal, (fraction) => step("project", "running", void 0, fraction), options);
     items.push(...parts.items);
     step("project", "done", String(parts.files.length));
     if (atLeast(level, "deep")) {
@@ -3464,11 +3562,11 @@ function relativeTo(root, path) {
 }
 async function dynamicParts(root, parts, options, notes, saved = []) {
   const out = [];
-  const patterns = compilePatterns(options.excludePatterns);
+  const allow = await projectFileAllowed(root, options);
   const alreadyIncluded = new Set(parts.items.filter((entry) => entry.kind === "rules").map((entry) => entry.label));
   const isProse = (file) => /\.(md|mdx|rst|txt)$/i.test(file);
-  const files = parts.files.filter((file) => {
-    if (isExcluded(file, patterns) || isBinaryPath(file) || alreadyIncluded.has(file)) return false;
+  const files = (await filterAllowed(parts.files, allow, options.signal)).filter((file) => {
+    if (alreadyIncluded.has(file)) return false;
     return !isProse(file) || file.startsWith("docs/");
   });
   let changed = /* @__PURE__ */ new Set();
@@ -3488,28 +3586,31 @@ async function dynamicParts(root, parts, options, notes, saved = []) {
     const [status, log, diff] = await Promise.all([
       counted(gitStatus(root, signal)),
       counted(skip("git:log") ? null : gitLog(root, 6, signal)),
-      counted(skip("git:diff") ? null : gitDiff(root, diffChars, (path) => !isExcluded(path, patterns), signal))
+      counted(skip("git:diff") ? null : gitDiff(root, diffChars, allow, signal))
     ]);
     stopIfCancelled(signal);
     if (status && !skip("git:status") && (status.changed.length > 0 || status.branchLine)) {
-      const shown = status.changed.filter((line) => !statusLinePaths(line).some((path) => isSensitive(path) || isExcluded(path, patterns)));
+      const shown = await filterAllowed(status.changed, async (line) => {
+        const paths = statusLinePaths(line);
+        return (await filterAllowed(paths, allow, signal)).length === paths.length;
+      }, signal);
       out.push(
         item(
           "git:status",
           "git",
           msg("label.status", { count: shown.length }),
-          [status.branchLine && `## ${status.branchLine}`, ...shown.slice(0, 60)].filter(Boolean).join("\n")
+          redactSecrets([status.branchLine && `## ${status.branchLine}`, ...shown.slice(0, 60)].filter(Boolean).join("\n"))
         )
       );
     }
     if (status) changed = /* @__PURE__ */ new Set([...changedPaths(status.changed), ...saved]);
-    if (log?.trim()) out.push(item("git:log", "git", msg("label.log"), log.trim()));
+    if (log?.trim()) out.push(item("git:log", "git", msg("label.log"), redactSecrets(log.trim())));
     if (diff) out.push(item("git:diff", "git", msg("label.diff"), `${diff.stat}
 
 ${diff.diff}`));
     step("git", "done", String(changed.size));
   } else {
-    notes.push(msg("note.not_git"));
+    notes.push(msg(options.allowGit === false ? "note.git_off" : "note.not_git"));
     step("git", "skipped");
     changed = new Set(saved);
   }
@@ -3520,32 +3621,33 @@ ${diff.diff}`));
   const grepTargets = weighted.filter((entry) => entry.word.length >= 4).slice(0, 8);
   const grepWords = grepTargets.map((entry) => entry.word);
   let searched = 0;
-  const perWord = parts.isGit ? await Promise.all(
+  const useGitSearch = parts.isGit && parts.refused.join("").length < 5e3 && parts.refused.length < 100;
+  const likely = scoreFiles(files, weighted, /* @__PURE__ */ new Map(), changed, true).map((entry) => entry.path);
+  const local = !useGitSearch ? await searchFiles(root, [.../* @__PURE__ */ new Set([...likely, ...files])], grepWords, allow, signal) : null;
+  if (local?.limited) notes.push(msg("note.search_limited"));
+  const perWord = useGitSearch ? await Promise.all(
     grepWords.map(
-      (word) => gitGrepCount(root, word, signal).then((counts) => {
+      (word) => gitGrepCount(root, word, signal, parts.refused).then((counts) => {
         searched++;
         step("search", "running", void 0, searched / grepWords.length * 0.9);
         return counts;
       })
     )
-  ) : [];
+  ) : local?.counts ?? [];
   stopIfCancelled(signal);
   const content = contentScores(perWord, files.length, grepTargets.map((entry) => entry.weight));
   const mentionsTests = /\btest|spec|kiểm thử/i.test(options.prompt);
   const scored = scoreFiles(files, weighted, content, changed, mentionsTests);
-  const picked = scored.slice(0, RELEVANT_FILES[options.level]).map((entry) => ({ path: entry.path, hits: [], why: msg("why.keyword") }));
+  let picked = scored.slice(0, RELEVANT_FILES[options.level]).map((entry) => ({ path: entry.path, hits: [], why: msg("why.keyword") }));
   step("search", "done", String(picked.length));
-  if (options.level === "max" && !options.pickFiles) step("pick", "skipped");
-  if (options.level === "max" && options.pickFiles) {
+  if (options.level === "max" && (!options.pickFiles || files.length === 0)) step("pick", "skipped");
+  if (options.level === "max" && options.pickFiles && files.length > 0) {
     step("pick", "running");
     try {
       const shortlist = [.../* @__PURE__ */ new Set([...scored.slice(0, 150).map((s) => s.path), ...files])].slice(0, 600);
       const chosen = await options.pickFiles(shortlist, options.prompt);
-      for (const path of chosen.filter((p) => files.includes(p)).slice(0, 8)) {
-        if (!picked.some((entry) => entry.path === path)) {
-          picked.push({ path, hits: [], why: msg("why.ai") });
-        }
-      }
+      const ai = [...new Set(chosen.filter((path) => files.includes(path)))].slice(0, 8);
+      picked = [...ai.map((path) => ({ path, hits: [], why: msg("why.ai") })), ...picked.filter((entry) => !ai.includes(entry.path))].slice(0, RELEVANT_FILES.max);
       step("pick", "done", String(picked.length));
     } catch (error) {
       stopIfCancelled(signal);
@@ -3554,13 +3656,13 @@ ${diff.diff}`));
     }
   }
   stopIfCancelled(signal);
-  const lines = parts.isGit ? await gitGrep(root, grepWords, picked.map((entry) => entry.path), void 0, signal) : /* @__PURE__ */ new Map();
+  const lines = useGitSearch ? await gitGrep(root, grepWords, picked.map((entry) => entry.path), void 0, signal) : local?.hits ?? /* @__PURE__ */ new Map();
   stopIfCancelled(signal);
   for (const entry of picked) entry.hits = lines.get(entry.path) ?? [];
   const perFile = options.level === "max" ? 1800 : 1400;
   for (const entry of picked) {
     if (options.exclude.has(`file:${entry.path}`)) continue;
-    const text = await readText(root, entry.path);
+    const text = await readText(root, entry.path, void 0, allow);
     if (!text) continue;
     out.push(item(`file:${entry.path}`, "file", raw(entry.path), snippet(redactCode(text), entry.hits, perFile), entry.why));
   }
@@ -3652,7 +3754,7 @@ ${missing.map((image) => `- ${image.path}`).join("\n")}`;
 // src/attachments.ts
 import { appendFile, mkdir, readdir as readdir2, readFile as readFile4, rm as rm2, stat as stat3 } from "node:fs/promises";
 import { tmpdir as tmpdir2 } from "node:os";
-import { basename, isAbsolute as isAbsolute2, join as join4, relative as relative2, resolve } from "node:path";
+import { basename as basename2, isAbsolute as isAbsolute2, join as join4, relative as relative2, resolve } from "node:path";
 
 // src/image-limits.ts
 var MAX_IMAGES = 4;
@@ -3673,7 +3775,7 @@ var ATTACHMENTS_DIR = join4(tmpdir2(), `enhance-prompt-attachments${process.env.
 var TEXT_MAX = 2e4;
 var DAY_MS = 24 * 36e5;
 function safeName(name) {
-  const cleaned = basename(name).replace(/[^\p{L}\p{N}._ -]+/gu, "_").replace(/^\.+/, "").trim().slice(0, 120);
+  const cleaned = basename2(name).replace(/[^\p{L}\p{N}._ -]+/gu, "_").replace(/^\.+/, "").trim().slice(0, 120);
   return cleaned || "file";
 }
 async function putChunk(input) {
@@ -3738,20 +3840,20 @@ async function loadFiles(paths) {
   for (const path of paths) {
     if (!isAttachment(path)) throw new LlmError(msg("error.attachment_bad"), "invalid_params");
     const info = await stat3(path).catch(() => null);
-    if (!info || !info.isFile()) throw new LlmError(msg("error.attachment_missing", { name: basename(path) }), "invalid_params");
+    if (!info || !info.isFile()) throw new LlmError(msg("error.attachment_missing", { name: basename2(path) }), "invalid_params");
     if (info.size > MAX_ATTACHMENT_BYTES) {
-      throw new LlmError(msg("error.file_too_large", { name: basename(path), size: sizeOver(info.size, MAX_ATTACHMENT_BYTES), max: megabytes(MAX_ATTACHMENT_BYTES) }), "too_large");
+      throw new LlmError(msg("error.file_too_large", { name: basename2(path), size: sizeOver(info.size, MAX_ATTACHMENT_BYTES), max: megabytes(MAX_ATTACHMENT_BYTES) }), "too_large");
     }
     const bytes = await readFile4(path);
     out.paths.push(path);
     const type = sniffImage(bytes.subarray(0, 16));
     if (type && info.size <= MAX_IMAGE_BYTES && out.images.length < MAX_IMAGES) {
-      out.images.push({ path, name: basename(path), bytes: info.size, type, base64: bytes.toString("base64") });
+      out.images.push({ path, name: basename2(path), bytes: info.size, type, base64: bytes.toString("base64") });
       continue;
     }
     if (type || bytes.includes(0)) continue;
     const { text: content, cut } = excerpt(bytes.toString("utf8"));
-    out.texts.push({ path, name: basename(path), content, cut });
+    out.texts.push({ path, name: basename2(path), content, cut });
   }
   return out;
 }
@@ -4697,11 +4799,11 @@ async function hookPlace(host, terminalId) {
     where: { workspace: focused.displayName, project: await projectNameOf(host, focused, workspace) }
   };
 }
-function hookContext(place, allowProjectFiles) {
+function hookContext(place, settings) {
   if (!place) return [];
   const items = [{ id: "workspace", kind: "workspace", label: "Workspace", content: place.label, chars: place.label.length }];
-  if (!allowProjectFiles) return items;
-  const cached = place.workspace && isLocalWorkspace(place.workspace) ? cachedStatic(place.workspace.path) : null;
+  if (!settings.privacy.allowProjectFiles) return items;
+  const cached = place.workspace && isLocalWorkspace(place.workspace) ? cachedStatic(place.workspace.path, settings) : null;
   if (cached) items.push(...cached.items.filter((entry) => entry.kind !== "tree"));
   return items;
 }
@@ -5213,12 +5315,12 @@ ${append}` });
     try {
       const config = await loadModels(host);
       const place = await hookPlace(host, event.terminalId);
-      const items = settings.autoEnhanceContext ? hookContext(place, settings.privacy.allowProjectFiles) : [];
-      if (settings.autoEnhanceContext && settings.privacy.allowProjectFiles && place?.workspace && isLocalWorkspace(place.workspace) && !cachedStatic(place.workspace.path)) {
+      const items = settings.autoEnhanceContext ? hookContext(place, settings) : [];
+      if (settings.autoEnhanceContext && settings.privacy.allowProjectFiles && place?.workspace && isLocalWorkspace(place.workspace) && !cachedStatic(place.workspace.path, settings)) {
         const root = place.workspace.path;
         if (!warming.has(root)) {
           warming.add(root);
-          void staticParts(root, settings.extraContextFiles, true, settings.privacy.allowGit).catch(() => void 0).finally(() => warming.delete(root));
+          void staticParts(root, settings.extraContextFiles, true, settings.privacy.allowGit, void 0, void 0, settings).catch(() => void 0).finally(() => warming.delete(root));
         }
       }
       const rules = rulesFor(parseRulesConfig(await host.storage.get(RULES_KEY).catch(() => null)), place?.where ?? { workspace: null, project: null });
@@ -5279,7 +5381,7 @@ ${append}` });
         if (!wantsHook && !atLeast(settings.contextLevel, "standard")) return;
         const workspace = await findFocusedWorkspace(host, context);
         if (workspace && isLocalWorkspace(workspace) && settings.privacy.allowProjectFiles) {
-          await staticParts(workspace.path, settings.extraContextFiles, true, settings.privacy.allowGit);
+          await staticParts(workspace.path, settings.extraContextFiles, true, settings.privacy.allowGit, void 0, void 0, settings);
         }
       } catch (error) {
         host.log(`context warm-up: ${error.message}`);
@@ -5404,7 +5506,7 @@ function activate(host) {
 import { EventEmitter } from "node:events";
 
 // src/version.ts
-var VERSION = "0.3.0";
+var VERSION = "0.3.1";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([
@@ -5860,7 +5962,7 @@ function protectedSecrets(store) {
 }
 
 // src/copilot/session.ts
-import { basename as basename2, isAbsolute as isAbsolute3 } from "node:path";
+import { basename as basename3, isAbsolute as isAbsolute3 } from "node:path";
 import { realpath as realpath2 } from "node:fs/promises";
 var unavailable = (message) => Object.assign(new Error(message), { code: "unavailable" });
 async function bounded(request) {
@@ -5890,7 +5992,7 @@ function sessionAdapter(session) {
     const info = await bounded(session.rpc.metadata.snapshot());
     if (info.isRemote || !isAbsolute3(info.workingDirectory)) return null;
     const path = await realpath2(info.workingDirectory);
-    return { id: `copilot::${path}`, path, name: basename2(path) };
+    return { id: `copilot::${path}`, path, name: basename3(path) };
   };
   const state = async () => {
     try {
@@ -6084,7 +6186,8 @@ async function runPromptHook(input, directory) {
     if (settings.autoEnhanceMode === "off") return {};
     return await rewriteTransformed({ prompt, transformedPrompt }, async () => {
       if (settings.autoEnhanceMode === "ai" && settings.autoEnhanceContext && settings.privacy.allowProjectFiles) {
-        await staticParts(cwd, settings.extraContextFiles, true, settings.privacy.allowGit);
+        const project = await services.adapter.project();
+        if (project) await staticParts(project.path, settings.extraContextFiles, true, settings.privacy.allowGit, void 0, void 0, settings);
       }
       const result = await worker.hooks.fire("agent.prompt.before", { prompt, terminalId: sessionId, agent: "copilot" });
       const last = await worker.request("hook.last");

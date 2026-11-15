@@ -3,6 +3,8 @@ import { formatText } from '../../src/format.ts'
 // the run's progress, the context sent, and the enhanced prompt with Send.
 import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react'
 import { read, set, settings, update } from '#panel'
+import { CONTEXT_LEVEL_HINTS, isContextLevel } from '../../src/presets.ts'
+import { contextKey } from '../../src/panel/context-preview.ts'
 import {
   CopyIcon,
   CornerDownLeftIcon,
@@ -25,6 +27,9 @@ import {
   busy,
   contextNotes,
   contextShown,
+  contextFor,
+  contextLoading,
+  contextError,
   draft,
   effectiveEnter,
   effectiveLevel,
@@ -314,16 +319,20 @@ function PromptOptions() {
           <Pick label={'Style'} value={read(effectiveStyle)} options={styleOptions()} onChange={(value) => set(style, value)} />
         </Field>
         <Field label={'Context'}>
-          <Pick label={'Context'} value={read(effectiveLevel)} options={levelOptions()} onChange={(value) => set(level, value)} />
+          <Pick label={'Context'} value={read(effectiveLevel)} options={levelOptions(read(effectiveLevel))} onChange={(value) => set(level, value)} />
         </Field>
         <Field label={'Structure'}>
           <Pick label={'Structure'} value={structureValue()} options={structureOptions()} onChange={(value) => set(structureChoice, value === 'style' ? '' : value)} />
         </Field>
       </div>
       {read(effectiveStyle) === 'custom' ? <CustomInstructions /> : null}
+      <p className="text-muted-foreground text-xs">{CONTEXT_LEVEL_HINTS[isContextLevel(read(effectiveLevel)) ? read(effectiveLevel) as keyof typeof CONTEXT_LEVEL_HINTS : 'standard']}</p>
       <div>
-        <h3 className="text-sm font-medium">{'Context to include'}</h3>
-        <p className="text-muted-foreground text-xs">{'Uncheck anything you do not want sent to the rewriting model.'}</p>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-medium">{'Context to include'}</h3>
+          <Button size="sm" variant="ghost" disabled={read(contextLoading) || read(busy) !== null} onClick={() => void previewContext()}><RotateCcwIcon className="size-3.5" />Refresh context</Button>
+        </div>
+        <p className="text-muted-foreground text-xs">{'Uncheck files to leave them out of automatic context, including Git diffs and AI selection. Refresh after editing project files.'}</p>
       </div>
       <ContextList />
     </div>
@@ -410,20 +419,17 @@ function RunCard() {
 function ContextList() {
   const shown = read(contextShown)
   const notes = read(contextNotes)
-  const working = read(busy)
-  const empty = shown.length === 0 && notes.length === 0
   const ex = new Set(read(excluded))
-  useEffect(() => {
-    if (empty && read(busy) === null) void previewContext()
-  }, [empty])
-  if (empty) {
-    return working === 'preview' ? (
-      <div className="text-muted-foreground flex items-center gap-1.5 px-1 text-xs">
+  if (read(contextLoading) || read(contextFor) !== contextKey()) {
+    return (
+      <div role="status" className="text-muted-foreground flex items-center gap-1.5 px-1 text-xs">
         <Spinner className="size-3.5" />
-        {'Gathering…'}
+        {read(busy) ? 'Context updates when enhancement finishes.' : 'Gathering context…'}
       </div>
-    ) : null
+    )
   }
+  if (read(contextError)) return <p role="alert" className="text-destructive text-xs">{read(contextError)} Use Refresh context to try again.</p>
+  if (shown.length === 0 && notes.length === 0) return <p className="text-muted-foreground text-xs">No automatic project context for this request.</p>
   return (
     <div className="bg-background flex max-h-72 flex-col gap-3 overflow-y-auto rounded-md border p-3">
       {shown.map((item) => (

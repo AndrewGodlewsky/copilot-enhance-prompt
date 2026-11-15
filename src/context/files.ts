@@ -1,6 +1,6 @@
 // File listing (git or a bounded walk), path filters, tree summaries and snippets.
 import { readdir, readFile, realpath, stat } from 'node:fs/promises'
-import { isAbsolute, join, relative, sep } from 'node:path'
+import { basename, dirname, isAbsolute, join, relative, sep } from 'node:path'
 
 const WALK_SKIP = new Set([
   '.git', 'node_modules', '.copilot', 'dist', 'build', 'out', 'target', '.next', '.nuxt', '.venv', 'venv',
@@ -50,7 +50,74 @@ export function isExcluded(path: string, patterns: RegExp[]): boolean {
   return patterns.some((pattern) => pattern.test(path))
 }
 
-export async function walkFiles(root: string, maxFiles = 8000, maxDepth = 6, signal?: AbortSignal): Promise<string[]> {
+export type FileFilter = (path: string) => boolean | Promise<boolean>
+
+export type FilePolicy = { excludePatterns?: string; exclude?: ReadonlySet<string> }
+
+/** The same file decision applies to every representation, including resolved link targets. */
+export function fileAllowed(policy: FilePolicy = {}): (path: string) => boolean {
+  const patterns = compilePatterns(policy.excludePatterns ?? '')
+  const normalize = (path: string) => process.platform === 'win32' ? path.toLowerCase() : path
+  const unchecked = new Set([...policy.exclude ?? []].filter(id => /^(file|rules):/.test(id)).map(id => normalize(id.slice(id.indexOf(':') + 1).replace(/\\/g, '/'))))
+  return path => {
+    path = path.replace(/\\/g, '/')
+    return !isSensitive(path) && !isBinaryPath(path) && !isExcluded(path, patterns) && !unchecked.has(normalize(path))
+  }
+}
+
+/** Resolve both unchecked paths and candidates before any context route uses them. */
+export async function projectFileAllowed(root: string, policy: FilePolicy = {}): Promise<FileFilter> {
+  const exclude = new Set(policy.exclude)
+  const base = await realpath(root).catch(() => null)
+  if (!base) return () => false
+  const resolved = new Map<string, Promise<string | null>>()
+  const canonical = (full: string): Promise<string | null> => {
+    let value = resolved.get(full)
+    if (!value) {
+      value = realpath(full).catch(async (error: NodeJS.ErrnoException) => {
+        // Keep deleted-file diffs only when the immediate parent still resolves.
+        // A missing directory could have been an alias to an excluded location.
+        if (error.code !== 'ENOENT' || full === base || dirname(full) === full) return null
+        const parent = await realpath(dirname(full)).catch(() => null)
+        return parent ? join(parent, basename(full)) : null
+      })
+      resolved.set(full, value)
+    }
+    return value
+  }
+  const localPath = async (path: string): Promise<string | null> => {
+    if (isAbsolute(path) || path.split(/[\\/]/).includes('..')) return null
+    const actual = await canonical(join(base, path))
+    if (!actual) return null
+    const local = relative(base, actual).split(sep).join('/')
+    return local.startsWith('..') || isAbsolute(local) ? null : local
+  }
+  for (const id of policy.exclude ?? []) {
+    if (!/^(file|rules):/.test(id)) continue
+    const local = await localPath(id.slice(id.indexOf(':') + 1))
+    if (local !== null) exclude.add(`file:${local}`)
+  }
+  const lexical = fileAllowed({ ...policy, exclude })
+  return async path => {
+    if (!lexical(path)) return false
+    const local = await localPath(path)
+    return local !== null && lexical(local + (path.endsWith('/') ? '/' : ''))
+  }
+}
+
+/** Bound filesystem concurrency while preserving the original file order. */
+export async function filterAllowed(paths: string[], allow: FileFilter, signal?: AbortSignal): Promise<string[]> {
+  const result: string[] = []
+  for (let i = 0; i < paths.length; i += 64) {
+    signal?.throwIfAborted()
+    const batch = paths.slice(i, i + 64)
+    const allowed = await Promise.all(batch.map(allow))
+    result.push(...batch.filter((_, index) => allowed[index]))
+  }
+  return result
+}
+
+export async function walkFiles(root: string, maxFiles = 8000, maxDepth = 6, signal?: AbortSignal, allow: FileFilter = () => true): Promise<string[]> {
   const out: string[] = []
   async function visit(dir: string, depth: number): Promise<void> {
     if (out.length >= maxFiles || depth > maxDepth || signal?.aborted) {
@@ -66,12 +133,13 @@ export async function walkFiles(root: string, maxFiles = 8000, maxDepth = 6, sig
       if (out.length >= maxFiles) {
         return
       }
+      const path = relative(root, join(dir, entry.name)).split(sep).join('/')
       if (entry.isDirectory()) {
-        if (!WALK_SKIP.has(entry.name) && !entry.name.startsWith('.')) {
+        if (await allow(`${path}/`) && !WALK_SKIP.has(entry.name) && (!entry.name.startsWith('.') || path === '.github' || path === '.cursor')) {
           await visit(join(dir, entry.name), depth + 1)
         }
-      } else if (entry.isFile()) {
-        out.push(relative(root, join(dir, entry.name)).split(sep).join('/'))
+      } else if (entry.isFile() && await allow(path)) {
+        out.push(path)
       }
     }
   }
@@ -102,8 +170,8 @@ export function treeSummary(files: string[], maxLines = 70): string {
   return all.length > maxLines ? `${all.slice(0, maxLines).join('\n')}\n…(${all.length - maxLines} more)` : all.join('\n')
 }
 
-export async function readText(root: string, path: string, maxBytes = 200_000): Promise<string | null> {
-  if (isSensitive(path) || isBinaryPath(path) || path.includes('..')) {
+export async function readText(root: string, path: string, maxBytes = 200_000, allow: FileFilter = () => true): Promise<string | null> {
+  if (!await allow(path) || isSensitive(path) || isBinaryPath(path) || path.includes('..')) {
     return null
   }
   try {
@@ -115,7 +183,7 @@ export async function readText(root: string, path: string, maxBytes = 200_000): 
     // A link is read as the file it leads to: one that leaves the workspace, or leads to a file
     // whose own name says it holds secrets (README.md -> .env), is not read.
     const actual = relative(await realpath(root), await realpath(full)).split(sep).join('/')
-    if (actual.startsWith('..') || isAbsolute(actual) || isSensitive(actual)) {
+    if (actual.startsWith('..') || isAbsolute(actual) || isSensitive(actual) || !await allow(actual)) {
       return null
     }
     const text = await readFile(full, 'utf8')

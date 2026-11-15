@@ -76,7 +76,7 @@ test('enhances with context, then sends to the chosen agent', async () => {
   // Untick the tree, enhance again: the worker is told, and the item stays listed (unticked).
   toggleItem('tree', false)
   // The options button names the current choice.
-  assert.equal(optionsSummary(), 'Balanced · Standard')
+  assert.equal(optionsSummary(), 'Balanced · Project overview')
   await enhanceNow()
   assert.deepEqual(enhanceInputs[1].exclude, ['tree'])
   assert.deepEqual(read(contextShown).map((item) => item.id), ['rules:AGENTS.md', 'tree'])

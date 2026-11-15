@@ -1,5 +1,18 @@
 var e=`# Changes
 
+## [0.3.1] - 2026-11-14
+
+### Changed
+- Offer four clearer context choices: Off, Project overview, Relevant code, and AI-assisted. Keep existing defaults and saved Basic selections. Explain which choice adds another model request.
+- Refresh context previews after request and preference changes, ignore obsolete responses, and add Refresh context for project edits. Preview no longer blocks enhancement.
+
+### Fixed
+- Apply excluded paths and unchecked project files across rules, summaries, file lists, source excerpts, Git changes and AI candidates, including resolved link targets.
+- Mask recognized secrets in automatically gathered instructions, README/extra context, stack details and Git metadata before trimming, as already done for source snippets and diffs.
+- Reread static context for each preview and enhancement. Match hook caches to current file preferences so removed extra files or changed exclusions cannot reuse old context.
+- Read supported hidden instruction directories and search file contents without Git, with bounded reads and a visible limit notice.
+- Limit AI-assisted selection to ten source files total, prioritizing AI choices and filling from local matches. Skip the selector when there are no candidates.
+
 ## [0.3.0] - 2026-11-14
 
 ### Changed

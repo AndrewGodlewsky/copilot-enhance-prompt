@@ -47,7 +47,8 @@ export async function runPromptHook(input: Record<string, unknown>, directory?: 
     if (settings.autoEnhanceMode === 'off') return {}
     return await rewriteTransformed({ prompt, transformedPrompt }, async () => {
       if (settings.autoEnhanceMode === 'ai' && settings.autoEnhanceContext && settings.privacy.allowProjectFiles) {
-        await staticParts(cwd, settings.extraContextFiles, true, settings.privacy.allowGit)
+        const project = await services.adapter.project()
+        if (project) await staticParts(project.path, settings.extraContextFiles, true, settings.privacy.allowGit, undefined, undefined, settings)
       }
       const result = await worker.hooks.fire('agent.prompt.before', { prompt, terminalId: sessionId, agent: 'copilot' })
       const last = await worker.request('hook.last')

@@ -445,11 +445,11 @@ export async function hookPlace(host: EnhanceWorker, terminalId: string): Promis
   }
 }
 
-function hookContext(place: HookPlace | null, allowProjectFiles: boolean): ContextItem[] {
+function hookContext(place: HookPlace | null, settings: Settings): ContextItem[] {
   if (!place) return []
   const items: ContextItem[] = [{ id: 'workspace', kind: 'workspace', label: 'Workspace', content: place.label, chars: place.label.length }]
-  if (!allowProjectFiles) return items
-  const cached = place.workspace && isLocalWorkspace(place.workspace) ? cachedStatic(place.workspace.path) : null
+  if (!settings.privacy.allowProjectFiles) return items
+  const cached = place.workspace && isLocalWorkspace(place.workspace) ? cachedStatic(place.workspace.path, settings) : null
   if (cached) items.push(...cached.items.filter((entry) => entry.kind !== 'tree'))
   return items
 }
@@ -1112,15 +1112,15 @@ function registerAutoEnhance(host: EnhanceWorker): void {
       const config = await loadModels(host)
       // The project the prompt goes to, which need not be the one in focus.
       const place = await hookPlace(host, event.terminalId)
-      const items = settings.autoEnhanceContext ? hookContext(place, settings.privacy.allowProjectFiles) : []
+      const items = settings.autoEnhanceContext ? hookContext(place, settings) : []
       // A project that is not in focus has not been read yet: read it now, for the next prompt that
       // goes there (this one has 2 s and goes with the workspace's name alone).
-      if (settings.autoEnhanceContext && settings.privacy.allowProjectFiles && place?.workspace && isLocalWorkspace(place.workspace) && !cachedStatic(place.workspace.path)) {
+      if (settings.autoEnhanceContext && settings.privacy.allowProjectFiles && place?.workspace && isLocalWorkspace(place.workspace) && !cachedStatic(place.workspace.path, settings)) {
         const root = place.workspace.path
         // Once per project at a time: several tasks sent to one project start one read, not one each.
         if (!warming.has(root)) {
           warming.add(root)
-          void staticParts(root, settings.extraContextFiles, true, settings.privacy.allowGit)
+          void staticParts(root, settings.extraContextFiles, true, settings.privacy.allowGit, undefined, undefined, settings)
             .catch(() => undefined)
             .finally(() => warming.delete(root))
         }
@@ -1190,7 +1190,7 @@ function registerAutoEnhance(host: EnhanceWorker): void {
         if (!wantsHook && !atLeast(settings.contextLevel, 'standard')) return
         const workspace = await findFocusedWorkspace(host, context)
         if (workspace && isLocalWorkspace(workspace) && settings.privacy.allowProjectFiles) {
-          await staticParts(workspace.path, settings.extraContextFiles, true, settings.privacy.allowGit)
+          await staticParts(workspace.path, settings.extraContextFiles, true, settings.privacy.allowGit, undefined, undefined, settings)
         }
       } catch (error) {
         host.log(`context warm-up: ${(error as Error).message}`)

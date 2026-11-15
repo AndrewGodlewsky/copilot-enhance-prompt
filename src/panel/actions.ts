@@ -14,6 +14,9 @@ import { stepPercent, totalPercent, type Step } from '../progress.ts'
 import { PANEL_REQUEST_LIMIT_MS, type ProfileInput } from '../protocol.ts'
 import { pathInWorkspaceId, pathKey } from '../workspaces.ts'
 import { consents, feedbackAsk, feedbackOff, feedbackShown, files, ruleDraft, ruleScope, structureDraft, type Form, terminalWorkspaces, workspaceChoices, tick, workspaceKey, projectName, parked, MAX_PARKED, type Slot, rulesState, structureChoice, workspaceName, tab, draft, result, style, profileChoice, modelChoice, excluded, target, historyRaw, confirmClearHistory, form, detected, catalogs, catalogLoading, customModel, type Run, run, dataSummary, privacy, confirmWipe, busy, notice, lastRun, contextShown, contextNotes, KEPT, mayKeep, put, forgetSaved, targets, models, defaults, effectiveStyle, effectiveLevel, effectiveEnter, say, message, errorMessage, historyOpen, hookLast, resultFor, sendAfterEnhance, filteredHistory, type NoticeAction } from './state.ts'
+import { contextPreferences } from './state.ts'
+import { cancelContextPreview, contextKey, knownWorkspaceId, showContext } from './context-preview.ts'
+export { knownWorkspaceId, showContext, previewContext } from './context-preview.ts'
 import { panelDiagnostics } from './diagnostics.ts'
 import { diagnosticError } from '../diagnostics.ts'
 
@@ -129,12 +132,6 @@ export async function pickWorkspace(workspaceId: string): Promise<void> {
   await refreshTargets()
 }
 
-/** the host's id of the workspace the composer belongs to, when it is known (not just its name). */
-export function knownWorkspaceId(): Record<string, string> {
-  const key = read(workspaceKey)
-  return key && !key.startsWith('name:') ? { workspaceId: key } : {}
-}
-
 /**
  * the host removed a project: forget what was parked for it. The event names it by another id than the
  * one the panel knows it by (workspaces.ts), so the project is also looked up by its folder.
@@ -167,6 +164,7 @@ export async function refreshDefaults(): Promise<void> {
     notifyWhenDone: all.notifyWhenDone === true,
     otherAgents: parseOtherAgentsLimits(all)
   })
+  set(contextPreferences, JSON.stringify([all.extraContextFiles, all.excludePatterns, all.terminalLines, parsePrivacy(all), parseOtherAgentsLimits(all)]))
   set(privacy, parsePrivacy(all))
   // Saving history is off: nothing typed or produced stays on disk after the panel closes.
   if (!mayKeep()) forgetSaved()
@@ -243,13 +241,6 @@ export async function refreshTargets(): Promise<void> {
   }
 }
 
-export function showContext(items: ContextItemView[], notes: (Message | string)[]): void {
-  const ex = new Set(read(excluded))
-  const keptExcluded = read(contextShown).filter((item) => ex.has(item.id) && !items.some((i) => i.id === item.id))
-  put(contextShown, [...items, ...keptExcluded])
-  put(contextNotes, notes)
-}
-
 // ---------------------------------------------------------------- actions
 
 export async function enhanceNow(): Promise<void> {
@@ -266,6 +257,8 @@ type Enhanced = { prompt: string; enhanced: string }
 async function runEnhance(): Promise<Enhanced | null> {
   const prompt = read(draft).trim()
   if (!prompt || read(busy)) return null
+  cancelContextPreview()
+  const contextAtStart = contextKey()
   let shown: Enhanced | null = null
   const controller = new AbortController()
   inFlight = controller
@@ -303,7 +296,7 @@ async function runEnhance(): Promise<Enhanced | null> {
       // While the composer still holds this request, Ctrl+Enter sends the result (enhanceOrSend).
       set(resultFor, prompt)
       put(lastRun, ran)
-      showContext(answer.context, answer.notes)
+      showContext(answer.context, answer.notes, contextAtStart)
       askForFeedback()
       shown = { prompt, enhanced: answer.enhanced }
     } else if (origin.key !== null && !removedWorkspaces.has(origin.key)) {
@@ -392,23 +385,6 @@ export function removeFile(path: string): void {
   const id = attachmentItemId(path)
   put(contextShown, read(contextShown).filter((item) => item.id !== id))
   update(excluded, (list) => list.filter((entry) => entry !== id))
-}
-
-export async function previewContext(): Promise<void> {
-  set(busy, 'preview')
-  try {
-    const answer = await plugin.request(
-      'context.preview',
-      { prompt: read(draft), level: read(effectiveLevel), terminalId: read(target), exclude: read(excluded), ...knownWorkspaceId() },
-      { timeoutMs: 60_000 }
-    )
-    showContext(answer.context, answer.notes)
-    set(notice, null)
-  } catch (error) {
-    set(notice, { tone: 'danger', text: message(error) })
-  } finally {
-    set(busy, null)
-  }
 }
 
 export function cancel(): void {

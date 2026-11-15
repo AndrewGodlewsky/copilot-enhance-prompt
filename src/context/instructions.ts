@@ -1,5 +1,6 @@
 // Agent rule files and a README digest (the useful sections, not just the first N chars).
-import { readText } from './files.ts'
+import { readText, type FileFilter } from './files.ts'
+import { redactCode, redactSecrets } from './secrets.ts'
 
 /** Rule files agents themselves read, most specific first. */
 const RULE_FILES = [
@@ -53,7 +54,8 @@ export async function readRuleFiles(
   root: string,
   fileList: string[],
   extra: string[],
-  budget: number
+  budget: number,
+  allow: FileFilter = () => true
 ): Promise<TextItem[]> {
   const present = new Set(fileList)
   const cursorRules = fileList.filter((f) => f.startsWith('.cursor/rules/') && /\.mdc?$/.test(f)).slice(0, 4)
@@ -62,18 +64,20 @@ export async function readRuleFiles(
   let used = 0
   for (const name of names) {
     if (used >= budget) break
+    if (!await allow(name)) continue
     if (!present.has(name) && !extra.includes(name)) continue
-    const text = await readText(root, name)
+    const text = await readText(root, name, undefined, allow)
     if (!text?.trim()) continue
-    const content = cap(text.trim(), Math.min(4000, budget - used))
+    const mask = /\.(md|mdc|rst|txt)$/i.test(name) || RULE_FILES.includes(name) ? redactSecrets : redactCode
+    const content = cap(mask(text.trim()), Math.min(4000, budget - used))
     used += content.length
     out.push({ name, content })
   }
   const readme = fileList.find((f) => /^readme(\.md|\.rst|\.txt)?$/i.test(f))
   if (readme && used < budget) {
-    const text = await readText(root, readme)
+    const text = await readText(root, readme, undefined, allow)
     if (text?.trim()) {
-      out.push({ name: readme, content: readmeDigest(text, Math.min(3500, budget - used)) })
+      out.push({ name: readme, content: readmeDigest(redactSecrets(text), Math.min(3500, budget - used)) })
     }
   }
   return out

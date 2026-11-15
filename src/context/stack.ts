@@ -1,5 +1,6 @@
 // Detects the stack and the real build/test commands from manifest files.
-import { readText } from './files.ts'
+import { readText, type FileFilter } from './files.ts'
+import { redactCode, redactSecrets } from './secrets.ts'
 
 const truncate = (text: string, max: number) => (text.length > max ? `${text.slice(0, max)}…` : text)
 
@@ -15,17 +16,17 @@ function packageJson(text: string, files: Set<string>): string[] {
       workspaces?: unknown
     }
     const manager = pkg.packageManager?.split('@')[0] ??
-      (files.has('pnpm-lock.yaml') ? 'pnpm' : files.has('yarn.lock') ? 'yarn' : files.has('bun.lockb') || files.has('bun.lock') ? 'bun' : 'npm')
-    out.push(`Node project${pkg.name ? ` "${pkg.name}"` : ''}, package manager: ${manager}${pkg.workspaces ? ' (monorepo workspaces)' : ''}`)
+      (files.has('pnpm-lock.yaml') ? 'pnpm' : files.has('yarn.lock') ? 'yarn' : files.has('bun.lockb') || files.has('bun.lock') ? 'bun' : files.has('package-lock.json') ? 'npm' : null)
+    out.push(`Node project${pkg.name ? ` "${pkg.name}"` : ''}, package manager: ${manager ?? 'not established from permitted files'}${pkg.workspaces ? ' (monorepo workspaces)' : ''}`)
     const deps = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })
     if (deps.length > 0) {
       out.push(`Key dependencies: ${deps.slice(0, 30).join(', ')}${deps.length > 30 ? ', …' : ''}`)
     }
     const scripts = Object.entries(pkg.scripts ?? {})
     if (scripts.length > 0) {
-      out.push(`Scripts (run with "${manager} run <name>"):`)
+      out.push(manager ? `Scripts (run with "${manager} run <name>"):` : 'Scripts (package manager unspecified):')
       for (const [name, command] of scripts.slice(0, 25)) {
-        out.push(`  ${name}: ${truncate(command, 120)}`)
+        out.push(`  ${name}: ${truncate(redactSecrets(command), 120)}`)
       }
     }
   } catch {
@@ -59,10 +60,13 @@ function tomlSection(text: string, section: string, maxLines = 25): string | nul
   return body.length > 0 ? `[${section}]\n${body.join('\n')}` : null
 }
 
-export async function detectStack(root: string, fileList: string[]): Promise<string | null> {
+export async function detectStack(root: string, fileList: string[], allow: FileFilter = () => true): Promise<string | null> {
   const files = new Set(fileList.filter((file) => !file.includes('/')))
   const out: string[] = []
-  const read = (name: string) => (files.has(name) ? readText(root, name, 300_000) : Promise.resolve(null))
+  const read = async (name: string) => {
+    const text = files.has(name) ? await readText(root, name, 300_000, allow) : null
+    return text === null ? null : name === 'package.json' ? redactCode(text) : redactSecrets(text)
+  }
 
   const pkg = await read('package.json')
   if (pkg) out.push(...packageJson(pkg, files))

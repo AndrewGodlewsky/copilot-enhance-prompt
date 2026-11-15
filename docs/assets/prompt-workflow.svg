@@ -42,7 +42,7 @@
 <path d="M 584 728 H 640" class="connector" marker-end="url(#prompt-workflow-arrow)"/>
 <g><rect x="586" y="696" width="52" height="20" fill="#fafafa"/><text x="612" y="710" class="arrow-label" text-anchor="middle">RESULT</text></g>
 <g class="node"><rect x="40" y="284" width="244" height="116" rx="6" class="input"/><text x="60" y="316" class="node-name" >Your request</text><text x="60" y="340" class="body" >Rough text + explicit attachments</text><text x="60" y="358" class="body" >Text excerpts, images and paths</text><text x="60" y="376" class="body" >Preview context; exclude items</text></g>
-<g class="node"><rect x="320" y="284" width="284" height="116" rx="6" class="step"/><text x="340" y="316" class="node-name" >Allowed project context</text><text x="340" y="340" class="body" >Off → Max, with privacy switches</text><text x="340" y="358" class="body" >Safe paths; selective secret masking</text><text x="340" y="376" class="body" >Max: selector sees task + file paths</text></g>
+<g class="node"><rect x="320" y="284" width="284" height="116" rx="6" class="step"/><text x="340" y="316" class="node-name" >Allowed project context</text><text x="340" y="340" class="body" >Four choices, with privacy switches</text><text x="340" y="358" class="body" >Safe paths; recognized secrets masked</text><text x="340" y="376" class="body" >AI sees task + allowed file paths</text></g>
 <g class="node"><rect x="640" y="284" width="280" height="116" rx="6" class="step"/><text x="660" y="316" class="node-name" >How to rewrite</text><text x="660" y="340" class="body" >Global + project rules; custom text</text><text x="660" y="358" class="body" >Style or structure; English output</text><text x="660" y="376" class="body" >Optional Copilot-specific guidance</text></g>
 <g class="node"><rect x="40" y="448" width="880" height="160" rx="6" class="payload"/>
   <text x="60" y="480" class="node-name" >One enhancement request, two parts</text>
@@ -97,7 +97,7 @@
 <g class="node"><rect x="40" y="2064" width="880" height="100" rx="6" class="artifact"/><text x="60" y="2096" class="node-name" >Copilot processes the same chat turn</text><text x="60" y="2120" class="body" >Its model receives the resulting text, changed only when the hook succeeds.</text><text x="60" y="2138" class="body" >The visible chat still shows the user’s original message.</text></g>
 <text x="40" y="2204" class="body" >AI chain budget: 1.7 s minus setup. Outer process deadline: 4.5 s. Failure leaves original content intact.</text>
 <text x="40" y="2228" class="body" >AI responses can enter history if enabled. Rules mode records an outcome only; reporting is best effort.</text>
-<text x="40" y="2264" class="body" >Masking is selective: typed text, attachments and some context remain unmasked. Preview before sharing.</text>
+<text x="40" y="2264" class="body" >Recognized secrets in automatic context are masked. Typed text and attachments stay as supplied.</text>
 <line x1="40" y1="2300" x2="920" y2="2300" class="separator"/>
 <path d="M 40 2332 H 72" class="connector" marker-end="url(#prompt-workflow-arrow)"/><text x="88" y="2336" class="legend" >Data or action flow</text>
 <path d="M 288 2332 H 320" class="connector optional" marker-end="url(#prompt-workflow-arrow)"/><text x="336" y="2336" class="legend" >Optional path</text>
