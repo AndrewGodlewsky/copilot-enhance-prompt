@@ -1,4 +1,4 @@
-import { body, finishFrame, makeCrew, sampleCrew, type Point, type Pose, type Token, type Word } from '../../src/panel/word-crew.ts'
+import { body, finishFrame, finishPose, makeCrew, sampleCrew, type Point, type Token, type Word } from '../../src/panel/word-crew.ts'
 
 /** Measure the textarea's native wrapping, including its padding and scroll position. */
 export function measureWords(input: HTMLTextAreaElement): Word[] | null {
@@ -84,14 +84,10 @@ export function mountWordCrew(svg: SVGSVGElement, words: Word[], width: number, 
   const draw = () => {
     const ending = finishAt === null ? null : finishFrame(time - finishAt, height)
     if (!ending) world = sampleCrew(crew, time)
+    const poses = ending ? world.poses.map(pose => finishPose(pose, ending, width)) : world.poses
     world.tokens.forEach((word, i) => drawWord(wordEls[i], word))
-    world.carried.forEach((word, i) => drawWord(carryEls[i], word))
-    world.poses.forEach((pose, i) => {
-      let p: Pose = pose
-      if (ending) {
-        const destination = pose.x < width / 2 ? -24 : width + 24
-        p = { ...pose, x: pose.x + (destination - pose.x) * ending.exit, grip: 0, crouch: 0, kick: 0, walk: Math.sin((time - finishAt!) * 45), visible: ending.exit < 1 }
-      }
+    world.carried.forEach((word, i) => drawWord(carryEls[i], { ...word, y: poses[i].word.y }))
+    poses.forEach((p, i) => {
       const figure = figures[i], b = body(p)
       attributes(figure.head, { cx: b.head.x, cy: b.head.y })
       attributes(figure.lines, { d: [path([{ x: b.head.x, y: b.head.y + 3.5 }, b.shoulder, b.hip]), ...b.arms.map(path), ...b.legs.map(path)].join(' ') })

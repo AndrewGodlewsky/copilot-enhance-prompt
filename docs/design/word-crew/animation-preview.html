@@ -165,7 +165,31 @@ function body(pose) {
   if(pose.kick){const leg=legs[pose.kick>0?1:0];leg[2]={x:x+pose.kick*16,y:foot-Math.abs(pose.kick)*10};}
   return {head,shoulder,hip,hands,arms,legs};
 }
-globalThis.CrewMotion={clamp,ease,crewCount,layoutWords,seededRandom,makeCrew,sampleCrew,transport,body,LINE_HEIGHT,MOTION_SPEED};
+function finishFrame(seconds, height) {
+    const lower = ease(seconds / .24);
+    const release = ease((seconds - .24) / .1);
+    const exit = ease((seconds - .34) / .6);
+    const offset = (height + 30) * ease((seconds - .94) / .65);
+    const walk = exit > 0 && exit < 1 ? Math.sin((seconds - .34) * 45) : 0;
+    return { lower, release, exit, walk, offset, barY: offset, sweeping: seconds >= .94, done: seconds >= 1.59 };
+}
+/** Lower in place before releasing: the deposited word stays behind as its carrier exits. */
+function finishPose(pose, frame, width) {
+    const destination = pose.x < width / 2 ? -24 : width + 24;
+    const raised = pose.carrying && pose.word.y < pose.foot - 10;
+    return {
+        ...pose,
+        x: mix(pose.x, destination, frame.exit),
+        word: { ...pose.word, y: pose.carrying ? mix(pose.word.y, pose.foot - 10, frame.lower) : pose.word.y },
+        grip: pose.grip * (1 - frame.release),
+        crouch: mix(pose.crouch, raised ? 3 : 0, frame.lower) * (1 - frame.release),
+        kick: pose.kick * (1 - frame.lower),
+        walk: pose.walk * (1 - frame.lower) + frame.walk,
+        visible: pose.visible !== false && frame.exit < 1
+    };
+}
+
+globalThis.CrewMotion={clamp,ease,crewCount,layoutWords,seededRandom,makeCrew,sampleCrew,transport,body,LINE_HEIGHT,MOTION_SPEED,finishFrame,finishPose};
 </script>
 <script id="preview-app">
 const $ = id => document.getElementById(id);
@@ -212,25 +236,21 @@ function drawWord(el,word){el.textContent=word.text;set(el,{x:word.x,y:word.y,op
 function draw(t){
   const ending=mode==='finishing';
   const elapsed=ending?t-finishTime:0;
-  const world=ending?finishWorld:sampleCrew(crew,t),poses=world.poses;
-  const exitingFor=.6;
-  const sweep=ending?ease((elapsed-exitingFor)/.65):0;
+  const world=ending?finishWorld:sampleCrew(crew,t);
+  const endingFrame=ending?finishFrame(elapsed,height):null;
+  const poses=endingFrame?world.poses.map(p=>finishPose(p,endingFrame,width)):world.poses;
   $('people').style.visibility=reduce.checked?'hidden':'visible';
   $('carried').style.visibility=reduce.checked?'hidden':'visible';
   (reduce.checked?words:world.tokens).forEach((w,i)=>drawWord(wordEls[i],w));
-  world.carried.forEach((w,i)=>drawWord(carryEls[i],w));
-  poses.forEach((pose,i)=>{
-    let p=pose;
-    if(ending){const destination=p.x<width/2?-24:width+24;p={...p,x:mix(p.x,destination,ease(elapsed/exitingFor)),grip:p.grip*(1-ease(elapsed/.1)),crouch:0,kick:0,walk:Math.sin(elapsed*45),visible:elapsed<exitingFor};}
-    drawFigure(figures[i],p);
-  });
+  world.carried.forEach((w,i)=>drawWord(carryEls[i],{...w,y:poses[i].word.y}));
+  poses.forEach((pose,i)=>drawFigure(figures[i],pose));
   if(ending&&!reduce.checked){
-    const barY=(height+30)*sweep;
+    const barY=endingFrame.offset;
     [...wordEls,...carryEls].forEach(el=>{const y=Number(el.getAttribute('y'));set(el,{y:y+barY});});
-    $('press').setAttribute('d',elapsed>=exitingFor?`M0,${barY}H${width}`:'');
+    $('press').setAttribute('d',endingFrame.sweeping?`M0,${barY}H${width}`:'');
   }
-  if(!ending){progress(Math.min(95,t/18*95));const first=poses.find(p=>p.visible!==false);$('status').textContent=reduce.checked?'Enhancing preview…':`${first?.phase||'The crew is arriving'} · request locked`;}else{progress(100);$('status').textContent=elapsed<exitingFor?'100% · the crew is leaving':'100% · moving to the prompt';}
-  if(ending&&(reduce.checked||elapsed>=exitingFor+.65))stop('done');
+  if(!ending){progress(Math.min(95,t/18*95));const first=poses.find(p=>p.visible!==false);$('status').textContent=reduce.checked?'Enhancing preview…':`${first?.phase||'The crew is arriving'} · request locked`;}else{progress(100);$('status').textContent=elapsed<.34?'100% · putting words down':!endingFrame.sweeping?'100% · the crew is leaving':'100% · moving to the prompt';}
+  if(ending&&(reduce.checked||endingFrame.done))stop('done');
 }
 function tick(now){
   if(mode==='idle')return;

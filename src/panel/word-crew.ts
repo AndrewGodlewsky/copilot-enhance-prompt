@@ -129,7 +129,26 @@ export function body(pose: Pose) {
 
 /** One shared offset for every word. Never clamp individual words against the bar. */
 export function finishFrame(seconds: number, height: number) {
-  const exit = ease(seconds / .6)
-  const offset = (height + 30) * ease((seconds - .6) / .65)
-  return { exit, offset, barY: offset, sweeping: seconds >= .6, done: seconds >= 1.25 }
+  const lower = ease(seconds / .24)
+  const release = ease((seconds - .24) / .1)
+  const exit = ease((seconds - .34) / .6)
+  const offset = (height + 30) * ease((seconds - .94) / .65)
+  const walk = exit > 0 && exit < 1 ? Math.sin((seconds - .34) * 45) : 0
+  return { lower, release, exit, walk, offset, barY: offset, sweeping: seconds >= .94, done: seconds >= 1.59 }
+}
+
+/** Lower in place before releasing: the deposited word stays behind as its carrier exits. */
+export function finishPose(pose: Pose, frame: ReturnType<typeof finishFrame>, width: number): Pose {
+  const destination = pose.x < width / 2 ? -24 : width + 24
+  const raised = pose.carrying && pose.word.y < pose.foot - 10
+  return {
+    ...pose,
+    x: mix(pose.x, destination, frame.exit),
+    word: { ...pose.word, y: pose.carrying ? mix(pose.word.y, pose.foot - 10, frame.lower) : pose.word.y },
+    grip: pose.grip * (1 - frame.release),
+    crouch: mix(pose.crouch, raised ? 3 : 0, frame.lower) * (1 - frame.release),
+    kick: pose.kick * (1 - frame.lower),
+    walk: pose.walk * (1 - frame.lower) + frame.walk,
+    visible: pose.visible !== false && frame.exit < 1
+  }
 }

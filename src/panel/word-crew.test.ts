@@ -1,21 +1,55 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { makeCrew, sampleCrew, finishFrame, body, type Word } from './word-crew.ts'
+import { makeCrew, sampleCrew, finishFrame, finishPose, body, type Word } from './word-crew.ts'
 
 const words: Word[] = Array.from({ length: 31 }, (_, i) => ({ text: ['café', '路径', 'getUser()', '🧑‍💻'][i % 4], width: 60, x: 12 + (i % 7) * 72, y: 20 + Math.floor(i / 7) * 20 }))
 
 test('the completion sweep moves the entire paragraph together, offscreen, without compression', () => {
   const before = structuredClone(words)
-  for (const seconds of [.6, .7, .9, 1.1, 1.25]) {
+  for (const seconds of [.94, 1, 1.2, 1.4, 1.6]) {
     const frame = finishFrame(seconds, 200)
     const shifted = words.map(w => ({ ...w, y: w.y + frame.offset }))
     for (let i = 1; i < words.length; i++) assert.ok(Math.abs((shifted[i].y - shifted[0].y) - (words[i].y - words[0].y)) < 1e-9)
     assert.equal(frame.barY, frame.offset)
   }
   assert.equal(finishFrame(.5, 200).offset, 0, 'crew leaves before the sweep')
-  assert.ok(finishFrame(1.25, 200).offset >= 200)
-  assert.equal(finishFrame(1.25, 200).done, true)
+  assert.ok(finishFrame(1.6, 200).offset >= 200)
+  assert.equal(finishFrame(1.6, 200).done, true)
   assert.deepEqual(words, before)
+})
+
+test('completion lowers each held word at its current position, releases it, then exits', () => {
+  const crew = makeCrew(words, 540, 123)
+  const phases = new Set<string>()
+  for (let time = 0; time < 8; time += .025) {
+    for (const pose of sampleCrew(crew, time).poses) {
+      phases.add(pose.phase)
+      const before = structuredClone(pose)
+      const atStart = finishPose(pose, finishFrame(0, 200), 540)
+      assert.deepEqual(body(atStart), body(pose), 'completion starts from the exact displayed pose')
+      const halfway = finishPose(pose, finishFrame(.12, 200), 540)
+      assert.equal(halfway.x, pose.x, 'no exit movement during set-down')
+      assert.equal(halfway.word.x, pose.word.x, 'do not snap the word to its old destination')
+      assert.equal(halfway.grip, pose.grip, 'keep hands on the word until it rests')
+      if (pose.phase === 'Next word') assert.equal(halfway.crouch, 0, 'already-deposited words do not trigger another bend to pick them up')
+      if (pose.carrying) {
+        const groundY = pose.foot - 10
+        assert.ok(halfway.word.y >= pose.word.y && halfway.word.y <= groundY + 1e-9)
+        const placed = finishPose(pose, finishFrame(.24, 200), 540)
+        assert.equal(placed.word.y, groundY)
+        if (placed.grip === 1) assert.ok(body(placed).hands.every(hand => hand.y === groundY))
+        const released = finishPose(pose, finishFrame(.34, 200), 540)
+        assert.equal(released.x, pose.x)
+        assert.equal(released.grip, 0)
+        const leaving = finishPose(pose, finishFrame(.6, 200), 540)
+        assert.deepEqual(leaving.word, placed.word, 'the deposited word stays behind when its carrier leaves')
+      }
+      const gone = finishPose(pose, finishFrame(1, 200), 540)
+      assert.equal(gone.visible, false)
+      assert.deepEqual(pose, before, 'finishing must not mutate the captured scene')
+    }
+  }
+  for (const phase of ['Waiting', 'Run to a word', 'Reach', 'Lift', 'Carry', 'Make room', 'Set down', 'Release', 'Next word']) assert.ok(phases.has(phase), phase)
 })
 
 test('the crew varies jobs without moving line slots, sharing words or changing source data', () => {

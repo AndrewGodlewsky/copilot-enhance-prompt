@@ -1,5 +1,10 @@
 var e=`# Changes
 
+## [0.5.1] - 2026-11-15
+
+### Fixed
+- On successful completion, have each stick figure lower its held word at its current position, release it, and then run offscreen. Keep deposited words in place until the whole-text sweep; avoid leaving them suspended in midair.
+
 ## [0.5.0] - 2026-11-15
 
 ### Added
