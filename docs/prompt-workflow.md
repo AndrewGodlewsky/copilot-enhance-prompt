@@ -24,7 +24,7 @@ flowchart TD
     J["Global and project rules; custom instructions; style or structure; output language; agent hint"] --> K["SYSTEM instructions: preserve intent, ground details, shape final prompt"]
     H --> L["USER payload: project_context + original request + attachment descriptions/paths"]
     I --> L
-    K --> M["Call configured rewrite model; images supplied where supported"]
+    K --> M["Copilot helper or explicit external provider; images where supported"]
     L --> M
     M --> N{"Usable model response?"}
     N -- "Failure; permitted fallback remains" --> M
@@ -51,8 +51,8 @@ The rewriting model and Copilot have separate jobs. The rewriter produces text. 
 | --- | --- |
 | System instructions | Built-in rewrite rules; selected style or structure; output language; custom instructions; applicable user rules; optional Copilot-specific guidance |
 | User payload | The rough request inside `<request>`; allowed context items inside `<project_context>`; attached text excerpts and attachment paths |
-| Images | Image bytes for supported providers; paths are still supplied when the model cannot see images |
-| Authentication | The configured provider's key or the selected CLI's own authentication; keys are not inserted into the prompt |
+| Images | Image bytes for supported providers. Copilot rejects attachments unless the model reports image support; external nonvision profiles receive paths only |
+| Authentication | Copilot: existing SDK authentication, verified against the attached account; external providers: configured API key or CLI authentication. Keys are never inserted into the prompt |
 
 The built-in instructions ask the model to preserve the user's intent and concrete details, use only grounded file names and commands, and return the final prompt without commentary. These are instructions to a model, not a guarantee that its answer is correct. Review remains useful.
 
@@ -68,13 +68,15 @@ For example, a request might be `Fix the login button overlapping the password f
 | Deep | Standard plus allowed Git information and relevant source excerpts |
 | Max | Deep plus a larger file selection and optional model-assisted file picking; this can make an extra model request |
 
-Preview does not call the model-assisted file picker. At Max, a separately configured selector profile/chain receives the original request and candidate file paths, potentially using a different provider from the rewriter. Picker errors or timeouts retain heuristic file selection and let enhancement continue with a note. Files may change between preview and enhancement, so preview is not an immutable copy of the eventual request. Exclusions are applied to the enhancement run too. Turning off project-file access limits gathered context; it does not remove text the user explicitly attached or typed.
+Preview does not call the model-assisted file picker. At Max, a selector profile/chain receives the original request and candidate file paths. Copilot rewrites use only Copilot selector profiles; a saved external selector is replaced for that run by the chosen Copilot profile. External rewrites can use a different external selector provider. Picker errors or timeouts retain heuristic file selection and let enhancement continue with a note. Files may change between preview and enhancement, so preview is not an immutable copy of the eventual request. Exclusions are applied to the enhancement run too. Turning off project-file access limits gathered context; it does not remove text the user explicitly attached or typed.
 
 Project file reads reject sensitive filenames and escaping symlinks. Recognized secrets in relevant source excerpts and Git diffs are masked before truncation. This is not a blanket filter: project instructions, README/extra context, stack summaries and Git metadata are not uniformly secret-masked. Preview the context and exclude material you do not want sent.
 
 Explicit attachments follow a separate path: the panel uploads them into the plugin's temporary attachment directory; only those copies can be loaded. Images are identified from their bytes. Attached text is excerpted, but it is not automatically secret-masked. The request and custom instructions are also supplied as written. Excluding an attached text item removes its content from the payload while its path remains listed. Treat text, images and paths you provide as data the configured providers may receive.
 
-The selected enabled profile is tried first according to the configured model chain. When fallback is enabled, recoverable failures can try another eligible profile within the run's time budget. API profiles call the configured remote or local endpoint. Subscription/custom CLIs run in an empty temporary directory, with the supplied rewrite instructions and payload; they are told that directory is not the user's project. The plugin does not use the attached Copilot session as a hidden rewrite model.
+The selected profile is tried first according to the configured model chain. When fallback is enabled, recoverable failures can try another eligible profile within the run's time budget. Copilot and external profiles are separate fallback groups: a run never crosses that boundary. API profiles call the configured remote or local endpoint. Subscription/custom CLIs run in an empty temporary directory with the supplied rewrite instructions and payload.
+
+The Copilot preset creates a disposable helper using the desktop's existing SDK and runtime, with no npm install or download. It checks matching authenticated account/host, eligible Copilot models, actual model selection, an empty tool list and an isolated working directory before inference. Tools, hooks, plugins, skills, instruction discovery, memory and shared session storage are disabled. The helper receives the prepared payload and explicit image bytes, without attached-chat history. After generation it stops and removes its temporary state before returning text for review. The attached chat stays unchanged until Send. [Full lifecycle and compatibility limits](copilot-background-rewriting.md).
 
 Progress travels back to the canvas. Long runs can resume across bounded panel requests. Cancelling, closing the owning canvas, or abandoning a run stops its work. Only a delivered successful run is eligible for canvas history; saving history obeys the privacy setting.
 
@@ -112,7 +114,7 @@ flowchart TD
 
 Auto-enhance is off by default and can affect chat prompts in sessions where this plugin's hook is active, even without an open canvas. The runtime supplies the target session and project directory; switching desktop tabs does not choose the hook's project. Plugin or organization policy can prevent hooks from running.
 
-**Rules mode** appends the dedicated auto-enhance text; it does not run the rewriting model or automatically append the Rules tab's contents. **AI mode** reuses the rewrite instructions and applicable user rules, but only takes optional static project context. It does not run Deep/Max context gathering, the file picker, canvas attachment loading or subscription CLIs. Short prompts below the configured minimum are left unchanged in both modes.
+**Rules mode** appends the dedicated auto-enhance text; it does not run the rewriting model or automatically append the Rules tab's contents. **AI mode** reuses the rewrite instructions and applicable user rules, but only takes optional static project context. It does not run Deep/Max context gathering, the file picker, canvas attachment loading, Copilot helpers or subscription CLIs. Short prompts below the configured minimum are left unchanged in both modes.
 
 The worker gives the AI chain a 1.7-second budget minus setup time; key retrieval can add wall-clock time outside individual model timers. The command process has a 4.5-second outer deadline and the host configuration allows 5 seconds. An absent or ambiguous original-text span, error, empty answer or timeout preserves the original model-facing content. Surrounding runtime-added context is preserved byte for byte when replacement succeeds.
 
@@ -125,7 +127,7 @@ The hook uses the packaged command integration because registering an SDK prompt
 - The canvas and worker communicate through an authenticated loopback HTTP/SSE server. Copilot session access stays in the extension process.
 - Profiles, preferences, user rules and history live in the plugin's local data directory. Project rules use canonical project paths; drafts and results are scoped to the session. Prompt text in saved history is not encrypted. Disabling history also stops persistence of sensitive panel fields.
 - Saved API keys use Windows DPAPI. Other platforms currently need an available environment key or a CLI's own authentication; saved API-key storage is unavailable there.
-- Configured rewrite providers/CLIs receive the enhancement payload; fallback can send it to more than one provider. At Max, the selector chain also receives the original request and candidate file paths. On Send, Copilot receives the enhanced task prompt, including the attachment paths retained in it. The hook can also make an API rewrite request when AI mode is enabled.
+- Copilot or configured external providers/CLIs receive the enhancement payload. External fallback can send it to more than one external provider; Copilot runs stay within Copilot for rewriting and Max file selection. On Send, the attached Copilot session receives the enhanced task prompt, including retained attachment paths. The hook can also make an API rewrite request when AI mode is enabled.
 - The adapter does not gather terminal scrollback, other-agent context, tool activity or editor-save events. It cannot start an external agent or issue desktop notifications; those controls are shown as unavailable.
 
 ## Implementation map
@@ -138,7 +140,7 @@ The hook uses the packaged command integration because registering an SDK prompt
 | Project context, privacy and safe reads | [context/index.ts](../src/context/index.ts), [context/files.ts](../src/context/files.ts), [context/secrets.ts](../src/context/secrets.ts), [privacy.ts](../src/privacy.ts) |
 | Explicit uploads and attachment loading | [attachments.ts](../src/attachments.ts) |
 | System instructions, payload and response cleanup | [prompts.ts](../src/prompts.ts), [rules.ts](../src/rules.ts) |
-| Model chain, HTTP providers and CLI execution | [models.ts](../src/models.ts), [llm.ts](../src/llm.ts), [cli.ts](../src/cli.ts) |
+| Model chain, Copilot helper, HTTP providers and CLI execution | [models.ts](../src/models.ts), [Copilot models.ts](../src/copilot/models.ts), [llm.ts](../src/llm.ts), [cli.ts](../src/cli.ts) |
 | Session identity, idle checks and message delivery | [session.ts](../src/copilot/session.ts), [services.ts](../src/copilot/services.ts), [sent.ts](../src/copilot/sent.ts) |
 | Chat transformation and hook deadline | [hook.ts](../src/copilot/hook.ts), [hook-entry.ts](../src/copilot/hook-entry.ts), [hooks.json](../com.github.copilot/hooks/hooks.json) |
 | Local state and saved credentials | [storage.ts](../src/copilot/storage.ts), [secrets.ts](../src/copilot/secrets.ts) |

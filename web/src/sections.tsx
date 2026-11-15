@@ -207,6 +207,7 @@ function FormModelPicker({ current }: { current: Form }) {
   const catalog = read(catalogs).form
   const loading = read(catalogLoading).form === true
   const cli = current.provider === 'cli'
+  const copilot = current.provider === 'copilot'
   const options = modelOptions(catalog, current.model)
   const inList = options.some((option) => option.value === current.model)
   const typing = read(customModel) || (current.model !== '' && !inList)
@@ -219,12 +220,14 @@ function FormModelPicker({ current }: { current: Form }) {
             label={label}
             placeholder={cli ? t('CLI default') : presetById(current.preset).model || t('Choose a model')}
             value={typing ? CUSTOM_MODEL : current.model || (cli ? CLI_DEFAULT : undefined)}
-            options={[...(cli ? [{ value: CLI_DEFAULT, label: t('CLI default') }] : []), ...options, { value: CUSTOM_MODEL, label: t('Other (type the id)…') }]}
+            options={[...(cli ? [{ value: CLI_DEFAULT, label: t('CLI default') }] : []), ...options, ...(!copilot ? [{ value: CUSTOM_MODEL, label: t('Other (type the id)…') }] : [])]}
             onChange={(value) => {
               set(customModel, value === CUSTOM_MODEL)
               if (value !== CUSTOM_MODEL) patchForm({ model: toModel(value) })
             }}
           />
+        ) : copilot ? (
+          <Pick label={label} placeholder={t('Choose a model')} value={undefined} options={[]} onChange={() => {}} />
         ) : (
           <Input className="h-8" placeholder={presetById(current.preset).model || (cli ? t('CLI default') : 'model-id')} value={current.model} onChange={(event) => patchForm({ model: event.target.value })} />
         )}
@@ -232,17 +235,17 @@ function FormModelPicker({ current }: { current: Form }) {
           {loading ? <Spinner /> : <RefreshCwIcon />}
         </IconAction>
       </div>
-      {options.length > 0 && typing ? <Input className="h-8" aria-label={t('Model id')} placeholder="model-id" value={current.model} onChange={(event) => patchForm({ model: event.target.value })} /> : null}
+      {!copilot && options.length > 0 && typing ? <Input className="h-8" aria-label={t('Model id')} placeholder="model-id" value={current.model} onChange={(event) => patchForm({ model: event.target.value })} /> : null}
       <span className="text-muted-foreground text-xs">
         {loading
           ? t('Loading the model list…')
           : catalog?.error
-            ? t('Could not load the list ({error}). Type the model id.', { error: catalog.errorText ? say(catalog.errorText) : catalog.error })
+            ? copilot ? (catalog.errorText ? say(catalog.errorText) : catalog.error) : t('Could not load the list ({error}). Type the model id.', { error: catalog.errorText ? say(catalog.errorText) : catalog.error })
             : catalog && catalog.models.length > 0
-              ? t('{count} models from {source}, refreshed daily.', { count: catalog.models.length, source: catalog.source })
+              ? copilot ? t('Models available through this Copilot session. Access is checked again before each rewrite.') : t('{count} models from {source}, refreshed daily.', { count: catalog.models.length, source: catalog.source })
               : cli
                 ? t('Uses the model set in the CLI itself.')
-                : t('Add the API key to list the models.')}
+                : copilot ? t('Refresh to check which Copilot models are available.') : t('Add the API key to list the models.')}
       </span>
     </Field>
   )
@@ -253,10 +256,11 @@ function ProfileForm() {
   const view = read(models)
   if (!current || !view) return null
   const cli = current.provider === 'cli'
+  const copilot = current.provider === 'copilot'
   const editing = Boolean(current.id)
   const preset = presetById(current.preset)
   const keyHint = editing ? t('Leave empty to keep the saved key') : preset.env ? t('Or set {env}', { env: preset.env }) : t('Not needed for local servers')
-  const invalid = !current.name.trim() || (cli ? current.preset === 'custom-cli' && !current.command?.trim() : !(current.baseUrl.trim() || preset.baseUrl))
+  const invalid = !current.name.trim() || (copilot ? !read(catalogs).form?.models.some(model => model.id === current.model) : cli ? current.preset === 'custom-cli' && !current.command?.trim() : !(current.baseUrl.trim() || preset.baseUrl))
   return (
     <div className="border-primary/40 flex flex-col gap-2 rounded-lg border p-3">
       <p className="text-sm font-semibold">{editing ? t('Edit {name}', { name: current.name }) : t('Add a model')}</p>
@@ -279,7 +283,9 @@ function ProfileForm() {
           />
         </Field>
       ) : null}
-      {cli ? (
+      {copilot ? (
+        <p className="text-muted-foreground text-xs">{t('Uses your GitHub Copilot account in the background. No npm install, API key or separate runtime. Copilot usage charges apply. It never falls back to another provider and is unavailable for chat auto-enhance.')}</p>
+      ) : cli ? (
         <>
           <div className="text-muted-foreground flex items-center gap-1 text-xs">
             {t('Uses your subscription')}
@@ -300,7 +306,7 @@ function ProfileForm() {
         </Field>
       )}
       <FormModelPicker current={current} />
-      {cli ? null : (
+      {cli || copilot ? null : (
         <>
           <Field label={t('API key')}>
             <Input className="h-8" type="password" placeholder={keyHint} value={current.apiKey} onChange={(event) => patchForm({ apiKey: event.target.value })} />
@@ -329,7 +335,7 @@ function ProfileForm() {
 }
 
 function ProfileCard({ profile, index, count, fromEnv }: { profile: ProfileView; index: number; count: number; fromEnv: boolean }) {
-  const where = profile.provider === 'cli' ? `${presetById(profile.preset).label.replace(/ \(.*\)$/, '')} CLI` : profile.effectiveBaseUrl
+  const where = profile.provider === 'copilot' ? t('GitHub Copilot · background rewrite') : profile.provider === 'cli' ? `${presetById(profile.preset).label.replace(/ \(.*\)$/, '')} CLI` : profile.effectiveBaseUrl
   const listed = modelOptions(read(catalogs)[profile.id], profile.effectiveModel)
   const options = [...(profile.provider === 'cli' ? [{ value: CLI_DEFAULT, label: t('CLI default') }] : []), ...listed]
   const testing = read(busy) === 'test'
@@ -422,7 +428,7 @@ export function ModelsSection() {
         {view.profiles.length === 0 && !read(form) ? (
           <div className="text-muted-foreground rounded-xl border border-dashed p-4 text-center text-sm">
             <p className="text-foreground font-medium">{t('No models yet')}</p>
-            <p>{t('Use a subscription CLI above, or add OpenAI, Anthropic, OpenRouter, Gemini, Groq, DeepSeek, Mistral, Ollama, LM Studio or any OpenAI-compatible endpoint.')}</p>
+            <p>{t('Add GitHub Copilot to rewrite with your Copilot account, or choose an external provider.')}</p>
           </div>
         ) : null}
         <div className="flex flex-col gap-1.5">
@@ -838,7 +844,7 @@ export function SettingsSection() {
         {view && prefs.autoEnhanceMode === 'ai' && hookOptions.length === 0 ? (
           <Row
             title={t('Auto-enhance (AI) has no model to use')}
-            description={t('It needs an enabled API model: subscription CLIs take too long for its 2 s limit. Add one in Models, or use Rules.')}
+            description={t('It needs an enabled API model. Copilot background rewriting and subscription CLIs are excluded from its two-second limit. Add an API model, or use Rules.')}
             control={
               <Button size="sm" variant="outline" onClick={() => set(tab, 'models')}>
                 {t('Open Models')}

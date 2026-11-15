@@ -3,7 +3,7 @@ import type { Message } from './messages.ts'
 import type { JsonValue } from '#panel'
 
 /** `cli` runs an installed agent CLI (Claude Code, Codex, Gemini CLI) on the person's subscription. */
-export type Provider = 'openai' | 'anthropic' | 'cli'
+export type Provider = 'openai' | 'anthropic' | 'cli' | 'copilot'
 
 export type Preset = {
   id: string
@@ -16,6 +16,7 @@ export type Preset = {
 }
 
 export const PRESETS: Preset[] = [
+  { id: 'copilot', label: 'GitHub Copilot', provider: 'copilot', baseUrl: '', model: '', env: '' },
   { id: 'openai', label: 'OpenAI', provider: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4.1-mini', env: 'OPENAI_API_KEY' },
   { id: 'anthropic', label: 'Anthropic', provider: 'anthropic', baseUrl: 'https://api.anthropic.com', model: 'claude-haiku-4-5', env: 'ANTHROPIC_API_KEY' },
   { id: 'openrouter', label: 'OpenRouter', provider: 'openai', baseUrl: 'https://openrouter.ai/api/v1', model: 'openai/gpt-4.1-mini', env: 'OPENROUTER_API_KEY' },
@@ -83,7 +84,7 @@ export type ModelsConfig = {
 export type ProfileView = ModelProfile & {
   effectiveBaseUrl: string
   effectiveModel: string
-  keySource: 'secret' | 'env' | 'none' | 'not-needed' | 'subscription'
+  keySource: 'secret' | 'env' | 'none' | 'not-needed' | 'subscription' | 'copilot'
   envName: string
 }
 
@@ -114,14 +115,14 @@ export function normalizeProfile(value: unknown): ModelProfile | null {
     id,
     name: str(raw.name).trim().slice(0, 60) || preset.label,
     preset: preset.id,
-    provider: preset.provider === 'cli' ? 'cli' : raw.provider === 'anthropic' ? 'anthropic' : 'openai',
-    baseUrl: str(raw.baseUrl).trim().slice(0, 500),
+    provider: preset.provider === 'copilot' ? 'copilot' : preset.provider === 'cli' ? 'cli' : raw.provider === 'anthropic' ? 'anthropic' : 'openai',
+    baseUrl: preset.provider === 'copilot' ? '' : str(raw.baseUrl).trim().slice(0, 500),
     model: str(raw.model).trim().slice(0, 200),
     // A profile saved before 2.5.4 also carries `temperature`: it is dropped here, and never sent.
     maxTokens: Math.round(Math.min(32000, Math.max(128, num(raw.maxTokens, DEFAULT_MAX_TOKENS)))),
     enabled: raw.enabled !== false,
-    command: str(raw.command).trim().slice(0, 500),
-    args: str(raw.args).trim().slice(0, 500)
+    command: preset.provider === 'copilot' ? '' : str(raw.command).trim().slice(0, 500),
+    args: preset.provider === 'copilot' ? '' : str(raw.args).trim().slice(0, 500)
   }
 }
 

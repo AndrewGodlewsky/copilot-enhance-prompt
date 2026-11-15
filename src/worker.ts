@@ -294,6 +294,15 @@ export async function enhance(
   if (!prompt) throw hostError(msg('error.no_prompt'), 'invalid_params')
   const settings = await readSettings(host)
   const config = await loadModels(host)
+  const chosenModel = input.model?.trim().slice(0, 200)
+  const list = candidates(config.profiles, input.profileId ?? null, settings.fallbackEnabled).map((profile) =>
+    chosenModel && profile.id === input.profileId ? { ...profile, model: chosenModel } : profile
+  )
+  if (list.length === 0) throw hostError(msg('error.no_model'), 'invalid_params')
+  // File selection is part of the same data/billing route as rewriting.
+  const pickerProfiles = config.profiles.filter(profile => (profile.provider === 'copilot') === (list[0]?.provider === 'copilot'))
+  const pickerConfig = { ...config, profiles: pickerProfiles.map(profile => list.find(candidate => candidate.id === profile.id) ?? profile),
+    selectorProfileId: pickerProfiles.some(profile => profile.id === config.selectorProfileId) ? config.selectorProfileId : list[0]?.id ?? null }
   const style: Style = isStyle(input.style) ? input.style : settings.defaultStyle
   const requested: ContextLevel = isContextLevel(input.level) ? input.level : settings.contextLevel
   const level = allowedLevel(requested, settings)
@@ -312,7 +321,7 @@ export async function enhance(
     extraFiles: settings.extraContextFiles,
     excludePatterns: settings.excludePatterns,
     // The picker gets its own share, so the rewrite itself always has time left.
-    pickFiles: (tree, task) => pickFilesWithModel(host, config, settings, tree, task, signal, Math.min(RUN_LIMITS.pickerMs, (left() ?? Infinity) / 2)),
+    pickFiles: (tree, task) => pickFilesWithModel(host, pickerConfig, settings, tree, task, signal, Math.min(RUN_LIMITS.pickerMs, (left() ?? Infinity) / 2)),
     ...privacy,
     onStep: step,
     signal,
@@ -347,11 +356,6 @@ export async function enhance(
   const user = [buildUserMessage(prompt, gathered.items), imagesBlock(images), otherFiles.length > 0 ? `<attached_files>\n${otherFiles.map((path, index) => `${index + 1}. ${path}`).join('\n')}\n</attached_files>` : '']
     .filter(Boolean)
     .join('\n\n')
-  const chosenModel = input.model?.trim().slice(0, 200)
-  // The picked model applies to the picked profile only; the rest of the chain keeps its own models.
-  const list = candidates(config.profiles, input.profileId ?? null, settings.fallbackEnabled).map((profile) =>
-    chosenModel && profile.id === input.profileId ? { ...profile, model: chosenModel } : profile
-  )
   /** The model being tried, as the progress card names it. */
   let tried = ''
   try {
@@ -875,6 +879,7 @@ function registerModelHandlers(host: EnhanceWorker): void {
     if (!profile) throw hostError(msg('error.invalid_profile'), 'invalid_params')
     // The key first: where this machine has no OS key store the host refuses it, and a model saved
     // without its key would look ready and fail on its first run.
+    if (profile.provider === 'copilot' && input.apiKey?.trim()) throw hostError(msg('error.invalid_profile'), 'invalid_params')
     if (input.apiKey?.trim()) {
       try {
         await host.secrets.set(secretName(id), input.apiKey.trim())
@@ -918,7 +923,7 @@ function registerModelHandlers(host: EnhanceWorker): void {
     const valid = (id: string | null) => (id && config.profiles.some((profile) => profile.id === id) ? id : null)
     // The hook cannot use a CLI model (too slow for its 2 s), so it is never stored as the hook's.
     const hook = valid(hookProfileId)
-    config.hookProfileId = hook && config.profiles.find((profile) => profile.id === hook)?.provider !== 'cli' ? hook : null
+    config.hookProfileId = hook && ['openai', 'anthropic'].includes(config.profiles.find((profile) => profile.id === hook)?.provider ?? '') ? hook : null
     config.selectorProfileId = valid(selectorProfileId)
     await saveModels(host, config)
     return modelsView(host)
@@ -951,7 +956,15 @@ function registerModelHandlers(host: EnhanceWorker): void {
     const preset = presetById(input.preset)
     const config = await loadModels(host)
     const profile = input.profileId ? config.profiles.find((entry) => entry.id === input.profileId) : undefined
-    const provider = profile?.provider ?? (input.provider === 'anthropic' ? 'anthropic' : preset.provider)
+    const provider = preset.id === 'custom'
+      ? (input.provider ?? profile?.provider) === 'anthropic' ? 'anthropic' : 'openai'
+      : preset.provider
+    if (provider === 'copilot') {
+      if (!(await readSettings(host)).privacy.allowOnlineModelLists) return { models: [], source: 'GitHub Copilot', fetchedAt: Date.now(), error: english(msg('error.lists_off')), errorText: msg('error.lists_off') }
+      // Account and policy dependent: never persist or reuse a cross-session catalog.
+      try { return await host.host.call('copilot.catalog', {}) }
+      catch (error) { return { models: [], source: 'GitHub Copilot', fetchedAt: Date.now(), error: english(messageOf(error)), errorText: messageOf(error) } }
+    }
     const baseUrl = (input.baseUrl ?? profile?.baseUrl ?? '').trim() || preset.baseUrl
     const command = (input.command ?? profile?.command ?? '').trim()
     // CLIs share one catalog per preset; APIs one per endpoint (keys differ per profile, lists rarely do).
@@ -1167,10 +1180,10 @@ function registerAutoEnhance(host: EnhanceWorker): void {
         agent: settings.adaptToAgent ? event.agent : null,
         rules
       })
-      // CLI models take seconds to start; the hook has under 2 s, so it uses API models only.
-      const list = candidates(config.profiles, config.hookProfileId, settings.fallbackEnabled).filter(
-        (profile) => profile.enabled && profile.provider !== 'cli'
-      )
+      // Copilot helpers and CLIs take too long for the hook's two-second budget.
+      const apiProfiles = config.profiles.filter(profile => profile.enabled && ['openai', 'anthropic'].includes(profile.provider))
+      const hookProfileId = apiProfiles.some(profile => profile.id === config.hookProfileId) ? config.hookProfileId : null
+      const list = candidates(apiProfiles, hookProfileId, settings.fallbackEnabled)
       if (list.length === 0) {
         // The panel's Auto-enhance section warns about this; the prompt goes through unchanged.
         host.log('auto-enhance skipped: no enabled API model (subscription CLIs are too slow for the hook)')

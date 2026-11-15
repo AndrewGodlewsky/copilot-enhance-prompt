@@ -6,20 +6,20 @@ Turn a rough request into a clear prompt using the project's files, rules and Gi
 
 [Read the complete workflow and editable diagrams](docs/prompt-workflow.md). The rewriting model produces the task prompt; Copilot receives that prompt and does the work. Optional chat auto-enhance changes the model-facing text while the visible chat keeps your original message.
 
-The React panel retains model chains and fallback, prompt styles, reusable rules and structures, attachments, context preview, history, and English, Vietnamese and Chinese translations. Copilot is the destination; rewriting uses the API or subscription CLI models you configure in **Models**.
+The React panel retains model chains and fallback, prompt styles, reusable rules and structures, attachments, context preview, history, and English, Vietnamese and Chinese translations. Choose **GitHub Copilot** in Models to rewrite through your Copilot account in the background. External APIs, local models and subscription CLIs remain available as explicit alternatives.
 
 [Tiếng Việt](docs/readme/README.vi.md) · [简体中文](docs/readme/README.zh-CN.md) · [User guide](docs/user-guide.md) · [Changes](CHANGELOG.md)
 
 ## Download and install
 
-**Development preview, version 0.1.8.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
+**Development preview, version 0.2.0.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
 
 ### Requirements
 
 - [GitHub Copilot desktop](https://github.com/features/copilot) with canvas extension support, signed in to your account. This port targets the experimental SDK bundled with the Windows app on November 14, 2026.
 - Node.js **22.18 or newer** on `PATH`; the packaged chat hook starts `node`.
 - Copilot CLI available as `copilot` for the command-line installation below. If the command is missing, follow [GitHub's CLI setup instructions](https://docs.github.com/en/copilot/how-tos/copilot-cli/cli-getting-started).
-- One rewrite model: an API provider, a local model endpoint, or an installed and authenticated subscription CLI. Configure it after installation. External API costs belong to that provider, separately from Copilot.
+- One rewrite model configured after installation. The **GitHub Copilot** preset reuses the desktop's SDK and running Copilot executable: no npm install, separate SDK/runtime download, or API key. The helper must resolve the same existing GitHub account as the attached session; desktop-only credentials that are not available to the helper will produce an unavailable message. External providers retain their own authentication and billing.
 
 Windows supports encrypted saved API keys through DPAPI. On other systems, use a key available in the extension's environment or a subscription CLI; saved keys are unavailable. Desktop environments may omit shell environment variables. Other platforms have not been verified.
 
@@ -86,7 +86,7 @@ The native tab uses the compact SVG declared in `plugin.json`. Version 0.1.5 rem
 
 The Quiet Desk banner changes its still scene with local time and the current enhancement state. Use the single button at its top right to toggle light/dark mode; your choice is remembered across sessions. The version and release notes are in the footer. See the [user guide](docs/user-guide.md) for the scene's triggers.
 
-1. In **Models**, add an API provider, local model, custom CLI, or detected subscription CLI. API calls use that provider's account and billing; installing this plugin does not give them access to your Copilot subscription.
+1. In **Models**, click **Add a model**, keep the **GitHub Copilot** preset, choose a model from the live list, and save. Existing profiles are preserved; select the new Copilot profile explicitly in Enhance if another profile was already first. Claude models in this preset use GitHub Copilot, not Claude Code. The separate Claude Code preset still uses Claude Code's authentication and billing.
 2. In **Enhance → Write a request**, describe the task and choose a model. **Options** opens style, context, output language and structure settings. Preview the context and uncheck items to exclude them; use **Attach files** for explicit attachments.
 3. Click **Enhance**. Progress reports the context and model steps; Cancel stops the run.
 4. In **Review and send**, edit the enhanced prompt. **Send to Copilot** submits a new message to the attached session shown in **Send to**. **Copy** keeps the handoff manual. The download icon saves a file; the up-arrow uses the result as a new input for refinement.
@@ -98,6 +98,14 @@ Send refuses busy, blocked, queued, disconnected or unknown sessions. It never a
 **Send right after enhancing** is optional, off by default, and requires its confirmation dialog. It checks that the session, project and input are unchanged and that the session is idle. [Details](docs/settings.md).
 
 ## Platform differences
+
+### Background Copilot rewriting
+
+Enhance starts a disposable, hidden helper using the SDK and executable supplied by the running desktop host. It sends only the prepared rewrite instructions, permitted context and explicit attachments. It does not open a chat window, copy the attached chat history, change its model, or send the result into that session until you use Send.
+
+Before inference, the plugin checks both sessions' GitHub identity and Copilot model availability. The helper has an empty working directory, no tools, denied permissions, and disabled plugins, hooks, skills, automatic instruction discovery, shared session storage and memory. Cancellation stops the helper; normal completion removes its temporary home. A crash or failed shutdown can leave temporary files for OS cleanup. Copilot profiles never fall back to an external provider, including at Max's AI file-selection step.
+
+Copilot usage is billed under the account's Copilot plan; Max context can make an additional model request. The two-second chat auto-enhance hook still supports Rules or API models only. The desktop owns SDK/runtime updates. This experimental integration checks required APIs and runtime state and refuses incompatible setups; future desktop changes may still require a plugin update. See [security and compatibility details](docs/copilot-background-rewriting.md).
 
 | Capability | Copilot behavior |
 | --- | --- |
@@ -114,7 +122,7 @@ Unavailable settings are disabled and explained. Switching the visible desktop t
 
 ## Data and privacy
 
-The worker reads the project directory from Copilot session metadata, never from its session-artifact directory. Remote workspaces expose no local project files. Project reads obey privacy switches and reject sensitive filenames and escaping symlinks. Recognized secrets in source excerpts and Git diffs are masked before trimming; other context is not uniformly masked. Explicit attachments, your request and custom instructions are not automatically secret-masked. Preview and exclude context before enhancing. Fallback can send the payload to multiple configured providers; Max's file selector can use a separate model. [Exact data flow](docs/prompt-workflow.md).
+The worker reads the project directory from Copilot session metadata, never from its session-artifact directory. Remote workspaces expose no local project files. Project reads obey privacy switches and reject sensitive filenames and escaping symlinks. Recognized secrets in source excerpts and Git diffs are masked before trimming; other context is not uniformly masked. Explicit attachments, your request and custom instructions are not automatically secret-masked. Preview and exclude context before enhancing. External-provider fallback can send the payload to multiple configured providers. Copilot selection confines both fallback and Max's file selector to Copilot profiles. [Exact data flow](docs/prompt-workflow.md).
 
 Preferences, profiles, rules and history are local. Saved prompt history is not encrypted; drafts and results are scoped to the Copilot session. Windows API keys use DPAPI under the current Windows account; they are never saved as plain text. The default data directory is `%LOCALAPPDATA%/copilot-enhance-prompt` on Windows and `~/.local/share/copilot-enhance-prompt` elsewhere. `ENHANCE_PROMPT_DATA_DIR` overrides it for tests or a separate installation.
 
@@ -138,7 +146,7 @@ The development panel runs at `http://localhost:5174` with sample data, without 
 
 `scripts/e2e.mjs` loads the built package in an isolated installed Copilot runtime and exercises canvas discovery, project metadata, context preview, enhancement, sending and the packaged prompt hook. Its disposable session uses a local model fixture; no external model is called. Set `COPILOT_SDK_DIR` and `COPILOT_CLI_PATH` to the desktop SDK directory and runtime executable. See [AGENTS.md](AGENTS.md) for the architecture and behavioral invariants.
 
-`node scripts/e2e-model-access.mjs` uses the same environment variables to compare native workflow and headless SDK rewriting against a local model fixture. It checks model choice, tool/context isolation and cancellation; it does not enable a Copilot rewrite provider in the plugin. See the [model-access validation findings](docs/research/copilot-model-access-validation.md) for the result and remaining desktop checks.
+`node scripts/e2e-model-access.mjs` compares the native workflow and headless SDK against a local fixture. `node scripts/e2e-copilot-provider.mjs` exercises the production helper's output, model selection, tool/context isolation, cancellation and temporary-state cleanup with the installed SDK. Both use the same environment variables. Account/catalog identity is synthetic in the production-helper fixture, and inference never reaches a paid provider. Read-only authentication discovery has also been checked in a disposable extension, but an actual account-backed rewrite and desktop behavior require user validation. See the [model-access validation findings](docs/research/copilot-model-access-validation.md).
 
 The current port has passed unit tests, type checks, package checks and that installed-runtime integration test. Desktop visual verification remains unfinished; the preview is not a published stable release.
 

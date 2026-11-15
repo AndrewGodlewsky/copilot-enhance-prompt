@@ -1,5 +1,15 @@
 var e=`# Thay đổi
 
+## [0.2.0] - 2026-11-14
+
+### Thêm
+- Cấu hình GitHub Copilot với danh sách mô hình theo tài khoản và viết lại ở chế độ nền bằng SDK/môi trường chạy có sẵn của ứng dụng. Người dùng không cần npm, tải môi trường chạy riêng hay khóa API.
+- Phiên hỗ trợ tạm thời kiểm tra tài khoản và mô hình, không có công cụ hay tự đọc dự án, hỗ trợ hủy và dọn dữ liệu. Dự phòng và chọn file ở mức Max luôn dùng Copilot khi chọn Copilot.
+
+### Thay đổi
+- Biểu mẫu mô hình mới mặc định là GitHub Copilot. Giữ nguyên các cấu hình đã lưu; API và CLI thuê bao vẫn là lựa chọn riêng.
+- Cập nhật hướng dẫn cài đặt, phí Copilot, đăng nhập và giới hạn tương thích. Không dùng phiên Copilot nền cho hook chat tự động có giới hạn hai giây.
+
 ## [0.1.8] - 2026-11-14
 
 ### Thay đổi

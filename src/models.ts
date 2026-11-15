@@ -58,7 +58,7 @@ export async function saveModels(host: EnhanceWorker, config: ModelsConfig): Pro
 }
 
 export function needsKey(profile: ModelProfile): boolean {
-  if (profile.provider === 'cli') return false
+  if (profile.provider === 'cli' || profile.provider === 'copilot') return false
   return !(profile.provider === 'openai' && isLocalUrl(effectiveBaseUrl(profile)))
 }
 
@@ -79,6 +79,7 @@ export async function resolveKey(
   host: EnhanceWorker,
   profile: ModelProfile
 ): Promise<{ key: string | null; source: ProfileView['keySource'] }> {
+  if (profile.provider === 'copilot') return { key: null, source: 'copilot' }
   if (profile.provider === 'cli') {
     return { key: null, source: 'subscription' }
   }
@@ -147,8 +148,11 @@ export class ChainError extends Error {
 export function candidates(profiles: ModelProfile[], preferredId: string | null, fallback: boolean): ModelProfile[] {
   const enabled = profiles.filter((profile) => profile.enabled)
   const preferred = preferredId ? profiles.find((profile) => profile.id === preferredId) : undefined
+  if (preferredId && !preferred) return []
   const ordered = preferred ? [preferred, ...enabled.filter((p) => p.id !== preferred.id)] : enabled
-  return fallback ? ordered : ordered.slice(0, 1)
+  // A fallback must never change between Copilot billing/auth and an external provider.
+  const sameRoute = ordered.filter(profile => (profile.provider === 'copilot') === (ordered[0]?.provider === 'copilot'))
+  return fallback ? sameRoute : sameRoute.slice(0, 1)
 }
 
 export async function runChain(
@@ -163,6 +167,7 @@ export async function runChain(
     throw new ChainError(msg('error.no_model'), 'invalid_params', attempts)
   }
   const started = Date.now()
+  list = list.filter(profile => (profile.provider === 'copilot') === (list[0]?.provider === 'copilot'))
   let lastError: unknown = null
   for (const profile of list) {
     if (options.signal?.aborted) {
@@ -195,8 +200,13 @@ export async function runChain(
     const onAbort = () => controller.abort()
     options.signal?.addEventListener('abort', onAbort)
     try {
+      if (profile.provider === 'copilot' && (await host.settings.get('allowOnlineModelLists')) === false) {
+        throw new LlmError(msg('error.lists_off'), 'unavailable')
+      }
       const text =
-        profile.provider === 'cli'
+        profile.provider === 'copilot'
+          ? (await host.host.call('copilot.rewrite', { model, system, user, images: (options.images ?? []).map(image => ({ type: image.type, base64: image.base64 })) }, { signal: controller.signal })).text
+          : profile.provider === 'cli'
           ? await runCli(
               {
                 kind: profile.preset as CliKind,

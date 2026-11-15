@@ -214,7 +214,7 @@ export function formCatalogInput(current: Form) {
     baseUrl: current.baseUrl,
     provider: current.provider,
     command: current.command ?? '',
-    apiKey: current.apiKey
+    ...(current.provider === 'copilot' ? {} : { apiKey: current.apiKey })
   }
 }
 
@@ -697,7 +697,7 @@ export function openForm(profile?: ProfileView): void {
       apiKey: ''
     })
   } else {
-    const preset = presetById('openai')
+    const preset = presetById('copilot')
     set(form, { name: preset.label, preset: preset.id, provider: preset.provider, baseUrl: preset.baseUrl, model: preset.model, maxTokens: DEFAULT_MAX_TOKENS, enabled: true, command: '', args: '', apiKey: '' })
   }
   const current = read(form)
@@ -747,7 +747,7 @@ export function applyPreset(id: string): void {
   update(form, (current) => {
     if (!current) return current
     const name = current.id ? current.name : preset.label
-    return { ...current, preset: preset.id, provider: preset.provider, baseUrl: preset.baseUrl, model: preset.model, command: '', args: '', name }
+    return { ...current, preset: preset.id, provider: preset.provider, baseUrl: preset.baseUrl, model: preset.model, command: '', args: '', name, ...(preset.provider === 'copilot' ? { apiKey: '' } : {}) }
   })
   const current = read(form)
   if (current) void loadCatalog('form', formCatalogInput(current))
@@ -762,7 +762,7 @@ export async function saveForm(): Promise<void> {
   try {
     const { apiKey, ...rest } = current
     // Editing: an empty key field keeps the saved key.
-    const input: ProfileInput = { ...rest, ...(apiKey.trim() || !current.id ? { apiKey: apiKey.trim() } : {}) }
+    const input: ProfileInput = { ...rest, ...(current.provider === 'copilot' ? { apiKey: '' } : apiKey.trim() || !current.id ? { apiKey: apiKey.trim() } : {}) }
     set(models, await plugin.request('models.save', input))
     set(form, null)
     set(notice, { tone: 'success', text: t('Saved {name}.', { name: current.name }) })

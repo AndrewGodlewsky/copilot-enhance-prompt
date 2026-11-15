@@ -1,11 +1,29 @@
 // The composer's model menu: every model of every enabled profile, like the menu in ChatGPT or Claude.
 import { assert, mockHost, mountWorker, test } from '#testing'
-import { enhanceNow } from './panel/actions.ts'
-import { draft, put } from './panel/state.ts'
+import { enhanceNow, openForm, applyPreset, patchForm, formCatalogInput, saveForm } from './panel/actions.ts'
+import { draft, put, form } from './panel/state.ts'
+import { read } from '#panel'
 import { mountPanel } from './panel/testing.ts'
 import { currentModelValue, modelMenu, pickModel } from './panel/view.ts'
 import { PRESETS, type ProfileView } from './presets.ts'
 import * as main from './worker.ts'
+
+test('switching a keyed form to Copilot clears the key and never sends it in catalog or save requests', async () => {
+  const models = { profiles: [], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS }
+  const host = mockHost({ requests: { 'models.get': models, 'models.save': models, 'models.catalog': { models: [], source: 'fixture', fetchedAt: 0 } } })
+  const panel = await mountPanel(host)
+  try {
+    openForm()
+    applyPreset('openai')
+    patchForm({ apiKey: 'private-key' })
+    applyPreset('copilot')
+    assert.equal(read(form)?.apiKey, '')
+    assert.equal(formCatalogInput({ ...read(form)!, apiKey: 'stale-key' }).apiKey, undefined)
+    await saveForm()
+    const saved = host.callsOf('plugin.request').find(call => call.name === 'models.save')
+    assert.equal(saved.input.apiKey, '')
+  } finally { await panel.unmount() }
+})
 
 const claude: ProfileView = {
   id: 'claude',

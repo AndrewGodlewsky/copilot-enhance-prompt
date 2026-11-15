@@ -1660,6 +1660,10 @@ var MESSAGES = {
   "error.file_too_large": "{name} is {size}; an attachment can be at most {max}.",
   "note.images_paths_only": "This model cannot see images: it got their paths only, and the prompt lists them for the agent.",
   "error.cancelled": "Cancelled.",
+  "error.copilot_unavailable": "Copilot background rewriting is unavailable. Restart or update GitHub Copilot and reopen this plugin. No separate SDK or runtime is installed.",
+  "error.copilot_account": "The background runtime could not verify the same GitHub account as this Copilot session. Check your existing Copilot sign-in. No prompt was sent.",
+  "error.copilot_model": "This model is not available through GitHub Copilot in both sessions. Refresh the model list and choose a Copilot model.",
+  "error.copilot_images": "This Copilot model does not report image support. Choose a model with image support or remove the images.",
   "error.send_off": "Sending to Copilot is off in Settings.",
   "error.session_not_idle": "Copilot is busy, waiting for your answer, or disconnected. Wait until the session is idle before sending.",
   "error.send_pending": "A prompt was just sent. Wait for Copilot before sending again.",
@@ -1670,7 +1674,7 @@ var MESSAGES = {
   "error.key_not_saved": "Copilot could not store the API key: this machine has no key store for it. Use a key from an environment variable, or a subscription CLI.",
   "error.agent_blocked": "{name} is waiting for an answer from you, and what is typed now could be taken as that answer.",
   // Why auto-enhance let a prompt through unchanged (the Settings section shows the last one).
-  "hook.no_model": "No enabled API model: a subscription CLI starts too slowly for the 2 s auto-enhance has.",
+  "hook.no_model": "No enabled API model: Copilot helpers and subscription CLIs are excluded from the two-second chat hook.",
   "hook.empty": "The model returned no prompt.",
   "error.unsupported": "This version of Copilot cannot do that yet.",
   "error.invalid_request": "Invalid request.",
@@ -2799,6 +2803,19 @@ function translate(lang, text, params) {
   return template.replace(/\{(\w+)\}/g, (match, key) => key in params ? String(params[key]) : match);
 }
 var VI = {
+  "No enabled API model: Copilot helpers and subscription CLIs are excluded from the two-second chat hook.": "Kh\xF4ng c\xF3 m\xF4 h\xECnh API \u0111ang b\u1EADt: phi\xEAn Copilot n\u1EC1n v\xE0 CLI thu\xEA bao kh\xF4ng d\xF9ng \u0111\u01B0\u1EE3c trong hook chat c\xF3 gi\u1EDBi h\u1EA1n hai gi\xE2y.",
+  "Refresh API and Copilot model lists and the public Claude Code schema. Copilot rewriting needs this enabled to verify model access.": "L\xE0m m\u1EDBi danh s\xE1ch m\xF4 h\xECnh API, Copilot v\xE0 l\u01B0\u1EE3c \u0111\u1ED3 Claude Code c\xF4ng khai. Vi\u1EBFt l\u1EA1i b\u1EB1ng Copilot c\u1EA7n b\u1EADt m\u1EE5c n\xE0y \u0111\u1EC3 x\xE1c minh quy\u1EC1n truy c\u1EADp m\xF4 h\xECnh.",
+  "Model-list requests use the provider account. List refreshes send no prompt or project context.": "Y\xEAu c\u1EA7u danh s\xE1ch m\xF4 h\xECnh d\xF9ng t\xE0i kho\u1EA3n c\u1EE7a nh\xE0 cung c\u1EA5p. L\xE0m m\u1EDBi danh s\xE1ch kh\xF4ng g\u1EEDi prompt hay ng\u1EEF c\u1EA3nh d\u1EF1 \xE1n.",
+  "Models available through this Copilot session. Access is checked again before each rewrite.": "C\xE1c m\xF4 h\xECnh c\xF3 s\u1EB5n trong phi\xEAn Copilot n\xE0y. Quy\u1EC1n truy c\u1EADp \u0111\u01B0\u1EE3c ki\u1EC3m tra l\u1EA1i tr\u01B0\u1EDBc m\u1ED7i l\u1EA7n vi\u1EBFt l\u1EA1i.",
+  "Refresh to check which Copilot models are available.": "L\xE0m m\u1EDBi \u0111\u1EC3 ki\u1EC3m tra c\xE1c m\xF4 h\xECnh Copilot c\xF3 s\u1EB5n.",
+  "Uses your GitHub Copilot account in the background. No npm install, API key or separate runtime. Copilot usage charges apply. It never falls back to another provider and is unavailable for chat auto-enhance.": "D\xF9ng t\xE0i kho\u1EA3n GitHub Copilot c\u1EE7a b\u1EA1n \u1EDF ch\u1EBF \u0111\u1ED9 n\u1EC1n. Kh\xF4ng c\u1EA7n c\xE0i npm, kh\xF3a API hay m\xF4i tr\u01B0\u1EDDng ch\u1EA1y ri\xEAng. C\xF3 t\xEDnh ph\xED s\u1EED d\u1EE5ng Copilot. Kh\xF4ng chuy\u1EC3n sang nh\xE0 cung c\u1EA5p kh\xE1c v\xE0 kh\xF4ng h\u1ED7 tr\u1EE3 t\u1EF1 \u0111\u1ED9ng c\u1EA3i thi\u1EC7n trong chat.",
+  "GitHub Copilot \xB7 background rewrite": "GitHub Copilot \xB7 vi\u1EBFt l\u1EA1i \u1EDF ch\u1EBF \u0111\u1ED9 n\u1EC1n",
+  "Add GitHub Copilot to rewrite with your Copilot account, or choose an external provider.": "Th\xEAm GitHub Copilot \u0111\u1EC3 vi\u1EBFt l\u1EA1i b\u1EB1ng t\xE0i kho\u1EA3n Copilot c\u1EE7a b\u1EA1n, ho\u1EB7c ch\u1ECDn nh\xE0 cung c\u1EA5p b\xEAn ngo\xE0i.",
+  "It needs an enabled API model. Copilot background rewriting and subscription CLIs are excluded from its two-second limit. Add an API model, or use Rules.": "C\u1EA7n m\u1ED9t m\xF4 h\xECnh API \u0111ang b\u1EADt. Vi\u1EBFt l\u1EA1i b\u1EB1ng Copilot \u1EDF ch\u1EBF \u0111\u1ED9 n\u1EC1n v\xE0 CLI thu\xEA bao kh\xF4ng d\xF9ng \u0111\u01B0\u1EE3c trong gi\u1EDBi h\u1EA1n hai gi\xE2y. Th\xEAm m\xF4 h\xECnh API ho\u1EB7c d\xF9ng Quy t\u1EAFc.",
+  "Copilot background rewriting is unavailable. Restart or update GitHub Copilot and reopen this plugin. No separate SDK or runtime is installed.": "Kh\xF4ng th\u1EC3 vi\u1EBFt l\u1EA1i b\u1EB1ng Copilot \u1EDF ch\u1EBF \u0111\u1ED9 n\u1EC1n. Kh\u1EDFi \u0111\u1ED9ng l\u1EA1i ho\u1EB7c c\u1EADp nh\u1EADt GitHub Copilot r\u1ED3i m\u1EDF l\u1EA1i plugin. Kh\xF4ng c\xF3 SDK hay m\xF4i tr\u01B0\u1EDDng ch\u1EA1y ri\xEAng n\xE0o \u0111\u01B0\u1EE3c c\xE0i \u0111\u1EB7t.",
+  "The background runtime could not verify the same GitHub account as this Copilot session. Check your existing Copilot sign-in. No prompt was sent.": "M\xF4i tr\u01B0\u1EDDng ch\u1EA1y n\u1EC1n kh\xF4ng x\xE1c minh \u0111\u01B0\u1EE3c c\xF9ng t\xE0i kho\u1EA3n GitHub v\u1EDBi phi\xEAn Copilot n\xE0y. Ki\u1EC3m tra t\xE0i kho\u1EA3n Copilot \u0111ang \u0111\u0103ng nh\u1EADp. Ch\u01B0a g\u1EEDi prompt n\xE0o.",
+  "This model is not available through GitHub Copilot in both sessions. Refresh the model list and choose a Copilot model.": "M\xF4 h\xECnh n\xE0y kh\xF4ng c\xF3 s\u1EB5n qua GitHub Copilot trong c\u1EA3 hai phi\xEAn. L\xE0m m\u1EDBi danh s\xE1ch r\u1ED3i ch\u1ECDn m\xF4 h\xECnh Copilot.",
+  "This Copilot model does not report image support. Choose a model with image support or remove the images.": "M\xF4 h\xECnh Copilot n\xE0y kh\xF4ng x\xE1c nh\u1EADn h\u1ED7 tr\u1EE3 \u1EA3nh. Ch\u1ECDn m\xF4 h\xECnh h\u1ED7 tr\u1EE3 \u1EA3nh ho\u1EB7c b\u1ECF \u1EA3nh \u0111\xEDnh k\xE8m.",
   "GitHub Copilot": "GitHub Copilot",
   "A little more thought. A clearer prompt.": "Th\xEAm ch\xFAt suy ngh\u0129. Prompt r\xF5 r\xE0ng h\u01A1n.",
   "A fresh page for your next idea": "Trang m\u1EDBi cho \xFD t\u01B0\u1EDFng ti\u1EBFp theo",
@@ -2918,7 +2935,6 @@ var VI = {
   "On to reuse earlier prompts and to find your draft again after a restart. Off on a shared machine, or when prompts hold things that must not be kept.": "B\u1EADt \u0111\u1EC3 d\xF9ng l\u1EA1i prompt c\u0169 v\xE0 t\xECm l\u1EA1i b\u1EA3n nh\xE1p sau khi kh\u1EDFi \u0111\u1ED9ng l\u1EA1i. T\u1EAFt tr\xEAn m\xE1y d\xF9ng chung, ho\u1EB7c khi prompt ch\u1EE9a th\u1EE9 kh\xF4ng \u0111\u01B0\u1EE3c ph\xE9p l\u01B0u.",
   "A key from your environment is sent to that provider like a saved one, and its account pays for the calls.": "Key l\u1EA5y t\u1EEB m\xF4i tr\u01B0\u1EDDng \u0111\u01B0\u1EE3c g\u1EEDi t\u1EDBi nh\xE0 cung c\u1EA5p \u0111\xF3 nh\u01B0 m\u1ED9t key \u0111\xE3 l\u01B0u, v\xE0 t\xE0i kho\u1EA3n c\u1EE7a key \u0111\xF3 tr\u1EA3 ti\u1EC1n cho c\xE1c l\u1EA7n g\u1ECDi.",
   "On when your keys already live in the environment and you do not want to store them twice. Off to use only the keys you saved in Models.": "B\u1EADt khi key c\u1EE7a b\u1EA1n \u0111\xE3 c\xF3 s\u1EB5n trong m\xF4i tr\u01B0\u1EDDng v\xE0 b\u1EA1n kh\xF4ng mu\u1ED1n l\u01B0u hai n\u01A1i. T\u1EAFt \u0111\u1EC3 ch\u1EC9 d\xF9ng nh\u1EEFng key b\u1EA1n \u0111\xE3 l\u01B0u trong Model.",
-  "Network requests go to your API providers (with your key) and to schemastore.org. No prompt and nothing of your project is in them.": "C\xE1c y\xEAu c\u1EA7u m\u1EA1ng \u0111\u01B0\u1EE3c g\u1EEDi t\u1EDBi nh\xE0 cung c\u1EA5p API c\u1EE7a b\u1EA1n (k\xE8m key) v\xE0 t\u1EDBi schemastore.org. Trong \u0111\xF3 kh\xF4ng c\xF3 prompt v\xE0 kh\xF4ng c\xF3 g\xEC c\u1EE7a d\u1EF1 \xE1n.",
   "On to see new models without updating the plugin. Off for no network traffic besides the model calls.": "B\u1EADt \u0111\u1EC3 th\u1EA5y model m\u1EDBi m\xE0 kh\xF4ng c\u1EA7n c\u1EADp nh\u1EADt plugin. T\u1EAFt n\u1EBFu kh\xF4ng mu\u1ED1n c\xF3 l\u01B0u l\u01B0\u1EE3ng m\u1EA1ng n\xE0o ngo\xE0i c\xE1c l\u1EA7n g\u1ECDi model.",
   "What it may read": "Plugin \u0111\u01B0\u1EE3c \u0111\u1ECDc g\xEC",
   "What it may do": "Plugin \u0111\u01B0\u1EE3c l\xE0m g\xEC",
@@ -2938,7 +2954,6 @@ var VI = {
   "The last lines of the terminal you picked, at the Max level only.": "C\xE1c d\xF2ng cu\u1ED1i c\u1EE7a terminal b\u1EA1n ch\u1ECDn, ch\u1EC9 \u1EDF m\u1EE9c T\u1ED1i \u0111a.",
   "Keep your prompts and enhanced prompts in the History tab, on this machine only.": "L\u01B0u prompt g\u1ED1c v\xE0 prompt \u0111\xE3 c\u1EA3i thi\u1EC7n trong tab L\u1ECBch s\u1EED, ch\u1EC9 tr\xEAn m\xE1y n\xE0y.",
   "OPENAI_API_KEY, ANTHROPIC_API_KEY and the others, when a model has no saved key.": "OPENAI_API_KEY, ANTHROPIC_API_KEY v\xE0 c\xE1c bi\u1EBFn kh\xE1c, khi model ch\u01B0a c\xF3 key \u0111\xE3 l\u01B0u.",
-  "GET /models from your API providers and the public Claude Code settings schema, to keep model menus current. CLI lists are always local.": "G\u1ECDi GET /models c\u1EE7a nh\xE0 cung c\u1EA5p API v\xE0 schema c\xE0i \u0111\u1EB7t c\xF4ng khai c\u1EE7a Claude Code \u0111\u1EC3 danh s\xE1ch model lu\xF4n m\u1EDBi. Danh s\xE1ch c\u1EE7a CLI lu\xF4n l\u1EA5y tr\xEAn m\xE1y.",
   "Stored on this machine": "L\u01B0u tr\xEAn m\xE1y n\xE0y",
   "Nothing is sent anywhere except your prompt and the context you allow, to the model you run. No tracking or analytics.": "Kh\xF4ng g\u1EEDi g\xEC \u0111i \u0111\xE2u ngo\xE0i prompt v\xE0 ng\u1EEF c\u1EA3nh b\u1EA1n cho ph\xE9p, t\u1EDBi model b\u1EA1n ch\u1EA1y. Kh\xF4ng theo d\xF5i, kh\xF4ng analytics.",
   "History": "L\u1ECBch s\u1EED",
@@ -3022,7 +3037,6 @@ var VI = {
   "Using API keys from your environment": "\u0110ang d\xF9ng API key t\u1EEB bi\u1EBFn m\xF4i tr\u01B0\u1EDDng",
   "Add a model below to customize; then only your saved models are used.": "Th\xEAm model b\xEAn d\u01B0\u1EDBi \u0111\u1EC3 tu\u1EF3 ch\u1EC9nh; khi \u0111\xF3 ch\u1EC9 d\xF9ng c\xE1c model b\u1EA1n \u0111\xE3 l\u01B0u.",
   "No models yet": "Ch\u01B0a c\xF3 model n\xE0o",
-  "Use a subscription CLI above, or add OpenAI, Anthropic, OpenRouter, Gemini, Groq, DeepSeek, Mistral, Ollama, LM Studio or any OpenAI-compatible endpoint.": "D\xF9ng CLI theo g\xF3i \u1EDF tr\xEAn, ho\u1EB7c th\xEAm OpenAI, Anthropic, OpenRouter, Gemini, Groq, DeepSeek, Mistral, Ollama, LM Studio hay endpoint t\u01B0\u01A1ng th\xEDch OpenAI.",
   "Use your subscription, no API key": "D\xF9ng g\xF3i subscription, kh\xF4ng c\u1EA7n API key",
   "Found on this machine. Uses the account the CLI is signed in with.": "T\xECm th\u1EA5y tr\xEAn m\xE1y. D\xF9ng t\xE0i kho\u1EA3n m\xE0 CLI \u0111ang \u0111\u0103ng nh\u1EADp.",
   "Add model": "Th\xEAm model",
@@ -3072,7 +3086,6 @@ var VI = {
   "Show more": "Xem th\xEAm",
   "Press again to clear history": "B\u1EA5m l\u1EA7n n\u1EEFa \u0111\u1EC3 xo\xE1 l\u1ECBch s\u1EED",
   "Auto-enhance (AI) has no model to use": "T\u1EF1 c\u1EA3i thi\u1EC7n (AI) kh\xF4ng c\xF3 model \u0111\u1EC3 d\xF9ng",
-  "It needs an enabled API model: subscription CLIs take too long for its 2 s limit. Add one in Models, or use Rules.": "C\u1EA7n m\u1ED9t model API \u0111ang b\u1EADt: CLI theo g\xF3i subscription kh\u1EDFi \u0111\u1ED9ng qu\xE1 l\xE2u so v\u1EDBi gi\u1EDBi h\u1EA1n 2 gi\xE2y. Th\xEAm m\u1ED9t model trong tab Model, ho\u1EB7c d\xF9ng Lu\u1EADt.",
   "Write a prompt first.": "H\xE3y vi\u1EBFt prompt tr\u01B0\u1EDBc.",
   "Nothing to send.": "Kh\xF4ng c\xF3 g\xEC \u0111\u1EC3 g\u1EEDi.",
   "Invalid model profile.": "C\u1EA5u h\xECnh model kh\xF4ng h\u1EE3p l\u1EC7.",
@@ -3225,7 +3238,6 @@ var VI = {
   "online model lists are off in Settings": "danh s\xE1ch model tr\u1EF1c tuy\u1EBFn \u0111ang t\u1EAFt trong C\xE0i \u0111\u1EB7t",
   "Copilot could not store the API key: this machine has no key store for it. Use a key from an environment variable, or a subscription CLI.": "Copilot kh\xF4ng l\u01B0u \u0111\u01B0\u1EE3c API key: m\xE1y n\xE0y kh\xF4ng c\xF3 kho kh\xF3a cho n\xF3. H\xE3y d\xF9ng key t\u1EEB bi\u1EBFn m\xF4i tr\u01B0\u1EDDng, ho\u1EB7c m\u1ED9t CLI \u0111\u0103ng k\xFD.",
   "{name} is waiting for an answer from you, and what is typed now could be taken as that answer.": "{name} \u0111ang ch\u1EDD b\u1EA1n tr\u1EA3 l\u1EDDi, v\xE0 n\u1ED9i dung g\xF5 v\xE0o l\xFAc n\xE0y c\xF3 th\u1EC3 b\u1ECB coi l\xE0 c\xE2u tr\u1EA3 l\u1EDDi \u0111\xF3.",
-  "No enabled API model: a subscription CLI starts too slowly for the 2 s auto-enhance has.": "Kh\xF4ng c\xF3 model API n\xE0o \u0111ang b\u1EADt: CLI \u0111\u0103ng k\xFD kh\u1EDFi \u0111\u1ED9ng qu\xE1 ch\u1EADm so v\u1EDBi 2 gi\xE2y c\u1EE7a t\u1EF1 c\u1EA3i thi\u1EC7n.",
   "The model returned no prompt.": "Model kh\xF4ng tr\u1EA3 v\u1EC1 prompt n\xE0o.",
   "This version of Copilot cannot do that yet.": "Phi\xEAn b\u1EA3n Copilot n\xE0y ch\u01B0a l\xE0m \u0111\u01B0\u1EE3c vi\u1EC7c \u0111\xF3.",
   "Invalid request.": "Y\xEAu c\u1EA7u kh\xF4ng h\u1EE3p l\u1EC7.",
@@ -3294,6 +3306,19 @@ var VI = {
   "Changes the text Copilot receives; the chat still shows your original message. Off by default. Ambiguous prompts are left unchanged.": "Thay \u0111\u1ED5i v\u0103n b\u1EA3n Copilot nh\u1EADn \u0111\u01B0\u1EE3c; cu\u1ED9c tr\xF2 chuy\u1EC7n v\u1EABn hi\u1EC3n th\u1ECB tin nh\u1EAFn g\u1ED1c. M\u1EB7c \u0111\u1ECBnh t\u1EAFt. Gi\u1EEF nguy\xEAn n\u1EBFu kh\xF4ng x\xE1c \u0111\u1ECBnh \u0111\u01B0\u1EE3c ph\u1EA7n c\u1EA7n thay."
 };
 var ZH = {
+  "No enabled API model: Copilot helpers and subscription CLIs are excluded from the two-second chat hook.": "\u6CA1\u6709\u5DF2\u542F\u7528\u7684 API \u6A21\u578B\uFF1ACopilot \u540E\u53F0\u4F1A\u8BDD\u548C\u8BA2\u9605 CLI \u4E0D\u9002\u7528\u4E8E\u4E24\u79D2\u9650\u5236\u7684\u804A\u5929 hook\u3002",
+  "Refresh API and Copilot model lists and the public Claude Code schema. Copilot rewriting needs this enabled to verify model access.": "\u5237\u65B0 API\u3001Copilot \u6A21\u578B\u5217\u8868\u53CA\u516C\u5F00\u7684 Claude Code \u914D\u7F6E\u67B6\u6784\u3002Copilot \u6539\u5199\u9700\u8981\u5F00\u542F\u6B64\u9009\u9879\u4EE5\u9A8C\u8BC1\u6A21\u578B\u8BBF\u95EE\u6743\u9650\u3002",
+  "Model-list requests use the provider account. List refreshes send no prompt or project context.": "\u6A21\u578B\u5217\u8868\u8BF7\u6C42\u4F7F\u7528\u63D0\u4F9B\u5546\u8D26\u6237\u3002\u5237\u65B0\u5217\u8868\u4E0D\u4F1A\u53D1\u9001\u63D0\u793A\u8BCD\u6216\u9879\u76EE\u4E0A\u4E0B\u6587\u3002",
+  "Models available through this Copilot session. Access is checked again before each rewrite.": "\u6B64 Copilot \u4F1A\u8BDD\u53EF\u7528\u7684\u6A21\u578B\u3002\u6BCF\u6B21\u6539\u5199\u524D\u90FD\u4F1A\u91CD\u65B0\u68C0\u67E5\u8BBF\u95EE\u6743\u9650\u3002",
+  "Refresh to check which Copilot models are available.": "\u5237\u65B0\u4EE5\u68C0\u67E5\u53EF\u7528\u7684 Copilot \u6A21\u578B\u3002",
+  "Uses your GitHub Copilot account in the background. No npm install, API key or separate runtime. Copilot usage charges apply. It never falls back to another provider and is unavailable for chat auto-enhance.": "\u5728\u540E\u53F0\u4F7F\u7528\u4F60\u7684 GitHub Copilot \u8D26\u6237\u3002\u65E0\u9700\u5B89\u88C5 npm\u3001API \u5BC6\u94A5\u6216\u5355\u72EC\u7684\u8FD0\u884C\u65F6\u3002\u6309 Copilot \u7528\u91CF\u8BA1\u8D39\u3002\u4E0D\u4F1A\u56DE\u9000\u5230\u5176\u4ED6\u63D0\u4F9B\u5546\uFF0C\u4E5F\u4E0D\u652F\u6301\u804A\u5929\u81EA\u52A8\u589E\u5F3A\u3002",
+  "GitHub Copilot \xB7 background rewrite": "GitHub Copilot \xB7 \u540E\u53F0\u6539\u5199",
+  "Add GitHub Copilot to rewrite with your Copilot account, or choose an external provider.": "\u6DFB\u52A0 GitHub Copilot\uFF0C\u4F7F\u7528\u4F60\u7684 Copilot \u8D26\u6237\u6539\u5199\uFF0C\u6216\u9009\u62E9\u5916\u90E8\u63D0\u4F9B\u5546\u3002",
+  "It needs an enabled API model. Copilot background rewriting and subscription CLIs are excluded from its two-second limit. Add an API model, or use Rules.": "\u9700\u8981\u4E00\u4E2A\u5DF2\u542F\u7528\u7684 API \u6A21\u578B\u3002Copilot \u540E\u53F0\u6539\u5199\u548C\u8BA2\u9605 CLI \u4E0D\u9002\u7528\u4E8E\u4E24\u79D2\u7684\u65F6\u9650\u3002\u8BF7\u6DFB\u52A0 API \u6A21\u578B\u6216\u4F7F\u7528\u89C4\u5219\u3002",
+  "Copilot background rewriting is unavailable. Restart or update GitHub Copilot and reopen this plugin. No separate SDK or runtime is installed.": "Copilot \u540E\u53F0\u6539\u5199\u4E0D\u53EF\u7528\u3002\u8BF7\u91CD\u542F\u6216\u66F4\u65B0 GitHub Copilot\uFF0C\u7136\u540E\u91CD\u65B0\u6253\u5F00\u63D2\u4EF6\u3002\u4E0D\u4F1A\u5B89\u88C5\u5355\u72EC\u7684 SDK \u6216\u8FD0\u884C\u65F6\u3002",
+  "The background runtime could not verify the same GitHub account as this Copilot session. Check your existing Copilot sign-in. No prompt was sent.": "\u540E\u53F0\u8FD0\u884C\u65F6\u65E0\u6CD5\u786E\u8BA4\u4E0E\u6B64 Copilot \u4F1A\u8BDD\u4F7F\u7528\u540C\u4E00 GitHub \u8D26\u6237\u3002\u8BF7\u68C0\u67E5\u73B0\u6709\u7684 Copilot \u767B\u5F55\u72B6\u6001\u3002\u672A\u53D1\u9001\u4EFB\u4F55\u63D0\u793A\u8BCD\u3002",
+  "This model is not available through GitHub Copilot in both sessions. Refresh the model list and choose a Copilot model.": "\u6B64\u6A21\u578B\u65E0\u6CD5\u5728\u4E24\u4E2A\u4F1A\u8BDD\u4E2D\u90FD\u901A\u8FC7 GitHub Copilot \u4F7F\u7528\u3002\u8BF7\u5237\u65B0\u5217\u8868\u5E76\u9009\u62E9 Copilot \u6A21\u578B\u3002",
+  "This Copilot model does not report image support. Choose a model with image support or remove the images.": "\u6B64 Copilot \u6A21\u578B\u672A\u58F0\u660E\u652F\u6301\u56FE\u7247\u3002\u8BF7\u9009\u62E9\u652F\u6301\u56FE\u7247\u7684\u6A21\u578B\u6216\u79FB\u9664\u56FE\u7247\u3002",
   "GitHub Copilot": "GitHub Copilot",
   "A little more thought. A clearer prompt.": "\u591A\u4E00\u5206\u601D\u8003\uFF0C\u8BA9\u63D0\u793A\u8BCD\u66F4\u6E05\u6670\u3002",
   "A fresh page for your next idea": "\u4E3A\u4E0B\u4E00\u4E2A\u60F3\u6CD5\u5F00\u542F\u65B0\u7684\u4E00\u9875",
@@ -3413,7 +3438,6 @@ var ZH = {
   "On to reuse earlier prompts and to find your draft again after a restart. Off on a shared machine, or when prompts hold things that must not be kept.": "\u60F3\u590D\u7528\u4EE5\u524D\u7684\u63D0\u793A\u8BCD\u3001\u91CD\u542F\u540E\u627E\u56DE\u8349\u7A3F\u65F6\u5F00\u542F\u3002\u5728\u5171\u7528\u7684\u673A\u5668\u4E0A\uFF0C\u6216\u63D0\u793A\u8BCD\u542B\u6709\u4E0D\u80FD\u4FDD\u7559\u7684\u5185\u5BB9\u65F6\u5173\u95ED\u3002",
   "A key from your environment is sent to that provider like a saved one, and its account pays for the calls.": "\u73AF\u5883\u4E2D\u7684 key \u4F1A\u50CF\u5DF2\u4FDD\u5B58\u7684 key \u4E00\u6837\u53D1\u9001\u7ED9\u5BF9\u5E94\u7684\u63D0\u4F9B\u65B9\uFF0C\u8C03\u7528\u8D39\u7528\u7531\u8BE5 key \u7684\u8D26\u6237\u627F\u62C5\u3002",
   "On when your keys already live in the environment and you do not want to store them twice. Off to use only the keys you saved in Models.": "\u5F53 key \u5DF2\u5728\u73AF\u5883\u53D8\u91CF\u4E2D\u3001\u4E0D\u60F3\u518D\u5B58\u4E00\u4EFD\u65F6\u5F00\u542F\u3002\u5173\u95ED\u540E\u53EA\u4F7F\u7528\u4F60\u5728\u201C\u6A21\u578B\u201D\u4E2D\u4FDD\u5B58\u7684 key\u3002",
-  "Network requests go to your API providers (with your key) and to schemastore.org. No prompt and nothing of your project is in them.": "\u7F51\u7EDC\u8BF7\u6C42\u4F1A\u53D1\u5F80\u4F60\u7684 API \u63D0\u4F9B\u65B9\uFF08\u5E26\u4E0A\u4F60\u7684 key\uFF09\u548C schemastore.org\u3002\u5176\u4E2D\u4E0D\u542B\u63D0\u793A\u8BCD\uFF0C\u4E5F\u4E0D\u542B\u9879\u76EE\u7684\u4EFB\u4F55\u5185\u5BB9\u3002",
   "On to see new models without updating the plugin. Off for no network traffic besides the model calls.": "\u60F3\u4E0D\u66F4\u65B0\u63D2\u4EF6\u5C31\u770B\u5230\u65B0\u6A21\u578B\u65F6\u5F00\u542F\u3002\u9664\u4E86\u6A21\u578B\u8C03\u7528\u5916\u4E0D\u60F3\u6709\u4EFB\u4F55\u7F51\u7EDC\u6D41\u91CF\u65F6\u5173\u95ED\u3002",
   "What it may read": "\u5141\u8BB8\u8BFB\u53D6",
   "What it may do": "\u5141\u8BB8\u6267\u884C",
@@ -3433,7 +3457,6 @@ var ZH = {
   "The last lines of the terminal you picked, at the Max level only.": "\u6240\u9009\u7EC8\u7AEF\u7684\u6700\u540E\u51E0\u884C\uFF0C\u4EC5\u5728\u6700\u5927\u7EA7\u522B\u3002",
   "Keep your prompts and enhanced prompts in the History tab, on this machine only.": "\u5728\u201C\u5386\u53F2\u201D\u4E2D\u4FDD\u5B58\u539F\u59CB\u548C\u4F18\u5316\u540E\u7684\u63D0\u793A\u8BCD\uFF0C\u4EC5\u4FDD\u5B58\u5728\u672C\u673A\u3002",
   "OPENAI_API_KEY, ANTHROPIC_API_KEY and the others, when a model has no saved key.": "\u5F53\u6A21\u578B\u6CA1\u6709\u4FDD\u5B58\u7684 key \u65F6\uFF0C\u4F7F\u7528 OPENAI_API_KEY\u3001ANTHROPIC_API_KEY \u7B49\u3002",
-  "GET /models from your API providers and the public Claude Code settings schema, to keep model menus current. CLI lists are always local.": "\u8C03\u7528 API \u63D0\u4F9B\u5546\u7684 GET /models \u548C\u516C\u5F00\u7684 Claude Code \u8BBE\u7F6E schema\uFF0C\u4F7F\u6A21\u578B\u5217\u8868\u4FDD\u6301\u6700\u65B0\u3002CLI \u5217\u8868\u59CB\u7EC8\u5728\u672C\u5730\u83B7\u53D6\u3002",
   "Stored on this machine": "\u672C\u673A\u5B58\u50A8",
   "Nothing is sent anywhere except your prompt and the context you allow, to the model you run. No tracking or analytics.": "\u9664\u4F60\u5141\u8BB8\u7684\u63D0\u793A\u8BCD\u548C\u4E0A\u4E0B\u6587\u53D1\u9001\u5230\u4F60\u4F7F\u7528\u7684\u6A21\u578B\u5916\uFF0C\u4E0D\u4F1A\u53D1\u9001\u4EFB\u4F55\u5185\u5BB9\u3002\u65E0\u8FFD\u8E2A\u3001\u65E0\u7EDF\u8BA1\u3002",
   "History": "\u5386\u53F2",
@@ -3517,7 +3540,6 @@ var ZH = {
   "Using API keys from your environment": "\u6B63\u5728\u4F7F\u7528\u73AF\u5883\u53D8\u91CF\u4E2D\u7684 API key",
   "Add a model below to customize; then only your saved models are used.": "\u5728\u4E0B\u65B9\u6DFB\u52A0\u6A21\u578B\u4EE5\u81EA\u5B9A\u4E49\uFF1B\u4E4B\u540E\u53EA\u4F7F\u7528\u5DF2\u4FDD\u5B58\u7684\u6A21\u578B\u3002",
   "No models yet": "\u8FD8\u6CA1\u6709\u6A21\u578B",
-  "Use a subscription CLI above, or add OpenAI, Anthropic, OpenRouter, Gemini, Groq, DeepSeek, Mistral, Ollama, LM Studio or any OpenAI-compatible endpoint.": "\u4F7F\u7528\u4E0A\u9762\u7684\u8BA2\u9605 CLI\uFF0C\u6216\u6DFB\u52A0 OpenAI\u3001Anthropic\u3001OpenRouter\u3001Gemini\u3001Groq\u3001DeepSeek\u3001Mistral\u3001Ollama\u3001LM Studio \u6216\u4EFB\u4F55 OpenAI \u517C\u5BB9\u7AEF\u70B9\u3002",
   "Use your subscription, no API key": "\u4F7F\u7528\u4F60\u7684\u8BA2\u9605\uFF0C\u65E0\u9700 API key",
   "Found on this machine. Uses the account the CLI is signed in with.": "\u5728\u672C\u673A\u627E\u5230\u3002\u4F7F\u7528 CLI \u5DF2\u767B\u5F55\u7684\u8D26\u53F7\u3002",
   "Add model": "\u6DFB\u52A0\u6A21\u578B",
@@ -3567,7 +3589,6 @@ var ZH = {
   "Show more": "\u663E\u793A\u66F4\u591A",
   "Press again to clear history": "\u518D\u6309\u4E00\u6B21\u6E05\u7A7A\u5386\u53F2",
   "Auto-enhance (AI) has no model to use": "\u81EA\u52A8\u4F18\u5316\uFF08AI\uFF09\u6CA1\u6709\u53EF\u7528\u7684\u6A21\u578B",
-  "It needs an enabled API model: subscription CLIs take too long for its 2 s limit. Add one in Models, or use Rules.": "\u9700\u8981\u4E00\u4E2A\u5DF2\u542F\u7528\u7684 API \u6A21\u578B\uFF1A\u8BA2\u9605 CLI \u542F\u52A8\u592A\u6162\uFF0C\u8D76\u4E0D\u4E0A 2 \u79D2\u7684\u9650\u5236\u3002\u8BF7\u5728\u201C\u6A21\u578B\u201D\u4E2D\u6DFB\u52A0\u4E00\u4E2A\uFF0C\u6216\u6539\u7528\u89C4\u5219\u3002",
   "Write a prompt first.": "\u8BF7\u5148\u5199\u63D0\u793A\u8BCD\u3002",
   "Nothing to send.": "\u6CA1\u6709\u53EF\u53D1\u9001\u7684\u5185\u5BB9\u3002",
   "Invalid model profile.": "\u6A21\u578B\u914D\u7F6E\u65E0\u6548\u3002",
@@ -3720,7 +3741,6 @@ var ZH = {
   "online model lists are off in Settings": "\u201C\u8BBE\u7F6E\u201D\u4E2D\u5DF2\u5173\u95ED\u5728\u7EBF\u6A21\u578B\u5217\u8868",
   "Copilot could not store the API key: this machine has no key store for it. Use a key from an environment variable, or a subscription CLI.": "Copilot \u65E0\u6CD5\u4FDD\u5B58 API key\uFF1A\u8FD9\u53F0\u673A\u5668\u6CA1\u6709\u53EF\u7528\u7684\u5BC6\u94A5\u5B58\u50A8\u3002\u8BF7\u6539\u7528\u73AF\u5883\u53D8\u91CF\u4E2D\u7684 key\uFF0C\u6216\u8BA2\u9605 CLI\u3002",
   "{name} is waiting for an answer from you, and what is typed now could be taken as that answer.": "{name} \u6B63\u5728\u7B49\u4F60\u56DE\u7B54\uFF0C\u73B0\u5728\u8F93\u5165\u7684\u5185\u5BB9\u53EF\u80FD\u4F1A\u88AB\u5F53\u4F5C\u56DE\u7B54\u3002",
-  "No enabled API model: a subscription CLI starts too slowly for the 2 s auto-enhance has.": "\u6CA1\u6709\u5DF2\u542F\u7528\u7684 API \u6A21\u578B\uFF1A\u8BA2\u9605 CLI \u542F\u52A8\u592A\u6162\uFF0C\u8D76\u4E0D\u4E0A\u81EA\u52A8\u4F18\u5316\u7684 2 \u79D2\u9650\u5236\u3002",
   "The model returned no prompt.": "\u6A21\u578B\u6CA1\u6709\u8FD4\u56DE\u63D0\u793A\u8BCD\u3002",
   "This version of Copilot cannot do that yet.": "\u6B64\u7248\u672C\u7684 Copilot \u8FD8\u4E0D\u652F\u6301\u6B64\u64CD\u4F5C\u3002",
   "Invalid request.": "\u65E0\u6548\u7684\u8BF7\u6C42\u3002",
@@ -4611,6 +4631,7 @@ function sniffImage(head) {
 }
 var megabytes = (bytes) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 function imageSupport(profile) {
+  if (profile.provider === "copilot") return "data";
   if (profile.provider === "anthropic") return "data";
   if (profile.provider === "openai") return ["openai", "openrouter", "gemini"].includes(profile.preset) ? "data" : "none";
   return profile.preset === "codex" ? "file" : "none";
@@ -4844,6 +4865,7 @@ function parseHistory(value) {
 
 // src/presets.ts
 var PRESETS = [
+  { id: "copilot", label: "GitHub Copilot", provider: "copilot", baseUrl: "", model: "", env: "" },
   { id: "openai", label: "OpenAI", provider: "openai", baseUrl: "https://api.openai.com/v1", model: "gpt-4.1-mini", env: "OPENAI_API_KEY" },
   { id: "anthropic", label: "Anthropic", provider: "anthropic", baseUrl: "https://api.anthropic.com", model: "claude-haiku-4-5", env: "ANTHROPIC_API_KEY" },
   { id: "openrouter", label: "OpenRouter", provider: "openai", baseUrl: "https://openrouter.ai/api/v1", model: "openai/gpt-4.1-mini", env: "OPENROUTER_API_KEY" },
@@ -4889,14 +4911,14 @@ function normalizeProfile(value) {
     id: id2,
     name: str2(raw2.name).trim().slice(0, 60) || preset.label,
     preset: preset.id,
-    provider: preset.provider === "cli" ? "cli" : raw2.provider === "anthropic" ? "anthropic" : "openai",
-    baseUrl: str2(raw2.baseUrl).trim().slice(0, 500),
+    provider: preset.provider === "copilot" ? "copilot" : preset.provider === "cli" ? "cli" : raw2.provider === "anthropic" ? "anthropic" : "openai",
+    baseUrl: preset.provider === "copilot" ? "" : str2(raw2.baseUrl).trim().slice(0, 500),
     model: str2(raw2.model).trim().slice(0, 200),
     // A profile saved before 2.5.4 also carries `temperature`: it is dropped here, and never sent.
     maxTokens: Math.round(Math.min(32e3, Math.max(128, num(raw2.maxTokens, DEFAULT_MAX_TOKENS)))),
     enabled: raw2.enabled !== false,
-    command: str2(raw2.command).trim().slice(0, 500),
-    args: str2(raw2.args).trim().slice(0, 500)
+    command: preset.provider === "copilot" ? "" : str2(raw2.command).trim().slice(0, 500),
+    args: preset.provider === "copilot" ? "" : str2(raw2.args).trim().slice(0, 500)
   };
 }
 function parseModelsConfig(value) {
@@ -4964,7 +4986,7 @@ async function saveModels(host, config) {
   await host.storage.set(MODELS_KEY, modelsToJson(config));
 }
 function needsKey(profile) {
-  if (profile.provider === "cli") return false;
+  if (profile.provider === "cli" || profile.provider === "copilot") return false;
   return !(profile.provider === "openai" && isLocalUrl(effectiveBaseUrl(profile)));
 }
 function effectiveBaseUrl(profile) {
@@ -4975,6 +4997,7 @@ function effectiveModel(profile) {
   return profile.model || presetById(profile.preset).model;
 }
 async function resolveKey(host, profile) {
+  if (profile.provider === "copilot") return { key: null, source: "copilot" };
   if (profile.provider === "cli") {
     return { key: null, source: "subscription" };
   }
@@ -5018,8 +5041,10 @@ var ChainError = class extends Error {
 function candidates(profiles, preferredId, fallback) {
   const enabled = profiles.filter((profile) => profile.enabled);
   const preferred = preferredId ? profiles.find((profile) => profile.id === preferredId) : void 0;
+  if (preferredId && !preferred) return [];
   const ordered = preferred ? [preferred, ...enabled.filter((p) => p.id !== preferred.id)] : enabled;
-  return fallback ? ordered : ordered.slice(0, 1);
+  const sameRoute = ordered.filter((profile) => profile.provider === "copilot" === (ordered[0]?.provider === "copilot"));
+  return fallback ? sameRoute : sameRoute.slice(0, 1);
 }
 async function runChain(host, list, system, user, options) {
   const attempts = [];
@@ -5027,6 +5052,7 @@ async function runChain(host, list, system, user, options) {
     throw new ChainError(msg("error.no_model"), "invalid_params", attempts);
   }
   const started = Date.now();
+  list = list.filter((profile) => profile.provider === "copilot" === (list[0]?.provider === "copilot"));
   let lastError = null;
   for (const profile of list) {
     if (options.signal?.aborted) {
@@ -5056,7 +5082,10 @@ async function runChain(host, list, system, user, options) {
     const onAbort = () => controller.abort();
     options.signal?.addEventListener("abort", onAbort);
     try {
-      const text2 = profile.provider === "cli" ? await runCli(
+      if (profile.provider === "copilot" && await host.settings.get("allowOnlineModelLists") === false) {
+        throw new LlmError(msg("error.lists_off"), "unavailable");
+      }
+      const text2 = profile.provider === "copilot" ? (await host.host.call("copilot.rewrite", { model, system, user, images: (options.images ?? []).map((image) => ({ type: image.type, base64: image.base64 })) }, { signal: controller.signal })).text : profile.provider === "cli" ? await runCli(
         {
           kind: profile.preset,
           command: profile.command,
@@ -5560,6 +5589,17 @@ async function enhance(host, input, signal, progress, budgetMs) {
   if (!prompt) throw hostError(msg("error.no_prompt"), "invalid_params");
   const settings = await readSettings(host);
   const config = await loadModels(host);
+  const chosenModel = input.model?.trim().slice(0, 200);
+  const list = candidates(config.profiles, input.profileId ?? null, settings.fallbackEnabled).map(
+    (profile) => chosenModel && profile.id === input.profileId ? { ...profile, model: chosenModel } : profile
+  );
+  if (list.length === 0) throw hostError(msg("error.no_model"), "invalid_params");
+  const pickerProfiles = config.profiles.filter((profile) => profile.provider === "copilot" === (list[0]?.provider === "copilot"));
+  const pickerConfig = {
+    ...config,
+    profiles: pickerProfiles.map((profile) => list.find((candidate) => candidate.id === profile.id) ?? profile),
+    selectorProfileId: pickerProfiles.some((profile) => profile.id === config.selectorProfileId) ? config.selectorProfileId : list[0]?.id ?? null
+  };
   const style = isStyle(input.style) ? input.style : settings.defaultStyle;
   const requested = isContextLevel(input.level) ? input.level : settings.contextLevel;
   const level = allowedLevel(requested, settings);
@@ -5575,7 +5615,7 @@ async function enhance(host, input, signal, progress, budgetMs) {
     extraFiles: settings.extraContextFiles,
     excludePatterns: settings.excludePatterns,
     // The picker gets its own share, so the rewrite itself always has time left.
-    pickFiles: (tree, task) => pickFilesWithModel(host, config, settings, tree, task, signal, Math.min(RUN_LIMITS.pickerMs, (left() ?? Infinity) / 2)),
+    pickFiles: (tree, task) => pickFilesWithModel(host, pickerConfig, settings, tree, task, signal, Math.min(RUN_LIMITS.pickerMs, (left() ?? Infinity) / 2)),
     ...privacy,
     onStep: step,
     signal,
@@ -5604,10 +5644,6 @@ async function enhance(host, input, signal, progress, budgetMs) {
   const user = [buildUserMessage(prompt, gathered.items), imagesBlock(images), otherFiles.length > 0 ? `<attached_files>
 ${otherFiles.map((path, index) => `${index + 1}. ${path}`).join("\n")}
 </attached_files>` : ""].filter(Boolean).join("\n\n");
-  const chosenModel = input.model?.trim().slice(0, 200);
-  const list = candidates(config.profiles, input.profileId ?? null, settings.fallbackEnabled).map(
-    (profile) => chosenModel && profile.id === input.profileId ? { ...profile, model: chosenModel } : profile
-  );
   let tried = "";
   try {
     const result = await runChain(
@@ -5985,6 +6021,7 @@ function registerModelHandlers(host) {
     const id2 = existing >= 0 ? config.profiles[existing].id : newProfileId(input.name || input.preset);
     const profile = normalizeProfile({ ...input, id: id2 });
     if (!profile) throw hostError(msg("error.invalid_profile"), "invalid_params");
+    if (profile.provider === "copilot" && input.apiKey?.trim()) throw hostError(msg("error.invalid_profile"), "invalid_params");
     if (input.apiKey?.trim()) {
       try {
         await host.secrets.set(secretName(id2), input.apiKey.trim());
@@ -6024,7 +6061,7 @@ function registerModelHandlers(host) {
     const config = await editableModels(host);
     const valid = (id2) => id2 && config.profiles.some((profile) => profile.id === id2) ? id2 : null;
     const hook = valid(hookProfileId);
-    config.hookProfileId = hook && config.profiles.find((profile) => profile.id === hook)?.provider !== "cli" ? hook : null;
+    config.hookProfileId = hook && ["openai", "anthropic"].includes(config.profiles.find((profile) => profile.id === hook)?.provider ?? "") ? hook : null;
     config.selectorProfileId = valid(selectorProfileId);
     await saveModels(host, config);
     return modelsView(host);
@@ -6055,7 +6092,15 @@ function registerModelHandlers(host) {
     const preset = presetById(input.preset);
     const config = await loadModels(host);
     const profile = input.profileId ? config.profiles.find((entry) => entry.id === input.profileId) : void 0;
-    const provider = profile?.provider ?? (input.provider === "anthropic" ? "anthropic" : preset.provider);
+    const provider = preset.id === "custom" ? (input.provider ?? profile?.provider) === "anthropic" ? "anthropic" : "openai" : preset.provider;
+    if (provider === "copilot") {
+      if (!(await readSettings(host)).privacy.allowOnlineModelLists) return { models: [], source: "GitHub Copilot", fetchedAt: Date.now(), error: english(msg("error.lists_off")), errorText: msg("error.lists_off") };
+      try {
+        return await host.host.call("copilot.catalog", {});
+      } catch (error) {
+        return { models: [], source: "GitHub Copilot", fetchedAt: Date.now(), error: english(messageOf(error)), errorText: messageOf(error) };
+      }
+    }
     const baseUrl = (input.baseUrl ?? profile?.baseUrl ?? "").trim() || preset.baseUrl;
     const command = (input.command ?? profile?.command ?? "").trim();
     const cliKey = `catalog:v3:${preset.id}`;
@@ -6234,9 +6279,9 @@ ${append}` });
         agent: settings.adaptToAgent ? event.agent : null,
         rules
       });
-      const list = candidates(config.profiles, config.hookProfileId, settings.fallbackEnabled).filter(
-        (profile) => profile.enabled && profile.provider !== "cli"
-      );
+      const apiProfiles = config.profiles.filter((profile) => profile.enabled && ["openai", "anthropic"].includes(profile.provider));
+      const hookProfileId = apiProfiles.some((profile) => profile.id === config.hookProfileId) ? config.hookProfileId : null;
+      const list = candidates(apiProfiles, hookProfileId, settings.fallbackEnabled);
       if (list.length === 0) {
         host.log("auto-enhance skipped: no enabled API model (subscription CLIs are too slow for the hook)");
         noteHook(host, { outcome: "skipped", agent: event.agent, reason: msg("hook.no_model") });
@@ -6819,7 +6864,7 @@ import { createHash } from "node:crypto";
 var sentKey = (sessionId, text) => `sent:${createHash("sha256").update(sessionId).update("\0").update(text).digest("hex")}`;
 
 // src/copilot/services.ts
-function createServices(session, directory = process.env.ENHANCE_PROMPT_DATA_DIR || join6(process.env.LOCALAPPDATA || join6(homedir3(), ".local", "share"), "copilot-enhance-prompt")) {
+function createServices(session, directory = process.env.ENHANCE_PROMPT_DATA_DIR || join6(process.env.LOCALAPPDATA || join6(homedir3(), ".local", "share"), "copilot-enhance-prompt"), copilot) {
   const data = persistentStore(join6(directory, "data"));
   const prefs = persistentStore(join6(directory, "preferences"));
   const secrets = protectedSecrets(persistentStore(join6(directory, "credentials")));
@@ -6865,8 +6910,8 @@ function createServices(session, directory = process.env.ENHANCE_PROMPT_DATA_DIR
     transaction: data.transaction
   };
   const host = {
-    has: (name) => name === "secrets.protection" || adapter.has(name),
-    call: async (name, input, options) => name === "secrets.protection" ? { status: secrets.available ? "os-keyring" : "unavailable", backend: "DPAPI" } : adapter.call(name, input, options)
+    has: (name) => Boolean(copilot) && ["copilot.catalog", "copilot.rewrite"].includes(name) || name === "secrets.protection" || adapter.has(name),
+    call: async (name, input, options) => name === "copilot.catalog" && copilot ? await copilot.catalog() : name === "copilot.rewrite" && copilot ? { text: await copilot.rewrite(input, options?.signal) } : name === "secrets.protection" ? { status: secrets.available ? "os-keyring" : "unavailable", backend: "DPAPI" } : adapter.call(name, input, options)
   };
   return { storage, settings, secrets, host, adapter, directory, data };
 }

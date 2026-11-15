@@ -1,5 +1,15 @@
 # Changes
 
+## [0.2.0] - 2026-11-14
+
+### Added
+- GitHub Copilot model preset with a live account-specific catalog and background rewriting through the desktop's existing SDK/runtime. No npm installation, separate runtime download, or API key for users.
+- Disposable helpers with account/model verification, no tools or ambient project discovery, cancellation and temporary-state cleanup. Copilot fallback and Max file selection stay within Copilot.
+
+### Changed
+- New model forms start with GitHub Copilot. Existing profiles are preserved. API and subscription CLI providers remain explicit alternatives.
+- Document installation, Copilot billing, sign-in and experimental runtime compatibility limits. Copilot helpers are excluded from the two-second chat auto-enhance hook.
+
 ## [0.1.8] - 2026-11-14
 
 ### Changed

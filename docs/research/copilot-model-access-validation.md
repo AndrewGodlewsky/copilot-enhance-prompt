@@ -1,5 +1,7 @@
 # Copilot background rewrite validation
 
+**Implementation update, v0.2.0:** the desktop-managed Copilot provider is now implemented. See [the current architecture and limits](../copilot-background-rewriting.md). `scripts/e2e-copilot-provider.mjs` exercises the production helper against a loopback fixture, including model choice, isolation, cancellation and cleanup. A separate read-only disposable-extension probe exercised the production options, sanitized environment and host-runtime discovery with the existing account; both sessions matched and reached the final send boundary. The probe intercepted `sendAndWait`, so it made no paid inference call. `enableManagedSettings` and `enforceManagedModelDefaults` were enabled. Desktop visual behavior and an actual account-backed rewrite remain user checks. The original investigation below explains why this implementation was chosen.
+
 Validated 2026-11-14 with the installed desktop SDK and runtime `1.0.106-8.unstable.r43566476370.g869eef3`, initially against plugin **0.1.7**. An independent icon update advanced the plugin to **0.1.8** before these findings were merged. This work validates integration choices; it does not change the shipped rewrite providers or bump the plugin version.
 
 ## Decision

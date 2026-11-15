@@ -28,6 +28,7 @@ export const megabytes = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1
  * run with no tools, a custom CLI), since sending pictures to a model that cannot read them fails.
  */
 export function imageSupport(profile: Pick<ModelProfile, 'provider' | 'preset'>): 'data' | 'file' | 'none' {
+  if (profile.provider === 'copilot') return 'data'
   if (profile.provider === 'anthropic') return 'data'
   if (profile.provider === 'openai') return ['openai', 'openrouter', 'gemini'].includes(profile.preset) ? 'data' : 'none'
   return profile.preset === 'codex' ? 'file' : 'none'

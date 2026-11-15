@@ -9,9 +9,10 @@ import { protectedSecrets } from './secrets.ts'
 import { sessionAdapter, type CopilotSession } from './session.ts'
 import { UNSUPPORTED_SETTINGS } from '../capabilities.ts'
 import { sentKey } from './sent.ts'
+import type { createCopilotModels } from './models.ts'
 
 // These services have no equivalent on the current canvas SDK. Do not silently emulate them.
-export function createServices(session: CopilotSession, directory = process.env.ENHANCE_PROMPT_DATA_DIR || join(process.env.LOCALAPPDATA || join(homedir(), '.local', 'share'), 'copilot-enhance-prompt')) {
+export function createServices(session: CopilotSession, directory = process.env.ENHANCE_PROMPT_DATA_DIR || join(process.env.LOCALAPPDATA || join(homedir(), '.local', 'share'), 'copilot-enhance-prompt'), copilot?: ReturnType<typeof createCopilotModels>) {
   const data = persistentStore(join(directory, 'data'))
   const prefs = persistentStore(join(directory, 'preferences'))
   const secrets = protectedSecrets(persistentStore(join(directory, 'credentials')))
@@ -49,8 +50,10 @@ export function createServices(session: CopilotSession, directory = process.env.
     transaction: data.transaction
   }
   const host: EnhanceWorker['host'] = {
-    has: name => name === 'secrets.protection' || adapter.has(name),
-    call: async (name, input, options) => name === 'secrets.protection'
+    has: name => (Boolean(copilot) && ['copilot.catalog', 'copilot.rewrite'].includes(name)) || name === 'secrets.protection' || adapter.has(name),
+    call: async (name, input, options) => name === 'copilot.catalog' && copilot ? await copilot.catalog() as never
+      : name === 'copilot.rewrite' && copilot ? { text: await copilot.rewrite(input as import('./models.ts').CopilotRewrite, options?.signal) } as never
+      : name === 'secrets.protection'
       ? { status: secrets.available ? 'os-keyring' : 'unavailable', backend: 'DPAPI' } as never
       : adapter.call(name, input, options)
   }

@@ -5,6 +5,8 @@ export type { JsonValue } from './runtime.ts'
 export type WorkspaceInfo = { id: string; name: string; project?: string | null; path: string; branch: string | null; hostId: string | null; kind?: string }
 export type AgentInfo = { terminalId: string; title: string | null; agent: string | null; state: string; workspaceId?: string; stateStartedAt: number }
 export type PlatformOperations = {
+  'copilot.catalog': { input: {}; output: import('./catalog.ts').Catalog }
+  'copilot.rewrite': { input: import('./copilot/models.ts').CopilotRewrite; output: { text: string } }
   'workspace.readContext': { input: {}; output: { displayName: string; branch: string; terminals: { id: string; title?: string }[]; workspaceId?: string } }
   'workspace.list': { input: {}; output: { workspaces: WorkspaceInfo[]; truncated?: boolean } }
   'agents.list': { input: {}; output: { agents: AgentInfo[] } }

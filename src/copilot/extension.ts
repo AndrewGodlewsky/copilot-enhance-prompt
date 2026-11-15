@@ -3,8 +3,9 @@ import activate, { cancelPanelRuns } from '../worker.ts'
 import { createWorkerHost } from '../worker-host.ts'
 import { createServices } from './services.ts'
 import { createCanvasServer } from './server.ts'
+import { createCopilotModels } from './models.ts'
 
-// Supplied by the desktop extension host. Never bundle or start a second Copilot client.
+// Supplied by the desktop host. The optional rewrite helper reuses this host's SDK and runtime.
 const SDK = '@github/copilot-sdk/extension'
 const { joinSession, createCanvas } = await import(SDK)
 let ready!: () => void
@@ -31,7 +32,8 @@ const canvas = createCanvas({
 })
 
 const session = await joinSession({ canvases: [canvas] })
-services = createServices(session)
+const copilot = createCopilotModels(session)
+services = createServices(session, undefined, copilot)
 process.stderr.write('[Enhance Prompt] Session connected.\n')
 worker = createWorkerHost(services, message => process.stderr.write(`[Enhance Prompt] ${message}\n`))
 activate(worker.api)
@@ -44,6 +46,7 @@ async function stop() {
   if (stopping) return
   stopping = true
   cancelPanelRuns()
+  copilot.close()
   await server.close()
   await worker.deactivate()
   await session.disconnect().catch(() => {})

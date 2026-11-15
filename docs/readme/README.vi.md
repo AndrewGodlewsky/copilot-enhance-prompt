@@ -1,5 +1,7 @@
 # Enhance Prompt cho GitHub Copilot
 
+**Mới trong 0.2.0:** trong Models, chọn cấu hình **GitHub Copilot** rồi chọn mô hình từ danh sách trực tiếp. Plugin viết lại ở chế độ nền bằng SDK và môi trường chạy có sẵn của ứng dụng, không cần npm, tải riêng hay khóa API. Mô hình Claude trong cấu hình này dùng tài khoản Copilot, không dùng Claude Code. Các cấu hình cũ được giữ nguyên; chọn cấu hình Copilot trong Enhance để sử dụng. [Chi tiết và giới hạn tương thích](../copilot-background-rewriting.md).
+
 Viết lại yêu cầu thành prompt rõ ràng, dùng tệp, luật và thay đổi Git của dự án. Xem lại kết quả trong canvas rồi gửi vào phiên Copilot được kết nối.
 
 Giữ lại trình soạn prompt, chuỗi model và dự phòng, luật, cấu trúc, lịch sử, tệp đính kèm và xem trước ngữ cảnh. Trong **Models**, thêm model API hoặc CLI có đăng ký. Plugin không dùng gói Copilot để trả phí cho model bên ngoài.

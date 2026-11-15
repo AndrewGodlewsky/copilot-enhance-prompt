@@ -1,5 +1,7 @@
 # GitHub Copilot 的 Enhance Prompt
 
+**0.2.0 新增：** 在 Models 中选择 **GitHub Copilot** 预设，再从实时列表选择模型。插件使用桌面应用现有的 SDK 和运行时在后台改写，无需 npm、单独下载或 API 密钥。此预设中的 Claude 模型使用 Copilot 账户，而非 Claude Code。已有配置保持不变；在 Enhance 中选择 Copilot 配置即可使用。[详细说明和兼容性限制](../copilot-background-rewriting.md)。
+
 结合项目文件、规则和 Git 变更，将请求改写为清晰的提示词。在原生画布中审阅结果，再发送到已连接的 Copilot 会话。
 
 保留编辑器、模型链和回退、规则、结构、历史、附件和上下文预览。在 **Models** 中添加 API 模型或订阅 CLI。外部模型的费用不会由 Copilot 订阅承担。

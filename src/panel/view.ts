@@ -59,7 +59,8 @@ export const KEY_LABEL: Record<ProfileView['keySource'], string> = {
   env: 'key from env',
   none: 'no key',
   'not-needed': 'local',
-  subscription: 'subscription'
+  subscription: 'subscription',
+  copilot: 'GitHub Copilot'
 }
 
 /** The Max tokens offered for a model; one saved with another value (an older version, a hand-edited profile) is offered too. */
@@ -87,7 +88,7 @@ export function modelWarning(): 'no-model' | 'no-key' | null {
 
 /** The models the auto-enhance hook can use: it has 2 s, so enabled API models only (a subscription CLI starts too slowly). */
 export function hookModels(): ProfileView[] {
-  return (read(models)?.profiles ?? []).filter((profile) => profile.enabled && profile.provider !== 'cli')
+  return (read(models)?.profiles ?? []).filter((profile) => profile.enabled && ['openai', 'anthropic'].includes(profile.provider))
 }
 
 /** The hook's model as its menu shows it: the saved one while it can still answer in time, else "Same as the chain". */
@@ -424,8 +425,8 @@ export const PRIVACY_ROWS: SwitchRow<PrivacyKey>[] = [
     key: 'allowOnlineModelLists',
     group: 'keeps',
     label: 'Fetch model lists online',
-    hint: "GET /models from your API providers and the public Claude Code settings schema, to keep model menus current. CLI lists are always local.",
-    risk: 'Network requests go to your API providers (with your key) and to schemastore.org. No prompt and nothing of your project is in them.',
+    hint: 'Refresh API and Copilot model lists and the public Claude Code schema. Copilot rewriting needs this enabled to verify model access.',
+    risk: 'Model-list requests use the provider account. List refreshes send no prompt or project context.',
     when: 'On to see new models without updating the plugin. Off for no network traffic besides the model calls.'
   }
 ]
