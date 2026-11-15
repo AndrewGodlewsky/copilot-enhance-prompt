@@ -1,5 +1,7 @@
 # GitHub Copilot 的 Enhance Prompt
 
+**0.2.4 新增：** 在本地保留 Copilot 用量记录，不含提示词或回复。将 Usage Insights 更新至 **0.1.64**，重启 Copilot，运行一次增强，再刷新 Usage Insights。独立会话将显示在 **Enhanced Prompt** 项目下。缺失费用不会显示为免费；已删除的旧记录无法恢复。[保存位置与限制](../copilot-background-rewriting.md#usage-visibility)。
+
 **0.2.0 新增：** 在 Models 中选择 **GitHub Copilot** 预设，再从实时列表选择模型。插件使用桌面应用现有的 SDK 和运行时在后台改写，无需 npm、单独下载或 API 密钥。此预设中的 Claude 模型使用 Copilot 账户，而非 Claude Code。已有配置保持不变；在 Enhance 中选择 Copilot 配置即可使用。[详细说明和兼容性限制](../copilot-background-rewriting.md)。
 
 结合项目文件、规则和 Git 变更，将请求改写为清晰的提示词。在原生画布中审阅结果，再发送到已连接的 Copilot 会话。

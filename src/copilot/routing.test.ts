@@ -5,9 +5,20 @@ import { normalizeProfile } from '../presets.ts'
 import { mkdtemp, writeFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { LlmError } from '../llm.ts'
+import { msg } from '../messages.ts'
 
 const copilot = normalizeProfile({ id: 'copilot', preset: 'copilot', model: 'model-a' })!
 const external = normalizeProfile({ id: 'external', preset: 'ollama', model: 'other' })!
+
+test('an accounting failure cannot retry a potentially charged rewrite on a fallback model', async () => {
+  const host = mockHost({ results: { 'copilot.rewrite': () => { throw new LlmError(msg('error.copilot_usage'), 'action_failed') } } })
+  const worker = await mountWorker(workerModule, { host })
+  try {
+    await assert.rejects(runChain(worker.api, [copilot, { ...copilot, id: 'backup' }], 'Rewrite', 'Draft', { timeoutMs: 1000, fallback: true, fallbackOn: 'any' }))
+    assert.equal(host.callsOf('copilot.rewrite').length, 1)
+  } finally { await worker.deactivate() }
+})
 
 test('Copilot profiles cannot carry executable/endpoint overrides or use provider keys', async () => {
   const profile = normalizeProfile({ ...copilot, provider: 'openai', baseUrl: 'https://evil', command: 'evil', args: '--evil' })!

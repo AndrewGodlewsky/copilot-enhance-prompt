@@ -236,9 +236,10 @@ export async function runChain(
       attempts.push({ profileId: profile.id, name: profile.name, model, ok: true, ms: Date.now() - attemptStart })
       return { text, profile, attempts }
     } catch (caught) {
+      const accountingFailed = messageOf(caught).code === 'error.copilot_usage'
       // Stopped by the limit above, not by the person: say which model, and how long it had.
       const error =
-        ranOut && !options.signal?.aborted ? new LlmError(msg('error.model_timeout', { model: model || profile.name, seconds: Math.max(1, Math.round(limit / 1000)) }), 'timeout') : caught
+        ranOut && !options.signal?.aborted && !accountingFailed ? new LlmError(msg('error.model_timeout', { model: model || profile.name, seconds: Math.max(1, Math.round(limit / 1000)) }), 'timeout') : caught
       lastError = error
       attempts.push({
         profileId: profile.id,
@@ -249,6 +250,8 @@ export async function runChain(
         errorText: messageOf(error),
         ms: Date.now() - attemptStart
       })
+      // A charged request may already have completed. Keep the recording failure visible.
+      if (accountingFailed) throw new ChainError(messageOf(error), 'action_failed', attempts)
       if (options.signal?.aborted) {
         break
       }

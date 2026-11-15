@@ -9,7 +9,7 @@ const OPERATIONS = new Set([
   'history.remove', 'history.clear', 'history.restore', 'consents.get', 'consent.set', 'agent.launch', 'editor.open',
   'targets.list', 'ui.locale', 'hook.last', 'rules.get', 'rules.save', 'data.summary', 'data.clear',
   'copilot.refresh', 'copilot.catalog', 'copilot.runtime', 'copilot.start', 'copilot.session', 'copilot.access', 'copilot.workspace',
-  'copilot.tools', 'copilot.images', 'copilot.account', 'copilot.generate', 'copilot.cleanup'
+  'copilot.tools', 'copilot.images', 'copilot.account', 'copilot.generate', 'copilot.usage', 'copilot.cleanup'
 ])
 const CODES = new Set(['aborted', 'cancelled', 'timeout', 'unavailable', 'invalid_params', 'action_failed', 'rate_limited',
   'disconnected', 'request_failed', 'unauthorized', 'forbidden', 'network', 'AbortError', 'TimeoutError', 'NotAllowedError',

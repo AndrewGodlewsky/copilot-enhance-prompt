@@ -1,5 +1,12 @@
 # Thay đổi
 
+## [0.2.4] - 2026-11-14
+
+### Bổ sung
+- Lưu lâu dài số token và tín dụng AI do Copilot báo cáo trong nguồn kế toán cục bộ. Usage Insights 0.1.64 tự động phát hiện và nhóm các phiên nền riêng biệt trong dự án **Enhanced Prompt**, gồm kiểm tra mô hình và chọn tệp ở mức Max.
+- Giữ mức sử dụng đã báo cáo khi lỗi hoặc hủy. Lỗi lưu được hiển thị trong Xem nhật ký, dừng dự phòng mô hình và giữ tệp phiên hỗ trợ để khôi phục. Không xuất prompt, câu trả lời, thông tin xác thực hay địa chỉ dịch vụ.
+- Hướng dẫn cập nhật cả hai plugin, phân biệt phí thiếu hoặc một phần và giải thích rằng không thể khôi phục biên nhận cũ đã xóa. Kiểm chứng bằng mô hình cục bộ và trình đọc Usage Insights thật với dữ liệu giả lập.
+
 ## [0.2.3] - 2026-11-14
 
 ### Sửa lỗi

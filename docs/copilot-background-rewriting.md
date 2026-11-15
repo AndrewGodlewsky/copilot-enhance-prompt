@@ -11,6 +11,8 @@ sequenceDiagram
     participant Host as Attached Copilot session
     participant Helper as Disposable Copilot helper
     participant API as GitHub Copilot model service
+    participant Usage as Local accounting records
+    participant Insights as Usage Insights
     Panel->>Worker: Request, selected Copilot model, privacy choices
     Worker->>Worker: Build rewrite instructions and permitted context
     Worker->>Helper: Start with desktop SDK/runtime in empty directory
@@ -24,7 +26,11 @@ sequenceDiagram
         API-->>Helper: Rewritten text
         Helper-->>Worker: Rewritten text
     end
-    Worker->>Helper: Stop owned process and remove temporary home
+    Worker->>Helper: Stop owned process
+    Worker->>Usage: Save filtered usage events and reconcile durable receipts
+    Note over Worker,Usage: Deduplicate by accounting ID; exclude prompts and responses
+    Usage-->>Insights: Enhanced Prompt project, separate helper sessions
+    Worker->>Worker: Remove temporary home only after accounting is saved
     Worker-->>Panel: Result for review, or failure explanation
     opt User sends a successful reviewed result
         Panel->>Host: Send only after normal send checks
@@ -39,9 +45,17 @@ Validation on this machine found the same account via an existing GitHub CLI log
 
 ## Usage visibility
 
-Background Copilot rewrites count toward the account's Copilot usage, but v0.2.3 does not preserve their local token or credit receipts. Each helper uses a separate temporary Copilot home, outside the homes normally scanned by Usage Insights, and deletes it after completion. The runtime can write usage receipts there even with shared session storage and session telemetry disabled. Enhance Prompt currently returns only the rewritten text; its history and support logs do not retain token counts or credit charges.
+Enhance Prompt **0.2.4** retains each helper's reported usage in a durable local source. **Usage Insights 0.1.64** automatically discovers it and groups the sessions in the **Enhanced Prompt** project. This label is a Usage Insights grouping, not a new project or chat in the desktop application. Each helper gets a unique session with a timestamped name. Max's file selector, each fallback attempt and the Models tab's Test action are separate helpers, so one enhancement can produce multiple sessions.
 
-Usage Insights reads local `session.usage_record` receipts and uses `session-store.db` as a fallback. It does not obtain account-wide billing records from GitHub. Refreshing that dashboard cannot recover receipts already deleted with a helper. This is a local accounting gap, not evidence of free inference. Preserving accounting without retaining helper transcripts needs an additional integration; it is not implemented in this version. See the [source comparison and fixture validation](research/copilot-sdk-usage-records.md).
+Update both plugins in Copilot's **Customize → Installed → Update**, restart the desktop and reopen their canvases. Run an enhancement with a GitHub Copilot model, then refresh Usage Insights and choose a date range containing the run. If you disabled its source in Usage Insights settings, enable it again. External API and subscription CLI profiles are not included in this Copilot ledger.
+
+The source lives at `%LOCALAPPDATA%/copilot-enhance-prompt/usage` on Windows, or `~/.local/share/copilot-enhance-prompt/usage` when `LOCALAPPDATA` is absent. `ENHANCE_PROMPT_DATA_DIR` overrides the plugin data directory; the source is its `usage` child. Usage Insights honors the same override. If the two extensions receive different environment values, add that usage folder as an extra Copilot home in Usage Insights settings.
+
+The plugin prepares a per-session journal before inference. It saves selected fields from `assistant.usage`, then checks the stopped helper's durable `session.usage_record` receipts through the same allowlist before removing temporary files. Shared accounting IDs prevent live and durable copies from counting twice. Retained fields include model, timestamp, tokens, reported AI credits, availability and accounting IDs. They exclude prompt text, model responses, files, endpoint URLs and account credentials. It does not export human prompt events, so Usage Insights' human-prompt metrics and prompt previews are unavailable for this source; use its session/request totals instead.
+
+Reported partial or missing charges stay partial or unavailable, not free. Failed or cancelled requests retain any usage reported before shutdown; a crash before the runtime reports accounting can still leave gaps. A storage or receipt-reading failure is shown as `error.copilot_usage` in Show Logs, stops model fallback and keeps remaining temporary helper files for recovery. Those recovery files can contain the helper transcript. The permanent usage source has no automatic expiration and is independent of Save history and the history/data-clearing controls. To remove it deliberately, close Enhance Prompt and delete only its `usage` folder; this does not alter GitHub billing.
+
+Usage Insights reads these local records, not account-wide billing records from GitHub. Receipts deleted by older Enhance Prompt versions cannot be recovered. The installed-runtime fixture proves retention with a local external model, and a synthetic Copilot fixture verifies exact totals through the real Usage Insights reader. Real account charges and any billing delay still need user validation. See the [original investigation and current validation](research/copilot-sdk-usage-records.md).
 
 ## Security and lifecycle
 
@@ -49,7 +63,7 @@ Usage Insights reads local `session.usage_record` receipts and uses `session-sto
 - The helper uses stdio, an empty temporary workspace and a separate temporary Copilot home. Its inherited environment is restricted to OS, existing GitHub authentication and normal proxy/certificate settings. Code-injection variables, endpoint overrides, host connection variables and ambient tracing settings are excluded.
 - `mode: 'empty'` plus explicit session options disable tools, extension/canvas discovery, plugins, MCP servers, skills, hooks, instruction/config discovery, shared session storage, memory, embeddings on disk and session telemetry. Permission requests are denied. Managed policy fetching and model enforcement are enabled. No user consent is inferred from the model.
 - The helper cannot read project files as a tool. Explicit image bytes already validated by the plugin are passed as blob attachments, and the selected model must report image support. Original attachment paths remain in the returned prompt for the destination agent.
-- Cancel, closing the canvas and extension shutdown abort owned work. A successful shutdown removes the owned temporary home/workspace. If the app crashes or shutdown fails, temporary session data may remain for OS cleanup. No existing session is stopped or deleted.
+- Cancel, closing the canvas and extension shutdown abort owned work. A successful shutdown saves accounting and removes the owned temporary home/workspace. If the app crashes, shutdown fails or accounting cannot be saved, temporary session data may remain. No existing session is stopped or deleted.
 - SDK errors are replaced with plugin messages instead of exposing raw errors that might contain prompt text or credentials. No paid calls run in automated tests.
 
 This is a constrained helper, not an OS security sandbox. It relies on the installed Copilot SDK/runtime honoring their documented options. Privacy switches and selective secret masking still apply to context gathered by the plugin; they do not sanitize everything a user types or attaches.

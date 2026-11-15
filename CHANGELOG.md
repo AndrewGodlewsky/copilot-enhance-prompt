@@ -1,5 +1,12 @@
 # Changes
 
+## [0.2.4] - 2026-11-14
+
+### Added
+- Keep reported Copilot tokens and AI credits in a permanent, local accounting-only source. Usage Insights 0.1.64 discovers it automatically and groups separate background sessions under **Enhanced Prompt**, including model tests and Max file selection.
+- Preserve reported usage on failure or cancellation. Recording failures appear in Show Logs and stop model fallback; remaining helper files are kept for recovery. Prompt text, responses, credentials and endpoints are not exported.
+- Document updating both plugins, partial/missing charges, retained records and the limit that already-deleted historical receipts cannot be recovered. Verify the installed SDK with a local model and the actual Usage Insights reader with synthetic accounting.
+
 ## [0.2.3] - 2026-11-14
 
 ### Fixed

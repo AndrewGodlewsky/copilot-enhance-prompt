@@ -1,11 +1,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { access } from 'node:fs/promises'
+import { access, rm } from 'node:fs/promises'
 import { createCopilotModels, hostRuntime, runtimeEnvironment, type DesktopSdk, type ModelSession } from './models.ts'
 import { createDiagnostics } from '../diagnostics.ts'
 
 function fixture() {
-  const state = { helperLogin: 'person', parentLogin: 'person', host: 'https://github.com', tools: [] as unknown[], selected: 'model-a', provider: 'copilot', policy: 'enabled', currentDirectory: '', sent: [] as unknown[], stopped: 0, config: {} as Record<string, unknown>, options: {} as Record<string, unknown>, hold: false }
+  const state = { helperLogin: 'person', parentLogin: 'person', host: 'https://github.com', tools: [] as unknown[], selected: 'model-a', provider: 'copilot', policy: 'enabled', currentDirectory: '', sent: [] as unknown[], stopped: 0, config: {} as Record<string, unknown>, options: {} as Record<string, unknown>, hold: false,
+    prepared: '', recorded: [] as unknown[], flushed: false, prepareFails: false, flushFails: false, generateFails: false }
+  const emit = (event: unknown) => (state.config.onEvent as ((event: unknown) => void) | undefined)?.(event)
   const model = () => ({ id: 'model-a', name: 'Model A', provider: { kind: state.provider }, policy: { state: state.policy }, capabilities: { supports: { vision: true } } })
   const parent: ModelSession = { rpc: {
     model: { list: async () => ({ list: [model()] }), getCurrent: async () => ({ modelId: 'model-a' }) },
@@ -18,25 +20,77 @@ function fixture() {
     CopilotClient: class {
       constructor(options: Record<string, unknown>) { state.options = options }
       async start() {}
-      async forceStop() { state.stopped++; release?.() }
+      async forceStop() { state.stopped++; emit({ type: 'assistant.usage', data: { inputTokens: 11, outputTokens: 3 } }); release?.() }
       async createSession(config: Record<string, unknown>) {
         state.config = config
         state.currentDirectory = config.workingDirectory as string
-        return { sessionId: 'owned', rpc: {
+        return { sessionId: config.sessionId as string, rpc: {
           ...parent.rpc,
           model: { list: async () => ({ list: [model()] }), getCurrent: async () => ({ modelId: state.selected }) },
           gitHubAuth: { getStatus: async () => ({ isAuthenticated: true, login: state.helperLogin, host: state.host }) },
           metadata: { snapshot: async () => ({ workingDirectory: state.currentDirectory, isRemote: false }) },
           tools: { initializeAndValidate: async () => ({}), getCurrentMetadata: async () => ({ tools: state.tools }) }
         },
-        sendAndWait: async (input: unknown) => { state.sent.push(input); if (state.hold) await new Promise<void>(resolve => { release = resolve }); return { data: { content: 'Rewritten request' } } }
+        sendAndWait: async (input: unknown) => { state.sent.push(input); if (state.hold) await new Promise<void>(resolve => { release = resolve }); if (state.generateFails) throw new Error('PRIVATE provider failure'); return { data: { content: 'Rewritten request' } } }
       }
       }
     }
   }
   const diagnostics = createDiagnostics()
-  return { state, diagnostics, parent, provider: createCopilotModels(parent, async () => ({ sdk, path: process.execPath }), diagnostics) }
+  return { state, diagnostics, parent, provider: createCopilotModels(parent, async () => ({ sdk, path: process.execPath }), diagnostics, async sessionId => {
+    if (state.prepareFails) throw new Error('PRIVATE disk failure')
+    state.prepared = sessionId
+    return { record(event: unknown) { state.recorded.push(event) }, async flush() {
+      assert.equal(state.stopped, 1, 'flush waits for the helper to stop')
+      if (state.flushFails) throw new Error('PRIVATE disk failure')
+      state.flushed = true
+    } }
+  }) }
 }
+
+test('helper usage is prepared before inference and flushed after late shutdown receipts', async () => {
+  const { provider, state } = fixture()
+  await provider.rewrite({ model: 'model-a', system: 'Rewrite', user: 'Draft' })
+  assert.match(state.prepared, /^[0-9a-f-]{36}$/)
+  assert.equal(state.prepared, state.config.sessionId)
+  assert.equal(state.flushed, true)
+  assert.equal(state.recorded.length, 1)
+})
+
+test('a usage storage preparation failure prevents inference and exposes only a safe error', async () => {
+  const { provider, state, diagnostics } = fixture()
+  state.prepareFails = true
+  await assert.rejects(provider.rewrite({ model: 'model-a', system: 'Rewrite', user: 'Draft' }), { text: { code: 'error.copilot_usage' } })
+  assert.equal(state.sent.length, 0)
+  assert.ok(diagnostics.snapshot().entries.some(entry => entry.operation === 'copilot.usage' && entry.code === 'error.copilot_usage'))
+  assert.doesNotMatch(JSON.stringify(diagnostics.snapshot()), /PRIVATE/)
+})
+
+test('generation failure still flushes any reported usage before removing temporary files', async () => {
+  const { provider, state } = fixture()
+  state.generateFails = true
+  await assert.rejects(provider.rewrite({ model: 'model-a', system: 'Rewrite', user: 'Draft' }))
+  assert.equal(state.flushed, true)
+  assert.equal(state.recorded.length, 1)
+  await assert.rejects(access(state.options.baseDirectory as string))
+})
+
+test('a usage flush failure is visible and preserves the helper directory for recovery', async () => {
+  const { provider, state, diagnostics } = fixture()
+  state.flushFails = true
+  try {
+    await assert.rejects(provider.rewrite({ model: 'model-a', system: 'Rewrite', user: 'Draft' }), { text: { code: 'error.copilot_usage' } })
+    await access(state.currentDirectory)
+    assert.ok(diagnostics.snapshot().entries.some(entry => entry.operation === 'copilot.usage' && entry.outcome === 'failed'))
+    assert.doesNotMatch(JSON.stringify(diagnostics.snapshot()), /PRIVATE/)
+  } finally {
+    // The fixture owns this newly created isolated workspace; never remove a caller's path.
+    const { dirname, basename } = await import('node:path')
+    const root = dirname(state.currentDirectory)
+    assert.ok(basename(root).startsWith('enhance-copilot-'))
+    await rm(root, { recursive: true, force: true })
+  }
+})
 
 test('runtime discovery accepts only the running Copilot bootstrap, never PATH or an override', () => {
   const env = { COPILOT_EXTENSION_PARENT_PID: '17', COPILOT_SDK_PATH: '/app/sdk', COPILOT_CLI_PATH: '/project/malicious' }
@@ -102,6 +156,8 @@ test('cancellation stops only the helper and cannot return a late result', async
   controller.abort()
   await assert.rejects(result)
   assert.ok(state.stopped >= 1)
+  assert.equal(state.flushed, true)
+  assert.equal(state.recorded.length, 1)
   await assert.rejects(access(state.options.baseDirectory as string))
 })
 

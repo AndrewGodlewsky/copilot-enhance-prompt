@@ -49,6 +49,7 @@ export const MESSAGES = {
   'error.copilot_account': 'The background runtime could not verify the same GitHub account as this Copilot session. Check your existing Copilot sign-in. No prompt was sent.',
   'error.copilot_model': 'This model is not available through GitHub Copilot in both sessions. Refresh the model list and choose a Copilot model.',
   'error.copilot_images': 'This Copilot model does not report image support. Choose a model with image support or remove the images.',
+  'error.copilot_usage': 'Copilot usage could not be saved. Check free disk space and plugin data-folder permissions, then open Show Logs. Any remaining helper files have been kept for recovery.',
   'error.send_off': 'Sending to Copilot is off in Settings.',
   'error.session_not_idle': 'Copilot is busy, waiting for your answer, or disconnected. Wait until the session is idle before sending.',
   'error.send_pending': 'A prompt was just sent. Wait for Copilot before sending again.',

@@ -1,5 +1,7 @@
 # Copilot SDK usage records
 
+**Resolved in Enhance Prompt 0.2.4 with Usage Insights 0.1.64.** The investigation below describes the original 0.2.3 behavior. Current usage retention, grouping and limits are documented in [Usage visibility](../copilot-background-rewriting.md#usage-visibility).
+
 Investigated on 2026-11-14 for Enhance Prompt 0.2.3. The installed desktop SDK identifies its runtime as `1.0.106-8.unstable.r43566476370.g869eef3` in `cliVersion.d.ts`. SDK references below are relative to `%LOCALAPPDATA%/Programs/GitHub Copilot/copilot-sdk/`.
 
 **Background rewriting still produces usage information. Enhance Prompt currently returns only the rewritten text and deletes its isolated session storage after stopping the helper.** This is separate from GitHub's account-level accounting. The SDK's official billing FAQ says SDK prompts consume the same usage allowance as Copilot CLI prompts. [Enhance adapter](../../src/copilot/models.ts), [SDK billing FAQ](https://github.com/github/copilot-sdk#how-does-billing-work-for-sdk-usage)
@@ -50,6 +52,8 @@ GitHub documents account consumption under **Copilot settings → Usage**. Indiv
 
 ## Recommendation and remaining limits
 
-Unimplemented: preserve allowlisted per-call tokens, credits, provider/model, accounting IDs, availability status and timestamp in a stable usage-only store. Add explicit Usage Insights reader support, deduplication and an Enhance Prompt origin label. Keep helper isolation. Do not copy entire receipts: they include unrelated metadata, including endpoints. Exclude prompts, responses and credentials.
+Implemented in 0.2.4: preserve allowlisted per-call tokens, credits, provider/model, accounting IDs, availability status and timestamp in a stable usage-only store. Usage Insights 0.1.64 discovers the source and groups it as **Enhanced Prompt**. Helper isolation remains intact. Live events and the stopped helper's durable receipts pass through the same projection and deduplication. Whole receipts are never exported; prompts, responses and credentials are excluded.
+
+Validation: `scripts/e2e-copilot-provider.mjs` exercises the installed runtime against a local model, suppresses one live usage event to verify journal recovery, and checks retention after temporary cleanup. `scripts/e2e-usage-insights.mjs` connects the actual writer to the actual Usage Insights scanner with synthetic Copilot accounting, checking exact token/credit totals, separate sessions, project names, deduplication, missing/partial charges and privacy. Set `USAGE_INSIGHTS_DIR` to that repository's checkout to run the latter. Neither test generates real Copilot charges.
 
 Changing telemetry/storage switches or pointing the dashboard at temporary homes does not solve retention. Deleted past per-call records cannot be reconstructed from rewrite text. Real Copilot charge amounts, billing delay and receipt-format stability remain unverified.

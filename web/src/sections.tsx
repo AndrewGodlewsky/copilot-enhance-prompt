@@ -976,6 +976,7 @@ export function SettingsSection() {
               {read(confirmWipe) ? t('Press again to delete everything') : t('Delete everything')}
             </Button>
           }
+          description={t('Usage records are kept separately for Usage Insights and are not removed by these controls.')}
         />
       </Group>
       <Group title={t('Feedback')}>

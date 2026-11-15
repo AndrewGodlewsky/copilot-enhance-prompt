@@ -2,11 +2,13 @@
 import { mkdtemp, mkdir, realpath, rm } from 'node:fs/promises'
 import { basename, isAbsolute, join, relative } from 'node:path'
 import { tmpdir } from 'node:os'
+import { randomUUID } from 'node:crypto'
 import type { Catalog } from '../catalog.ts'
 import type { ImageType } from '../images.ts'
 import { LlmError } from '../llm.ts'
 import { msg } from '../messages.ts'
 import { diagnosticError, type Diagnostics, type DiscoveryProbe } from '../diagnostics.ts'
+import { createUsageRecorder, reconcileUsageJournal, type UsageRecorder } from './usage.ts'
 
 type Auth = { isAuthenticated: boolean; login?: string; host?: string }
 type Model = { id: string; name?: string; provider?: { kind?: string }; policy?: { state?: string }; capabilities?: { supports?: { vision?: boolean } } }
@@ -16,6 +18,7 @@ export type ModelSession = { rpc: {
   metadata: { snapshot(): Promise<{ workingDirectory: string; isRemote: boolean }> }
 } }
 type HelperSession = ModelSession & {
+  sessionId: string
   rpc: ModelSession['rpc'] & { tools: { initializeAndValidate(): Promise<unknown>; getCurrentMetadata(): Promise<{ tools: unknown[] | null }> } }
   sendAndWait(input: { prompt: string; attachments: { type: 'blob'; data: string; mimeType: string }[] }, timeout: number): Promise<{ data: { content: string } } | undefined>
 }
@@ -25,6 +28,7 @@ export type CopilotRewrite = { model: string; system: string; user: string; imag
 
 const unavailable = () => new LlmError(msg('error.copilot_unavailable'), 'unavailable')
 const cancelled = () => new LlmError(msg('error.cancelled'), 'cancelled')
+const usageFailed = () => new LlmError(msg('error.copilot_usage'), 'action_failed')
 
 export function hostRuntime(executable = process.execPath, argv = process.argv, parentPid = process.ppid, environment = process.env, probe?: DiscoveryProbe): string {
   const checks = {
@@ -83,7 +87,7 @@ function sameAccount(left: Auth, right: Auth): boolean {
 }
 
 // Dependency injection is used only by local fixture tests. Production always calls desktopRuntime.
-export function createCopilotModels(parent: ModelSession, runtime = desktopRuntime, diagnostics?: Diagnostics) {
+export function createCopilotModels(parent: ModelSession, runtime = desktopRuntime, diagnostics?: Diagnostics, usageRecorder = createUsageRecorder) {
   const active = new Set<AbortController>()
   async function catalog(): Promise<Catalog> {
     const started = Date.now()
@@ -131,6 +135,8 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
     let client: Client | undefined
     let directory: string | undefined
     let stop: Promise<boolean> | undefined
+    let usage: UsageRecorder | undefined
+    const sessionId = randomUUID()
     const stopClient = () => { if (client) stop ??= withDeadline(client.forceStop(), 10_000).then(() => true, () => false); return stop }
     controller.signal.addEventListener('abort', () => { void stopClient() }, { once: true })
     const check = () => { if (controller.signal.aborted) throw cancelled() }
@@ -151,8 +157,12 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
       stage('copilot.start')
       await withDeadline(client.start(), 30_000)
       check()
+      stage('copilot.usage')
+      try { usage = await usageRecorder(sessionId) } catch { throw usageFailed() }
+      check()
       stage('copilot.session')
       const session = await withDeadline(client.createSession({
+        sessionId, onEvent: (event: unknown) => usage!.record(event),
         workingDirectory: workspace, configDirectory: join(directory, 'home'), model: input.model,
         systemMessage: { mode: 'replace', content: input.system },
         availableTools: [], onPermissionRequest: () => ({ kind: 'denied-by-rules', rules: [] }),
@@ -164,6 +174,7 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
         infiniteSessions: { enabled: false }, enableManagedSettings: true, enforceManagedModelDefaults: true
       }), 30_000)
       check()
+      if (session.sessionId !== sessionId) throw unavailable()
       stage('copilot.access')
       const [parentModels, helperModels, parentAuth, helperAuth, metadata] = await withDeadline(Promise.all([
         parent.rpc.model.list({ refresh: true }), session.rpc.model.list({ refresh: true }),
@@ -203,6 +214,21 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
       stage('copilot.cleanup')
       const stopped = await stopClient()
       active.delete(controller)
+      if (usage) {
+        stage('copilot.usage')
+        // forceStop can detach live listeners before the last durable receipt is delivered.
+        // Reconcile only this stopped helper's journal, retaining it if accounting cannot be saved.
+        try {
+          if (stopped !== false && directory) await reconcileUsageJournal(join(directory, 'home', 'session-state', sessionId, 'events.jsonl'), usage)
+          await usage.flush()
+        }
+        catch {
+          diagnostics?.record(phase, 'failed', diagnosticError(usageFailed()))
+          throw usageFailed()
+        }
+        diagnostics?.record(phase, 'ok', { ms: Date.now() - phaseStarted })
+        stage('copilot.cleanup')
+      }
       // Do not remove state while a helper might still be using it, or report success after a failed stop.
       if (stopped === false) { diagnostics?.record(phase, 'failed'); throw unavailable() }
       if (directory) {

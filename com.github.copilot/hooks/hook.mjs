@@ -1668,6 +1668,7 @@ var MESSAGES = {
   "error.copilot_account": "The background runtime could not verify the same GitHub account as this Copilot session. Check your existing Copilot sign-in. No prompt was sent.",
   "error.copilot_model": "This model is not available through GitHub Copilot in both sessions. Refresh the model list and choose a Copilot model.",
   "error.copilot_images": "This Copilot model does not report image support. Choose a model with image support or remove the images.",
+  "error.copilot_usage": "Copilot usage could not be saved. Check free disk space and plugin data-folder permissions, then open Show Logs. Any remaining helper files have been kept for recovery.",
   "error.send_off": "Sending to Copilot is off in Settings.",
   "error.session_not_idle": "Copilot is busy, waiting for your answer, or disconnected. Wait until the session is idle before sending.",
   "error.send_pending": "A prompt was just sent. Wait for Copilot before sending again.",
@@ -2817,6 +2818,8 @@ function translate(lang, text, params) {
   return template.replace(/\{(\w+)\}/g, (match, key) => key in params ? String(params[key]) : match);
 }
 var VI = {
+  "Usage records are kept separately for Usage Insights and are not removed by these controls.": "B\u1EA3n ghi m\u1EE9c s\u1EED d\u1EE5ng \u0111\u01B0\u1EE3c l\u01B0u ri\xEAng cho Usage Insights v\xE0 kh\xF4ng b\u1ECB x\xF3a b\u1EDFi c\xE1c thao t\xE1c n\xE0y.",
+  "Copilot usage could not be saved. Check free disk space and plugin data-folder permissions, then open Show Logs. Any remaining helper files have been kept for recovery.": "Kh\xF4ng th\u1EC3 l\u01B0u m\u1EE9c s\u1EED d\u1EE5ng Copilot. Ki\u1EC3m tra dung l\u01B0\u1EE3ng \u0111\u0129a tr\u1ED1ng v\xE0 quy\u1EC1n truy c\u1EADp th\u01B0 m\u1EE5c d\u1EEF li\u1EC7u c\u1EE7a plugin, r\u1ED3i m\u1EDF Xem nh\u1EADt k\xFD. C\xE1c t\u1EC7p c\xF2n l\u1EA1i c\u1EE7a phi\xEAn h\u1ED7 tr\u1EE3 \u0111\xE3 \u0111\u01B0\u1EE3c gi\u1EEF l\u1EA1i \u0111\u1EC3 kh\xF4i ph\u1EE5c.",
   "Copilot model discovery": "Kh\xE1m ph\xE1 m\xF4 h\xECnh Copilot",
   "Refresh the Copilot model list first, then reopen these logs. This section is included when you copy the logs.": "L\xE0m m\u1EDBi danh s\xE1ch m\xF4 h\xECnh Copilot tr\u01B0\u1EDBc, r\u1ED3i m\u1EDF l\u1EA1i nh\u1EADt k\xFD. Ph\u1EA7n n\xE0y \u0111\u01B0\u1EE3c bao g\u1ED3m khi b\u1EA1n sao ch\xE9p nh\u1EADt k\xFD.",
   "The plugin could not verify the desktop runtime. Open Show Logs and share the Copilot model discovery section.": "Plugin kh\xF4ng th\u1EC3 x\xE1c minh m\xF4i tr\u01B0\u1EDDng ch\u1EA1y c\u1EE7a \u1EE9ng d\u1EE5ng. M\u1EDF Xem nh\u1EADt k\xFD v\xE0 chia s\u1EBB ph\u1EA7n Kh\xE1m ph\xE1 m\xF4 h\xECnh Copilot.",
@@ -3334,6 +3337,8 @@ var VI = {
   "Changes the text Copilot receives; the chat still shows your original message. Off by default. Ambiguous prompts are left unchanged.": "Thay \u0111\u1ED5i v\u0103n b\u1EA3n Copilot nh\u1EADn \u0111\u01B0\u1EE3c; cu\u1ED9c tr\xF2 chuy\u1EC7n v\u1EABn hi\u1EC3n th\u1ECB tin nh\u1EAFn g\u1ED1c. M\u1EB7c \u0111\u1ECBnh t\u1EAFt. Gi\u1EEF nguy\xEAn n\u1EBFu kh\xF4ng x\xE1c \u0111\u1ECBnh \u0111\u01B0\u1EE3c ph\u1EA7n c\u1EA7n thay."
 };
 var ZH = {
+  "Usage records are kept separately for Usage Insights and are not removed by these controls.": "\u7528\u91CF\u8BB0\u5F55\u4E3A Usage Insights \u5355\u72EC\u4FDD\u7559\uFF0C\u4E0D\u4F1A\u88AB\u8FD9\u4E9B\u64CD\u4F5C\u5220\u9664\u3002",
+  "Copilot usage could not be saved. Check free disk space and plugin data-folder permissions, then open Show Logs. Any remaining helper files have been kept for recovery.": "\u65E0\u6CD5\u4FDD\u5B58 Copilot \u7528\u91CF\u3002\u8BF7\u68C0\u67E5\u78C1\u76D8\u53EF\u7528\u7A7A\u95F4\u548C\u63D2\u4EF6\u6570\u636E\u6587\u4EF6\u5939\u7684\u6743\u9650\uFF0C\u7136\u540E\u6253\u5F00\u201C\u663E\u793A\u65E5\u5FD7\u201D\u3002\u5269\u4F59\u7684\u8F85\u52A9\u4F1A\u8BDD\u6587\u4EF6\u5DF2\u4FDD\u7559\u4EE5\u4FBF\u6062\u590D\u3002",
   "Copilot model discovery": "Copilot \u6A21\u578B\u53D1\u73B0",
   "Refresh the Copilot model list first, then reopen these logs. This section is included when you copy the logs.": "\u8BF7\u5148\u5237\u65B0 Copilot \u6A21\u578B\u5217\u8868\uFF0C\u518D\u91CD\u65B0\u6253\u5F00\u65E5\u5FD7\u3002\u590D\u5236\u65E5\u5FD7\u65F6\u4F1A\u5305\u542B\u6B64\u90E8\u5206\u3002",
   "The plugin could not verify the desktop runtime. Open Show Logs and share the Copilot model discovery section.": "\u63D2\u4EF6\u65E0\u6CD5\u9A8C\u8BC1\u684C\u9762\u8FD0\u884C\u65F6\u3002\u8BF7\u6253\u5F00\u201C\u663E\u793A\u65E5\u5FD7\u201D\u5E76\u5206\u4EAB\u201CCopilot \u6A21\u578B\u53D1\u73B0\u201D\u90E8\u5206\u3002",
@@ -5155,7 +5160,8 @@ async function runChain(host, list, system, user, options) {
       attempts.push({ profileId: profile.id, name: profile.name, model, ok: true, ms: Date.now() - attemptStart });
       return { text: text2, profile, attempts };
     } catch (caught) {
-      const error = ranOut && !options.signal?.aborted ? new LlmError(msg("error.model_timeout", { model: model || profile.name, seconds: Math.max(1, Math.round(limit / 1e3)) }), "timeout") : caught;
+      const accountingFailed = messageOf(caught).code === "error.copilot_usage";
+      const error = ranOut && !options.signal?.aborted && !accountingFailed ? new LlmError(msg("error.model_timeout", { model: model || profile.name, seconds: Math.max(1, Math.round(limit / 1e3)) }), "timeout") : caught;
       lastError = error;
       attempts.push({
         profileId: profile.id,
@@ -5166,6 +5172,7 @@ async function runChain(host, list, system, user, options) {
         errorText: messageOf(error),
         ms: Date.now() - attemptStart
       });
+      if (accountingFailed) throw new ChainError(messageOf(error), "action_failed", attempts);
       if (options.signal?.aborted) {
         break;
       }
@@ -6506,7 +6513,7 @@ function activate(host) {
 import { EventEmitter } from "node:events";
 
 // src/version.ts
-var VERSION = "0.2.3";
+var VERSION = "0.2.4";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([
@@ -6554,6 +6561,7 @@ var OPERATIONS = /* @__PURE__ */ new Set([
   "copilot.images",
   "copilot.account",
   "copilot.generate",
+  "copilot.usage",
   "copilot.cleanup"
 ]);
 var CODES = /* @__PURE__ */ new Set([

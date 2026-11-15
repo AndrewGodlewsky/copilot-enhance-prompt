@@ -98,7 +98,7 @@ var require_polyfills = __commonJS({
       }
       if (platform === "win32") {
         fs.rename = typeof fs.rename !== "function" ? fs.rename : (function(fs$rename) {
-          function rename2(from, to, cb) {
+          function rename3(from, to, cb) {
             var start = Date.now();
             var backoff = 0;
             fs$rename(from, to, function CB(er) {
@@ -118,8 +118,8 @@ var require_polyfills = __commonJS({
               if (cb) cb(er);
             });
           }
-          if (Object.setPrototypeOf) Object.setPrototypeOf(rename2, fs$rename);
-          return rename2;
+          if (Object.setPrototypeOf) Object.setPrototypeOf(rename3, fs$rename);
+          return rename3;
         })(fs.rename);
       }
       fs.read = typeof fs.read !== "function" ? fs.read : (function(fs$read) {
@@ -520,7 +520,7 @@ var require_graceful_fs = __commonJS({
     function patch(fs2) {
       polyfills(fs2);
       fs2.gracefulify = patch;
-      fs2.createReadStream = createReadStream;
+      fs2.createReadStream = createReadStream2;
       fs2.createWriteStream = createWriteStream;
       var fs$readFile = fs2.readFile;
       fs2.readFile = readFile7;
@@ -540,8 +540,8 @@ var require_graceful_fs = __commonJS({
         }
       }
       var fs$writeFile = fs2.writeFile;
-      fs2.writeFile = writeFile2;
-      function writeFile2(path, data, options, cb) {
+      fs2.writeFile = writeFile3;
+      function writeFile3(path, data, options, cb) {
         if (typeof options === "function")
           cb = options, options = null;
         return go$writeFile(path, data, options, cb);
@@ -730,7 +730,7 @@ var require_graceful_fs = __commonJS({
           }
         });
       }
-      function createReadStream(path, options) {
+      function createReadStream2(path, options) {
         return new fs2.ReadStream(path, options);
       }
       function createWriteStream(path, options) {
@@ -927,11 +927,11 @@ var require_retry_operation = __commonJS({
       for (var i = 0; i < this._errors.length; i++) {
         var error = this._errors[i];
         var message = error.message;
-        var count = (counts[message] || 0) + 1;
-        counts[message] = count;
-        if (count >= mainErrorCount) {
+        var count2 = (counts[message] || 0) + 1;
+        counts[message] = count2;
+        if (count2 >= mainErrorCount) {
           mainError = error;
-          mainErrorCount = count;
+          mainErrorCount = count2;
         }
       }
       return mainError;
@@ -1668,6 +1668,7 @@ var MESSAGES = {
   "error.copilot_account": "The background runtime could not verify the same GitHub account as this Copilot session. Check your existing Copilot sign-in. No prompt was sent.",
   "error.copilot_model": "This model is not available through GitHub Copilot in both sessions. Refresh the model list and choose a Copilot model.",
   "error.copilot_images": "This Copilot model does not report image support. Choose a model with image support or remove the images.",
+  "error.copilot_usage": "Copilot usage could not be saved. Check free disk space and plugin data-folder permissions, then open Show Logs. Any remaining helper files have been kept for recovery.",
   "error.send_off": "Sending to Copilot is off in Settings.",
   "error.session_not_idle": "Copilot is busy, waiting for your answer, or disconnected. Wait until the session is idle before sending.",
   "error.send_pending": "A prompt was just sent. Wait for Copilot before sending again.",
@@ -2527,8 +2528,8 @@ function workspaceKey(id2) {
 function workspaceKeys(workspace) {
   return [.../* @__PURE__ */ new Set([workspaceKey(workspace.id), `path:${pathKey(workspace.path)}`])];
 }
-function workspaceTitle(displayName, project) {
-  const name = project?.trim();
+function workspaceTitle(displayName, project2) {
+  const name = project2?.trim();
   return name && name.toLowerCase() !== displayName.trim().toLowerCase() ? `${name}: ${displayName}` : displayName;
 }
 
@@ -2748,7 +2749,7 @@ function treeSummary(files, maxLines = 70) {
       dirs.set(sub, (dirs.get(sub) ?? 0) + 1);
     }
   }
-  const lines = [...dirs.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([dir, count]) => `${dir.split("/").length > 2 ? "  " : ""}${dir} (${count})`);
+  const lines = [...dirs.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([dir, count2]) => `${dir.split("/").length > 2 ? "  " : ""}${dir} (${count2})`);
   const all = [...lines, ...topFiles.sort((a, b) => a.localeCompare(b))];
   return all.length > maxLines ? `${all.slice(0, maxLines).join("\n")}
 \u2026(${all.length - maxLines} more)` : all.join("\n");
@@ -2817,6 +2818,8 @@ function translate(lang, text, params) {
   return template.replace(/\{(\w+)\}/g, (match, key) => key in params ? String(params[key]) : match);
 }
 var VI = {
+  "Usage records are kept separately for Usage Insights and are not removed by these controls.": "B\u1EA3n ghi m\u1EE9c s\u1EED d\u1EE5ng \u0111\u01B0\u1EE3c l\u01B0u ri\xEAng cho Usage Insights v\xE0 kh\xF4ng b\u1ECB x\xF3a b\u1EDFi c\xE1c thao t\xE1c n\xE0y.",
+  "Copilot usage could not be saved. Check free disk space and plugin data-folder permissions, then open Show Logs. Any remaining helper files have been kept for recovery.": "Kh\xF4ng th\u1EC3 l\u01B0u m\u1EE9c s\u1EED d\u1EE5ng Copilot. Ki\u1EC3m tra dung l\u01B0\u1EE3ng \u0111\u0129a tr\u1ED1ng v\xE0 quy\u1EC1n truy c\u1EADp th\u01B0 m\u1EE5c d\u1EEF li\u1EC7u c\u1EE7a plugin, r\u1ED3i m\u1EDF Xem nh\u1EADt k\xFD. C\xE1c t\u1EC7p c\xF2n l\u1EA1i c\u1EE7a phi\xEAn h\u1ED7 tr\u1EE3 \u0111\xE3 \u0111\u01B0\u1EE3c gi\u1EEF l\u1EA1i \u0111\u1EC3 kh\xF4i ph\u1EE5c.",
   "Copilot model discovery": "Kh\xE1m ph\xE1 m\xF4 h\xECnh Copilot",
   "Refresh the Copilot model list first, then reopen these logs. This section is included when you copy the logs.": "L\xE0m m\u1EDBi danh s\xE1ch m\xF4 h\xECnh Copilot tr\u01B0\u1EDBc, r\u1ED3i m\u1EDF l\u1EA1i nh\u1EADt k\xFD. Ph\u1EA7n n\xE0y \u0111\u01B0\u1EE3c bao g\u1ED3m khi b\u1EA1n sao ch\xE9p nh\u1EADt k\xFD.",
   "The plugin could not verify the desktop runtime. Open Show Logs and share the Copilot model discovery section.": "Plugin kh\xF4ng th\u1EC3 x\xE1c minh m\xF4i tr\u01B0\u1EDDng ch\u1EA1y c\u1EE7a \u1EE9ng d\u1EE5ng. M\u1EDF Xem nh\u1EADt k\xFD v\xE0 chia s\u1EBB ph\u1EA7n Kh\xE1m ph\xE1 m\xF4 h\xECnh Copilot.",
@@ -3334,6 +3337,8 @@ var VI = {
   "Changes the text Copilot receives; the chat still shows your original message. Off by default. Ambiguous prompts are left unchanged.": "Thay \u0111\u1ED5i v\u0103n b\u1EA3n Copilot nh\u1EADn \u0111\u01B0\u1EE3c; cu\u1ED9c tr\xF2 chuy\u1EC7n v\u1EABn hi\u1EC3n th\u1ECB tin nh\u1EAFn g\u1ED1c. M\u1EB7c \u0111\u1ECBnh t\u1EAFt. Gi\u1EEF nguy\xEAn n\u1EBFu kh\xF4ng x\xE1c \u0111\u1ECBnh \u0111\u01B0\u1EE3c ph\u1EA7n c\u1EA7n thay."
 };
 var ZH = {
+  "Usage records are kept separately for Usage Insights and are not removed by these controls.": "\u7528\u91CF\u8BB0\u5F55\u4E3A Usage Insights \u5355\u72EC\u4FDD\u7559\uFF0C\u4E0D\u4F1A\u88AB\u8FD9\u4E9B\u64CD\u4F5C\u5220\u9664\u3002",
+  "Copilot usage could not be saved. Check free disk space and plugin data-folder permissions, then open Show Logs. Any remaining helper files have been kept for recovery.": "\u65E0\u6CD5\u4FDD\u5B58 Copilot \u7528\u91CF\u3002\u8BF7\u68C0\u67E5\u78C1\u76D8\u53EF\u7528\u7A7A\u95F4\u548C\u63D2\u4EF6\u6570\u636E\u6587\u4EF6\u5939\u7684\u6743\u9650\uFF0C\u7136\u540E\u6253\u5F00\u201C\u663E\u793A\u65E5\u5FD7\u201D\u3002\u5269\u4F59\u7684\u8F85\u52A9\u4F1A\u8BDD\u6587\u4EF6\u5DF2\u4FDD\u7559\u4EE5\u4FBF\u6062\u590D\u3002",
   "Copilot model discovery": "Copilot \u6A21\u578B\u53D1\u73B0",
   "Refresh the Copilot model list first, then reopen these logs. This section is included when you copy the logs.": "\u8BF7\u5148\u5237\u65B0 Copilot \u6A21\u578B\u5217\u8868\uFF0C\u518D\u91CD\u65B0\u6253\u5F00\u65E5\u5FD7\u3002\u590D\u5236\u65E5\u5FD7\u65F6\u4F1A\u5305\u542B\u6B64\u90E8\u5206\u3002",
   "The plugin could not verify the desktop runtime. Open Show Logs and share the Copilot model discovery section.": "\u63D2\u4EF6\u65E0\u6CD5\u9A8C\u8BC1\u684C\u9762\u8FD0\u884C\u65F6\u3002\u8BF7\u6253\u5F00\u201C\u663E\u793A\u65E5\u5FD7\u201D\u5E76\u5206\u4EAB\u201CCopilot \u6A21\u578B\u53D1\u73B0\u201D\u90E8\u5206\u3002",
@@ -3916,8 +3921,8 @@ function statusLinePaths(line) {
 function changedPaths(statusLines) {
   return statusLines.map((line) => (line.slice(3).split(" -> ").pop() ?? "").replace(/^"|"$/g, "")).filter(Boolean);
 }
-async function gitLog(root, count, signal) {
-  return git(root, ["log", `-n${count}`, "--no-merges", "--pretty=format:%h %s (%cr)"], { signal });
+async function gitLog(root, count2, signal) {
+  return git(root, ["log", `-n${count2}`, "--no-merges", "--pretty=format:%h %s (%cr)"], { signal });
 }
 var MAX_DIFF_EXCLUSIONS = 300;
 function parseNameStatus(out) {
@@ -4112,8 +4117,8 @@ function contentScores(perWord, totalFiles, weights = []) {
     if (df === 0 || df > Math.max(20, totalFiles * 0.05)) return;
     const idf = Math.log((totalFiles + 1) / (df + 1));
     const k = keywordFactor(weights[index] ?? 4);
-    for (const [file, count] of counts) {
-      scores.set(file, (scores.get(file) ?? 0) + k * idf * (1 + Math.log(count)));
+    for (const [file, count2] of counts) {
+      scores.set(file, (scores.get(file) ?? 0) + k * idf * (1 + Math.log(count2)));
     }
   });
   return scores;
@@ -4276,12 +4281,12 @@ function forgetTerminal(host, terminalId) {
   if (known.delete(terminalId)) save(host);
 }
 function workspacesOfTerminals(terminalIds) {
-  const count = /* @__PURE__ */ new Map();
+  const count2 = /* @__PURE__ */ new Map();
   for (const id2 of terminalIds) {
     const workspace = known.get(id2);
-    if (workspace) count.set(workspace, (count.get(workspace) ?? 0) + 1);
+    if (workspace) count2.set(workspace, (count2.get(workspace) ?? 0) + 1);
   }
-  return [...count.entries()].sort((a, b) => b[1] - a[1]).map(([workspace]) => workspace);
+  return [...count2.entries()].sort((a, b) => b[1] - a[1]).map(([workspace]) => workspace);
 }
 async function forgetTerminals(host) {
   await saving.catch(() => void 0);
@@ -4808,7 +4813,7 @@ var MAX_STRUCTURES = 20;
 var MAX_SECTIONS = 12;
 var SCOPE_CHARS = 200;
 var PROJECT_SCOPE = "project:";
-var projectScope = (project) => `${PROJECT_SCOPE}${project.trim()}`.slice(0, SCOPE_CHARS);
+var projectScope = (project2) => `${PROJECT_SCOPE}${project2.trim()}`.slice(0, SCOPE_CHARS);
 var BUILT_IN_STRUCTURES = [
   {
     id: "brief",
@@ -4888,7 +4893,7 @@ function parseHistory(value) {
     if (!item2 || typeof item2 !== "object" || Array.isArray(item2)) {
       continue;
     }
-    const { id: id2, at, original, enhanced, style, model, source, project } = item2;
+    const { id: id2, at, original, enhanced, style, model, source, project: project2 } = item2;
     if (typeof id2 === "string" && typeof at === "number" && typeof original === "string" && typeof enhanced === "string") {
       out.push({
         id: id2,
@@ -4898,7 +4903,7 @@ function parseHistory(value) {
         style: typeof style === "string" ? style : "balanced",
         model: typeof model === "string" ? model : "",
         source: source === "hook" ? "hook" : "panel",
-        ...typeof project === "string" && project.trim() ? { project: project.trim().slice(0, 200) } : {}
+        ...typeof project2 === "string" && project2.trim() ? { project: project2.trim().slice(0, 200) } : {}
       });
     }
   }
@@ -5155,7 +5160,8 @@ async function runChain(host, list, system, user, options) {
       attempts.push({ profileId: profile.id, name: profile.name, model, ok: true, ms: Date.now() - attemptStart });
       return { text: text2, profile, attempts };
     } catch (caught) {
-      const error = ranOut && !options.signal?.aborted ? new LlmError(msg("error.model_timeout", { model: model || profile.name, seconds: Math.max(1, Math.round(limit / 1e3)) }), "timeout") : caught;
+      const accountingFailed = messageOf(caught).code === "error.copilot_usage";
+      const error = ranOut && !options.signal?.aborted && !accountingFailed ? new LlmError(msg("error.model_timeout", { model: model || profile.name, seconds: Math.max(1, Math.round(limit / 1e3)) }), "timeout") : caught;
       lastError = error;
       attempts.push({
         profileId: profile.id,
@@ -5166,6 +5172,7 @@ async function runChain(host, list, system, user, options) {
         errorText: messageOf(error),
         ms: Date.now() - attemptStart
       });
+      if (accountingFailed) throw new ChainError(messageOf(error), "action_failed", attempts);
       if (options.signal?.aborted) {
         break;
       }
@@ -6512,7 +6519,7 @@ function activate(host) {
 import { EventEmitter } from "node:events";
 
 // src/version.ts
-var VERSION = "0.2.3";
+var VERSION = "0.2.4";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([
@@ -6560,6 +6567,7 @@ var OPERATIONS = /* @__PURE__ */ new Set([
   "copilot.images",
   "copilot.account",
   "copilot.generate",
+  "copilot.usage",
   "copilot.cleanup"
 ]);
 var CODES = /* @__PURE__ */ new Set([
@@ -6996,7 +7004,7 @@ function sessionAdapter(session2) {
     sent.delete(text);
     return found;
   };
-  const project = async () => {
+  const project2 = async () => {
     const info = await bounded(session2.rpc.metadata.snapshot());
     if (info.isRemote || !isAbsolute3(info.workingDirectory)) return null;
     const path = await realpath2(info.workingDirectory);
@@ -7022,19 +7030,19 @@ function sessionAdapter(session2) {
   return {
     has: (name) => operations.has(name),
     state,
-    project,
+    project: project2,
     markSent,
     consumeSent,
     async call(name, input) {
       let result;
       if (name === "workspace.list") {
-        const place = await project();
+        const place = await project2();
         result = { workspaces: place ? [{ ...place, project: place.path, branch: null, hostId: null }] : [] };
       } else if (name === "workspace.readContext") {
-        const place = await project();
+        const place = await project2();
         result = { displayName: place?.name ?? "", branch: "", terminals: [{ id: session2.sessionId, title: "GitHub Copilot" }], ...place ? { workspaceId: place.id } : {} };
       } else if (name === "agents.list") {
-        const place = await project();
+        const place = await project2();
         result = { agents: [{ terminalId: session2.sessionId, title: "GitHub Copilot", agent: "copilot", state: await state(), stateStartedAt: Date.now(), ...place ? { workspaceId: place.id } : {} }] };
       } else if (name === "session.send") {
         const { sessionId, text } = input;
@@ -7307,11 +7315,170 @@ async function createCanvasServer(options) {
 }
 
 // src/copilot/models.ts
-import { mkdtemp as mkdtemp2, mkdir as mkdir3, realpath as realpath4, rm as rm3 } from "node:fs/promises";
-import { basename as basename3, isAbsolute as isAbsolute4, join as join7, relative as relative3 } from "node:path";
+import { mkdtemp as mkdtemp2, mkdir as mkdir4, realpath as realpath4, rm as rm3 } from "node:fs/promises";
+import { basename as basename3, isAbsolute as isAbsolute4, join as join8, relative as relative3 } from "node:path";
 import { tmpdir as tmpdir3 } from "node:os";
+import { randomUUID as randomUUID3 } from "node:crypto";
+
+// src/copilot/usage.ts
+import { randomUUID as randomUUID2 } from "node:crypto";
+import { createReadStream } from "node:fs";
+import { homedir as homedir4 } from "node:os";
+import { mkdir as mkdir3, rename as rename2, writeFile as writeFile2 } from "node:fs/promises";
+import { join as join7 } from "node:path";
+import { StringDecoder } from "node:string_decoder";
+var uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+var identifier = /^[a-z0-9][a-z0-9._:+\/-]*$/i;
+var numericFields = [
+  "inputTokens",
+  "outputTokens",
+  "cacheReadTokens",
+  "cacheWriteTokens",
+  "reasoningTokens",
+  "toolTokenCount",
+  "availableToolCount",
+  "totalTokens",
+  "duration"
+];
+function object(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? value : void 0;
+}
+function safeId(value, max = 256) {
+  return typeof value === "string" && value.length <= max && !value.includes("://") && identifier.test(value) ? value : void 0;
+}
+function count(value) {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : void 0;
+}
+function metric(value) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : void 0;
+}
+function project(event, sessionId) {
+  const e = object(event);
+  if (e?.type !== "assistant.usage" && e?.type !== "session.usage_record") return;
+  const data = e.type === "session.usage_record" ? object(object(e.data)?.usage) : object(e.data);
+  if (!data) throw new Error("Invalid usage accounting record.");
+  const id2 = safeId(e.id);
+  const timestamp = e.timestamp;
+  const ms = typeof timestamp === "string" ? Date.parse(timestamp) : NaN;
+  if (!id2 || !Number.isFinite(ms) || ms < Date.UTC(2020, 0, 1) || ms >= Date.UTC(2100, 0, 1)) throw new Error("Invalid usage accounting record.");
+  const usage = {};
+  const model = safeId(data.model, 128);
+  if (model) usage.model = model;
+  for (const field of numericFields) {
+    const value = field === "duration" ? metric(data[field]) : count(data[field]);
+    if (value !== void 0) usage[field] = value;
+  }
+  if (typeof data.cacheDetailsReported === "boolean") usage.cacheDetailsReported = data.cacheDetailsReported;
+  if (typeof data.isAuto === "boolean") usage.isAuto = data.isAuto;
+  if (typeof data.isByok === "boolean") usage.isByok = data.isByok;
+  if (typeof data.byokKind === "string" && data.byokKind.length) {
+    usage.byokKind = ["local_managed", "local_user", "remote_user"].includes(data.byokKind) ? data.byokKind : "other";
+  }
+  const provider = object(data.provider);
+  if (provider && (provider.kind !== void 0 || provider.id !== void 0)) {
+    usage.provider = { kind: provider.kind === "copilot" ? "copilot" : "external" };
+  }
+  const copilotUsage = object(data.copilotUsage);
+  const totalNanoAiu = count(copilotUsage?.totalNanoAiu);
+  if (totalNanoAiu !== void 0) usage.copilotUsage = { totalNanoAiu };
+  if (["complete", "partial", "unavailable"].includes(data.aiCreditsStatus)) usage.aiCreditsStatus = data.aiCreditsStatus;
+  const accounting = object(data.accounting);
+  if (accounting?.sourceSessionId === sessionId) {
+    const usageId = safeId(accounting.usageId);
+    const sequence = count(accounting.sequence);
+    if (usageId && sequence !== void 0) usage.accounting = { sourceSessionId: sessionId, usageId, sequence };
+  }
+  return { type: "session.usage_record", id: id2, timestamp: new Date(ms).toISOString(), data: { usage } };
+}
+async function reconcileUsageJournal(path, recorder) {
+  const maxBytes = 64 * 1024 * 1024;
+  const decoder = new StringDecoder("utf8");
+  let bytes = 0;
+  let remainder = "";
+  const consume = (line) => {
+    if (!line.trim()) return;
+    let event;
+    try {
+      event = JSON.parse(line);
+    } catch {
+      throw new Error("Unable to read usage accounting journal.");
+    }
+    if (object(event)?.type === "session.usage_record") recorder.record(event);
+  };
+  try {
+    for await (const chunk of createReadStream(path, { highWaterMark: 64 * 1024 })) {
+      bytes += chunk.length;
+      if (bytes > maxBytes) throw new Error("Unable to read usage accounting journal.");
+      remainder += decoder.write(chunk);
+      let newline;
+      while ((newline = remainder.indexOf("\n")) !== -1) {
+        consume(remainder.slice(0, newline));
+        remainder = remainder.slice(newline + 1);
+      }
+    }
+    consume(remainder + decoder.end());
+  } catch (error) {
+    if (error.code === "ENOENT") return;
+    throw new Error("Unable to read usage accounting journal.");
+  }
+  await recorder.flush();
+}
+async function replace(file, content) {
+  const temporary = `${file}.${randomUUID2()}.tmp`;
+  await writeFile2(temporary, content, { encoding: "utf8", mode: 384 });
+  await rename2(temporary, file);
+}
+function usageHome() {
+  return join7(process.env.ENHANCE_PROMPT_DATA_DIR || join7(process.env.LOCALAPPDATA || join7(homedir4(), ".local", "share"), "copilot-enhance-prompt"), "usage");
+}
+async function createUsageRecorder(sessionId, root = usageHome()) {
+  if (!uuid.test(sessionId)) throw new Error("Invalid usage session ID.");
+  const directory = join7(root, "session-state", sessionId);
+  const file = join7(directory, "events.jsonl");
+  const started = (/* @__PURE__ */ new Date()).toISOString();
+  await mkdir3(join7(root, "session-state"), { recursive: true, mode: 448 });
+  await mkdir3(directory, { mode: 448 });
+  await replace(join7(directory, "workspace.yaml"), JSON.stringify({ id: sessionId, name: `Enhanced Prompt \xB7 ${started}` }) + "\n");
+  let lines = JSON.stringify({ type: "session.start", id: randomUUID2(), timestamp: started, data: { sessionId, context: { repository: "Enhanced Prompt" } } }) + "\n";
+  await replace(file, lines);
+  const seen = /* @__PURE__ */ new Set();
+  let pending = Promise.resolve();
+  let failure = false;
+  return {
+    record(event) {
+      if (failure) return;
+      let receipt;
+      try {
+        receipt = project(event, sessionId);
+      } catch {
+        failure = true;
+        return;
+      }
+      if (!receipt) return;
+      const usage = object(object(receipt.data)?.usage);
+      const accounting = object(usage?.accounting);
+      const key = accounting ? `${sessionId}:${accounting.usageId}` : `event:${receipt.id}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      pending = pending.then(async () => {
+        const next = lines + JSON.stringify(receipt) + "\n";
+        await replace(file, next);
+        lines = next;
+      }).catch(() => {
+        failure = true;
+      });
+    },
+    async flush() {
+      await pending;
+      if (failure) throw new Error("Unable to save usage accounting.");
+    }
+  };
+}
+
+// src/copilot/models.ts
 var unavailable2 = () => new LlmError(msg("error.copilot_unavailable"), "unavailable");
 var cancelled = () => new LlmError(msg("error.cancelled"), "cancelled");
+var usageFailed = () => new LlmError(msg("error.copilot_usage"), "action_failed");
 function hostRuntime(executable = process.execPath, argv = process.argv, parentPid = process.ppid, environment = process.env, probe) {
   const checks = {
     executableAllowed: isAbsolute4(executable) && ["copilot.exe", "copilot", "copilot-runtime.exe", "copilot-runtime"].includes(basename3(executable).toLowerCase()),
@@ -7361,7 +7528,7 @@ function eligible(value) {
 function sameAccount(left, right) {
   return left.isAuthenticated === true && right.isAuthenticated === true && !!left.login && !!left.host && left.login.toLowerCase() === right.login?.toLowerCase() && left.host.toLowerCase() === right.host?.toLowerCase();
 }
-function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2) {
+function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usageRecorder = createUsageRecorder) {
   const active = /* @__PURE__ */ new Set();
   async function catalog() {
     const started = Date.now();
@@ -7412,6 +7579,8 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2) {
     let client;
     let directory;
     let stop2;
+    let usage;
+    const sessionId = randomUUID3();
     const stopClient = () => {
       if (client) stop2 ??= withDeadline(client.forceStop(), 1e4).then(() => true, () => false);
       return stop2;
@@ -7433,14 +7602,14 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2) {
     try {
       const { sdk, path } = await runtime();
       check();
-      directory = await mkdtemp2(join7(tmpdir3(), "enhance-copilot-"));
-      const workspace = join7(directory, "workspace");
-      await mkdir3(workspace);
+      directory = await mkdtemp2(join8(tmpdir3(), "enhance-copilot-"));
+      const workspace = join8(directory, "workspace");
+      await mkdir4(workspace);
       check();
       client = new sdk.CopilotClient({
         mode: "empty",
         workingDirectory: workspace,
-        baseDirectory: join7(directory, "home"),
+        baseDirectory: join8(directory, "home"),
         connection: sdk.RuntimeConnection.forStdio({ path, args: ["--no-auto-update"] }),
         env: runtimeEnvironment(),
         useLoggedInUser: true,
@@ -7450,10 +7619,19 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2) {
       stage("copilot.start");
       await withDeadline(client.start(), 3e4);
       check();
+      stage("copilot.usage");
+      try {
+        usage = await usageRecorder(sessionId);
+      } catch {
+        throw usageFailed();
+      }
+      check();
       stage("copilot.session");
       const session2 = await withDeadline(client.createSession({
+        sessionId,
+        onEvent: (event) => usage.record(event),
         workingDirectory: workspace,
-        configDirectory: join7(directory, "home"),
+        configDirectory: join8(directory, "home"),
         model: input.model,
         systemMessage: { mode: "replace", content: input.system },
         availableTools: [],
@@ -7482,6 +7660,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2) {
         enforceManagedModelDefaults: true
       }), 3e4);
       check();
+      if (session2.sessionId !== sessionId) throw unavailable2();
       stage("copilot.access");
       const [parentModels, helperModels, parentAuth, helperAuth, metadata] = await withDeadline(Promise.all([
         parent.rpc.model.list({ refresh: true }),
@@ -7523,6 +7702,18 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2) {
       stage("copilot.cleanup");
       const stopped = await stopClient();
       active.delete(controller);
+      if (usage) {
+        stage("copilot.usage");
+        try {
+          if (stopped !== false && directory) await reconcileUsageJournal(join8(directory, "home", "session-state", sessionId, "events.jsonl"), usage);
+          await usage.flush();
+        } catch {
+          diagnostics2?.record(phase, "failed", diagnosticError(usageFailed()));
+          throw usageFailed();
+        }
+        diagnostics2?.record(phase, "ok", { ms: Date.now() - phaseStarted });
+        stage("copilot.cleanup");
+      }
       if (stopped === false) {
         diagnostics2?.record(phase, "failed");
         throw unavailable2();

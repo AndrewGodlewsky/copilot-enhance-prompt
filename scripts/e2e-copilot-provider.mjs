@@ -2,10 +2,12 @@
 // The dependency seam supplies synthetic account/catalog data; it never uses paid inference.
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
-import { join } from 'node:path'
+import { join, dirname, resolve } from 'node:path'
+import { tmpdir } from 'node:os'
 import { pathToFileURL } from 'node:url'
-import { access, writeFile } from 'node:fs/promises'
+import { access, writeFile, mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
 import { createCopilotModels } from '../src/copilot/models.ts'
+import { createUsageRecorder } from '../src/copilot/usage.ts'
 
 assert.ok(process.env.COPILOT_SDK_DIR && process.env.COPILOT_CLI_PATH, 'Set installed desktop SDK/runtime paths.')
 const sdk = await import(pathToFileURL(join(process.env.COPILOT_SDK_DIR, 'index.js')).href)
@@ -25,6 +27,7 @@ const catalog = { list: [{ id: 'gpt-4.1', name: 'Fixture model', provider: { kin
 const parent = { rpc: { model: { list: async () => catalog }, gitHubAuth: { getStatus: async () => auth } } }
 const homes = []
 const clients = []
+let suppressedUsage = 0
 const bridge = {
   RuntimeConnection: sdk.RuntimeConnection,
   CopilotClient: class {
@@ -39,14 +42,21 @@ const bridge = {
       // Deliberately plant unselected files in the empty helper workspace before session creation.
       await writeFile(join(config.workingDirectory, 'AGENTS.md'), 'PRIVATE_INSTRUCTIONS_SENTINEL')
       await writeFile(join(config.workingDirectory, 'PRIVATE_FILENAME_SENTINEL.txt'), 'PRIVATE_CONTENT_SENTINEL')
-      const session = await this.client.createSession({ ...config, provider: { type: 'openai', baseUrl: `http://127.0.0.1:${fixture.address().port}/v1`, apiKey: 'fixture', wireApi: 'completions' } })
+      const dropLiveUsage = homes.length === 1
+      const session = await this.client.createSession({ ...config,
+        onEvent(event) {
+          if (dropLiveUsage && event.type === 'assistant.usage') suppressedUsage++
+          else config.onEvent(event)
+        },
+        provider: { type: 'openai', baseUrl: `http://127.0.0.1:${fixture.address().port}/v1`, apiKey: 'fixture', wireApi: 'completions' } })
       session.rpc.model.list = async () => catalog
       session.rpc.gitHubAuth.getStatus = async () => auth
       return session
     }
   }
 }
-const service = createCopilotModels(parent, async () => ({ sdk: bridge, path: process.env.COPILOT_CLI_PATH }))
+const retained = await mkdtemp(join(tmpdir(), 'enhance-usage-fixture-'))
+const service = createCopilotModels(parent, async () => ({ sdk: bridge, path: process.env.COPILOT_CLI_PATH }), undefined, id => createUsageRecorder(id, retained))
 const watchdog = setTimeout(() => { service.close(); for (const client of clients) void client.forceStop(); process.exitCode = 1 }, 55_000)
 try {
   const result = await service.rewrite({ model: 'gpt-4.1', system: 'Rewrite only the supplied request.', user: 'Add a dark mode setting.' })
@@ -70,11 +80,24 @@ try {
   for (let i = 0; i < 30 && !heldClosed; i++) await new Promise(resolve => setTimeout(resolve, 50))
   assert.ok(heldClosed, 'cancel closes the fixture request')
   for (const directory of homes) await assert.rejects(access(directory))
-  console.log('Production Copilot helper: output, model selection, images, no tools/unselected context, cancellation and cleanup passed. No paid inference.')
+  const sessions = await readdir(join(retained, 'session-state'))
+  assert.equal(sessions.length, 3)
+  const journals = await Promise.all(sessions.map(id => readFile(join(retained, 'session-state', id, 'events.jsonl'), 'utf8')))
+  const events = journals.flatMap(text => text.trim().split('\n').map(line => JSON.parse(line)))
+  const receipts = events.filter(event => event.type === 'session.usage_record')
+  assert.equal(receipts.length, 2, 'real runtime accounting survives helper cleanup')
+  assert.ok(suppressedUsage > 0, 'a missing live event is recovered from the real runtime journal')
+  assert.ok(receipts.every(event => event.data.usage.inputTokens === 1 && event.data.usage.outputTokens === 1))
+  assert.ok(receipts.every(event => event.data.usage.isByok === true), 'local fixture is never relabeled as Copilot usage')
+  assert.ok(receipts.every(event => sessions.includes(event.data.usage.accounting.sourceSessionId)))
+  assert.doesNotMatch(journals.join('\n'), /PRIVATE_|Add a dark mode|Rewrite only|Fixture rewritten|CANCEL_SENTINEL|127\.0\.0\.1|apiKey|data:image/)
+  console.log('Production Copilot helper: output, model selection, images, isolation, cancellation, retained usage and cleanup passed. No paid inference.')
 } finally {
   clearTimeout(watchdog)
   service.close()
   for (const client of clients) await client.forceStop()
   fixture.closeAllConnections()
   await new Promise(resolve => fixture.close(resolve))
+  assert.equal(dirname(resolve(retained)), resolve(tmpdir()))
+  await rm(retained, { recursive: true, force: true })
 }

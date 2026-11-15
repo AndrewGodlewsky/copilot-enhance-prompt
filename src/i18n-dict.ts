@@ -20,6 +20,8 @@ export function translate(lang: UiLanguage, text: string, params?: Record<string
 }
 
 export const VI: Record<string, string> = {
+  'Usage records are kept separately for Usage Insights and are not removed by these controls.': 'Bản ghi mức sử dụng được lưu riêng cho Usage Insights và không bị xóa bởi các thao tác này.',
+  'Copilot usage could not be saved. Check free disk space and plugin data-folder permissions, then open Show Logs. Any remaining helper files have been kept for recovery.': 'Không thể lưu mức sử dụng Copilot. Kiểm tra dung lượng đĩa trống và quyền truy cập thư mục dữ liệu của plugin, rồi mở Xem nhật ký. Các tệp còn lại của phiên hỗ trợ đã được giữ lại để khôi phục.',
   'Copilot model discovery': 'Khám phá mô hình Copilot',
   'Refresh the Copilot model list first, then reopen these logs. This section is included when you copy the logs.': 'Làm mới danh sách mô hình Copilot trước, rồi mở lại nhật ký. Phần này được bao gồm khi bạn sao chép nhật ký.',
   'The plugin could not verify the desktop runtime. Open Show Logs and share the Copilot model discovery section.': 'Plugin không thể xác minh môi trường chạy của ứng dụng. Mở Xem nhật ký và chia sẻ phần Khám phá mô hình Copilot.',
@@ -538,6 +540,8 @@ export const VI: Record<string, string> = {
 }
 
 export const ZH: Record<string, string> = {
+  'Usage records are kept separately for Usage Insights and are not removed by these controls.': '用量记录为 Usage Insights 单独保留，不会被这些操作删除。',
+  'Copilot usage could not be saved. Check free disk space and plugin data-folder permissions, then open Show Logs. Any remaining helper files have been kept for recovery.': '无法保存 Copilot 用量。请检查磁盘可用空间和插件数据文件夹的权限，然后打开“显示日志”。剩余的辅助会话文件已保留以便恢复。',
   'Copilot model discovery': 'Copilot 模型发现',
   'Refresh the Copilot model list first, then reopen these logs. This section is included when you copy the logs.': '请先刷新 Copilot 模型列表，再重新打开日志。复制日志时会包含此部分。',
   'The plugin could not verify the desktop runtime. Open Show Logs and share the Copilot model discovery section.': '插件无法验证桌面运行时。请打开“显示日志”并分享“Copilot 模型发现”部分。',

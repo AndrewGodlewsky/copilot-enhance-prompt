@@ -1,5 +1,7 @@
 # Enhance Prompt cho GitHub Copilot
 
+**Mới trong 0.2.4:** lưu mức sử dụng Copilot dưới dạng dữ liệu kế toán cục bộ, không chứa prompt hay câu trả lời. Cập nhật Usage Insights lên **0.1.64**, khởi động lại Copilot, chạy một lần cải thiện rồi làm mới Usage Insights. Các phiên riêng biệt xuất hiện trong dự án **Enhanced Prompt**. Phí thiếu không được xem là miễn phí; không thể khôi phục biên nhận cũ đã bị xóa. [Vị trí lưu và giới hạn](../copilot-background-rewriting.md#usage-visibility).
+
 **Mới trong 0.2.0:** trong Models, chọn cấu hình **GitHub Copilot** rồi chọn mô hình từ danh sách trực tiếp. Plugin viết lại ở chế độ nền bằng SDK và môi trường chạy có sẵn của ứng dụng, không cần npm, tải riêng hay khóa API. Mô hình Claude trong cấu hình này dùng tài khoản Copilot, không dùng Claude Code. Các cấu hình cũ được giữ nguyên; chọn cấu hình Copilot trong Enhance để sử dụng. [Chi tiết và giới hạn tương thích](../copilot-background-rewriting.md).
 
 Viết lại yêu cầu thành prompt rõ ràng, dùng tệp, luật và thay đổi Git của dự án. Xem lại kết quả trong canvas rồi gửi vào phiên Copilot được kết nối.

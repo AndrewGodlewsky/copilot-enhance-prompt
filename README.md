@@ -12,7 +12,7 @@ The React panel retains model chains and fallback, prompt styles, reusable rules
 
 ## Download and install
 
-**Development preview, version 0.2.3.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
+**Development preview, version 0.2.4.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
 
 ### Requirements
 
@@ -107,7 +107,9 @@ Before inference, the plugin checks both sessions' GitHub identity and Copilot m
 
 Copilot usage is billed under the account's Copilot plan; Max context can make an additional model request. The two-second chat auto-enhance hook still supports Rules or API models only. The desktop owns SDK/runtime updates. This experimental integration checks required APIs and runtime state and refuses incompatible setups; future desktop changes may still require a plugin update. See [security and compatibility details](docs/copilot-background-rewriting.md).
 
-**Usage Insights visibility:** v0.2.3 deletes each helper's temporary session records and does not save its token or credit totals. Those background requests therefore do not normally appear in the local Usage Insights dashboard, even though Copilot meters them. Dashboard Refresh cannot recover deleted records. See [where usage is recorded](docs/copilot-background-rewriting.md#usage-visibility).
+**Usage Insights visibility:** Enhance Prompt 0.2.4 keeps local accounting records; [Usage Insights](https://github.com/AndrewGodlewsky/copilot-usage-insights) 0.1.64 discovers them automatically. Update **both plugins**, restart Copilot, run an enhancement with a GitHub Copilot model, then refresh Usage Insights. Look for the **Enhanced Prompt** project and its separate timestamped sessions. Max's file selection, model tests and fallback attempts can each create another session. This is a dashboard grouping; no desktop project or chat window is created.
+
+Only reported model, timestamp, token and credit accounting is exported, without prompts or responses. Missing charges remain unavailable rather than zero. Existing deleted receipts cannot be recovered; tracking starts with this version. [Storage, privacy and coverage details](docs/copilot-background-rewriting.md#usage-visibility).
 
 | Capability | Copilot behavior |
 | --- | --- |
