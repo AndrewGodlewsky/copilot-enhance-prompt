@@ -111,6 +111,8 @@ Copilot usage is billed under the account's Copilot plan; Max context can make a
 
 Only reported model, timestamp, token and credit accounting is exported, without prompts or responses. Missing charges remain unavailable rather than zero. Existing deleted receipts cannot be recovered; tracking starts with this version. [Storage, privacy and coverage details](docs/copilot-background-rewriting.md#usage-visibility).
 
+Building another plugin that needs background Copilot models? Use the [agent handoff](docs/copilot-sdk-agent-handoff.md) for the host SDK/runtime setup, account and model checks, isolation, cancellation, retained usage, Usage Insights integration and fixture tests.
+
 | Capability | Copilot behavior |
 | --- | --- |
 | Prompt editor, rewrite models, fallback, rules, history, attachments | Retained in the canvas |
