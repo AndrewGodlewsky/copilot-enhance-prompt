@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Classic stick figures — word carrying preview</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:24px;background:var(--background,#f5f6f7);color:var(--foreground,#182024);font:14px/1.5 var(--font-sans,system-ui,"Segoe UI",sans-serif)}main{max-width:900px;margin:auto}h1{font-size:24px;line-height:1.2;margin:0 0 8px}h2{font-size:16px;margin:0}p{margin:6px 0 16px}.muted{color:var(--muted-foreground,#626b75)}.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:18px 0}.toolbar label{display:flex;gap:7px;align-items:center}button,select{font:inherit;color:inherit;background:var(--card,#fff);border:1px solid var(--border,#c5ccd2);border-radius:6px;padding:7px 12px}button{cursor:pointer}button:hover{background:var(--accent,#e6ebef);color:var(--accent-foreground,#182024)}button:disabled{opacity:.45;cursor:default}button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--ring,#287a49);outline-offset:3px}.primary{background:#4ccb78;color:#102218;border-color:#287a49;font-weight:600}.primary:hover{background:#65d68c;color:#102218}.mockup{--scene-bg:#fff;--scene-fg:#182024;--scene-border:#c7cdd2;background:var(--scene-bg);color:var(--scene-fg);border:1px solid var(--scene-border);border-radius:12px;padding:18px}.mockup.dark{--scene-bg:#111516;--scene-fg:#eaf0ed;--scene-border:#3e4945}.heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.heading span{font-size:12px}.stage{position:relative;overflow:hidden;border:1px solid var(--scene-border);border-radius:7px;min-height:200px;background:var(--scene-bg)}textarea{display:block;resize:vertical;width:100%;min-height:200px;padding:20px;border:0;background:var(--scene-bg);color:var(--scene-fg);font:14px/1.7 system-ui,"Segoe UI",sans-serif}textarea[readonly]{position:absolute;inset:0;opacity:0;pointer-events:none}svg{display:block;width:100%;overflow:hidden;color:var(--scene-fg)}svg[hidden]{display:none}.word{font:14px system-ui,"Segoe UI",sans-serif;fill:currentColor}.person{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.person circle{fill:var(--scene-bg)}.hint{margin:10px 0;font-size:12px}.run-row{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap}.buttons{display:flex;gap:8px;flex-wrap:wrap}.progress-label{display:flex;justify-content:space-between;margin:14px 0 6px;font-size:12px}.track{height:5px;border-radius:4px;background:var(--scene-border);overflow:hidden}.fill{height:100%;background:#4ccb78;width:0}.result{border-top:1px solid var(--scene-border);padding-top:16px;margin-top:18px}.result p{margin-bottom:0}.note{font-size:12px;margin-top:16px}[hidden]{display:none!important}@media(max-width:520px){body{padding:12px}.mockup{padding:12px}.toolbar{gap:8px}h1{font-size:21px}}
+</style>
+</head>
+<body>
+<main>
+  <h1>The classic crew, carrying actual words</h1>
+  <p class="muted">Animation prototype for approval. The hands lift the letters directly, with no boxes or word tiles.</p>
+  <div class="toolbar" aria-label="Preview controls">
+    <label>View <select id="zoom"><option value="1">Actual size · 28px figures</option><option value="2">2× detail</option></select></label>
+    <label>Speed <select id="speed"><option value="1">Normal</option><option value="0.5">Half speed</option></select></label>
+    <button id="theme" type="button" aria-pressed="false">Dark preview</button>
+    <label><input id="reduced" type="checkbox"> Reduce motion</label>
+  </div>
+  <section class="mockup" id="mockup" aria-label="Composer animation preview">
+    <div class="heading"><h2><label for="request">Write a request</label></h2><span id="crew-count"></span></div>
+    <div class="stage" id="stage">
+      <textarea id="request" maxlength="600" spellcheck="false" aria-describedby="request-help">Improve the checkout flow so customers can review their order quickly, understand delivery costs, and recover from payment errors. Include clear validation, accessible controls, and tests for the important paths.</textarea>
+      <svg id="scene" aria-hidden="true" hidden><g id="people"></g><g id="words"></g><path id="press" stroke="#4ccb78" stroke-width="3" fill="none"></path></svg>
+    </div>
+    <p class="hint" id="request-help">Edit the sample, then click Enhance preview. Your original text is preserved throughout.</p>
+    <div class="run-row"><span id="status" role="status">Ready to preview.</span><div class="buttons">
+      <button class="primary" id="start" type="button">Enhance preview</button>
+      <button id="pause" type="button" disabled>Pause</button>
+      <button id="complete" type="button" disabled>Finish now</button>
+      <button id="cancel" type="button" disabled>Cancel</button>
+    </div></div>
+    <div class="progress-label"><span>Simulated enhancement</span><span id="percent">0%</span></div>
+    <div class="track" role="progressbar" aria-label="Simulated enhancement" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress"><div class="fill" id="fill"></div></div>
+    <section class="result" id="result" hidden><h2>Prompt creation area</h2><p>The finished prompt would appear here. This preview has not called a model or changed your request.</p></section>
+  </section>
+  <div class="toolbar"><button id="fail" type="button" disabled>Simulate failure</button></div>
+  <p class="muted note">About one figure per ten words. The demo completes after 18 seconds of playback; “Finish now” previews the exit and descending bar sooner. No model calls, network requests, or saved data. Animation approval comes before plugin integration.</p>
+</main>
+<script id="motion-model">
+// Approval prototype only. Positions are in CSS pixels at the actual-size setting.
+const clamp = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
+const mix = (a, b, t) => a + (b - a) * t;
+const ease = t => { t = clamp(t); return t * t * (3 - 2 * t); };
+const point = (a, b, t) => ({x:mix(a.x,b.x,t),y:mix(a.y,b.y,t)});
+const crewCount = text => Math.ceil((text.match(/\S+/gu) || []).length / 10);
+function layoutWords(text, width, measure) {
+  const tokens = text.match(/\S+/gu) || [];
+  let x = 20, y = 34;
+  return tokens.map(value => {
+    const w = measure(value);
+    if (x > 20 && x + w > width - 20) { x = 20; y += 64; }
+    const item = {text:value,x,y,width:w};
+    x += w + measure(' ');
+    return item;
+  });
+}
+function makeJobs(words, width) {
+  const jobs = [];
+  for (let i = 0; i < words.length; i += 10) {
+    const group = words.slice(i, i + 10);
+    // Prefer a word that fits comfortably over a tiny pair of hands.
+    const candidates = group.map((word,j) => ({word,index:i+j})).filter(v => v.word.width >= 18 && v.word.width <= 90 && group.some(w => w !== v.word && w.width >= v.word.width));
+    const chosen = candidates[Math.min(2,candidates.length-1)] || {word:group[0],index:i};
+    const source = {x:chosen.word.x + chosen.word.width / 2,y:chosen.word.y};
+    const target = group.map((word,j) => ({word,index:i+j})).filter(v => v.index !== chosen.index && v.word.width >= chosen.word.width).at(-1);
+    const destination = target ? {x:target.word.x+target.word.width/2,y:target.word.y} : {x:source.x,y:source.y+30};
+    const entry = {x:source.x < width/2 ? -20 : width+20,y:source.y};
+    jobs.push({index:chosen.index,replaced:target?.index,source,destination,entry,delay:jobs.length*.22});
+  }
+  return jobs;
+}
+function transport(job, elapsed) {
+  const start = job.source, end = job.destination;
+  const entryTime = Math.max(.5,Math.abs(start.x-job.entry.x)/115);
+  let t = elapsed - job.delay;
+  const rest = (at, phase, walk = 0) => ({x:at.x,foot:at.y+12,word:{...start},grip:0,crouch:0,walk,phase});
+  if (t < 0) return {...rest(job.entry,'Waiting'),visible:false};
+  if (t < entryTime) return rest(point(job.entry,start,ease(t/entryTime)),'Approach',Math.sin(t*19));
+  t -= entryTime;
+  // Repeated trips are deliberate in this approval preview; production will choose fresh jobs.
+  const carryTime = Math.max(1.1,Math.hypot(end.x-start.x,end.y-start.y)/48);
+  const cycle = .4 + .6 + carryTime + .6 + .4 + .3;
+  const turn = Math.floor(t/cycle);
+  t %= cycle;
+  const from = turn%2 ? end : start, to = turn%2 ? start : end;
+  let at = {...from}, lift = 0, grip = 1, crouch = 0, walk = 0, phase;
+  if (t < .4) { phase='Reach'; grip=ease(t/.4); crouch=3*grip; }
+  else if ((t-=.4) < .6) { phase='Lift'; const f=ease(t/.6); lift=14.4*f; crouch=3*(1-f); }
+  else if ((t-=.6) < carryTime) { phase='Carry'; const f=t/carryTime; at=point(from,to,ease(f)); const bob=Math.sin(f*Math.PI)*Math.sin(t*15)*.35; at.y+=bob; lift=14.4; walk=Math.sin(t*15)*Math.sin(f*Math.PI); }
+  else if ((t-=carryTime) < .6) { phase='Set down'; const f=ease(t/.6); at={...to}; lift=14.4*(1-f); crouch=3*f; }
+  else if ((t-=.6) < .4) { phase='Release'; at={...to}; grip=1-ease(t/.4); crouch=3*grip; }
+  else { phase='Ready'; at={...to}; grip=0; }
+  return {x:at.x,foot:at.y+12,word:{x:at.x,y:at.y-lift},grip,crouch,walk,phase};
+}
+function elbow(shoulder, hand, side) {
+  const dx=hand.x-shoulder.x,dy=hand.y-shoulder.y,d=Math.hypot(dx,dy)||1;
+  const bend=Math.sqrt(Math.max(0,7.2**2-(d/2)**2));
+  return {x:(shoulder.x+hand.x)/2 + side*Math.abs(dy)/d*bend,y:(shoulder.y+hand.y)/2 + Math.abs(dx)/d*bend};
+}
+function body(pose) {
+  const {x,foot,grip=0,crouch=0,walk=0,word}=pose;
+  const shoulder={x,y:foot-15+crouch},hip={x,y:foot-8.5+crouch/2};
+  const head={x,y:foot-21.7+crouch};
+  const hands=[-1,1].map(side => point({x:x+side*7,y:foot-10+side*walk*3},{x:word.x+side*4,y:word.y},grip));
+  const arms=hands.map((hand,i) => [shoulder,elbow(shoulder,hand,i ? 1:-1),hand]);
+  const legs=[-1,1].map(side => [hip,{x:x+side*(2.5+walk*2),y:foot-4},{x:x+side*(5+walk*2),y:foot-Math.max(0,side*walk)*2}]);
+  return {head,shoulder,hip,hands,arms,legs};
+}
+globalThis.CrewMotion={clamp,ease,crewCount,layoutWords,makeJobs,transport,body};
+</script>
+<script id="preview-app">
+const $ = id => document.getElementById(id);
+const ns='http://www.w3.org/2000/svg';
+const scene=$('scene'), input=$('request'), zoom=$('zoom'), reduce=$('reduced');
+const create=(tag,attrs={})=>{const el=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,v);return el;};
+const set=(el,attrs)=>{for(const [k,v] of Object.entries(attrs))el.setAttribute(k,v);};
+const path=points=>points.map((p,i)=>`${i?'L':'M'}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
+let words=[],jobs=[],wordEls=[],figures=[],time=0,last=0,frame=0,mode='idle',paused=false,finishTime=0,exitPoses=[],width=700,height=200;
+let original='';
+const measureCanvas=document.createElement('canvas');
+const measureContext=measureCanvas.getContext('2d');
+measureContext.font='14px system-ui, "Segoe UI", sans-serif';
+reduce.checked=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function progress(value){$('fill').style.width=value+'%';$('percent').textContent=Math.round(value)+'%';$('progress').setAttribute('aria-valuenow',Math.round(value));}
+function controls(running){input.readOnly=running;zoom.disabled=running;$('start').disabled=running||!input.value.trim();for(const id of ['pause','complete','cancel','fail'])$(id).disabled=!running;$('pause').textContent='Pause';}
+function count(){const n=crewCount(input.value);$('crew-count').textContent=`${n} ${n===1?'figure':'figures'} · ${zoom.value==='1'?'28px':'56px at 2×'}`;}
+function drawFigure(el,pose){
+  const b=body(pose);
+  set(el.head,{cx:b.head.x,cy:b.head.y});
+  set(el.lines,{d:[path([{x:b.head.x,y:b.head.y+3.5},b.shoulder,b.hip]),...b.arms.map(path),...b.legs.map(path)].join(' ')});
+  el.group.style.visibility=pose.visible===false?'hidden':'visible';
+}
+function prepare(){
+  width=Math.max(180,$('stage').clientWidth/Number(zoom.value));
+  words=layoutWords(original,width,t=>measureContext.measureText(t).width);
+  height=Math.max(200/Number(zoom.value),(words.at(-1)?.y||34)+56);
+  set(scene,{viewBox:`0 0 ${width} ${height}`,height:height*Number(zoom.value)});
+  $('words').replaceChildren();$('people').replaceChildren();
+  wordEls=words.map(w=>{const el=create('text',{x:w.x,y:w.y,class:'word'});el.textContent=w.text;$('words').append(el);return el;});
+  jobs=makeJobs(words,width);
+  figures=jobs.map(()=>{const group=create('g',{class:'person'}),head=create('circle',{r:3.5}),lines=create('path');group.append(head,lines);$('people').append(group);return {group,head,lines};});
+  $('press').setAttribute('d','');
+}
+function posesAt(t){return jobs.map(job=>transport(job,t));}
+function draw(t){
+  const ending=mode==='finishing';
+  const elapsed=ending?t-finishTime:0;
+  const poses=ending?exitPoses:posesAt(t);
+  const exitingFor=1.25;
+  const sweep=ending?ease((elapsed-exitingFor)/.9):0;
+  $('people').style.visibility=reduce.checked?'hidden':'visible';
+  words.forEach((w,i)=>{set(wordEls[i],{x:w.x,y:w.y,opacity:1});});
+  jobs.forEach((job,i)=>{
+    let p=poses[i];
+    if(!reduce.checked){
+      set(wordEls[job.index],{x:p.word.x-words[job.index].width/2,y:p.word.y});
+      const arrival=job.delay+Math.max(.5,Math.abs(job.source.x-job.entry.x)/115);
+      if(job.replaced!==undefined)set(wordEls[job.replaced],{opacity:1-ease(((ending?finishTime:t)-arrival)/.4)});
+    }
+    if(ending){const destination=p.x<width/2?-24:width+24;p={...p,x:mix(p.x,destination,ease(elapsed/exitingFor)),grip:p.grip*(1-ease(elapsed/.22)),crouch:0,walk:Math.sin(elapsed*22),visible:elapsed<exitingFor};}
+    drawFigure(figures[i],p);
+  });
+  if(ending&&!reduce.checked){
+    const barY=mix(-16,height+22,sweep);
+    wordEls.forEach(el=>{const y=Number(el.getAttribute('y'));set(el,{y:y+Math.max(0,barY-(y-14))});});
+    $('press').setAttribute('d',elapsed>=exitingFor?`M0,${barY}H${width}`:'');
+  }
+  if(!ending){progress(Math.min(95,t/18*95));const first=poses.find(p=>p.visible!==false);$('status').textContent=reduce.checked?'Enhancing preview…':`${first?.phase||'The crew is arriving'} · request locked`;}else{progress(100);$('status').textContent=elapsed<exitingFor?'100% · the crew is leaving':'100% · moving to the prompt';}
+  if(ending&&(reduce.checked||elapsed>=exitingFor+.9))stop('done');
+}
+function tick(now){
+  if(mode==='idle')return;
+  if(!paused){time+=Math.min(.05,(now-last)/1000)*Number($('speed').value);if(mode==='running'&&time>=18)finish();if(mode!=='idle')draw(time);}
+  last=now;
+  if(mode!=='idle')frame=requestAnimationFrame(tick);
+}
+function start(){
+  if(mode!=='idle'||!input.value.trim())return;
+  original=input.value;time=0;paused=false;mode='running';prepare();scene.hidden=false;controls(true);$('result').hidden=true;last=performance.now();draw(0);frame=requestAnimationFrame(tick);
+}
+function finish(){
+  if(mode!=='running')return;
+  exitPoses=posesAt(time);finishTime=time;mode='finishing';paused=false;$('pause').textContent='Pause';$('complete').disabled=true;draw(time);
+}
+function stop(reason){
+  cancelAnimationFrame(frame);mode='idle';paused=false;scene.hidden=true;input.value=original;controls(false);$('result').hidden=reason!=='done';
+  $('status').textContent=reason==='done'?'Preview complete. Original request restored.':reason==='failed'?'Simulated failure. Original request restored.':'Cancelled. Original request restored.';
+  progress(reason==='done'?100:0);$('press').setAttribute('d','');
+}
+$('start').addEventListener('click',start);
+$('pause').addEventListener('click',()=>{paused=!paused;$('pause').textContent=paused?'Resume':'Pause';});
+$('complete').addEventListener('click',finish);
+$('cancel').addEventListener('click',()=>stop('cancelled'));
+$('fail').addEventListener('click',()=>stop('failed'));
+$('theme').addEventListener('click',()=>{const dark=$('mockup').classList.toggle('dark');$('theme').setAttribute('aria-pressed',dark);$('theme').textContent=dark?'Light preview':'Dark preview';});
+input.addEventListener('input',()=>{count();$('start').disabled=!input.value.trim();});
+zoom.addEventListener('change',count);
+reduce.addEventListener('change',()=>{if(mode!=='idle')draw(time);});
+new ResizeObserver(()=>{if(mode!=='idle'&&Math.abs($('stage').clientWidth/Number(zoom.value)-width)>1){stop('cancelled');$('status').textContent='Preview resized. Original request restored; play again at this width.';}}).observe($('stage'));
+document.addEventListener('visibilitychange',()=>{last=performance.now();});
+count();controls(false);
+</script>
+</body>
+</html>
