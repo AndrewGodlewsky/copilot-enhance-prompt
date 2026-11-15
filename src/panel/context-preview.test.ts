@@ -50,7 +50,7 @@ test('late previews cannot overwrite a newer request or clear an enhancement bus
   } finally { await panel.unmount() }
 })
 
-test('four context choices retain saved Basic selections without offering new ones', () => {
-  assert.deepEqual(levelOptions().map(item => item.value), ['off', 'standard', 'deep', 'max'])
+test('AI Test joins the stable context choices and retains saved Basic selections without offering new ones', () => {
+  assert.deepEqual(levelOptions().map(item => item.value), ['off', 'standard', 'deep', 'max', 'ai-test'])
   assert.ok(levelOptions('basic').some(item => item.value === 'basic'))
 })

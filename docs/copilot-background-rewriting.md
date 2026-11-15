@@ -57,6 +57,10 @@ Reported partial or missing charges stay partial or unavailable, not free. Faile
 
 Usage Insights reads these local records, not account-wide billing records from GitHub. Receipts deleted by older Enhance Prompt versions cannot be recovered. The installed-runtime fixture proves retention with a local external model, and a synthetic Copilot fixture verifies exact totals through the real Usage Insights reader. Real account charges and any billing delay still need user validation. See the [original investigation and current validation](research/copilot-sdk-usage-records.md).
 
+## AI Test research
+
+AI Test uses the same background request and usage-recording route as rewriting. It adds at most two research requests on the selected effort model, without research fallback. The model receives project evidence and returns structured read/search requests; the plugin validates and performs permitted reads before the next request. The helper itself still has no file or command tools. Each Copilot research call can create a separate usage session under Enhanced Prompt. See [the limits and failure behavior](context-levels.md#ai-test-experimental-follow-up-research). Chat auto-enhance does not use this loop.
+
 ## Security and lifecycle
 
 - Runtime discovery accepts only the currently executing Copilot binary in the recognized extension bootstrap environment with the expected parent PID. It never searches PATH for a runtime, takes an executable from a project/profile, uses `COPILOT_CLI_PATH`, or falls back to npm packages.

@@ -15,6 +15,10 @@ export const MESSAGES = {
   'note.no_files': 'No files matched the prompt; the agent will be told to locate them.',
   'note.search_limited': 'Local content search reached its file, size, or time limit. Name relevant files in your request to prioritize them.',
   'note.project_files_off': 'Project files are off in Settings: workspace and agent only.',
+  'note.preview_no_research': 'Preview shows initial local context. AI Test research runs only when you click Enhance.',
+  'note.research_summary': 'AI Test: {rounds} research rounds, {searches} search terms, {excerpts} added excerpts; {reason}. The rewrite uses the available evidence, which may be incomplete.',
+  'error.research_privacy_changed': 'Privacy or file exclusions changed during AI Test. Enhance again to use the updated settings.',
+  'why.research': 'read during AI Test research (excerpt)',
   'note.preview_no_picker': 'Preview skips the AI file picker.',
   'note.picker_skipped': 'AI file picker skipped: {reason}',
 

@@ -8,12 +8,12 @@ This is the semantic source for the [README illustration](assets/prompt-workflow
 
 ```mermaid
 flowchart TD
-    A["Open Enhance Prompt canvas in a Copilot project session"] --> B["Write rough request; choose style, context level and model"]
+    A["Open Enhance Prompt canvas in a Copilot project session"] --> B["Write rough request; choose style, context level and effort"]
     B --> C["Optional: select a structure, preview/exclude context, attach files"]
     C --> D["Click Enhance; capture input and target session/project"]
     D --> E["Authenticated local transport → enhancement worker"]
     E --> F["Resolve attached session's actual project directory; read privacy settings"]
-    F --> G["Gather allowed context for Off / Project overview / Relevant code / AI-assisted"]
+    F --> G["Gather allowed context for Off / Project overview / Relevant code / AI-assisted / AI Test"]
     G --> H["Safe project paths and size limits; mask recognized secrets in source excerpts and diffs; apply exclusions"]
     G -. "AI-assisted" .-> P["Selector model/chain gets original task + candidate file paths"]
     P -- "Selected paths" --> H
@@ -22,7 +22,10 @@ flowchart TD
     C -. "Explicit uploads" .-> I["Temporary attachment copies: text excerpts, image bytes and file paths"]
     I -- "Invalid attachment" --> X
     J["Global and project rules; custom instructions; style or structure; English output policy; agent hint"] --> K["SYSTEM instructions: preserve intent, ground details, shape final prompt"]
-    H --> L["USER payload: project_context + original request + attachment descriptions/paths"]
+    H -- "AI Test only" --> Q["Effort model requests evidence; plugin validates and reads excerpts; at most two rounds"]
+    Q -- "Evidence or ordinary research failure" --> L
+    Q -- "Cancel / privacy change / accounting failure" --> X
+    H -- "Other levels" --> L["USER payload: project_context + original request + attachment descriptions/paths"]
     I --> L
     K --> M["Copilot helper or explicit external provider; images where supported"]
     L --> M
@@ -67,8 +70,9 @@ For example, a request might be `Fix the login button overlapping the password f
 | Project overview | Identity plus project instructions, README, stack/commands, file tree and configured extra context files |
 | Relevant code | Project overview plus allowed Git information and relevant source excerpts |
 | AI-assisted | Relevant code plus model-assisted file picking, capped at ten source files total; adds a selector request when candidates exist |
+| AI Test | Relevant code plus at most two research rounds on the effort model; the plugin brokers safe reads/searches and sends actual excerpts into the final rewrite |
 
-Preview does not call the model-assisted file picker. With AI-assisted context, a selector profile/chain receives the original request and candidate file paths. Copilot rewrites use only Copilot selector profiles; a saved external selector is replaced for that run by the chosen Copilot profile. External rewrites can use a different external selector provider. Picker errors or timeouts retain heuristic file selection and let enhancement continue with a note. Files may change between preview and enhancement, so preview is not an immutable copy of the eventual request. Exclusions are applied to the enhancement run too. Turning off project-file access limits gathered context; it does not remove text the user explicitly attached or typed.
+Preview does not call models. [AI Test research limits, failure behavior and privacy](context-levels.md#ai-test-experimental-follow-up-research) apply only to the new experiment. Research has no model fallback and does not change AI-assisted. With AI-assisted context, a selector profile/chain receives the original request and candidate file paths. Copilot rewrites use only Copilot selector profiles; a saved external selector is replaced for that run by the chosen Copilot profile. External rewrites can use a different external selector provider. Picker errors or timeouts retain heuristic file selection and let enhancement continue with a note. Files may change between preview and enhancement, so preview is not an immutable copy of the eventual request. Exclusions are applied to the enhancement run too. Turning off project-file access limits gathered context; it does not remove text the user explicitly attached or typed.
 
 Project file reads reject sensitive filenames and escaping symlinks. Recognized secrets in automatically gathered project instructions, README/extra context, stack information, source excerpts and Git metadata/diffs are masked before truncation. File exclusions apply across automatic context routes and resolved link targets. Masking cannot identify every secret. Preview the context and exclude material you do not want sent.
 
@@ -114,7 +118,7 @@ flowchart TD
 
 Auto-enhance is off by default and can affect chat prompts in sessions where this plugin's hook is active, even without an open canvas. The runtime supplies the target session and project directory; switching desktop tabs does not choose the hook's project. Plugin or organization policy can prevent hooks from running.
 
-**Rules mode** appends the dedicated auto-enhance text; it does not run the rewriting model or automatically append the Rules tab's contents. **AI mode** reuses the rewrite instructions and applicable user rules, but only takes optional static project context. It does not run Relevant code or AI-assisted context gathering, the file picker, canvas attachment loading, Copilot helpers or subscription CLIs. Short prompts below the configured minimum are left unchanged in both modes.
+**Rules mode** appends the dedicated auto-enhance text; it does not run the rewriting model or automatically append the Rules tab's contents. **AI mode** reuses the rewrite instructions and applicable user rules, but only takes optional static project context. It does not run Relevant code, AI-assisted or AI Test context gathering, the file picker, canvas attachment loading, Copilot helpers or subscription CLIs. Short prompts below the configured minimum are left unchanged in both modes.
 
 The worker gives the AI chain a 1.7-second budget minus setup time; key retrieval can add wall-clock time outside individual model timers. The command process has a 4.5-second outer deadline and the host configuration allows 5 seconds. An absent or ambiguous original-text span, error, empty answer or timeout preserves the original model-facing content. Surrounding runtime-added context is preserved byte for byte when replacement succeeds.
 
@@ -138,6 +142,7 @@ The hook uses the packaged command integration because registering an SDK prompt
 | Input, progress, cancellation and send-after checks | [panel/actions.ts](../src/panel/actions.ts), [protocol.ts](../src/protocol.ts) |
 | Enhancement orchestration and hook modes | [worker.ts](../src/worker.ts) |
 | Project context, privacy and safe reads | [context/index.ts](../src/context/index.ts), [context/files.ts](../src/context/files.ts), [context/secrets.ts](../src/context/secrets.ts), [privacy.ts](../src/privacy.ts) |
+| AI Test read-only research broker | [context/research.ts](../src/context/research.ts) |
 | Explicit uploads and attachment loading | [attachments.ts](../src/attachments.ts) |
 | System instructions, payload and response cleanup | [prompts.ts](../src/prompts.ts), [rules.ts](../src/rules.ts) |
 | Model chain, Copilot helper, HTTP providers and CLI execution | [models.ts](../src/models.ts), [Copilot models.ts](../src/copilot/models.ts), [llm.ts](../src/llm.ts), [cli.ts](../src/cli.ts) |

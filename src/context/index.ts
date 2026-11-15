@@ -23,9 +23,9 @@ import { namesWorkspace, workspaceTitle } from '../workspaces.ts'
 
 export type ContextItem = ContextItemView & { content: string }
 
-const LEVEL_RANK: Record<ContextLevel, number> = { off: 0, basic: 1, standard: 2, deep: 3, max: 4 }
-const BUDGET: Record<ContextLevel, number> = { off: 0, basic: 1000, standard: 12_000, deep: 28_000, max: 45_000 }
-const RELEVANT_FILES: Record<ContextLevel, number> = { off: 0, basic: 0, standard: 0, deep: 6, max: 10 }
+const LEVEL_RANK: Record<ContextLevel, number> = { off: 0, basic: 1, standard: 2, deep: 3, max: 4, 'ai-test': 3 }
+const BUDGET: Record<ContextLevel, number> = { off: 0, basic: 1000, standard: 12_000, deep: 28_000, max: 45_000, 'ai-test': 28_000 }
+const RELEVANT_FILES: Record<ContextLevel, number> = { off: 0, basic: 0, standard: 0, deep: 6, max: 10, 'ai-test': 6 }
 
 export const atLeast = (level: ContextLevel, min: ContextLevel) => LEVEL_RANK[level] >= LEVEL_RANK[min]
 
@@ -77,7 +77,7 @@ function stopIfCancelled(signal?: AbortSignal): void {
   if (signal?.aborted) throw new LlmError(msg('error.cancelled'), 'cancelled')
 }
 
-export type GatherResult = { items: ContextItem[]; notes: Message[]; root: string | null }
+export type GatherResult = { items: ContextItem[]; notes: Message[]; root: string | null; files?: string[] }
 
 /** A context item made outside the gather (the text of an attached file); `why` says why it is as it is (trimmed). */
 export function contextItem(id: string, kind: string, label: Message, content: string, why?: Message): ContextItem {
@@ -315,6 +315,7 @@ export async function gatherContext(host: EnhanceWorker, options: GatherOptions)
   step('workspace', 'done', title)
 
   let root: string | null = null
+  let researchFiles: string[] | undefined
   if (atLeast(level, 'standard')) step('project', 'running')
   if (focused && atLeast(level, 'standard')) {
     if (!workspace) {
@@ -336,6 +337,7 @@ export async function gatherContext(host: EnhanceWorker, options: GatherOptions)
   if (root) {
     stopIfCancelled(signal)
     const parts = await staticParts(root, options.extraFiles, true, options.allowGit !== false, signal, (fraction) => step('project', 'running', undefined, fraction), options)
+    if (level === 'ai-test') researchFiles = parts.files
     items.push(...parts.items)
     step('project', 'done', String(parts.files.length))
     if (atLeast(level, 'deep')) {
@@ -379,7 +381,7 @@ export async function gatherContext(host: EnhanceWorker, options: GatherOptions)
   }
 
   stopIfCancelled(signal)
-  return { items: fitBudget(items.filter((entry) => !options.exclude.has(entry.id)), BUDGET[level]), notes, root }
+  return { items: fitBudget(items.filter((entry) => !options.exclude.has(entry.id)), BUDGET[level]), notes, root, ...(researchFiles ? { files: researchFiles } : {}) }
 }
 
 /** A path inside `root`, relative to it with forward slashes; null for a path outside it. */

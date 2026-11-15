@@ -111,14 +111,14 @@ try {
     assert.equal(response.status, 200)
   }
   const beforePreviews = captured.length
-  for (const level of ['off', 'basic', 'standard', 'deep', 'max']) {
+  for (const level of ['off', 'basic', 'standard', 'deep', 'max', 'ai-test']) {
     const preview = await request('context.preview', { prompt: 'Fix validateSession', level })
     if (level === 'off') assert.deepEqual(preview.context, [])
     else assert.ok(preview.context.some(item => item.kind === 'workspace'), `${level} identifies the attached project`)
-    assert.equal(preview.context.some(item => item.id === 'rules:.github/copilot-instructions.md'), ['standard', 'deep', 'max'].includes(level))
-    assert.equal(preview.context.some(item => item.id === 'file:src/service.ts'), ['deep', 'max'].includes(level))
+    assert.equal(preview.context.some(item => item.id === 'rules:.github/copilot-instructions.md'), ['standard', 'deep', 'max', 'ai-test'].includes(level))
+    assert.equal(preview.context.some(item => item.id === 'file:src/service.ts'), ['deep', 'max', 'ai-test'].includes(level))
   }
-  assert.equal(captured.length, beforePreviews, 'previews never call a model, including AI-assisted')
+  assert.equal(captured.length, beforePreviews, 'previews never call a model, including AI-assisted and AI Test')
   await setting('allowProjectFiles', false)
   const privatePreview = await request('context.preview', { prompt: 'Fix validateSession', level: 'max' })
   assert.ok(privatePreview.context.every(item => ['workspace', 'agent'].includes(item.kind)))

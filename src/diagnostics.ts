@@ -4,6 +4,7 @@ import { VERSION } from './version.ts'
 // Only these fields reach a support report. Never retain raw logs, inputs, results or error text.
 const OPERATIONS = new Set([
   'worker.ready', 'canvas.connection', 'canvas.request', 'panel.start', 'panel.persistence', 'clipboard',
+  'context.research', 'context.research.round', 'context.research.read', 'context.research.search',
   'prompt.enhance', 'prompt.send', 'prompt.copy', 'context.preview', 'attachments.put',
   'models.get', 'models.save', 'models.delete', 'models.move', 'models.roles', 'models.test', 'models.catalog', 'models.detect',
   'history.remove', 'history.clear', 'history.restore', 'consents.get', 'consent.set', 'agent.launch', 'editor.open',

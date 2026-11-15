@@ -1,5 +1,12 @@
 var e=`# Changes
 
+## [0.6.0] - 2026-11-15
+
+### Added
+- Add **AI Test** beside AI-assisted in Context Level. It starts with Relevant code context, lets the selected effort model request protected file excerpts and literal searches in up to two research rounds, then rewrites using the actual evidence. Existing context levels, defaults and chat auto-enhance remain unchanged.
+- Bound research to 45 seconds (or half the remaining run budget), eight new excerpts and 16,000 added context characters. Retain evidence after ordinary research failures; stop on cancellation, privacy changes or usage-accounting errors.
+- Show research progress, excerpt attribution and a completion note. Add content-free research events to Show Logs. Copilot research uses the existing background helper, provider boundary and Enhanced Prompt usage grouping.
+
 ## [0.5.3] - 2026-11-15
 
 ### Fixed

@@ -19,7 +19,7 @@ export function createWorkerHost(services: Pick<EnhanceWorker, 'storage' | 'sett
     return { dispose: () => { events.off(name, handler) } }
   }
   const api: EnhanceWorker = {
-    ...services, log,
+    ...services, log, diagnostics,
     panels: {
       handle: (name, handler) => { handlers.set(name, handler); return { dispose: () => { handlers.delete(name) } } },
       post: (name, payload, options) => { events.emit('post', { event: name, payload, panel: options?.panel }) }

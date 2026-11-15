@@ -4,7 +4,7 @@ Turn a rough request into a clear prompt using the project's files, rules and Gi
 
 [![End-to-end flow: user text and allowed context become a rewrite request; the configured model returns a prompt for review and delivery to Copilot. A separate optional hook transforms chat prompts.](docs/assets/prompt-workflow.svg)](docs/assets/prompt-workflow.svg)
 
-[Read the complete workflow and editable diagrams](docs/prompt-workflow.md). The rewriting model produces the task prompt; Copilot receives that prompt and does the work. Optional chat auto-enhance changes the model-facing text while the visible chat keeps your original message.
+[Read the complete workflow and editable diagrams](docs/prompt-workflow.md). The diagram shows the stable workflow; the additional [AI Test research loop](docs/context-levels.md#ai-test-experimental-follow-up-research) is documented separately. The rewriting model produces the task prompt; Copilot receives that prompt and does the work. Optional chat auto-enhance changes the model-facing text while the visible chat keeps your original message.
 
 The English-language React panel retains model chains and fallback, prompt styles, reusable rules and structures, attachments, context preview, and history. Rewritten instructions and headings are in English; your original text, custom rules, code, paths and quotations remain intact. Choose **GitHub Copilot** in Models to rewrite through your Copilot account in the background. External APIs, local models and subscription CLIs remain available as explicit alternatives.
 
@@ -12,7 +12,7 @@ The English-language React panel retains model chains and fallback, prompt style
 
 ## Download and install
 
-**Development preview, version 0.3.0.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
+**Development preview, version 0.6.0.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
 
 ### Requirements
 
@@ -86,7 +86,7 @@ The native tab uses the compact SVG declared in `plugin.json`. Version 0.1.5 rem
 
 **General** is the default style. Use **Context** to choose how much project information to include, and **Style** to choose how the task should be expressed. [Guide to all nine styles](docs/styles.md).
 
-Choose **Relevant code** for most coding tasks: it adds local source matches without an extra model call. **Project overview** stays the default for quick orientation; **AI-assisted** adds model-based file selection when needed. **Off** keeps only the inputs you supply. Saved Basic selections remain compatible. [Context choices and limits](docs/context-levels.md). For a deeper walkthrough, download and open the [interactive context guide](docs/context-levels-guide.html) in your browser; it works offline.
+Choose **Relevant code** for most coding tasks: it adds local source matches without an extra model call. **Project overview** stays the default for quick orientation; **AI-assisted** adds model-based file selection when needed. **AI Test** is a separate experiment: the effort model can request follow-up searches and file excerpts in up to two research rounds before rewriting. It adds time and possible usage charges; AI-assisted remains unchanged. **Off** keeps only the inputs you supply. Saved Basic selections remain compatible. [Context choices and limits](docs/context-levels.md). For a deeper walkthrough, download and open the [interactive context guide](docs/context-levels-guide.html) in your browser; it works offline.
 
 The Quiet Desk banner changes its still scene with local time and the current enhancement state. Use the single button at its top right to toggle light/dark mode; your choice is remembered across sessions. The footer links to this repository, Settings, Show Logs and Feedback, with the version in plain gray text. Release notes appear once after an update. See the [user guide](docs/user-guide.md) for the scene's triggers and support logs.
 
@@ -111,9 +111,9 @@ Enhance starts a disposable, hidden helper using the SDK and executable supplied
 
 Before inference, the plugin checks both sessions' GitHub identity and Copilot model availability. The helper has an empty working directory, no tools, denied permissions, and disabled plugins, hooks, skills, automatic instruction discovery, shared session storage and memory. Cancellation stops the helper; normal completion removes its temporary home. A crash or failed shutdown can leave temporary files for OS cleanup. Copilot profiles never fall back to an external provider, including at AI-assisted context's AI file-selection step.
 
-Copilot usage is billed under the account's Copilot plan; AI-assisted context can make an additional model request. The two-second chat auto-enhance hook still supports Rules or API models only. The desktop owns SDK/runtime updates. This experimental integration checks required APIs and runtime state and refuses incompatible setups; future desktop changes may still require a plugin update. See [security and compatibility details](docs/copilot-background-rewriting.md).
+Copilot usage is billed under the account's Copilot plan; AI-assisted context can make an additional model request; AI Test can make up to two, using the selected effort model. The two-second chat auto-enhance hook still supports Rules or API models only. The desktop owns SDK/runtime updates. This experimental integration checks required APIs and runtime state and refuses incompatible setups; future desktop changes may still require a plugin update. See [security and compatibility details](docs/copilot-background-rewriting.md).
 
-**Usage Insights visibility:** Enhance Prompt 0.2.4 keeps local accounting records; [Usage Insights](https://github.com/AndrewGodlewsky/copilot-usage-insights) 0.1.64 discovers them automatically. Update **both plugins**, restart Copilot, run an enhancement with a GitHub Copilot model, then refresh Usage Insights. Look for the **Enhanced Prompt** project and its separate timestamped sessions. AI-assisted context's file selection, model tests and fallback attempts can each create another session. This is a dashboard grouping; no desktop project or chat window is created.
+**Usage Insights visibility:** Enhance Prompt 0.2.4 keeps local accounting records; [Usage Insights](https://github.com/AndrewGodlewsky/copilot-usage-insights) 0.1.64 discovers them automatically. Update **both plugins**, restart Copilot, run an enhancement with a GitHub Copilot model, then refresh Usage Insights. Look for the **Enhanced Prompt** project and its separate timestamped sessions. AI-assisted file selection, AI Test research rounds, model tests and fallback attempts can each create another session. This is a dashboard grouping; no desktop project or chat window is created.
 
 Only reported model, timestamp, token and credit accounting is exported, without prompts or responses. Missing charges remain unavailable rather than zero. Existing deleted receipts cannot be recovered; tracking starts with this version. [Storage, privacy and coverage details](docs/copilot-background-rewriting.md#usage-visibility).
 

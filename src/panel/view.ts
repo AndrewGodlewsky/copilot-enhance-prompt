@@ -129,6 +129,7 @@ export const STEP_LABELS: Record<Step['key'], string> = {
   git: 'Reading git changes',
   search: 'Finding relevant code',
   pick: 'AI picking files',
+  research: 'AI Test researching context',
   terminal: 'Reading terminal output',
   agents: "Reading other agents' sessions",
   model: 'Writing the prompt'

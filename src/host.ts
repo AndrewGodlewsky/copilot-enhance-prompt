@@ -40,5 +40,6 @@ export type EnhanceWorker = {
   events: { on<K extends keyof AppEvents>(event: K, handler: (payload: AppEvents[K]) => void): Disposable }
   hooks: { on<K extends keyof WorkerHooks>(event: K, handler: (payload: WorkerHooks[K], next: (payload: WorkerHooks[K]) => unknown) => unknown): Disposable }
   commands: { register(name: string, handler: () => unknown): Disposable }
+  diagnostics?: Pick<import('./diagnostics.ts').Diagnostics, 'record'>
   log(message: string): void
 }

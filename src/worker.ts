@@ -7,6 +7,7 @@ import { apiCatalog, claudeCatalog, claudeProgramSignature, codexCatalog, gemini
 import { CLI_BINARIES, detectClis } from './cli.ts'
 import { copyToClipboard } from './clipboard.ts'
 import { forgetActivity, recordSave, recordStatus, recordTool } from './context/activity.ts'
+import { researchContext, RESEARCH_LIMITS } from './context/research.ts'
 import { isSensitive } from './context/files.ts'
 import { formatText } from './format.ts'
 import { EFFORT_LABELS, EFFORT_SETTINGS, isEffort, parseModelAssignment } from './effort.ts'
@@ -335,6 +336,26 @@ export async function enhance(
     workspaceId: typeof input.workspaceId === 'string' ? input.workspaceId : null
   })
   if (level !== requested) gathered.notes.push(PROJECT_FILES_OFF)
+  let checkResearchAccess: (() => Promise<void>) | undefined
+  if (level === 'ai-test') {
+    checkResearchAccess = async () => {
+      const current = await readSettings(host)
+      if (JSON.stringify(current.privacy) !== JSON.stringify(settings.privacy) || current.excludePatterns !== settings.excludePatterns ||
+          JSON.stringify(current.extraContextFiles) !== JSON.stringify(settings.extraContextFiles)) {
+        throw new LlmError(msg('error.research_privacy_changed'), 'cancelled')
+      }
+    }
+    const researched = await researchContext({
+      root: gathered.root, files: gathered.files ?? [], items: gathered.items, prompt, signal,
+      exclude: new Set(input.exclude ?? []), excludePatterns: settings.excludePatterns,
+      budgetMs: Math.min(RESEARCH_LIMITS.ms, (left() ?? RUN_LIMITS.totalMs) / 2),
+      ensureAccess: checkResearchAccess, onStep: step, diagnostics: host.diagnostics,
+      ask: async (system, user, researchSignal, remainingMs) => (await runChain(host, list.slice(0, 1), system, user,
+        chainOptions(settings, researchSignal, { fallback: false, totalMs: remainingMs, timeoutMs: remainingMs }))).text
+    })
+    gathered.items = researched.items
+    gathered.notes.push(researched.note)
+  }
   const agentItem = gathered.items.find((entry) => entry.kind === 'agent')
   const system = buildSystemPrompt({
     style,
@@ -364,6 +385,7 @@ export async function enhance(
   /** The model being tried, as the progress card names it. */
   let tried = ''
   try {
+    await checkResearchAccess?.()
     const result = await runChain(
       host,
       list,
@@ -745,6 +767,7 @@ function registerRunHandlers(host: EnhanceWorker): void {
     const notes = [...gathered.notes]
     if (allowed !== requested) notes.push(PROJECT_FILES_OFF)
     if (allowed === 'max') notes.push(msg('note.preview_no_picker'))
+    if (allowed === 'ai-test') notes.push(msg('note.preview_no_research'))
     return { context: view(gathered.items), notes, chars: gathered.items.reduce((sum, entry) => sum + entry.chars, 0) }
   })
 
