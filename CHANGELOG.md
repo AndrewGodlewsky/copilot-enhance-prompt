@@ -1,5 +1,13 @@
 # Changes
 
+## [0.5.0] - 2026-11-15
+
+### Added
+- Bring the approved classic stick-figure crew into Write a request. Figures carry bare words between fixed positions, with varied trips and a small kick to make room.
+- Lock request editing during enhancement. Keep real progress visible; only successful completion sends the crew offscreen and slides all decorative text downward together without compressing its spacing.
+- Reveal the exact original request after the sweep. Failure and cancellation skip the success effect. Animation never changes model input, drafts, history, generated prompts or sending checks.
+- Add Pause animation and respect reduced-motion preferences. Preserve readable native text when layout cannot be safely animated, and stop artwork on resize, hidden panels or rendering failure.
+
 ## [0.4.0] - 2026-11-14
 
 ### Changed

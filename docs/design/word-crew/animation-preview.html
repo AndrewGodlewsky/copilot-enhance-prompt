@@ -225,8 +225,8 @@ function draw(t){
     drawFigure(figures[i],p);
   });
   if(ending&&!reduce.checked){
-    const barY=mix(-16,height+22,sweep);
-    [...wordEls,...carryEls].forEach(el=>{const y=Number(el.getAttribute('y'));set(el,{y:y+Math.max(0,barY-(y-14))});});
+    const barY=(height+30)*sweep;
+    [...wordEls,...carryEls].forEach(el=>{const y=Number(el.getAttribute('y'));set(el,{y:y+barY});});
     $('press').setAttribute('d',elapsed>=exitingFor?`M0,${barY}H${width}`:'');
   }
   if(!ending){progress(Math.min(95,t/18*95));const first=poses.find(p=>p.visible!==false);$('status').textContent=reduce.checked?'Enhancing preview…':`${first?.phase||'The crew is arriving'} · request locked`;}else{progress(100);$('status').textContent=elapsed<exitingFor?'100% · the crew is leaving':'100% · moving to the prompt';}

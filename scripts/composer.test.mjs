@@ -13,8 +13,13 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
       import { TooltipProvider } from './src/components/ui/tooltip.tsx'
       import { captured } from './src/components/ui/textarea.tsx'
       import { set } from '../src/runtime.ts'
-      import { optionsOpen, result, draft } from '../src/panel/state.ts'
-      export function render(open) {
+      import { optionsOpen, result, draft, busy, run } from '../src/panel/state.ts'
+      import { testCrew } from './src/use-word-crew.ts'
+      export function render(open, working = false, finishing = false) {
+        testCrew.finishing = finishing
+        testCrew.visible = finishing
+        set(run, finishing ? { runId: 'test', status: 'done', startedAt: 0, finishedAt: 1000, endPercent: 100, steps: [] } : null)
+        set(busy, working ? 'enhance' : null)
         captured.length = 0
         set(optionsOpen, open)
         set(draft, 'A multiline request')
@@ -25,6 +30,9 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
       }
     `, resolveDir: fileURLToPath(new URL('../web/', import.meta.url)) },
     plugins: [{ name: 'capture-textarea-props', setup(build) {
+      build.onLoad({ filter: /use-word-crew\.ts$/ }, () => ({
+        contents: `export const testCrew = { input: {current:null}, scene: {current:null}, visible:false, finishing:false, paused:false, togglePause(){} }; export const useWordCrew = () => testCrew;`
+      }))
       build.onLoad({ filter: /components[\\/]ui[\\/]textarea\.tsx$/ }, () => ({
         contents: `import React from 'react'; export const captured = []; export function Textarea(props) { captured.push(props); return React.createElement('textarea', props) }`, loader: 'tsx'
       }))
@@ -44,6 +52,15 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
     assert.equal(request.onKeyDown, undefined, 'plain, modified and IME Enter never trigger an action')
     assert.equal(request.onKeyPress, undefined)
     assert.equal(request.onKeyUp, undefined)
+    assert.equal(request.readOnly, false)
+    assert.match(request.className, /\bpt-5\b/, 'reserve room for lifted first-line words without changing line spacing')
+    const locked = module.exports.render(open, true).inputs.find(input => input['aria-label'] === 'Your prompt')
+    assert.equal(locked.readOnly, true, 'request editing is locked for the real enhancement run')
+    const ending = module.exports.render(open, false, true)
+    assert.match(ending.html, /100%/)
+    assert.match(ending.html, /Prompt ready/)
+    assert.doesNotMatch(ending.html, />Try again<|>Dismiss</, 'success must not expose retry actions during the completion lock')
+    assert.equal(ending.inputs.find(input => input['aria-label'] === 'Your prompt').readOnly, true)
     assert.match(html, />Enhance</)
     assert.ok(inputs.some(input => input !== request && typeof input.onKeyDown === 'function'), 'reviewed-result send shortcut remains')
   }

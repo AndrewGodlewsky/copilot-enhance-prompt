@@ -3,6 +3,7 @@ import { formatText } from '../../src/format.ts'
 // the run's progress, the context sent, and the enhanced prompt with Send.
 import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent } from 'react'
 import { read, set, settings, update } from '#panel'
+import { useWordCrew } from './use-word-crew'
 import { EFFORTS, EFFORT_LABELS } from '../../src/effort.ts'
 import { CONTEXT_LEVEL_HINTS, isContextLevel } from '../../src/presets.ts'
 import { contextKey } from '../../src/panel/context-preview.ts'
@@ -153,14 +154,16 @@ function Attachments() {
 }
 
 /** The request composer and its explicit enhancement buttons. */
-function Composer({ refresh }: { refresh: () => void }) {
+function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typeof useWordCrew> }) {
   const [dragging, setDragging] = useState(false)
   const picker = useRef<HTMLInputElement>(null)
   const working = read(busy)
   const text = read(draft)
+  const locked = working === 'enhance' || crew.finishing
   const attachedCount = read(files).length + uploadingNames().length
 
   const onPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    if (locked) return
     const pasted = filesOf(event.clipboardData)
     if (pasted.length === 0) return
     event.preventDefault()
@@ -169,14 +172,14 @@ function Composer({ refresh }: { refresh: () => void }) {
   const onDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault()
     setDragging(false)
-    void attachFiles(filesOf(event.dataTransfer), refresh)
+    if (!locked) void attachFiles(filesOf(event.dataTransfer), refresh)
   }
 
   return (
     <div
       className={cn('bg-card relative flex flex-col gap-3 rounded-xl border p-4 focus-within:border-ring', dragging && 'border-primary bg-primary/5')}
       onDragOver={(event) => {
-        if (Array.from(event.dataTransfer.types).includes('Files')) {
+        if (!locked && Array.from(event.dataTransfer.types).includes('Files')) {
           event.preventDefault()
           setDragging(true)
         }
@@ -188,17 +191,27 @@ function Composer({ refresh }: { refresh: () => void }) {
     >
       <h2 className="text-base font-semibold">{'Write a request'}</h2>
       <Attachments />
-      <Textarea
-        aria-label={'Your prompt'}
-        aria-describedby="composer-help"
-        placeholder={'Describe what you want the agent to do…'}
-        value={text}
-        rows={3}
-        onChange={(event) => put(draft, event.target.value)}
-        onPaste={onPaste}
-        className="max-h-80 min-h-28 resize-y bg-background shadow-none dark:bg-background"
-      />
-      <p id="composer-help" className="text-muted-foreground text-xs">Click Enhance to rewrite in English. Enter adds a new line.</p>
+      <div className="relative overflow-hidden rounded-md">
+        <Textarea
+          ref={crew.input}
+          aria-label="Your prompt"
+          aria-describedby="composer-help"
+          aria-busy={locked}
+          readOnly={locked}
+          placeholder="Describe what you want the agent to do…"
+          value={text}
+          rows={3}
+          onChange={(event) => { if (!locked) put(draft, event.target.value) }}
+          onPaste={onPaste}
+          style={crew.visible ? { color: 'transparent', caretColor: 'transparent', pointerEvents: 'none' } : undefined}
+          className="max-h-80 min-h-28 resize-y bg-background pt-5 shadow-none dark:bg-background"
+        />
+        <svg ref={crew.scene} aria-hidden="true" focusable="false" className="pointer-events-none absolute overflow-hidden text-foreground" style={{ visibility: crew.visible ? 'visible' : 'hidden' }} />
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <p id="composer-help" className="text-muted-foreground text-xs">{locked ? crew.finishing ? 'Prompt ready. Restoring your original request…' : 'Enhancing… Your original request is kept unchanged.' : 'Click Enhance to rewrite in English. Enter adds a new line.'}</p>
+        {crew.visible && !crew.finishing ? <Button size="sm" variant="ghost" onClick={crew.togglePause} aria-pressed={crew.paused}>{crew.paused ? 'Resume animation' : 'Pause animation'}</Button> : null}
+      </div>
       {dragging ? (
         <div className="border-primary text-primary pointer-events-none absolute inset-1 grid place-items-center rounded-lg border-2 border-dashed text-sm font-medium">
           {'Drop files to attach'}
@@ -237,7 +250,7 @@ function Composer({ refresh }: { refresh: () => void }) {
               event.target.value = ''
             }}
           />
-          <Button size="sm" variant="ghost" onClick={() => picker.current?.click()} disabled={attachedCount >= MAX_FILES}>
+          <Button size="sm" variant="ghost" onClick={() => picker.current?.click()} disabled={locked || attachedCount >= MAX_FILES}>
             <PaperclipIcon />
             {'Attach files'}
           </Button>
@@ -251,12 +264,12 @@ function Composer({ refresh }: { refresh: () => void }) {
             <>
               {/* "Send right after enhancing" is on: the one-step button sits next to Enhance, which still stops at the result. */}
               {sendsAfterEnhance() ? (
-                <Button size="sm" title={'Enhance and send without reviewing'} variant="outline" onClick={() => void enhanceAndSend()} disabled={!text.trim() || working !== null || !read(target)}>
+                <Button size="sm" title={'Enhance and send without reviewing'} variant="outline" onClick={() => void enhanceAndSend()} disabled={locked || !text.trim() || working !== null || !read(target)}>
                   <SendIcon />
                   {'Enhance and send'}
                 </Button>
               ) : null}
-              <Button size="sm" onClick={() => void enhanceNow()} disabled={!text.trim() || working !== null}>
+              <Button size="sm" onClick={() => void enhanceNow()} disabled={locked || !text.trim() || working !== null}>
                 {'Enhance'}
               </Button>
             </>
@@ -314,9 +327,9 @@ function PromptOptions() {
 }
 
 /** Live progress of the current run, then how it ended when it did not end well. */
-function RunCard() {
+function RunCard({ finishing = false }: { finishing?: boolean }) {
   const current = read(run)
-  if (!current || current.status === 'done') return null
+  if (!current || (current.status === 'done' && !finishing)) return null
   const running = current.status === 'running'
   if (current.workspace && current.workspace.key !== read(workspaceKey)) {
     if (!running) return null
@@ -334,7 +347,7 @@ function RunCard() {
   const finished = steps.filter((entry) => entry.status === 'done' || entry.status === 'skipped')
   const next = steps.find((entry) => entry.status === 'pending')
   const idle = finished.length === 0 ? 'Starting…' : next ? stepText(next) : 'Finishing…'
-  const title = running ? (active ? stepText(active) : idle) : current.status === 'cancelled' ? 'Cancelled' : 'Enhance failed'
+  const title = current.status === 'done' ? 'Prompt ready' : running ? (active ? stepText(active) : idle) : current.status === 'cancelled' ? 'Cancelled' : 'Enhance failed'
   const failed = current.status === 'error'
   return (
     <div className={cn('flex flex-col gap-2 rounded-lg border p-3', failed && 'border-destructive/40')}>
@@ -371,7 +384,7 @@ function RunCard() {
         </ul>
       ) : null}
       {failed && current.error ? <p className="text-destructive text-xs">{current.error}</p> : null}
-      {running ? null : (
+      {running || current.status === 'done' ? null : (
         <div className="flex gap-1.5">
           <Button size="sm" variant="outline" onClick={() => void enhanceNow()}>
             <RotateCcwIcon />
@@ -587,6 +600,7 @@ export function WorkspacePicker() {
 }
 
 export function EnhanceSection({ refresh }: { refresh: () => void }) {
+  const crew = useWordCrew(read(run), read(draft), read(workspaceKey))
   const output = read(result)
   const warning = modelWarning()
   // With no model yet, an agent CLI found on this machine is one press away: it runs on the
@@ -595,8 +609,8 @@ export function EnhanceSection({ refresh }: { refresh: () => void }) {
   return (
     <div className="flex flex-col gap-3">
       <WorkspacePicker />
-      <Composer refresh={refresh} />
-      <RunCard />
+      <Composer refresh={refresh} crew={crew} />
+      <RunCard finishing={crew.finishing} />
       {output ? <ResultCard output={output} /> : null}
       {output ? <FeedbackNote /> : null}
       {warning ? (
