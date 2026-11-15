@@ -1,4 +1,6 @@
 import { bindPanel, type JsonValue, type PanelClient, type RequestOptions } from '../../src/runtime.ts'
+import { panelDiagnostics } from '../../src/panel/diagnostics.ts'
+import { diagnosticError } from '../../src/diagnostics.ts'
 
 export function connectCanvas(): void {
   const token = /^\/c\/([a-f0-9]{64})\/$/.exec(location.pathname)?.[1]
@@ -13,11 +15,17 @@ export function connectCanvas(): void {
   let closing = false
   let writes: Promise<unknown> = Promise.resolve()
   async function call(method: string, input: unknown = {}, options: RequestOptions = {}, name?: string): Promise<any> {
-    const signal = AbortSignal.any([...(options.signal ? [options.signal] : []), AbortSignal.timeout(options.timeoutMs ?? 120_000)])
-    const response = await fetch('api', { method: 'POST', headers, body: JSON.stringify({ method, input, ...(name ? { name } : {}) }), signal })
-    const body = await response.json()
-    if (!response.ok) throw Object.assign(new Error(body.error?.message ?? 'The canvas connection failed.'), { code: body.error?.code ?? 'disconnected' })
-    return body.result
+    const started = Date.now()
+    try {
+      const signal = AbortSignal.any([...(options.signal ? [options.signal] : []), AbortSignal.timeout(options.timeoutMs ?? 120_000)])
+      const response = await fetch('api', { method: 'POST', headers, body: JSON.stringify({ method, input, ...(name ? { name } : {}) }), signal })
+      const body = await response.json()
+      if (!response.ok) throw Object.assign(new Error(body.error?.message ?? 'The canvas connection failed.'), { code: body.error?.code ?? 'disconnected', status: response.status })
+      return body.result
+    } catch (error) {
+      panelDiagnostics.record('canvas.request', 'failed', { ms: Date.now() - started, ...diagnosticError(error) })
+      throw error
+    }
   }
   const write = (method: string, input: unknown): Promise<void> => {
     const result = writes.catch(() => {}).then(() => call(method, input))
@@ -53,11 +61,17 @@ export function connectCanvas(): void {
     } }
   }
   bindPanel(client)
+  let connected: boolean | undefined
+  const connection = (next: boolean) => {
+    if (next !== connected) panelDiagnostics.record('canvas.connection', next ? 'ok' : 'failed')
+    connected = next
+  }
   async function events() {
     while (!closing) {
       try {
         const response = await fetch('events', { headers })
         if (!response.ok || !response.body) throw new Error('Disconnected')
+        connection(true)
         emit('workspace.changed', {})
         const reader = response.body.pipeThrough(new TextDecoderStream()).getReader()
         let pending = ''
@@ -74,7 +88,8 @@ export function connectCanvas(): void {
             else if (event.kind === 'storage' || event.kind === 'settings') emit(event.kind, { key: event.key })
           }
         }
-      } catch { emit('workspace.changed', {}) }
+        if (!closing) connection(false)
+      } catch { if (!closing) connection(false); emit('workspace.changed', {}) }
       if (!closing) await new Promise(resolve => setTimeout(resolve, 2000))
     }
   }

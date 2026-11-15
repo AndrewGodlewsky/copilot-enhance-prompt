@@ -1717,6 +1717,16 @@ var WIRE_CLOSE = "]]";
 function withMessage(message) {
   return `${english(message)}${WIRE_OPEN}${encodeURIComponent(JSON.stringify(message))}${WIRE_CLOSE}`;
 }
+function messageIn(text) {
+  const at = text.lastIndexOf(WIRE_OPEN);
+  if (at < 0 || !text.endsWith(WIRE_CLOSE)) return null;
+  try {
+    const parsed = JSON.parse(decodeURIComponent(text.slice(at + WIRE_OPEN.length, text.length - WIRE_CLOSE.length)));
+    return isMessage(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
 function msg(code, params) {
   return params ? { code, params } : { code };
 }
@@ -2803,6 +2813,14 @@ function translate(lang, text, params) {
   return template.replace(/\{(\w+)\}/g, (match, key) => key in params ? String(params[key]) : match);
 }
 var VI = {
+  "Show Logs": "Xem nh\u1EADt k\xFD",
+  "Diagnostic logs": "Nh\u1EADt k\xFD ch\u1EA9n \u0111o\xE1n",
+  "Copy logs": "Sao ch\xE9p nh\u1EADt k\xFD",
+  "Collecting logs\u2026": "\u0110ang thu th\u1EADp nh\u1EADt k\xFD\u2026",
+  "Reproduce the problem, then open these logs and copy them into your issue. They contain recent operation results and error codes, without prompts, file contents, paths, account names, or API keys. Nothing is uploaded automatically.": "T\xE1i hi\u1EC7n s\u1EF1 c\u1ED1, sau \u0111\xF3 m\u1EDF nh\u1EADt k\xFD n\xE0y v\xE0 sao ch\xE9p v\xE0o b\xE1o c\xE1o l\u1ED7i. Nh\u1EADt k\xFD ch\u1EE9a k\u1EBFt qu\u1EA3 thao t\xE1c v\xE0 m\xE3 l\u1ED7i g\u1EA7n \u0111\xE2y, kh\xF4ng c\xF3 l\u1EDDi nh\u1EAFc, n\u1ED9i dung t\u1EC7p, \u0111\u01B0\u1EDDng d\u1EABn, t\xEAn t\xE0i kho\u1EA3n hay kh\xF3a API. Kh\xF4ng c\xF3 d\u1EEF li\u1EC7u n\xE0o \u0111\u01B0\u1EE3c t\u1EF1 \u0111\u1ED9ng t\u1EA3i l\xEAn.",
+  "Up to 200 events per component are kept in memory. Restarting clears them. Reopen this dialog to capture newer events.": "M\u1ED7i th\xE0nh ph\u1EA7n gi\u1EEF t\u1ED1i \u0111a 200 s\u1EF1 ki\u1EC7n trong b\u1ED9 nh\u1EDB. Kh\u1EDFi \u0111\u1ED9ng l\u1EA1i s\u1EBD x\xF3a nh\u1EADt k\xFD. M\u1EDF l\u1EA1i h\u1ED9p tho\u1EA1i \u0111\u1EC3 l\u1EA5y c\xE1c s\u1EF1 ki\u1EC7n m\u1EDBi h\u01A1n.",
+  "The worker could not be reached. These logs include panel diagnostics only.": "Kh\xF4ng th\u1EC3 k\u1EBFt n\u1ED1i v\u1EDBi ti\u1EBFn tr\xECnh x\u1EED l\xFD. Nh\u1EADt k\xFD n\xE0y ch\u1EC9 ch\u1EE9a ch\u1EA9n \u0111o\xE1n c\u1EE7a b\u1EA3ng \u0111i\u1EC1u khi\u1EC3n.",
+  "Clipboard access is unavailable. The logs are selected; copy them with Ctrl+C or Command+C.": "Kh\xF4ng th\u1EC3 truy c\u1EADp b\u1EA3ng nh\u1EDB t\u1EA1m. Nh\u1EADt k\xFD \u0111\xE3 \u0111\u01B0\u1EE3c ch\u1ECDn; h\xE3y sao ch\xE9p b\u1EB1ng Ctrl+C ho\u1EB7c Command+C.",
   "No enabled API model: Copilot helpers and subscription CLIs are excluded from the two-second chat hook.": "Kh\xF4ng c\xF3 m\xF4 h\xECnh API \u0111ang b\u1EADt: phi\xEAn Copilot n\u1EC1n v\xE0 CLI thu\xEA bao kh\xF4ng d\xF9ng \u0111\u01B0\u1EE3c trong hook chat c\xF3 gi\u1EDBi h\u1EA1n hai gi\xE2y.",
   "Refresh API and Copilot model lists and the public Claude Code schema. Copilot rewriting needs this enabled to verify model access.": "L\xE0m m\u1EDBi danh s\xE1ch m\xF4 h\xECnh API, Copilot v\xE0 l\u01B0\u1EE3c \u0111\u1ED3 Claude Code c\xF4ng khai. Vi\u1EBFt l\u1EA1i b\u1EB1ng Copilot c\u1EA7n b\u1EADt m\u1EE5c n\xE0y \u0111\u1EC3 x\xE1c minh quy\u1EC1n truy c\u1EADp m\xF4 h\xECnh.",
   "Model-list requests use the provider account. List refreshes send no prompt or project context.": "Y\xEAu c\u1EA7u danh s\xE1ch m\xF4 h\xECnh d\xF9ng t\xE0i kho\u1EA3n c\u1EE7a nh\xE0 cung c\u1EA5p. L\xE0m m\u1EDBi danh s\xE1ch kh\xF4ng g\u1EEDi prompt hay ng\u1EEF c\u1EA3nh d\u1EF1 \xE1n.",
@@ -3306,6 +3324,14 @@ var VI = {
   "Changes the text Copilot receives; the chat still shows your original message. Off by default. Ambiguous prompts are left unchanged.": "Thay \u0111\u1ED5i v\u0103n b\u1EA3n Copilot nh\u1EADn \u0111\u01B0\u1EE3c; cu\u1ED9c tr\xF2 chuy\u1EC7n v\u1EABn hi\u1EC3n th\u1ECB tin nh\u1EAFn g\u1ED1c. M\u1EB7c \u0111\u1ECBnh t\u1EAFt. Gi\u1EEF nguy\xEAn n\u1EBFu kh\xF4ng x\xE1c \u0111\u1ECBnh \u0111\u01B0\u1EE3c ph\u1EA7n c\u1EA7n thay."
 };
 var ZH = {
+  "Show Logs": "\u663E\u793A\u65E5\u5FD7",
+  "Diagnostic logs": "\u8BCA\u65AD\u65E5\u5FD7",
+  "Copy logs": "\u590D\u5236\u65E5\u5FD7",
+  "Collecting logs\u2026": "\u6B63\u5728\u6536\u96C6\u65E5\u5FD7\u2026",
+  "Reproduce the problem, then open these logs and copy them into your issue. They contain recent operation results and error codes, without prompts, file contents, paths, account names, or API keys. Nothing is uploaded automatically.": "\u8BF7\u5148\u590D\u73B0\u95EE\u9898\uFF0C\u518D\u6253\u5F00\u65E5\u5FD7\u5E76\u590D\u5236\u5230\u95EE\u9898\u62A5\u544A\u4E2D\u3002\u65E5\u5FD7\u5305\u542B\u8FD1\u671F\u64CD\u4F5C\u7ED3\u679C\u548C\u9519\u8BEF\u4EE3\u7801\uFF0C\u4E0D\u5305\u542B\u63D0\u793A\u8BCD\u3001\u6587\u4EF6\u5185\u5BB9\u3001\u8DEF\u5F84\u3001\u8D26\u6237\u540D\u6216 API \u5BC6\u94A5\u3002\u4E0D\u4F1A\u81EA\u52A8\u4E0A\u4F20\u4EFB\u4F55\u5185\u5BB9\u3002",
+  "Up to 200 events per component are kept in memory. Restarting clears them. Reopen this dialog to capture newer events.": "\u6BCF\u4E2A\u7EC4\u4EF6\u5728\u5185\u5B58\u4E2D\u6700\u591A\u4FDD\u7559 200 \u6761\u4E8B\u4EF6\uFF0C\u91CD\u542F\u540E\u4F1A\u6E05\u9664\u3002\u91CD\u65B0\u6253\u5F00\u6B64\u5BF9\u8BDD\u6846\u53EF\u83B7\u53D6\u6700\u65B0\u4E8B\u4EF6\u3002",
+  "The worker could not be reached. These logs include panel diagnostics only.": "\u65E0\u6CD5\u8FDE\u63A5\u540E\u53F0\u8FDB\u7A0B\u3002\u8FD9\u4E9B\u65E5\u5FD7\u4EC5\u5305\u542B\u9762\u677F\u8BCA\u65AD\u4FE1\u606F\u3002",
+  "Clipboard access is unavailable. The logs are selected; copy them with Ctrl+C or Command+C.": "\u65E0\u6CD5\u8BBF\u95EE\u526A\u8D34\u677F\u3002\u65E5\u5FD7\u5DF2\u9009\u4E2D\uFF0C\u8BF7\u6309 Ctrl+C \u6216 Command+C \u590D\u5236\u3002",
   "No enabled API model: Copilot helpers and subscription CLIs are excluded from the two-second chat hook.": "\u6CA1\u6709\u5DF2\u542F\u7528\u7684 API \u6A21\u578B\uFF1ACopilot \u540E\u53F0\u4F1A\u8BDD\u548C\u8BA2\u9605 CLI \u4E0D\u9002\u7528\u4E8E\u4E24\u79D2\u9650\u5236\u7684\u804A\u5929 hook\u3002",
   "Refresh API and Copilot model lists and the public Claude Code schema. Copilot rewriting needs this enabled to verify model access.": "\u5237\u65B0 API\u3001Copilot \u6A21\u578B\u5217\u8868\u53CA\u516C\u5F00\u7684 Claude Code \u914D\u7F6E\u67B6\u6784\u3002Copilot \u6539\u5199\u9700\u8981\u5F00\u542F\u6B64\u9009\u9879\u4EE5\u9A8C\u8BC1\u6A21\u578B\u8BBF\u95EE\u6743\u9650\u3002",
   "Model-list requests use the provider account. List refreshes send no prompt or project context.": "\u6A21\u578B\u5217\u8868\u8BF7\u6C42\u4F7F\u7528\u63D0\u4F9B\u5546\u8D26\u6237\u3002\u5237\u65B0\u5217\u8868\u4E0D\u4F1A\u53D1\u9001\u63D0\u793A\u8BCD\u6216\u9879\u76EE\u4E0A\u4E0B\u6587\u3002",
@@ -6462,11 +6488,114 @@ function activate(host) {
 
 // src/worker-host.ts
 import { EventEmitter } from "node:events";
+
+// src/version.ts
+var VERSION = "0.2.1";
+
+// src/diagnostics.ts
+var OPERATIONS = /* @__PURE__ */ new Set([
+  "worker.ready",
+  "canvas.connection",
+  "canvas.request",
+  "panel.start",
+  "panel.persistence",
+  "clipboard",
+  "prompt.enhance",
+  "prompt.send",
+  "prompt.copy",
+  "context.preview",
+  "attachments.put",
+  "models.get",
+  "models.save",
+  "models.delete",
+  "models.move",
+  "models.roles",
+  "models.test",
+  "models.catalog",
+  "models.detect",
+  "history.remove",
+  "history.clear",
+  "history.restore",
+  "consents.get",
+  "consent.set",
+  "agent.launch",
+  "editor.open",
+  "targets.list",
+  "ui.locale",
+  "hook.last",
+  "rules.get",
+  "rules.save",
+  "data.summary",
+  "data.clear",
+  "copilot.catalog",
+  "copilot.runtime",
+  "copilot.start",
+  "copilot.session",
+  "copilot.access",
+  "copilot.workspace",
+  "copilot.tools",
+  "copilot.images",
+  "copilot.account",
+  "copilot.generate",
+  "copilot.cleanup"
+]);
+var CODES = /* @__PURE__ */ new Set([
+  "aborted",
+  "cancelled",
+  "timeout",
+  "unavailable",
+  "invalid_params",
+  "action_failed",
+  "rate_limited",
+  "disconnected",
+  "request_failed",
+  "unauthorized",
+  "forbidden",
+  "network",
+  "AbortError",
+  "TimeoutError",
+  "NotAllowedError",
+  ...Object.keys(MESSAGES).filter((code) => code.startsWith("error."))
+]);
+function diagnosticError(error) {
+  const value = error;
+  const message = value?.text ?? (typeof value?.message === "string" ? messageIn(value.message) : void 0);
+  const code = [message?.code, value?.code, value?.name].find((code2) => typeof code2 === "string" && CODES.has(code2)) ?? "request_failed";
+  const status = value?.status ?? (message?.code === "error.http" ? message.params?.status : void 0);
+  return { code, ...typeof status === "number" && Number.isInteger(status) && status >= 100 && status <= 599 ? { status } : {} };
+}
+function createDiagnostics() {
+  const entries = [];
+  const startedAt = (/* @__PURE__ */ new Date()).toISOString();
+  const limit = 200;
+  return {
+    record(operation, outcome, details = {}) {
+      if (!OPERATIONS.has(operation) || !["started", "ok", "failed", "cancelled", "pending"].includes(outcome)) return;
+      const { ms, code, status } = details;
+      entries.push({
+        at: (/* @__PURE__ */ new Date()).toISOString(),
+        operation,
+        outcome,
+        ...typeof ms === "number" && Number.isFinite(ms) && ms >= 0 ? { ms: Math.round(ms) } : {},
+        ...typeof code === "string" && CODES.has(code) ? { code } : {},
+        ...typeof status === "number" && Number.isInteger(status) && status >= 100 && status <= 599 ? { status } : {}
+      });
+      if (entries.length > limit) entries.splice(0, entries.length - limit);
+    },
+    snapshot() {
+      return { version: VERSION, capturedAt: (/* @__PURE__ */ new Date()).toISOString(), startedAt, limit, entries: entries.map((entry) => ({ ...entry })) };
+    }
+  };
+}
+
+// src/worker-host.ts
 function createWorkerHost(services, log = (_message) => {
-}) {
+}, diagnostics = createDiagnostics()) {
   const events = new EventEmitter();
   events.setMaxListeners(100);
   const handlers = /* @__PURE__ */ new Map();
+  handlers.set("logs.get", () => ({ ...diagnostics.snapshot(), platform: process.platform, architecture: process.arch, runtime: process.version }));
+  diagnostics.record("worker.ready", "ok");
   const hooks = /* @__PURE__ */ new Map();
   const commands = /* @__PURE__ */ new Map();
   const requests = /* @__PURE__ */ new Map();
@@ -6519,13 +6648,26 @@ function createWorkerHost(services, log = (_message) => {
     const timer = options.timeoutMs ? setTimeout(abort, options.timeoutMs) : void 0;
     let onAbort = () => {
     };
+    const started = Date.now();
+    const quiet = ["logs.get", "targets.list", "hook.last", "data.summary", "consents.get", "ui.locale", "enhance.progress.get"].includes(name);
+    if (!quiet) diagnostics.record(name, "started");
     try {
       const stopped = new Promise((_resolve, reject) => {
         onAbort = () => reject(Object.assign(new Error("The request was aborted."), { code: "aborted" }));
         if (controller.signal.aborted) onAbort();
         else controller.signal.addEventListener("abort", onAbort, { once: true });
       });
-      return await Promise.race([Promise.resolve().then(() => handler(input ?? {}, { signal: controller.signal, panel: { id: panelId } })), stopped]);
+      const answer = await Promise.race([Promise.resolve().then(() => handler(input ?? {}, { signal: controller.signal, panel: { id: panelId } })), stopped]);
+      const result = answer;
+      const failed = result?.ok === false || result?.copied === false || result?.accepted === false || result?.restored === false || !!result?.error;
+      if (!quiet || failed) diagnostics.record(name, failed ? "failed" : result?.pending ? "pending" : "ok", {
+        ms: Date.now() - started,
+        ...failed ? diagnosticError({ text: result?.errorText ?? result?.text }) : {}
+      });
+      return answer;
+    } catch (error) {
+      diagnostics.record(name, controller.signal.aborted ? "cancelled" : "failed", { ms: Date.now() - started, ...diagnosticError(error) });
+      throw error;
     } finally {
       clearTimeout(timer);
       controller.signal.removeEventListener("abort", onAbort);

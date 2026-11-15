@@ -6,6 +6,7 @@ import type { Catalog } from '../catalog.ts'
 import type { ImageType } from '../images.ts'
 import { LlmError } from '../llm.ts'
 import { msg } from '../messages.ts'
+import { diagnosticError, type Diagnostics } from '../diagnostics.ts'
 
 type Auth = { isAuthenticated: boolean; login?: string; host?: string }
 type Model = { id: string; name?: string; provider?: { kind?: string }; policy?: { state?: string }; capabilities?: { supports?: { vision?: boolean } } }
@@ -58,14 +59,16 @@ function sameAccount(left: Auth, right: Auth): boolean {
 }
 
 // Dependency injection is used only by local fixture tests. Production always calls desktopRuntime.
-export function createCopilotModels(parent: ModelSession, runtime = desktopRuntime) {
+export function createCopilotModels(parent: ModelSession, runtime = desktopRuntime, diagnostics?: Diagnostics) {
   const active = new Set<AbortController>()
   async function catalog(): Promise<Catalog> {
+    const started = Date.now()
     try {
       await runtime()
       const result = await withDeadline(parent.rpc.model.list({ refresh: true }), 15_000)
+      diagnostics?.record('copilot.catalog', 'ok', { ms: Date.now() - started })
       return { models: result.list.filter(eligible).map(model => ({ id: model.id, label: model.name || model.id })), source: 'GitHub Copilot', fetchedAt: Date.now() }
-    } catch { throw unavailable() }
+    } catch (error) { diagnostics?.record('copilot.catalog', 'failed', { ms: Date.now() - started, ...diagnosticError(error) }); throw unavailable() }
   }
   async function rewrite(input: CopilotRewrite, signal?: AbortSignal): Promise<string> {
     if (signal?.aborted) throw cancelled()
@@ -80,6 +83,10 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
     const stopClient = () => { if (client) stop ??= withDeadline(client.forceStop(), 10_000).then(() => true, () => false); return stop }
     controller.signal.addEventListener('abort', () => { void stopClient() }, { once: true })
     const check = () => { if (controller.signal.aborted) throw cancelled() }
+    let phaseStarted = Date.now()
+    let phase = 'copilot.runtime'
+    const stage = (next: string) => { phase = next; phaseStarted = Date.now(); diagnostics?.record(phase, 'started') }
+    stage(phase)
     try {
       const { sdk, path } = await runtime()
       check()
@@ -90,8 +97,10 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
       client = new sdk.CopilotClient({ mode: 'empty', workingDirectory: workspace, baseDirectory: join(directory, 'home'),
         connection: sdk.RuntimeConnection.forStdio({ path, args: ['--no-auto-update'] }),
         env: runtimeEnvironment(), useLoggedInUser: true, logLevel: 'error', builtinPluginDirectories: [] })
+      stage('copilot.start')
       await withDeadline(client.start(), 30_000)
       check()
+      stage('copilot.session')
       const session = await withDeadline(client.createSession({
         workingDirectory: workspace, configDirectory: join(directory, 'home'), model: input.model,
         systemMessage: { mode: 'replace', content: input.system },
@@ -104,6 +113,7 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
         infiniteSessions: { enabled: false }, enableManagedSettings: true, enforceManagedModelDefaults: true
       }), 30_000)
       check()
+      stage('copilot.access')
       const [parentModels, helperModels, parentAuth, helperAuth, metadata] = await withDeadline(Promise.all([
         parent.rpc.model.list({ refresh: true }), session.rpc.model.list({ refresh: true }),
         parent.rpc.gitHubAuth.getStatus(), session.rpc.gitHubAuth.getStatus(), session.rpc.metadata.snapshot()
@@ -111,20 +121,27 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
       if (!sameAccount(parentAuth, helperAuth)) throw new LlmError(msg('error.copilot_account'), 'unavailable')
       const model = helperModels.list.filter(eligible).find(model => model.id === input.model)
       if (!model || !parentModels.list.filter(eligible).some(model => model.id === input.model)) throw new LlmError(msg('error.copilot_model'), 'invalid_params')
+      stage('copilot.workspace')
       if (metadata.isRemote !== false || await realpath(metadata.workingDirectory) !== await realpath(workspace)) throw unavailable()
+      stage('copilot.tools')
       await withDeadline(session.rpc.tools.initializeAndValidate(), 15_000)
       const [tools, selected] = await withDeadline(Promise.all([session.rpc.tools.getCurrentMetadata(), session.rpc.model.getCurrent()]), 15_000)
       if (!Array.isArray(tools.tools) || tools.tools.length !== 0 || selected.modelId !== input.model) throw unavailable()
       const images = input.images ?? []
+      stage('copilot.images')
       if (images.length && model.capabilities?.supports?.vision !== true) throw new LlmError(msg('error.copilot_images'), 'invalid_params')
+      stage('copilot.account')
       const [currentParent, currentHelper] = await withDeadline(Promise.all([parent.rpc.gitHubAuth.getStatus(), session.rpc.gitHubAuth.getStatus()]), 10_000)
       if (!sameAccount(parentAuth, currentParent) || !sameAccount(parentAuth, currentHelper)) throw new LlmError(msg('error.copilot_account'), 'unavailable')
       check()
+      stage('copilot.generate')
       const result = await session.sendAndWait({ prompt: input.user, attachments: images.map(image => ({ type: 'blob', data: image.base64, mimeType: image.type })) }, 180_000)
       check()
       if (typeof result?.data?.content !== 'string' || !result.data.content.trim()) throw new LlmError(msg('error.empty_answer'), 'action_failed')
+      diagnostics?.record(phase, 'ok', { ms: Date.now() - phaseStarted })
       return result.data.content
     } catch (error) {
+      diagnostics?.record(phase, controller.signal.aborted ? 'cancelled' : 'failed', { ms: Date.now() - phaseStarted, ...diagnosticError(error) })
       if (controller.signal.aborted) throw cancelled()
       // SDK exceptions can contain request text or credentials. Do not forward them to logs/UI/history.
       if (error instanceof LlmError) throw error
@@ -132,16 +149,18 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
     } finally {
       clearTimeout(timeout)
       signal?.removeEventListener('abort', abort)
+      stage('copilot.cleanup')
       const stopped = await stopClient()
       active.delete(controller)
       // Do not remove state while a helper might still be using it, or report success after a failed stop.
-      if (stopped === false) throw unavailable()
+      if (stopped === false) { diagnostics?.record(phase, 'failed'); throw unavailable() }
       if (directory) {
         const inside = relative(tmpdir(), directory)
         if (inside && !isAbsolute(inside) && !inside.startsWith('..') && basename(directory).startsWith('enhance-copilot-')) {
-          await rm(directory, { recursive: true, force: true, maxRetries: 3 }).catch(() => { throw unavailable() })
+          await rm(directory, { recursive: true, force: true, maxRetries: 3 }).catch(() => { diagnostics?.record(phase, 'failed'); throw unavailable() })
         }
       }
+      diagnostics?.record(phase, 'ok', { ms: Date.now() - phaseStarted })
     }
   }
   return { catalog, rewrite, close() { for (const controller of active) controller.abort() } }

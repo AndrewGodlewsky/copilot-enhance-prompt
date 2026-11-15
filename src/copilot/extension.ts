@@ -4,6 +4,7 @@ import { createWorkerHost } from '../worker-host.ts'
 import { createServices } from './services.ts'
 import { createCanvasServer } from './server.ts'
 import { createCopilotModels } from './models.ts'
+import { createDiagnostics } from '../diagnostics.ts'
 
 // Supplied by the desktop host. The optional rewrite helper reuses this host's SDK and runtime.
 const SDK = '@github/copilot-sdk/extension'
@@ -32,10 +33,11 @@ const canvas = createCanvas({
 })
 
 const session = await joinSession({ canvases: [canvas] })
-const copilot = createCopilotModels(session)
+const diagnostics = createDiagnostics()
+const copilot = createCopilotModels(session, undefined, diagnostics)
 services = createServices(session, undefined, copilot)
 process.stderr.write('[Enhance Prompt] Session connected.\n')
-worker = createWorkerHost(services, message => process.stderr.write(`[Enhance Prompt] ${message}\n`))
+worker = createWorkerHost(services, message => process.stderr.write(`[Enhance Prompt] ${message}\n`), diagnostics)
 activate(worker.api)
 server = await createCanvasServer({ worker, assets: fileURLToPath(new URL('./web/', import.meta.url)), onClose: cancelPanelRuns })
 ready()

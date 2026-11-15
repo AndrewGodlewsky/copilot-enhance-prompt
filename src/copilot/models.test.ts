@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { access } from 'node:fs/promises'
 import { createCopilotModels, hostRuntime, runtimeEnvironment, type DesktopSdk, type ModelSession } from './models.ts'
+import { createDiagnostics } from '../diagnostics.ts'
 
 function fixture() {
   const state = { helperLogin: 'person', parentLogin: 'person', host: 'https://github.com', tools: [] as unknown[], selected: 'model-a', provider: 'copilot', policy: 'enabled', currentDirectory: '', sent: [] as unknown[], stopped: 0, config: {} as Record<string, unknown>, options: {} as Record<string, unknown>, hold: false }
@@ -33,7 +34,8 @@ function fixture() {
       }
     }
   }
-  return { state, provider: createCopilotModels(parent, async () => ({ sdk, path: process.execPath })) }
+  const diagnostics = createDiagnostics()
+  return { state, diagnostics, provider: createCopilotModels(parent, async () => ({ sdk, path: process.execPath }), diagnostics) }
 }
 
 test('runtime discovery accepts only the running Copilot bootstrap, never PATH or an override', () => {
@@ -85,4 +87,14 @@ test('cancellation stops only the helper and cannot return a late result', async
   await assert.rejects(result)
   assert.ok(state.stopped >= 1)
   await assert.rejects(access(state.options.baseDirectory as string))
+})
+
+test('Copilot diagnostics identify the failed check and cleanup without account names or prompts', async () => {
+  const { provider, state, diagnostics } = fixture()
+  state.helperLogin = 'PRIVATE-ACCOUNT'
+  await assert.rejects(provider.rewrite({ model: 'model-a', system: 'PRIVATE-SYSTEM', user: 'PRIVATE-PROMPT' }))
+  const report = diagnostics.snapshot()
+  assert.ok(report.entries.some(entry => entry.operation === 'copilot.access' && entry.code === 'error.copilot_account' && entry.outcome === 'failed'))
+  assert.ok(report.entries.some(entry => entry.operation === 'copilot.cleanup' && entry.outcome === 'ok'))
+  assert.doesNotMatch(JSON.stringify(report), /PRIVATE-|person|github.com|enhance-copilot-/)
 })

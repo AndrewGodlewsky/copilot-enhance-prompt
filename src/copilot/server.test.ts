@@ -22,6 +22,11 @@ test('the canvas rejects unauthenticated, cross-origin and oversized requests, a
     assert.deepEqual(await (await post({ method: 'storage.get', input: { key: 'colorTheme' } })).json(), { result: 'light' })
     assert.equal((await post({ method: 'storage.set', input: { key: 'colorTheme', value: 'arbitrary' } })).status, 400)
     assert.equal((await post({ method: 'request', name: 'models.get' })).status, 200)
+    const logs = { method: 'request', name: 'logs.get' }
+    assert.equal((await post(logs, { authorization: '' })).status, 403)
+    assert.equal((await post(logs, { origin: 'https://example.com' })).status, 403)
+    const report = await (await post(logs)).json()
+    assert.ok(report.result.entries.some((entry: any) => entry.operation === 'worker.ready'))
     assert.equal((await post({ method: 'storage.set', input: { key: 'panel:draft', value: 'x'.repeat(3_000_000) } })).status, 413)
     assert.equal((await fetch(url + '%2e%2e%2fstate.json')).status, 404)
     server.closeCanvas('one')

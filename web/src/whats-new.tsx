@@ -1,6 +1,6 @@
 // What's new and the changelog, from CHANGELOG.md and its translations (bundled as text, loaded when
 // the dialog opens).
-// The version in the footer opens it; after an update it opens once by itself.
+// The version is plain footer text; after an update the changelog opens once by itself.
 import { useEffect, useState, type ReactNode } from 'react'
 import { currentLanguage, t, type UiLanguage } from '../../src/i18n.ts'
 import { VERSION } from '../../src/version.ts'
@@ -105,9 +105,9 @@ export function WhatsNew() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {versionHidden ? null : (
-        <button type="button" onClick={() => setOpen(true)} aria-label={t("What's new in {version}", { version: VERSION })} title={t("What's new")} className="text-muted-foreground hover:text-foreground min-h-8 rounded-md px-1 text-xs hover:bg-accent">
+        <span className="text-muted-foreground inline-flex min-h-8 items-center px-1 text-xs">
           {`v${VERSION}`}
-        </button>
+        </span>
       )}
       <DialogContent className="flex max-h-[85vh] max-w-[calc(100vw-24px)] flex-col gap-3 p-4">
         <DialogHeader>

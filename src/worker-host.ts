@@ -2,12 +2,15 @@ import { EventEmitter } from 'node:events'
 import type { EnhanceWorker, RequestContext, WorkerHooks } from './host.ts'
 import type { AppEvents, Disposable, PanelClient, RequestInput, RequestOptions } from './runtime.ts'
 import type { PluginPanelEvents, PluginRequests } from './protocol.ts'
+import { createDiagnostics, diagnosticError } from './diagnostics.ts'
 
 type Handler = (input: any, context: RequestContext) => unknown
-export function createWorkerHost(services: Pick<EnhanceWorker, 'storage' | 'settings' | 'secrets' | 'host'>, log = (_message: string) => {}) {
+export function createWorkerHost(services: Pick<EnhanceWorker, 'storage' | 'settings' | 'secrets' | 'host'>, log = (_message: string) => {}, diagnostics = createDiagnostics()) {
   const events = new EventEmitter()
   events.setMaxListeners(100)
   const handlers = new Map<string, Handler>()
+  handlers.set('logs.get', () => ({ ...diagnostics.snapshot(), platform: process.platform, architecture: process.arch, runtime: process.version }))
+  diagnostics.record('worker.ready', 'ok')
   const hooks = new Map<string, ((event: any, next: (event: any) => unknown) => unknown)[]>()
   const commands = new Map<string, () => unknown>()
   const requests = new Map<AbortController, string>()
@@ -39,13 +42,25 @@ export function createWorkerHost(services: Pick<EnhanceWorker, 'storage' | 'sett
     options.signal?.addEventListener('abort', abort, { once: true })
     const timer = options.timeoutMs ? setTimeout(abort, options.timeoutMs) : undefined
     let onAbort: () => void = () => {}
+    const started = Date.now()
+    const quiet = ['logs.get', 'targets.list', 'hook.last', 'data.summary', 'consents.get', 'ui.locale', 'enhance.progress.get'].includes(name)
+    if (!quiet) diagnostics.record(name, 'started')
     try {
       const stopped = new Promise<never>((_resolve, reject) => {
         onAbort = () => reject(Object.assign(new Error('The request was aborted.'), { code: 'aborted' }))
         if (controller.signal.aborted) onAbort()
         else controller.signal.addEventListener('abort', onAbort, { once: true })
       })
-      return await Promise.race([Promise.resolve().then(() => handler(input ?? {}, { signal: controller.signal, panel: { id: panelId } })), stopped]) as PluginRequests[K]['output']
+      const answer = await Promise.race([Promise.resolve().then(() => handler(input ?? {}, { signal: controller.signal, panel: { id: panelId } })), stopped])
+      const result = answer as { ok?: boolean; copied?: boolean; accepted?: boolean; restored?: boolean; pending?: boolean; error?: unknown; errorText?: unknown; text?: unknown } | null
+      const failed = result?.ok === false || result?.copied === false || result?.accepted === false || result?.restored === false || !!result?.error
+      if (!quiet || failed) diagnostics.record(name, failed ? 'failed' : result?.pending ? 'pending' : 'ok', {
+        ms: Date.now() - started, ...(failed ? diagnosticError({ text: result?.errorText ?? result?.text }) : {})
+      })
+      return answer as PluginRequests[K]['output']
+    } catch (error) {
+      diagnostics.record(name, controller.signal.aborted ? 'cancelled' : 'failed', { ms: Date.now() - started, ...diagnosticError(error) })
+      throw error
     } finally {
       clearTimeout(timer)
       controller.signal.removeEventListener('abort', onAbort)

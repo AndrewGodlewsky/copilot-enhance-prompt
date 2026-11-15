@@ -479,7 +479,8 @@ export const DISCLOSURES: Partial<Record<PrivacyKey | 'sendAfterEnhance', string
 }
 
 /** The plugin's issue page, in the browser (the host asks before opening a site the first time). */
-export const ISSUES_URL = 'https://github.com/AndrewGodlewsky/copilot-enhance-prompt/issues/new'
+export const REPOSITORY_URL = 'https://github.com/AndrewGodlewsky/copilot-enhance-prompt'
+export const ISSUES_URL = `${REPOSITORY_URL}/issues/new`
 
 /**
  * The note that asks for ideas and feedback: first once someone has enhanced this many prompts (they

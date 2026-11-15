@@ -112,6 +112,13 @@ try {
   assert.ok(JSON.stringify(latestUser).includes(enhanced.enhanced))
   assert.ok(!JSON.stringify(latestUser).includes('HOOK FIXTURE:'), 'panel send bypasses automatic enhancement')
   console.log('Manual enhancement, session submission and hook bypass verified.')
+  const diagnostics = await request('logs.get')
+  assert.ok(diagnostics.entries.some(entry => entry.operation === 'prompt.enhance' && entry.outcome === 'ok'))
+  assert.ok(diagnostics.entries.some(entry => entry.operation === 'prompt.send' && entry.outcome === 'ok'))
+  for (const privateValue of [project, 'Improve this test request', 'Fixture enhanced prompt', token, session.sessionId]) {
+    assert.ok(!JSON.stringify(diagnostics).includes(privateValue), 'diagnostics exclude private request and connection data')
+  }
+  console.log('Copyable diagnostic report verified without prompts, project paths or connection tokens.')
   await session.rpc.canvas.close({ instanceId: 'enhance-smoke' })
   console.log('PASS: installed runtime discovered the canvas, read session metadata and context, and applied its packaged hook. No external model called.')
 } catch (error) {

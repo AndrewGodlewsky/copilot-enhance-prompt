@@ -4,7 +4,15 @@ The header switches between Enhance, History, Models, Rules and Settings. The la
 
 The Quiet Desk banner changes its still illustration with the current draft and enhancement status. Its window shows morning (05:00–11:59), afternoon (12:00–17:59), or night (18:00–04:59), using your local clock when the panel opens or regains focus. There is no animation. A finished page means a prompt is ready to review, not that it has been sent or verified.
 
-Use the single theme button at the banner's top right to switch the entire panel between light and dark. It initially follows the system, then remembers your choice across canvases and sessions. Time of day changes the artwork independently. The plugin version at the bottom opens release notes.
+Use the single theme button at the banner's top right to switch the entire panel between light and dark. It initially follows the system, then remembers your choice across canvases and sessions. Time of day changes the artwork independently. The plugin version at the bottom is plain text; release notes appear once after an update.
+
+## Footer and support logs
+
+**Enhance Prompt** opens the GitHub repository. **Settings** opens the Settings tab. **Feedback** opens the repository's new-issue form for you to review and submit; nothing is posted automatically.
+
+If something fails, reproduce it and select **Show Logs → Copy logs** before restarting. Paste the report into your issue along with what you expected and what happened. Reopen the dialog to capture newer events. If clipboard access is blocked, the text is selected so you can copy it manually. Logs are also accessible from the connection-error screen.
+
+Reports include the plugin version, runtime version, OS/architecture, timestamps, operation results, durations and recognized error codes. Copilot events identify the failing stage, such as account checks, model generation or helper cleanup. Raw error messages, prompts, rewritten text, file contents, paths, account names, API keys and connection tokens are excluded. Each component retains at most 200 events in memory; restarting clears them. Reports are never uploaded automatically. If the worker is unavailable, the report contains panel events only. These are plugin diagnostics, not the desktop application's full logs.
 
 ## Enhance
 

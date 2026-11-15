@@ -17,7 +17,9 @@ import { closePanel, wirePanel } from '../../src/panel/setup.ts'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Notices } from './common'
 import { Button } from '@/components/ui/button'
-import { WhatsNew } from './whats-new'
+import { Footer, LogsButton } from './footer'
+import { panelDiagnostics } from '../../src/panel/diagnostics.ts'
+import { diagnosticError } from '../../src/diagnostics.ts'
 import { QuietDesk } from './quiet-desk'
 import { followTheme } from './theme'
 import { colorTheme } from '../../src/panel/appearance.ts'
@@ -114,9 +116,7 @@ function App() {
             <EnhanceSection refresh={refresh} />
           )}
         </Suspense>
-        <footer className="mt-auto flex items-center gap-2 border-t pt-3 text-xs text-muted-foreground">
-          <span>{BRAND}</span><WhatsNew />
-        </footer>
+        <Footer onSettings={() => { openSection('privacy'); window.scrollTo({ top: 0, behavior: 'instant' }) }} />
       </div>
       <Notices />
     </TooltipProvider>
@@ -124,7 +124,10 @@ function App() {
 }
 
 async function start(): Promise<void> {
-  onPersistenceError(() => set(notice, { tone: 'danger', text: t('Changes could not be saved. Check the canvas connection and try again.') }))
+  onPersistenceError(() => {
+    panelDiagnostics.record('panel.persistence', 'failed')
+    set(notice, { tone: 'danger', text: t('Changes could not be saved. Check the canvas connection and try again.') })
+  })
   // In a plain browser (npm run dev) there is no Copilot: a mock stands in, with sample data.
   if (import.meta.env.DEV) {
     await (await import('./mock-host')).installMockHost()
@@ -142,6 +145,7 @@ async function start(): Promise<void> {
   // Closing or reloading the panel ends its run: the worker stops the model too.
   window.addEventListener('pagehide', closePanel)
   wirePanel()
+  panelDiagnostics.record('panel.start', 'ok')
   if (import.meta.env.DEV) {
     // A browser hears no Copilot events: reload the terminal list now and then instead.
     setInterval(() => void refreshTargets(), 8000)
@@ -201,8 +205,9 @@ async function start(): Promise<void> {
   )
 }
 
-void start().catch(() => {
+void start().catch(error => {
+  panelDiagnostics.record('panel.start', 'failed', diagnosticError(error))
   createRoot(document.getElementById('root')!).render(
-    <div className="p-6"><h1>{BRAND}</h1><p role="alert">{t('The canvas could not connect. Close it and open Enhance Prompt again from Copilot.')}</p></div>
+    <div className="p-6"><h1>{BRAND}</h1><p role="alert">{t('The canvas could not connect. Close it and open Enhance Prompt again from Copilot.')}</p><LogsButton /></div>
   )
 })

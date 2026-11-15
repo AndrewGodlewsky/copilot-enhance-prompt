@@ -1,5 +1,12 @@
 var e=`# Changes
 
+## [0.2.1] - 2026-11-14
+
+### Added
+- Footer links to the repository, Settings, diagnostic logs and a new GitHub issue. The version is plain gray text; release notes still appear once after an update.
+- Copyable support logs with timestamps, operation outcomes, durations, error codes and Copilot failure stages. Logs use bounded memory and exclude prompts, file contents, paths, account names and API keys; nothing is uploaded automatically.
+- Panel diagnostics remain available when the worker cannot connect, with manual selection if clipboard access is unavailable.
+
 ## [0.2.0] - 2026-11-14
 
 ### Added

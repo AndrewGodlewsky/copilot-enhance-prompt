@@ -20,6 +20,14 @@ export function translate(lang: UiLanguage, text: string, params?: Record<string
 }
 
 export const VI: Record<string, string> = {
+  'Show Logs': 'Xem nhật ký',
+  'Diagnostic logs': 'Nhật ký chẩn đoán',
+  'Copy logs': 'Sao chép nhật ký',
+  'Collecting logs…': 'Đang thu thập nhật ký…',
+  'Reproduce the problem, then open these logs and copy them into your issue. They contain recent operation results and error codes, without prompts, file contents, paths, account names, or API keys. Nothing is uploaded automatically.': 'Tái hiện sự cố, sau đó mở nhật ký này và sao chép vào báo cáo lỗi. Nhật ký chứa kết quả thao tác và mã lỗi gần đây, không có lời nhắc, nội dung tệp, đường dẫn, tên tài khoản hay khóa API. Không có dữ liệu nào được tự động tải lên.',
+  'Up to 200 events per component are kept in memory. Restarting clears them. Reopen this dialog to capture newer events.': 'Mỗi thành phần giữ tối đa 200 sự kiện trong bộ nhớ. Khởi động lại sẽ xóa nhật ký. Mở lại hộp thoại để lấy các sự kiện mới hơn.',
+  'The worker could not be reached. These logs include panel diagnostics only.': 'Không thể kết nối với tiến trình xử lý. Nhật ký này chỉ chứa chẩn đoán của bảng điều khiển.',
+  'Clipboard access is unavailable. The logs are selected; copy them with Ctrl+C or Command+C.': 'Không thể truy cập bảng nhớ tạm. Nhật ký đã được chọn; hãy sao chép bằng Ctrl+C hoặc Command+C.',
   'No enabled API model: Copilot helpers and subscription CLIs are excluded from the two-second chat hook.': 'Không có mô hình API đang bật: phiên Copilot nền và CLI thuê bao không dùng được trong hook chat có giới hạn hai giây.',
   'Refresh API and Copilot model lists and the public Claude Code schema. Copilot rewriting needs this enabled to verify model access.': 'Làm mới danh sách mô hình API, Copilot và lược đồ Claude Code công khai. Viết lại bằng Copilot cần bật mục này để xác minh quyền truy cập mô hình.',
   'Model-list requests use the provider account. List refreshes send no prompt or project context.': 'Yêu cầu danh sách mô hình dùng tài khoản của nhà cung cấp. Làm mới danh sách không gửi prompt hay ngữ cảnh dự án.',
@@ -524,6 +532,14 @@ export const VI: Record<string, string> = {
 }
 
 export const ZH: Record<string, string> = {
+  'Show Logs': '显示日志',
+  'Diagnostic logs': '诊断日志',
+  'Copy logs': '复制日志',
+  'Collecting logs…': '正在收集日志…',
+  'Reproduce the problem, then open these logs and copy them into your issue. They contain recent operation results and error codes, without prompts, file contents, paths, account names, or API keys. Nothing is uploaded automatically.': '请先复现问题，再打开日志并复制到问题报告中。日志包含近期操作结果和错误代码，不包含提示词、文件内容、路径、账户名或 API 密钥。不会自动上传任何内容。',
+  'Up to 200 events per component are kept in memory. Restarting clears them. Reopen this dialog to capture newer events.': '每个组件在内存中最多保留 200 条事件，重启后会清除。重新打开此对话框可获取最新事件。',
+  'The worker could not be reached. These logs include panel diagnostics only.': '无法连接后台进程。这些日志仅包含面板诊断信息。',
+  'Clipboard access is unavailable. The logs are selected; copy them with Ctrl+C or Command+C.': '无法访问剪贴板。日志已选中，请按 Ctrl+C 或 Command+C 复制。',
   'No enabled API model: Copilot helpers and subscription CLIs are excluded from the two-second chat hook.': '没有已启用的 API 模型：Copilot 后台会话和订阅 CLI 不适用于两秒限制的聊天 hook。',
   'Refresh API and Copilot model lists and the public Claude Code schema. Copilot rewriting needs this enabled to verify model access.': '刷新 API、Copilot 模型列表及公开的 Claude Code 配置架构。Copilot 改写需要开启此选项以验证模型访问权限。',
   'Model-list requests use the provider account. List refreshes send no prompt or project context.': '模型列表请求使用提供商账户。刷新列表不会发送提示词或项目上下文。',

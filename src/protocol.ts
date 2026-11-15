@@ -38,6 +38,8 @@ export type ModelsView = {
 
   // oxlint-disable-next-line typescript/consistent-type-definitions -- declaration merging needs an interface
 export interface PluginRequests {
+    /** Bounded, in-memory diagnostics with no request/response content or account identifiers. */
+    'logs.get': { output: import('./diagnostics.ts').WorkerDiagnostics }
     /** Rewrites `prompt` with the model chain (or one profile), with context at `level`. */
     'prompt.enhance': {
       input: {

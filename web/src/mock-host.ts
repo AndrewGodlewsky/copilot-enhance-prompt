@@ -8,6 +8,7 @@ import { bindPanel, type PanelClient } from '../../src/runtime.ts'
 import { english, msg, raw, type Message } from '../../src/messages.ts'
 import { DEFAULTS } from '../../src/defaults.ts'
 import { UNSUPPORTED_SETTINGS } from '../../src/capabilities.ts'
+import { createDiagnostics } from '../../src/diagnostics.ts'
 
 type Handler = (payload: unknown) => void
 
@@ -231,6 +232,7 @@ const handlers: Record<string, (input: Record<string, unknown>, signal?: AbortSi
     structures: [{ id: 's1', name: 'Bug report', sections: ['Symptom', 'Steps to reproduce', 'Expected', 'Actual', 'Fix and verify'] }]
   }),
   'rules.save': (input) => (input as { config: unknown }).config,
+  'logs.get': () => ({ ...createDiagnostics().snapshot(), platform: 'preview', architecture: 'preview', runtime: 'preview' }),
   'prompt.enhance': (input, signal) => enhance(input, signal),
   // The same list a run sends, without a run.
   'context.preview': async () => {

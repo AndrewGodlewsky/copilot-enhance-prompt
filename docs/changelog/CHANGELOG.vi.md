@@ -1,5 +1,12 @@
 # Thay đổi
 
+## [0.2.1] - 2026-11-14
+
+### Thêm
+- Chân trang liên kết đến kho mã, Cài đặt, nhật ký chẩn đoán và biểu mẫu tạo issue trên GitHub. Phiên bản hiển thị màu xám, không phải liên kết; ghi chú phát hành vẫn tự mở một lần sau khi cập nhật.
+- Nhật ký hỗ trợ có thể sao chép, gồm thời gian, kết quả thao tác, thời lượng, mã lỗi và bước Copilot gặp lỗi. Nhật ký được giới hạn trong bộ nhớ, không chứa lời nhắc, nội dung tệp, đường dẫn, tên tài khoản hay khóa API; không tự động tải lên.
+- Vẫn xem được chẩn đoán của bảng điều khiển khi không kết nối được tiến trình xử lý; có thể chọn văn bản để sao chép nếu không truy cập được bảng nhớ tạm.
+
 ## [0.2.0] - 2026-11-14
 
 ### Thêm

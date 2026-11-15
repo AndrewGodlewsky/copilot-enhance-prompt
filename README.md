@@ -12,7 +12,7 @@ The React panel retains model chains and fallback, prompt styles, reusable rules
 
 ## Download and install
 
-**Development preview, version 0.2.0.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
+**Development preview, version 0.2.1.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
 
 ### Requirements
 
@@ -84,7 +84,7 @@ The native tab uses the compact SVG declared in `plugin.json`. Version 0.1.5 rem
 
 ## Use it
 
-The Quiet Desk banner changes its still scene with local time and the current enhancement state. Use the single button at its top right to toggle light/dark mode; your choice is remembered across sessions. The version and release notes are in the footer. See the [user guide](docs/user-guide.md) for the scene's triggers.
+The Quiet Desk banner changes its still scene with local time and the current enhancement state. Use the single button at its top right to toggle light/dark mode; your choice is remembered across sessions. The footer links to this repository, Settings, Show Logs and Feedback, with the version in plain gray text. Release notes appear once after an update. See the [user guide](docs/user-guide.md) for the scene's triggers and support logs.
 
 1. In **Models**, click **Add a model**, keep the **GitHub Copilot** preset, choose a model from the live list, and save. Existing profiles are preserved; select the new Copilot profile explicitly in Enhance if another profile was already first. Claude models in this preset use GitHub Copilot, not Claude Code. The separate Claude Code preset still uses Claude Code's authentication and billing.
 2. In **Enhance → Write a request**, describe the task and choose a model. **Options** opens style, context, output language and structure settings. Preview the context and uncheck items to exclude them; use **Attach files** for explicit attachments.
