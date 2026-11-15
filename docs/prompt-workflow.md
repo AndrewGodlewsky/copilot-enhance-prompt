@@ -8,7 +8,7 @@ This is the semantic source for the [README illustration](assets/prompt-workflow
 
 ```mermaid
 flowchart TD
-    A["Open Enhance Prompt canvas in a Copilot project session"] --> B["Write rough request; choose style, language, context level and model"]
+    A["Open Enhance Prompt canvas in a Copilot project session"] --> B["Write rough request; choose style, context level and model"]
     B --> C["Optional: select a structure, preview/exclude context, attach files"]
     C --> D["Click Enhance; capture input and target session/project"]
     D --> E["Authenticated local transport → enhancement worker"]
@@ -21,7 +21,7 @@ flowchart TD
     G -- "Fatal validation error / cancellation" --> X
     C -. "Explicit uploads" .-> I["Temporary attachment copies: text excerpts, image bytes and file paths"]
     I -- "Invalid attachment" --> X
-    J["Global and project rules; custom instructions; style or structure; output language; agent hint"] --> K["SYSTEM instructions: preserve intent, ground details, shape final prompt"]
+    J["Global and project rules; custom instructions; style or structure; English output policy; agent hint"] --> K["SYSTEM instructions: preserve intent, ground details, shape final prompt"]
     H --> L["USER payload: project_context + original request + attachment descriptions/paths"]
     I --> L
     K --> M["Copilot helper or explicit external provider; images where supported"]
@@ -49,12 +49,12 @@ The rewriting model and Copilot have separate jobs. The rewriter produces text. 
 
 | Part | Contents |
 | --- | --- |
-| System instructions | Built-in rewrite rules; selected style or structure; output language; custom instructions; applicable user rules; optional Copilot-specific guidance |
+| System instructions | Built-in rewrite rules; selected style or structure; English output policy; custom instructions; applicable user rules; optional Copilot-specific guidance |
 | User payload | The rough request inside `<request>`; allowed context items inside `<project_context>`; attached text excerpts and attachment paths |
 | Images | Image bytes for supported providers. Copilot rejects attachments unless the model reports image support; external nonvision profiles receive paths only |
 | Authentication | Copilot: existing SDK authentication, verified against the attached account; external providers: configured API key or CLI authentication. Keys are never inserted into the prompt |
 
-The built-in instructions ask the model to preserve the user's intent and concrete details, use only grounded file names and commands, and return the final prompt without commentary. These are instructions to a model, not a guarantee that its answer is correct. Review remains useful.
+The built-in instructions ask the model to preserve the user's intent and concrete details, use only grounded file names and commands, and return the final prompt without commentary. They require English for the rewritten instructions and headings even when custom rules or project context request another output language. The original request, custom rules and structures, Unicode, code, identifiers, paths, URLs, quoted text, errors and other user-supplied data remain intact. These are instructions to a model, not a guarantee that its answer is correct. Review remains useful.
 
 For example, a request might be `Fix the login button overlapping the password field on phones.` If selected project context actually identifies `src/components/LoginForm.tsx` and the relevant test command, the result can name them. Without that evidence, the rewriter is instructed to ask the destination agent to locate the form instead of inventing a path. The result is a task description, not a code change.
 
@@ -96,7 +96,7 @@ flowchart TD
     D -- "No / subagent / ambiguous" --> U["Return no replacement; original model-facing content continues"]
     D -- "Yes" --> E{"Configured mode"}
     E -- "Rules" --> F["Append configured auto-enhance text; no model call"]
-    E -- "AI" --> G["Build instructions from default style, language, custom instructions and applicable rules"]
+    E -- "AI" --> G["Build instructions from default style, English output policy, custom instructions and applicable rules"]
     G --> H["Optional allowed static project context + original request; API profiles only"]
     H --> I["Run fast API model chain within short deadline; clean response"]
     I -- "Error / timeout / empty / unchanged" --> U

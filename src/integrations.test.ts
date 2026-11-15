@@ -193,7 +193,7 @@ test('an agent that is waiting for an answer is not typed into unasked, and neve
     }
   })
   const worker = await mountWorker(main, { host: blockedHost })
-  // The picker gets an agent's title and state apart, to word them in the panel's language.
+  // The picker gets an agent's title and state apart, to show the state as an English label.
   const listed = await worker.request('targets.list', {})
   assert.deepEqual(listed.targets[0], { terminalId: 't1', label: 'Claude · blocked', agent: 'claude', title: 'Claude', state: 'blocked' })
   // Claude is asking the person something: what is typed now could be taken as the answer.

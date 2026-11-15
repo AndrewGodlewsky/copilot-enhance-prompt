@@ -2,7 +2,6 @@ import { memo, useEffect, useState } from 'react'
 import { ContrastIcon } from 'lucide-react'
 import { read } from '#panel'
 import { BRAND } from '../../src/brand.ts'
-import { t } from '../../src/i18n.ts'
 import { currentTheme, DESK_STATUS_LABELS, deskState, deskTime, toggleTheme, type DeskState, type DeskTime } from '../../src/panel/appearance.ts'
 import { IconAction } from './common'
 
@@ -62,14 +61,14 @@ export function QuietDesk() {
     return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh) }
   }, [])
   const state = read(deskState)
-  const themeLabel = read(currentTheme) === 'dark' ? t('Switch to light mode') : t('Switch to dark mode')
+  const themeLabel = read(currentTheme) === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
   return (
     <div className="quiet-desk">
       <div className="quiet-desk-copy">
-        <p className="quiet-desk-platform">{t('GitHub Copilot')}</p>
+        <p className="quiet-desk-platform">{'GitHub Copilot'}</p>
         <h1>{BRAND}</h1>
-        <p className="quiet-desk-tagline">{t('A little more thought. A clearer prompt.')}</p>
-        <p className="quiet-desk-status" data-state={state} role="status"><span aria-hidden="true" />{t(DESK_STATUS_LABELS[state])}</p>
+        <p className="quiet-desk-tagline">{'A little more thought. A clearer prompt.'}</p>
+        <p className="quiet-desk-status" data-state={state} role="status"><span aria-hidden="true" />{DESK_STATUS_LABELS[state]}</p>
       </div>
       <IconAction label={themeLabel} onClick={toggleTheme} variant="outline" className="quiet-desk-theme size-9"><ContrastIcon aria-hidden="true" className="size-4" /></IconAction>
       <div className="quiet-desk-scene"><DeskIllustration time={time} state={state} /></div>

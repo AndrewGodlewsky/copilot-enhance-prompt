@@ -3,7 +3,7 @@
 // answer, and the history by project.
 import { read, set } from '#panel'
 import { assert, mockHost, test } from '#testing'
-import { changeUiLanguage, enhanceNow, enhanceOrSend, refreshTargets, removeEntry, reuse, runNoticeAction, send } from './panel/actions.ts'
+import { enhanceNow, enhanceOrSend, refreshTargets, removeEntry, reuse, runNoticeAction, send } from './panel/actions.ts'
 import { busy, contextShown, draft, filteredHistory, history, historyByProject, historyOpen, historyScope, lastRun, notice, put, result, resultFor, tab, targets } from './panel/state.ts'
 import { mountPanel } from './panel/testing.ts'
 import { targetLabel } from './panel/view.ts'
@@ -79,23 +79,22 @@ test('an agent waiting for an answer is not typed into unasked: the notice offer
     }
   })
   const view = await mountPanel(host)
-  // The picker words an agent's state in the panel's language.
-  assert.equal(targetLabel(read(targets)[0]), 'Claude · cần bạn')
+  // Legacy language preferences do not change safety messages or state labels.
+  assert.equal(targetLabel(read(targets)[0]), 'Claude · needs you')
   await send('Do the thing')
   const asked = read(notice)
   assert.equal(asked?.tone, 'warning')
-  assert.match(asked?.text ?? '', /Claude đang chờ bạn trả lời/)
+  assert.match(asked?.text ?? '', /Claude is waiting for an answer from you/)
   assert.deepEqual(asked?.action?.run, { kind: 'send.anyway', terminalId: 't1', text: 'Do the thing' })
   // The person presses the button: now it is typed, and the worker is told they were asked.
   await runNoticeAction(asked!.action!.run)
   assert.deepEqual(calls.map((call) => call.force ?? false), [false, true])
-  assert.match(read(notice)?.text ?? '', /không nhấn Enter/)
+  assert.match(read(notice)?.text ?? '', /without Enter/)
   // A terminal that closed meanwhile gets nothing.
   set(targets, [])
   await runNoticeAction({ kind: 'send.anyway', terminalId: 't1', text: 'Do the thing' })
   assert.equal(calls.length, 2)
   assert.deepEqual(view.errors, [])
-  await changeUiLanguage('en')
   await view.unmount()
 })
 

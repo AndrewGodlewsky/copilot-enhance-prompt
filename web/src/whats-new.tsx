@@ -1,8 +1,8 @@
-// What's new and the changelog, from CHANGELOG.md and its translations (bundled as text, loaded when
+import { formatText } from '../../src/format.ts'
+// What's new and the changelog, from the English CHANGELOG.md (bundled as text, loaded when
 // the dialog opens).
 // The version is plain footer text; after an update the changelog opens once by itself.
 import { useEffect, useState, type ReactNode } from 'react'
-import { currentLanguage, t, type UiLanguage } from '../../src/i18n.ts'
 import { VERSION } from '../../src/version.ts'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Segmented } from './common'
@@ -67,16 +67,9 @@ function ReleaseBody({ body }: { body: string }) {
 
 const SEEN_KEY = 'enhance-prompt:seen-version'
 
-/**
- * The changelog in the panel's language (docs/changelog/CHANGELOG.<lang>.md), each release falling
- * back to the English one when its translation is missing. Loaded only when the dialog opens.
- */
-async function loadChangelog(lang: UiLanguage): Promise<Release[]> {
-  const english = parseChangelog((await import('../../CHANGELOG.md?raw')).default)
-  if (lang === 'en') return english
-  const text = lang === 'vi' ? (await import('../../docs/changelog/CHANGELOG.vi.md?raw')).default : (await import('../../docs/changelog/CHANGELOG.zh-CN.md?raw')).default
-  const translated = new Map(parseChangelog(text).map((release) => [release.version, release]))
-  return english.map((release) => translated.get(release.version) ?? release)
+/** Loads the English changelog only when the dialog opens. */
+async function loadChangelog(): Promise<Release[]> {
+  return parseChangelog((await import('../../CHANGELOG.md?raw')).default)
 }
 
 /**
@@ -87,13 +80,12 @@ async function loadChangelog(lang: UiLanguage): Promise<Release[]> {
 const versionHidden = import.meta.env.DEV && new URLSearchParams(location.search).get('version') === '0'
 
 export function WhatsNew() {
-  const lang = currentLanguage()
-  const [loaded, setLoaded] = useState<{ lang: string; releases: Release[] } | null>(null)
+  const [loaded, setLoaded] = useState<Release[] | null>(null)
   const [open, setOpen] = useState(false)
   useEffect(() => {
-    if (open && loaded?.lang !== lang) void loadChangelog(lang).then((list) => setLoaded({ lang, releases: list }))
-  }, [open, lang, loaded?.lang])
-  const releases = loaded?.releases ?? []
+    if (open && loaded === null) void loadChangelog().then(setLoaded)
+  }, [open, loaded])
+  const releases = loaded ?? []
   const [view, setView] = useState('new')
   // After an update (not on the first install), show what changed once.
   useEffect(() => {
@@ -111,15 +103,15 @@ export function WhatsNew() {
       )}
       <DialogContent className="flex max-h-[85vh] max-w-[calc(100vw-24px)] flex-col gap-3 p-4">
         <DialogHeader>
-          <DialogTitle>{view === 'new' ? t("What's new in {version}", { version: latest?.version ?? VERSION }) : t('Changelog')}</DialogTitle>
-          <DialogDescription className="sr-only">{t('Changelog')}</DialogDescription>
+          <DialogTitle>{view === 'new' ? formatText("What's new in {version}", { version: latest?.version ?? VERSION }) : 'Changelog'}</DialogTitle>
+          <DialogDescription className="sr-only">{'Changelog'}</DialogDescription>
         </DialogHeader>
         <Segmented
-          label={t('Changelog')}
+          label={'Changelog'}
           value={view}
           options={[
-            { value: 'new', label: t("What's new") },
-            { value: 'all', label: t('Changelog') }
+            { value: 'new', label: "What's new" },
+            { value: 'all', label: 'Changelog' }
           ]}
           onChange={setView}
         />

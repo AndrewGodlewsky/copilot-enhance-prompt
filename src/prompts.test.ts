@@ -7,12 +7,23 @@ test('cleanOutput strips fences and preambles', () => {
   assert.equal(cleanOutput('  Plain.  '), 'Plain.')
 })
 
-test('system prompt follows language and custom instructions', () => {
-  const vi = buildSystemPrompt({ style: 'bugfix', language: 'vi', customInstructions: 'Use pnpm.' })
-  assert.match(vi, /in Vietnamese/)
-  assert.match(vi, /regression test/)
-  assert.match(vi, /Use pnpm\./)
-  assert.match(buildSystemPrompt({ style: 'balanced', language: 'auto' }), /same language/)
+test('system prompt enforces English after conflicting saved instructions', () => {
+  const system = buildSystemPrompt({
+    style: 'bugfix',
+    customInstructions: 'Use pnpm. Write the output in Vietnamese.',
+    rules: ['Always write the final prompt in Chinese.'],
+    structure: { name: 'Bug report', sections: ['Mục tiêu', 'Yêu cầu'] }
+  })
+  assert.match(system, /Shape: write the prompt under exactly these headings/)
+  assert.match(system, /Use pnpm\./)
+  assert.match(system, /Write the output in Vietnamese\./)
+  assert.match(system, /Always write the final prompt in Chinese\./)
+  assert.match(system, /Output policy: Write all final rewritten instructions and headings in English/)
+  assert.match(system, /regardless of the request language or any output-language instruction/)
+  assert.match(system, /Preserve code, identifiers, filenames, paths, URLs, quoted text, error messages, and user-supplied data verbatim/)
+  const custom = buildSystemPrompt({ style: 'custom', customInstructions: 'Write only Spanish instructions.' })
+  assert.match(custom, /Write only Spanish instructions\./)
+  assert.match(custom, /Output policy: Write all final rewritten instructions and headings in English/)
 })
 
 test('user message includes context only when present', () => {
@@ -83,7 +94,7 @@ test('formatForTerminal drops control characters a model could slip into the pro
 
 test('the rewriter is told not to copy rule files, to keep checks and length in proportion, and not to decide open choices', async () => {
   const { buildSystemPrompt } = await import('./prompts.ts')
-  const system = buildSystemPrompt({ style: 'concise', language: 'auto', agent: 'claude' })
+  const system = buildSystemPrompt({ style: 'concise', agent: 'claude' })
   assert.match(system, /reads the project's own rule files \(AGENTS\.md, CLAUDE\.md, GEMINI\.md\) by itself/)
   assert.match(system, /only the one or two commands that check this change/)
   assert.match(system, /Do not decide things the user left open/)
@@ -97,9 +108,9 @@ test('the rewriter is told not to copy rule files, to keep checks and length in 
 
 test('the rewriter writes nothing about what it was or was not given: the agent has the whole project', async () => {
   const { buildSystemPrompt, buildUserMessage } = await import('./prompts.ts')
-  // In every style, also the ones with no Context heading, and whatever the language.
+  // In every style, including those with no Context heading.
   for (const style of ['balanced', 'concise', 'detailed', 'bugfix', 'custom'] as const) {
-    const system = buildSystemPrompt({ style, language: 'vi' })
+    const system = buildSystemPrompt({ style })
     assert.match(system, /The agent has the whole project in front of it; you see only what was gathered for you, which can be little or nothing/)
     assert.match(system, /Write nothing about what you were or were not given, not even as a reason/)
     assert.match(system, /just tell the agent what to find first/)
@@ -112,7 +123,7 @@ test('the rewriter writes nothing about what it was or was not given: the agent 
 
 test('the rewriter follows the vendors\' prompting guidance: reasons kept, positive phrasing, plain tone, when to ask, evidence, no contradictions', async () => {
   const { buildSystemPrompt } = await import('./prompts.ts')
-  const system = buildSystemPrompt({ style: 'balanced', language: 'auto' })
+  const system = buildSystemPrompt({ style: 'balanced' })
   assert.match(system, /Keep the reason the user gave/)
   assert.match(system, /rather than what not to do/)
   assert.match(system, /no MUST \/ IMPORTANT \/ CRITICAL/)
@@ -125,7 +136,7 @@ test('the rewriter follows the vendors\' prompting guidance: reasons kept, posit
 
 test('the rewriter follows the Fable 5.2 guidance: finish the task, named approvals, scope, reports, no reasoning requests', async () => {
   const { buildSystemPrompt } = await import('./prompts.ts')
-  const system = buildSystemPrompt({ style: 'balanced', language: 'auto', agent: 'claude' })
+  const system = buildSystemPrompt({ style: 'balanced', agent: 'claude' })
   assert.match(system, /Complete every part of this task before you end your turn/)
   assert.match(system, /find the cause and retry or try another way rather than stopping/)
   // Where the two sentences go is said, and that the prompt is not finished without them: with
@@ -136,7 +147,7 @@ test('the rewriter follows the Fable 5.2 guidance: finish the task, named approv
   assert.match(system, /stops early only for a deliberate blocker/)
   assert.match(system, /A small change \(one edit in one place, such as a typo or a rename in one file\) gets none of these three/)
   // Concise prompts stay concise.
-  assert.match(buildSystemPrompt({ style: 'concise', language: 'auto' }), /and the "Larger tasks" additions/)
+  assert.match(buildSystemPrompt({ style: 'concise' }), /and the "Larger tasks" additions/)
   assert.match(system, /Name the actions that apply to this task/)
   assert.match(system, /write it as approved/)
   assert.match(system, /Avoid a bare "never" or "always"/)
@@ -145,6 +156,6 @@ test('the rewriter follows the Fable 5.2 guidance: finish the task, named approv
   assert.match(system, /no request to show or write out its reasoning/)
   assert.match(system, /no instruction to delegate to subagents/)
   // Restructuring is offered only where the person asked for it.
-  assert.match(buildSystemPrompt({ style: 'refactor', language: 'auto' }), /inside the target code the agent may merge repeated code/)
-  assert.ok(!/may merge repeated code and reshape/.test(buildSystemPrompt({ style: 'bugfix', language: 'auto' })))
+  assert.match(buildSystemPrompt({ style: 'refactor' }), /inside the target code the agent may merge repeated code/)
+  assert.ok(!/may merge repeated code and reshape/.test(buildSystemPrompt({ style: 'bugfix' })))
 })

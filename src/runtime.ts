@@ -26,7 +26,6 @@ export type AppEvents = {
 }
 export type SaveOptions = { suggestedName?: string; mimeType?: string; data: string | ArrayBuffer }
 export type PanelClient = {
-  locale?: string
   plugin: {
     request<K extends keyof PluginRequests>(name: K, input?: RequestInput<K>, options?: RequestOptions): Promise<PluginRequests[K]['output']>
     on<K extends keyof PluginPanelEvents>(event: K, handler: (payload: PluginPanelEvents[K]) => void): Disposable
@@ -127,7 +126,6 @@ export const files = { saveAs: (options: SaveOptions) => {
 } }
 export const on: PanelClient['on'] = (name, handler) => frame().on(name, handler)
 export const env = {
-  get locale() { return client?.locale ?? 'en' },
   get theme() { return { colorScheme: typeof document !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' as const : 'light' as const } },
   client: 'desktop' as const
 }

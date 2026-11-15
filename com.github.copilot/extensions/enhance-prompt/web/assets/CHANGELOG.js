@@ -1,5 +1,12 @@
 var e=`# Changes
 
+## [0.3.0] - 2026-11-14
+
+### Changed
+- Use English for plugin-authored interface text and rewritten instructions, including the optional AI chat hook. Remove the panel and output language controls and the Vietnamese and Chinese documentation copies.
+- Keep existing rules, structures, drafts, history and model settings. Preserve user-supplied text, Unicode, code, paths, quotations and other data while applying the English output policy ahead of conflicting language instructions.
+- Replace translation tables with literal English text and a small interpolation helper. Remove retired language preferences without disturbing other saved data.
+
 ## [0.2.4] - 2026-11-14
 
 ### Added

@@ -33,7 +33,6 @@ export function connectCanvas(): void {
     return result
   }
   const client: PanelClient = {
-    locale: navigator.language,
     plugin: { request: (name, input, options) => call('request', input ?? {}, options, name), on: (name, handler) => listen(`plugin:${name}`, handler) },
     settings: {
       get: ((key?: string) => call('settings.get', key ? { key } : {})) as PanelClient['settings']['get'],

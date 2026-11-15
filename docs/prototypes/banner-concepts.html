@@ -43,7 +43,6 @@ button:focus-visible,select:focus-visible { outline: 3px solid currentColor; out
 .nav { display:flex; align-items:center; flex-wrap:wrap; gap:4px; padding:12px 0; border-bottom:1px solid var(--app-line); font-size:13px; }
 .nav span { padding:7px 10px; color:var(--app-muted); }
 .nav .selected { background:var(--app-raised); color:var(--app-fg); border-radius:6px; font-weight:600; }
-.nav .language { margin-left:auto; font-size:12px; }
 .composer { padding:14px 0 2px; }
 .composer strong { font-size:14px; font-weight:600; }
 .input-sample { margin-top:7px; padding:10px 12px; background:var(--app-raised); color:var(--app-muted); border-radius:6px; font-size:13px; }
@@ -61,7 +60,6 @@ button:focus-visible,select:focus-visible { outline: 3px solid currentColor; out
   .status { margin-top:12px; }
   .scene,.desk .scene { width:100%; height:130px; margin:4px 0 0; padding:0 12px; }
   .nav span { padding:6px 8px; }
-  .nav .language { margin-left:0; }
 }
 </style>
 </head>
@@ -84,7 +82,7 @@ button:focus-visible,select:focus-visible { outline: 3px solid currentColor; out
         <div class="theme-switch" role="group" aria-label="Prompt Press color theme"><button type="button" data-theme="light" aria-pressed="false"><span aria-hidden="true">☀</span> Light</button><button type="button" data-theme="dark" aria-pressed="true"><span aria-hidden="true">◐</span> Dark</button></div>
         <div class="scene" aria-hidden="true"></div>
       </header>
-      <div class="nav" aria-label="Sample navigation"><span class="selected">Enhance</span><span>History</span><span>Models</span><span>Rules</span><span>Settings</span><span class="language">English</span></div>
+      <div class="nav" aria-label="Sample navigation"><span class="selected">Enhance</span><span>History</span><span>Models</span><span>Rules</span><span>Settings</span></div>
       <div class="composer"><strong>Write a request</strong><div class="input-sample">Add search to the settings page.</div></div>
     </div>
     <p class="explanation" id="press-explanation" aria-live="polite"></p>
@@ -107,7 +105,7 @@ button:focus-visible,select:focus-visible { outline: 3px solid currentColor; out
         <div class="theme-switch" role="group" aria-label="Quiet Desk color theme"><button type="button" data-theme="light" aria-pressed="false"><span aria-hidden="true">☀</span> Light</button><button type="button" data-theme="dark" aria-pressed="true"><span aria-hidden="true">◐</span> Dark</button></div>
         <div class="scene" aria-hidden="true"></div>
       </header>
-      <div class="nav" aria-label="Sample navigation"><span class="selected">Enhance</span><span>History</span><span>Models</span><span>Rules</span><span>Settings</span><span class="language">English</span></div>
+      <div class="nav" aria-label="Sample navigation"><span class="selected">Enhance</span><span>History</span><span>Models</span><span>Rules</span><span>Settings</span></div>
       <div class="composer"><strong>Write a request</strong><div class="input-sample">Add search to the settings page.</div></div>
     </div>
     <p class="explanation" id="desk-explanation" aria-live="polite"></p>

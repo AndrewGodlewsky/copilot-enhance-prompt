@@ -33,7 +33,7 @@ export class LlmError extends Error {
   code: string
   /** HTTP status when the endpoint answered with an error. */
   status?: number
-  /** The message as a code and parameters, for the panel to show in its language. */
+  /** The message as a code and parameters, for structured error handling. */
   text: Message
   constructor(message: Message | string, code = 'action_failed', status?: number) {
     const text = typeof message === 'string' ? raw(message) : message

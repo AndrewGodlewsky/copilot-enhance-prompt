@@ -43,7 +43,7 @@ export function createWorkerHost(services: Pick<EnhanceWorker, 'storage' | 'sett
     const timer = options.timeoutMs ? setTimeout(abort, options.timeoutMs) : undefined
     let onAbort: () => void = () => {}
     const started = Date.now()
-    const quiet = ['logs.get', 'targets.list', 'hook.last', 'data.summary', 'consents.get', 'ui.locale', 'enhance.progress.get'].includes(name)
+    const quiet = ['logs.get', 'targets.list', 'hook.last', 'data.summary', 'consents.get', 'enhance.progress.get'].includes(name)
     if (!quiet) diagnostics.record(name, 'started')
     try {
       const stopped = new Promise<never>((_resolve, reject) => {

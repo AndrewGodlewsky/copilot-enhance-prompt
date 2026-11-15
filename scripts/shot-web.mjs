@@ -5,7 +5,7 @@ import { existsSync, mkdtempSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve, dirname } from 'node:path'
 
-const [out = '.artifacts/web.png', width = '400', height = '700', query = 'lang=vi'] = process.argv.slice(2)
+const [out = '.artifacts/web.png', width = '400', height = '700', query = ''] = process.argv.slice(2)
 const browsers = [process.env.BRAVE_PATH, 'C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe'].filter(Boolean)
 const browser = browsers.find((path) => existsSync(path))
 if (!browser) throw new Error('No Brave found')

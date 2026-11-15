@@ -15,7 +15,7 @@ the agent to run `pnpm test` before finishing", "Keep code identifiers in Englis
 - Rules are used by every Enhance and by [AI auto-enhance](auto-enhance.md).
 - They win over the style's shape when the two disagree.
 
-The style **Custom only** follows your own instructions instead of a built-in shape; write them in
+The style **Custom only** follows your own instructions instead of a built-in shape, subject to the English output policy; write them in
 **Options → Custom instructions** when that style is picked (they are also the setting **Custom
 instructions** in Settings → Plugins → Enhance Prompt).
 
@@ -33,9 +33,11 @@ A structure is a list of headings the prompt is written under, in that order. Tw
 - **Add structure**: a name and one heading per line, in any language.
 - Pick one under **Options → Structure** in the composer. "By style" uses the style's own shape.
 
-Built-in structures are shown in the panel's language. Headings may be in any language: the
-rewriter translates them into the prompt's output language, and leaves out a heading only when
-nothing belongs under it. So changing the panel language never changes what a structure means.
+Built-in structures and the panel are in English. Custom headings can be entered in any language;
+the rewriter writes the final prompt's headings and instructions in English, leaving out a heading
+only when nothing belongs under it. The stored structure remains as you wrote it. Code, paths,
+quotations and other user-supplied data stay intact. A language instruction in a rule or custom
+instruction cannot override the English output policy; its other guidance still applies.
 
 ## How prompts are written
 

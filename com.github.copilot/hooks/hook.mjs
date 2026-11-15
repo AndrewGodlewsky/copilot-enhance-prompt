@@ -1623,9 +1623,14 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 
+// src/format.ts
+function formatText(template, params = {}) {
+  return template.replace(/\{(\w+)\}/g, (match, key) => Object.hasOwn(params, key) ? String(params[key]) : match);
+}
+
 // src/messages.ts
 var MESSAGES = {
-  // Shown text that came from outside (a provider's error, a file name): never translated.
+  // Text from outside the plugin (a provider's error, a file name) stays verbatim.
   raw: "{text}",
   // Context notes: why something was left out.
   "note.no_workspace": "No focused workspace.",
@@ -1739,19 +1744,18 @@ var raw = (text) => ({ code: "raw", params: { text } });
 function isMessage(value) {
   return Boolean(value) && typeof value === "object" && typeof value.code === "string" && value.code in MESSAGES;
 }
-function render(message, lookup) {
+function render(message) {
   const param = (value) => {
     if (Array.isArray(value)) return value.map(param).join(" \xB7 ");
-    if (isMessage(value)) return render(value, lookup);
+    if (isMessage(value)) return render(value);
     return String(value);
   };
-  const params = {};
+  const params = /* @__PURE__ */ Object.create(null);
   for (const [key, value] of Object.entries(message.params ?? {})) params[key] = param(value);
-  return lookup(MESSAGES[message.code], params);
+  return formatText(MESSAGES[message.code], params);
 }
-var fill = (template, params) => template.replace(/\{(\w+)\}/g, (match, key) => params[key] ?? match);
 function english(message) {
-  return render(message, fill);
+  return render(message);
 }
 
 // src/llm.ts
@@ -1766,7 +1770,7 @@ var LlmError = class extends Error {
   code;
   /** HTTP status when the endpoint answered with an error. */
   status;
-  /** The message as a code and parameters, for the panel to show in its language. */
+  /** The message as a code and parameters, for structured error handling. */
   text;
   constructor(message, code = "action_failed", status) {
     const text = typeof message === "string" ? raw(message) : message;
@@ -2802,1059 +2806,6 @@ function snippet(text, hits, maxChars) {
   }
   return out.join("\n");
 }
-
-// src/i18n-dict.ts
-function resolveLanguage(setting, locale) {
-  if (setting === "en" || setting === "vi" || setting === "zh") return setting;
-  const lower = locale.toLowerCase();
-  if (lower.startsWith("vi")) return "vi";
-  if (lower.startsWith("zh")) return "zh";
-  return "en";
-}
-function translate(lang, text, params) {
-  const dict = lang === "vi" ? VI : lang === "zh" ? ZH : {};
-  const template = dict[text] ?? text;
-  if (!params) return template;
-  return template.replace(/\{(\w+)\}/g, (match, key) => key in params ? String(params[key]) : match);
-}
-var VI = {
-  "Usage records are kept separately for Usage Insights and are not removed by these controls.": "B\u1EA3n ghi m\u1EE9c s\u1EED d\u1EE5ng \u0111\u01B0\u1EE3c l\u01B0u ri\xEAng cho Usage Insights v\xE0 kh\xF4ng b\u1ECB x\xF3a b\u1EDFi c\xE1c thao t\xE1c n\xE0y.",
-  "Copilot usage could not be saved. Check free disk space and plugin data-folder permissions, then open Show Logs. Any remaining helper files have been kept for recovery.": "Kh\xF4ng th\u1EC3 l\u01B0u m\u1EE9c s\u1EED d\u1EE5ng Copilot. Ki\u1EC3m tra dung l\u01B0\u1EE3ng \u0111\u0129a tr\u1ED1ng v\xE0 quy\u1EC1n truy c\u1EADp th\u01B0 m\u1EE5c d\u1EEF li\u1EC7u c\u1EE7a plugin, r\u1ED3i m\u1EDF Xem nh\u1EADt k\xFD. C\xE1c t\u1EC7p c\xF2n l\u1EA1i c\u1EE7a phi\xEAn h\u1ED7 tr\u1EE3 \u0111\xE3 \u0111\u01B0\u1EE3c gi\u1EEF l\u1EA1i \u0111\u1EC3 kh\xF4i ph\u1EE5c.",
-  "Copilot model discovery": "Kh\xE1m ph\xE1 m\xF4 h\xECnh Copilot",
-  "Refresh the Copilot model list first, then reopen these logs. This section is included when you copy the logs.": "L\xE0m m\u1EDBi danh s\xE1ch m\xF4 h\xECnh Copilot tr\u01B0\u1EDBc, r\u1ED3i m\u1EDF l\u1EA1i nh\u1EADt k\xFD. Ph\u1EA7n n\xE0y \u0111\u01B0\u1EE3c bao g\u1ED3m khi b\u1EA1n sao ch\xE9p nh\u1EADt k\xFD.",
-  "The plugin could not verify the desktop runtime. Open Show Logs and share the Copilot model discovery section.": "Plugin kh\xF4ng th\u1EC3 x\xE1c minh m\xF4i tr\u01B0\u1EDDng ch\u1EA1y c\u1EE7a \u1EE9ng d\u1EE5ng. M\u1EDF Xem nh\u1EADt k\xFD v\xE0 chia s\u1EBB ph\u1EA7n Kh\xE1m ph\xE1 m\xF4 h\xECnh Copilot.",
-  "The required desktop SDK could not be loaded. Open Show Logs and share the Copilot model discovery section.": "Kh\xF4ng th\u1EC3 t\u1EA3i SDK c\u1EA7n thi\u1EBFt c\u1EE7a \u1EE9ng d\u1EE5ng. M\u1EDF Xem nh\u1EADt k\xFD v\xE0 chia s\u1EBB ph\u1EA7n Kh\xE1m ph\xE1 m\xF4 h\xECnh Copilot.",
-  "Copilot could not return its model list. Try Refresh, then open Show Logs and share the Copilot model discovery section if it still fails.": "Copilot kh\xF4ng th\u1EC3 tr\u1EA3 v\u1EC1 danh s\xE1ch m\xF4 h\xECnh. Th\u1EED L\xE0m m\u1EDBi, r\u1ED3i m\u1EDF Xem nh\u1EADt k\xFD v\xE0 chia s\u1EBB ph\u1EA7n Kh\xE1m ph\xE1 m\xF4 h\xECnh Copilot n\u1EBFu v\u1EABn l\u1ED7i.",
-  "No eligible Copilot models were returned for this session. Check your Copilot sign-in and model access, then refresh. Show Logs includes the model discovery results.": "Phi\xEAn n\xE0y kh\xF4ng tr\u1EA3 v\u1EC1 m\xF4 h\xECnh Copilot \u0111\u1EE7 \u0111i\u1EC1u ki\u1EC7n. Ki\u1EC3m tra \u0111\u0103ng nh\u1EADp Copilot v\xE0 quy\u1EC1n truy c\u1EADp m\xF4 h\xECnh, r\u1ED3i l\xE0m m\u1EDBi. Xem nh\u1EADt k\xFD ch\u1EE9a k\u1EBFt qu\u1EA3 kh\xE1m ph\xE1 m\xF4 h\xECnh.",
-  "Show Logs": "Xem nh\u1EADt k\xFD",
-  "Diagnostic logs": "Nh\u1EADt k\xFD ch\u1EA9n \u0111o\xE1n",
-  "Copy logs": "Sao ch\xE9p nh\u1EADt k\xFD",
-  "Collecting logs\u2026": "\u0110ang thu th\u1EADp nh\u1EADt k\xFD\u2026",
-  "Reproduce the problem, then open these logs and copy them into your issue. They contain recent operation results and error codes, without prompts, file contents, paths, account names, or API keys. Nothing is uploaded automatically.": "T\xE1i hi\u1EC7n s\u1EF1 c\u1ED1, sau \u0111\xF3 m\u1EDF nh\u1EADt k\xFD n\xE0y v\xE0 sao ch\xE9p v\xE0o b\xE1o c\xE1o l\u1ED7i. Nh\u1EADt k\xFD ch\u1EE9a k\u1EBFt qu\u1EA3 thao t\xE1c v\xE0 m\xE3 l\u1ED7i g\u1EA7n \u0111\xE2y, kh\xF4ng c\xF3 l\u1EDDi nh\u1EAFc, n\u1ED9i dung t\u1EC7p, \u0111\u01B0\u1EDDng d\u1EABn, t\xEAn t\xE0i kho\u1EA3n hay kh\xF3a API. Kh\xF4ng c\xF3 d\u1EEF li\u1EC7u n\xE0o \u0111\u01B0\u1EE3c t\u1EF1 \u0111\u1ED9ng t\u1EA3i l\xEAn.",
-  "Up to 200 events per component are kept in memory. Restarting clears them. Reopen this dialog to capture newer events.": "M\u1ED7i th\xE0nh ph\u1EA7n gi\u1EEF t\u1ED1i \u0111a 200 s\u1EF1 ki\u1EC7n trong b\u1ED9 nh\u1EDB. Kh\u1EDFi \u0111\u1ED9ng l\u1EA1i s\u1EBD x\xF3a nh\u1EADt k\xFD. M\u1EDF l\u1EA1i h\u1ED9p tho\u1EA1i \u0111\u1EC3 l\u1EA5y c\xE1c s\u1EF1 ki\u1EC7n m\u1EDBi h\u01A1n.",
-  "The worker could not be reached. These logs include panel diagnostics only.": "Kh\xF4ng th\u1EC3 k\u1EBFt n\u1ED1i v\u1EDBi ti\u1EBFn tr\xECnh x\u1EED l\xFD. Nh\u1EADt k\xFD n\xE0y ch\u1EC9 ch\u1EE9a ch\u1EA9n \u0111o\xE1n c\u1EE7a b\u1EA3ng \u0111i\u1EC1u khi\u1EC3n.",
-  "Clipboard access is unavailable. The logs are selected; copy them with Ctrl+C or Command+C.": "Kh\xF4ng th\u1EC3 truy c\u1EADp b\u1EA3ng nh\u1EDB t\u1EA1m. Nh\u1EADt k\xFD \u0111\xE3 \u0111\u01B0\u1EE3c ch\u1ECDn; h\xE3y sao ch\xE9p b\u1EB1ng Ctrl+C ho\u1EB7c Command+C.",
-  "No enabled API model: Copilot helpers and subscription CLIs are excluded from the two-second chat hook.": "Kh\xF4ng c\xF3 m\xF4 h\xECnh API \u0111ang b\u1EADt: phi\xEAn Copilot n\u1EC1n v\xE0 CLI thu\xEA bao kh\xF4ng d\xF9ng \u0111\u01B0\u1EE3c trong hook chat c\xF3 gi\u1EDBi h\u1EA1n hai gi\xE2y.",
-  "Refresh API and Copilot model lists and the public Claude Code schema. Copilot rewriting needs this enabled to verify model access.": "L\xE0m m\u1EDBi danh s\xE1ch m\xF4 h\xECnh API, Copilot v\xE0 l\u01B0\u1EE3c \u0111\u1ED3 Claude Code c\xF4ng khai. Vi\u1EBFt l\u1EA1i b\u1EB1ng Copilot c\u1EA7n b\u1EADt m\u1EE5c n\xE0y \u0111\u1EC3 x\xE1c minh quy\u1EC1n truy c\u1EADp m\xF4 h\xECnh.",
-  "Model-list requests use the provider account. List refreshes send no prompt or project context.": "Y\xEAu c\u1EA7u danh s\xE1ch m\xF4 h\xECnh d\xF9ng t\xE0i kho\u1EA3n c\u1EE7a nh\xE0 cung c\u1EA5p. L\xE0m m\u1EDBi danh s\xE1ch kh\xF4ng g\u1EEDi prompt hay ng\u1EEF c\u1EA3nh d\u1EF1 \xE1n.",
-  "Models available through this Copilot session. Access is checked again before each rewrite.": "C\xE1c m\xF4 h\xECnh c\xF3 s\u1EB5n trong phi\xEAn Copilot n\xE0y. Quy\u1EC1n truy c\u1EADp \u0111\u01B0\u1EE3c ki\u1EC3m tra l\u1EA1i tr\u01B0\u1EDBc m\u1ED7i l\u1EA7n vi\u1EBFt l\u1EA1i.",
-  "Refresh to check which Copilot models are available.": "L\xE0m m\u1EDBi \u0111\u1EC3 ki\u1EC3m tra c\xE1c m\xF4 h\xECnh Copilot c\xF3 s\u1EB5n.",
-  "Uses your GitHub Copilot account in the background. No npm install, API key or separate runtime. Copilot usage charges apply. It never falls back to another provider and is unavailable for chat auto-enhance.": "D\xF9ng t\xE0i kho\u1EA3n GitHub Copilot c\u1EE7a b\u1EA1n \u1EDF ch\u1EBF \u0111\u1ED9 n\u1EC1n. Kh\xF4ng c\u1EA7n c\xE0i npm, kh\xF3a API hay m\xF4i tr\u01B0\u1EDDng ch\u1EA1y ri\xEAng. C\xF3 t\xEDnh ph\xED s\u1EED d\u1EE5ng Copilot. Kh\xF4ng chuy\u1EC3n sang nh\xE0 cung c\u1EA5p kh\xE1c v\xE0 kh\xF4ng h\u1ED7 tr\u1EE3 t\u1EF1 \u0111\u1ED9ng c\u1EA3i thi\u1EC7n trong chat.",
-  "GitHub Copilot \xB7 background rewrite": "GitHub Copilot \xB7 vi\u1EBFt l\u1EA1i \u1EDF ch\u1EBF \u0111\u1ED9 n\u1EC1n",
-  "Add GitHub Copilot to rewrite with your Copilot account, or choose an external provider.": "Th\xEAm GitHub Copilot \u0111\u1EC3 vi\u1EBFt l\u1EA1i b\u1EB1ng t\xE0i kho\u1EA3n Copilot c\u1EE7a b\u1EA1n, ho\u1EB7c ch\u1ECDn nh\xE0 cung c\u1EA5p b\xEAn ngo\xE0i.",
-  "It needs an enabled API model. Copilot background rewriting and subscription CLIs are excluded from its two-second limit. Add an API model, or use Rules.": "C\u1EA7n m\u1ED9t m\xF4 h\xECnh API \u0111ang b\u1EADt. Vi\u1EBFt l\u1EA1i b\u1EB1ng Copilot \u1EDF ch\u1EBF \u0111\u1ED9 n\u1EC1n v\xE0 CLI thu\xEA bao kh\xF4ng d\xF9ng \u0111\u01B0\u1EE3c trong gi\u1EDBi h\u1EA1n hai gi\xE2y. Th\xEAm m\xF4 h\xECnh API ho\u1EB7c d\xF9ng Quy t\u1EAFc.",
-  "Copilot background rewriting is unavailable. Restart or update GitHub Copilot and reopen this plugin. No separate SDK or runtime is installed.": "Kh\xF4ng th\u1EC3 vi\u1EBFt l\u1EA1i b\u1EB1ng Copilot \u1EDF ch\u1EBF \u0111\u1ED9 n\u1EC1n. Kh\u1EDFi \u0111\u1ED9ng l\u1EA1i ho\u1EB7c c\u1EADp nh\u1EADt GitHub Copilot r\u1ED3i m\u1EDF l\u1EA1i plugin. Kh\xF4ng c\xF3 SDK hay m\xF4i tr\u01B0\u1EDDng ch\u1EA1y ri\xEAng n\xE0o \u0111\u01B0\u1EE3c c\xE0i \u0111\u1EB7t.",
-  "The background runtime could not verify the same GitHub account as this Copilot session. Check your existing Copilot sign-in. No prompt was sent.": "M\xF4i tr\u01B0\u1EDDng ch\u1EA1y n\u1EC1n kh\xF4ng x\xE1c minh \u0111\u01B0\u1EE3c c\xF9ng t\xE0i kho\u1EA3n GitHub v\u1EDBi phi\xEAn Copilot n\xE0y. Ki\u1EC3m tra t\xE0i kho\u1EA3n Copilot \u0111ang \u0111\u0103ng nh\u1EADp. Ch\u01B0a g\u1EEDi prompt n\xE0o.",
-  "This model is not available through GitHub Copilot in both sessions. Refresh the model list and choose a Copilot model.": "M\xF4 h\xECnh n\xE0y kh\xF4ng c\xF3 s\u1EB5n qua GitHub Copilot trong c\u1EA3 hai phi\xEAn. L\xE0m m\u1EDBi danh s\xE1ch r\u1ED3i ch\u1ECDn m\xF4 h\xECnh Copilot.",
-  "This Copilot model does not report image support. Choose a model with image support or remove the images.": "M\xF4 h\xECnh Copilot n\xE0y kh\xF4ng x\xE1c nh\u1EADn h\u1ED7 tr\u1EE3 \u1EA3nh. Ch\u1ECDn m\xF4 h\xECnh h\u1ED7 tr\u1EE3 \u1EA3nh ho\u1EB7c b\u1ECF \u1EA3nh \u0111\xEDnh k\xE8m.",
-  "GitHub Copilot": "GitHub Copilot",
-  "A little more thought. A clearer prompt.": "Th\xEAm ch\xFAt suy ngh\u0129. Prompt r\xF5 r\xE0ng h\u01A1n.",
-  "A fresh page for your next idea": "Trang m\u1EDBi cho \xFD t\u01B0\u1EDFng ti\u1EBFp theo",
-  "Draft ready to enhance": "B\u1EA3n nh\xE1p \u0111\xE3 s\u1EB5n s\xE0ng \u0111\u1EC3 c\u1EA3i thi\u1EC7n",
-  "Enhancing your request\u2026": "\u0110ang c\u1EA3i thi\u1EC7n y\xEAu c\u1EA7u\u2026",
-  "Prompt ready to review": "Prompt \u0111\xE3 s\u1EB5n s\xE0ng \u0111\u1EC3 xem l\u1EA1i",
-  "Enhancement failed": "C\u1EA3i thi\u1EC7n th\u1EA5t b\u1EA1i",
-  "Enhancement cancelled": "\u0110\xE3 h\u1EE7y c\u1EA3i thi\u1EC7n",
-  "Switch to light mode": "Chuy\u1EC3n sang giao di\u1EC7n s\xE1ng",
-  "Switch to dark mode": "Chuy\u1EC3n sang giao di\u1EC7n t\u1ED1i",
-  "Plugin sections": "C\xE1c m\u1EE5c c\u1EE7a plugin",
-  "Enhance": "C\u1EA3i thi\u1EC7n",
-  "Write a request": "Vi\u1EBFt y\xEAu c\u1EA7u",
-  "Review and send": "Xem l\u1EA1i v\xE0 g\u1EEDi",
-  "Enter to enhance \xB7 Shift+Enter for a new line": "Enter \u0111\u1EC3 c\u1EA3i thi\u1EC7n \xB7 Shift+Enter \u0111\u1EC3 xu\u1ED1ng d\xF2ng",
-  "Enhance and send": "C\u1EA3i thi\u1EC7n v\xE0 g\u1EEDi",
-  "Enhance and send skips review. Enhance lets you edit first.": "C\u1EA3i thi\u1EC7n v\xE0 g\u1EEDi s\u1EBD b\u1ECF qua b\u01B0\u1EDBc xem l\u1EA1i. Ch\u1ECDn C\u1EA3i thi\u1EC7n \u0111\u1EC3 ch\u1EC9nh s\u1EEDa tr\u01B0\u1EDBc.",
-  "Context to include": "Ng\u1EEF c\u1EA3nh c\u1EA7n g\u1EEDi k\xE8m",
-  "Uncheck anything you do not want sent to the rewriting model.": "B\u1ECF ch\u1ECDn nh\u1EEFng m\u1EE5c b\u1EA1n kh\xF4ng mu\u1ED1n g\u1EEDi cho m\xF4 h\xECnh vi\u1EBFt l\u1EA1i.",
-  "Edit the enhanced prompt below, then copy it or send it to Copilot.": "Ch\u1EC9nh s\u1EEDa prompt \u0111\xE3 c\u1EA3i thi\u1EC7n b\xEAn d\u01B0\u1EDBi, r\u1ED3i sao ch\xE9p ho\u1EB7c g\u1EEDi t\u1EDBi Copilot.",
-  "Copilot session unavailable. You can still copy or save this prompt.": "Phi\xEAn Copilot kh\xF4ng kh\u1EA3 d\u1EE5ng. B\u1EA1n v\u1EABn c\xF3 th\u1EC3 sao ch\xE9p ho\u1EB7c l\u01B0u prompt n\xE0y.",
-  "Wait for the current operation to finish before sending.": "Ch\u1EDD thao t\xE1c hi\u1EC7n t\u1EA1i ho\xE0n t\u1EA5t tr\u01B0\u1EDBc khi g\u1EEDi.",
-  "Reuse": "D\xF9ng l\u1EA1i",
-  "Send to Copilot is off in Settings. You can still copy or save this prompt.": "G\u1EEDi t\u1EDBi Copilot \u0111ang t\u1EAFt trong C\xE0i \u0111\u1EB7t. B\u1EA1n v\u1EABn c\xF3 th\u1EC3 sao ch\xE9p ho\u1EB7c l\u01B0u prompt n\xE0y.",
-  "AI file picker skipped: {reason}": "B\u1ECF qua AI ch\u1ECDn file: {reason}",
-  "Preview skips the AI file picker.": "Xem tr\u01B0\u1EDBc b\u1ECF qua b\u01B0\u1EDBc AI ch\u1ECDn file.",
-  "Project files are off in Settings: workspace and agent only.": "\u0110\u1ECDc file d\u1EF1 \xE1n \u0111ang t\u1EAFt trong C\xE0i \u0111\u1EB7t: ch\u1EC9 d\xF9ng workspace v\xE0 agent.",
-  "No files matched the prompt; the agent will be told to locate them.": "Kh\xF4ng file n\xE0o kh\u1EDBp prompt; agent s\u1EBD \u0111\u01B0\u1EE3c d\u1EB7n t\u1EF1 t\xECm.",
-  "Not a git repository: no git context.": "Kh\xF4ng ph\u1EA3i repo git: kh\xF4ng c\xF3 ng\u1EEF c\u1EA3nh git.",
-  "Terminal output is off in Settings.": "\u0110\u1ECDc output terminal \u0111ang t\u1EAFt trong C\xE0i \u0111\u1EB7t.",
-  "Remote (SSH/WSL) workspace: project files are not readable from the plugin.": "Workspace t\u1EEB xa (SSH/WSL): plugin kh\xF4ng \u0111\u1ECDc \u0111\u01B0\u1EE3c file d\u1EF1 \xE1n.",
-  "Could not tell which folder the workspace is in; project files skipped.": "Kh\xF4ng x\xE1c \u0111\u1ECBnh \u0111\u01B0\u1EE3c th\u01B0 m\u1EE5c c\u1EE7a workspace; b\u1ECF qua file d\u1EF1 \xE1n.",
-  "No focused workspace.": "Ch\u01B0a m\u1EDF workspace n\xE0o.",
-  "trimmed": "\u0111\xE3 c\u1EAFt b\u1EDBt",
-  "picked by AI": "AI ch\u1ECDn",
-  "keyword match": "kh\u1EDBp t\u1EEB kho\xE1",
-  "terminal": "terminal",
-  "file": "file",
-  "git": "git",
-  "tree": "c\xE2y th\u01B0 m\u1EE5c",
-  "stack": "stack",
-  "rules": "lu\u1EADt",
-  "agent": "agent",
-  "workspace": "workspace",
-  "Recent output: {name}": "Output g\u1EA7n \u0111\xE2y: {name}",
-  "Git status ({count} changed)": "Git status ({count} thay \u0111\u1ED5i)",
-  "Repository tree ({count} files)": "C\xE2y th\u01B0 m\u1EE5c ({count} file)",
-  "Uncommitted changes": "Thay \u0111\u1ED5i ch\u01B0a commit",
-  "Recent commits": "Commit g\u1EA7n \u0111\xE2y",
-  "Stack & commands": "Stack v\xE0 l\u1EC7nh",
-  "Target agent": "Agent \u0111\xEDch",
-  "Workspace": "Workspace",
-  "Writing the prompt": "Vi\u1EBFt prompt",
-  "Reading terminal output": "\u0110\u1ECDc output terminal",
-  "AI picking files": "AI ch\u1ECDn file",
-  "Finding relevant code": "T\xECm code li\xEAn quan",
-  "Reading git changes": "\u0110\u1ECDc thay \u0111\u1ED5i git",
-  "Reading project rules and stack": "\u0110\u1ECDc lu\u1EADt v\xE0 stack c\u1EE7a d\u1EF1 \xE1n",
-  "Reading workspace": "\u0110\u1ECDc workspace",
-  "Panel language": "Ng\xF4n ng\u1EEF giao di\u1EC7n",
-  "Done": "Xong",
-  "Try again": "Th\u1EED l\u1EA1i",
-  "Enhance failed": "C\u1EA3i thi\u1EC7n th\u1EA5t b\u1EA1i",
-  "Cancelled": "\u0110\xE3 hu\u1EF7",
-  "Starting\u2026": "\u0110ang b\u1EAFt \u0111\u1EA7u\u2026",
-  "{count} files": "{count} file",
-  "{count} changed": "{count} thay \u0111\u1ED5i",
-  "{count} lines": "{count} d\xF2ng",
-  "latest": "m\u1EDBi nh\u1EA5t",
-  "Models": "Model",
-  "Settings": "C\xE0i \u0111\u1EB7t",
-  "That terminal is no longer open.": "Terminal \u0111\xF3 kh\xF4ng c\xF2n m\u1EDF n\u1EEFa.",
-  "Typed into {label}, without Enter.": "\u0110\xE3 g\xF5 v\xE0o {label}, kh\xF4ng nh\u1EA5n Enter.",
-  "Type it without Enter": "G\xF5 v\xE0o, kh\xF4ng nh\u1EA5n Enter",
-  "Back in the history.": "\u0110\xE3 \u0111\u01B0a l\u1EA1i v\xE0o l\u1ECBch s\u1EED.",
-  "It could not be brought back.": "Kh\xF4ng \u0111\u01B0a l\u1EA1i \u0111\u01B0\u1EE3c.",
-  "This prompt was written in {name}: read it before you send it here.": "Prompt n\xE0y \u0111\u01B0\u1EE3c vi\u1EBFt \u1EDF {name}: h\xE3y \u0111\u1ECDc l\u1EA1i tr\u01B0\u1EDBc khi g\u1EEDi \u1EDF \u0111\xE2y.",
-  "Something is still running here. Try again when it has finished.": "\u1EDE \u0111\xE2y c\xF2n vi\u1EC7c \u0111ang ch\u1EA1y. H\xE3y th\u1EED l\u1EA1i khi n\xF3 xong.",
-  "Opened from the history. What the composer held was replaced.": "\u0110\xE3 m\u1EDF t\u1EEB l\u1ECBch s\u1EED. N\u1ED9i dung \u0111ang so\u1EA1n \u0111\xE3 b\u1ECB thay th\u1EBF.",
-  "Undo": "Ho\xE0n t\xE1c",
-  "Removed from the history.": "\u0110\xE3 x\xF3a kh\u1ECFi l\u1ECBch s\u1EED.",
-  "Auto-enhance left a prompt for {agent} unchanged: {reason}": "T\u1EF1 c\u1EA3i thi\u1EC7n \u0111\u1EC3 nguy\xEAn m\u1ED9t prompt g\u1EEDi cho {agent}: {reason}",
-  "Found on this machine. It uses your subscription: no API key needed.": "T\xECm th\u1EA5y tr\xEAn m\xE1y n\xE0y. N\xF3 d\xF9ng g\xF3i \u0111\u0103ng k\xFD c\u1EE7a b\u1EA1n: kh\xF4ng c\u1EA7n API key.",
-  "Use {name}": "D\xF9ng {name}",
-  "Other models": "Model kh\xE1c",
-  "Which prompts to show": "Hi\u1EC7n prompt n\xE0o",
-  "Nothing here matches.": "Kh\xF4ng c\xF3 m\u1EE5c n\xE0o kh\u1EDBp.",
-  "Hide the enhanced prompt": "\u1EA8n prompt \u0111\xE3 c\u1EA3i thi\u1EC7n",
-  "Show the enhanced prompt": "Xem prompt \u0111\xE3 c\u1EA3i thi\u1EC7n",
-  "API keys cannot be saved on this machine": "M\xE1y n\xE0y kh\xF4ng l\u01B0u \u0111\u01B0\u1EE3c API key",
-  "Copilot found no key store here to keep them in. Use a key from an environment variable (the switch for it is in Settings), or a subscription CLI.": "Copilot kh\xF4ng t\xECm th\u1EA5y kho kh\xF3a n\xE0o tr\xEAn m\xE1y n\xE0y \u0111\u1EC3 c\u1EA5t ch\xFAng. H\xE3y d\xF9ng key t\u1EEB bi\u1EBFn m\xF4i tr\u01B0\u1EDDng (c\xF4ng t\u1EAFc n\u1EB1m trong C\xE0i \u0111\u1EB7t), ho\u1EB7c m\u1ED9t CLI \u0111\u0103ng k\xFD.",
-  "What this switch does, what can go wrong, and when it is worth turning on.": "C\xF4ng t\u1EAFc n\xE0y l\xE0m g\xEC, \u0111i\u1EC1u g\xEC c\xF3 th\u1EC3 x\u1EA3y ra, v\xE0 khi n\xE0o \u0111\xE1ng b\u1EADt.",
-  "What it does": "N\xF3 l\xE0m g\xEC",
-  "What can go wrong": "R\u1EE7i ro",
-  "When to turn it on": "Khi n\xE0o n\xEAn b\u1EADt",
-  "Last prompt ({when}): rewritten for {agent} with {model}.": "Prompt g\u1EA7n nh\u1EA5t ({when}): \u0111\xE3 vi\u1EBFt l\u1EA1i cho {agent} b\u1EB1ng {model}.",
-  "Last prompt ({when}): your text was added for {agent}.": "Prompt g\u1EA7n nh\u1EA5t ({when}): \u0111\xE3 th\xEAm \u0111o\u1EA1n v\u0103n c\u1EE7a b\u1EA1n cho {agent}.",
-  "Last prompt ({when}): left unchanged for {agent}. {reason}": "Prompt g\u1EA7n nh\u1EA5t ({when}): \u0111\u1EC3 nguy\xEAn cho {agent}. {reason}",
-  "Risk and when to use it": "R\u1EE7i ro v\xE0 khi n\xE0o n\xEAn d\xF9ng",
-  "File and folder names, your agent rules, the README and manifest files go to the model you run. Files that look like secrets (.env, keys, certificates) are never read.": "T\xEAn file v\xE0 th\u01B0 m\u1EE5c, c\xE1c quy t\u1EAFc cho agent, README v\xE0 c\xE1c file manifest \u0111\u01B0\u1EE3c g\u1EEDi t\u1EDBi model b\u1EA1n ch\u1EA1y. Nh\u1EEFng file tr\xF4ng nh\u01B0 b\xED m\u1EADt (.env, kh\xF3a, ch\u1EE9ng ch\u1EC9) kh\xF4ng bao gi\u1EDD \u0111\u01B0\u1EE3c \u0111\u1ECDc.",
-  "Keep it on for prompts that name real files and commands. Turn it off in a project whose contents must not reach a model provider.": "N\xEAn b\u1EADt \u0111\u1EC3 prompt n\xEAu \u0111\xFAng file v\xE0 l\u1EC7nh th\u1EADt. T\u1EAFt \u1EDF d\u1EF1 \xE1n c\xF3 n\u1ED9i dung kh\xF4ng \u0111\u01B0\u1EE3c ph\xE9p t\u1EDBi nh\xE0 cung c\u1EA5p model.",
-  "Branch names, commit subjects, the list of changed files and the diff of your uncommitted changes go to the model. Nothing in the repository is changed.": "T\xEAn nh\xE1nh, ti\xEAu \u0111\u1EC1 commit, danh s\xE1ch file \u0111\xE3 \u0111\u1ED5i v\xE0 diff c\xE1c thay \u0111\u1ED5i ch\u01B0a commit \u0111\u01B0\u1EE3c g\u1EEDi t\u1EDBi model. Kh\xF4ng c\xF3 g\xEC trong repository b\u1ECB thay \u0111\u1ED5i.",
-  "On when a prompt should know what you are working on right now. Off when uncommitted changes may hold something you would not share.": "B\u1EADt khi prompt c\u1EA7n bi\u1EBFt b\u1EA1n \u0111ang l\xE0m d\u1EDF vi\u1EC7c g\xEC. T\u1EAFt khi c\xE1c thay \u0111\u1ED5i ch\u01B0a commit c\xF3 th\u1EC3 ch\u1EE9a th\u1EE9 b\u1EA1n kh\xF4ng mu\u1ED1n chia s\u1EBB.",
-  "A terminal shows whatever was printed: paths, logs, data. Values that look like keys, tokens or passwords are masked first, which cannot catch everything.": "Terminal hi\u1EC7n m\u1ECDi th\u1EE9 \u0111\xE3 in ra: \u0111\u01B0\u1EDDng d\u1EABn, log, d\u1EEF li\u1EC7u. Nh\u1EEFng gi\xE1 tr\u1ECB tr\xF4ng nh\u01B0 kh\xF3a, token hay m\u1EADt kh\u1EA9u \u0111\u01B0\u1EE3c che tr\u01B0\u1EDBc, nh\u01B0ng kh\xF4ng th\u1EC3 che h\u1EBFt m\u1ECDi th\u1EE9.",
-  "On to fix an error that is on screen in the terminal. Off when your terminals show secrets or customer data.": "B\u1EADt \u0111\u1EC3 s\u1EEDa m\u1ED9t l\u1ED7i \u0111ang hi\u1EC7n trong terminal. T\u1EAFt khi terminal c\u1EE7a b\u1EA1n hi\u1EC7n b\xED m\u1EADt ho\u1EB7c d\u1EEF li\u1EC7u kh\xE1ch h\xE0ng.",
-  "Terminals you did not pick are read too, and their text goes to the model: code, file contents and command output of other work.": "C\u1EA3 nh\u1EEFng terminal b\u1EA1n kh\xF4ng ch\u1ECDn c\u0169ng \u0111\u01B0\u1EE3c \u0111\u1ECDc, v\xE0 n\u1ED9i dung c\u1EE7a ch\xFAng \u0111\u01B0\u1EE3c g\u1EEDi t\u1EDBi model: code, n\u1ED9i dung file v\xE0 output l\u1EC7nh c\u1EE7a c\xF4ng vi\u1EC7c kh\xE1c.",
-  "On when several agents share a task and a new prompt must not repeat or undo their work. Otherwise leave it off.": "B\u1EADt khi nhi\u1EC1u agent c\xF9ng l\xE0m m\u1ED9t vi\u1EC7c v\xE0 prompt m\u1EDBi kh\xF4ng \u0111\u01B0\u1EE3c l\u1EB7p l\u1EA1i hay ph\xE1 ph\u1EA7n vi\u1EC7c c\u1EE7a ch\xFAng. C\xF2n l\u1EA1i n\xEAn \u0111\u1EC3 t\u1EAFt.",
-  "Tool names, file paths and command lines of every agent in Copilot are kept in memory and sent with Deep and Max prompts. A command line can carry more than you expect.": "T\xEAn c\xF4ng c\u1EE5, \u0111\u01B0\u1EDDng d\u1EABn file v\xE0 d\xF2ng l\u1EC7nh c\u1EE7a m\u1ECDi agent trong Copilot \u0111\u01B0\u1EE3c gi\u1EEF trong b\u1ED9 nh\u1EDB v\xE0 g\u1EEDi k\xE8m prompt \u1EDF m\u1EE9c S\xE2u v\xE0 T\u1ED1i \u0111a. M\u1ED9t d\xF2ng l\u1EC7nh c\xF3 th\u1EC3 ch\u1EE9a nhi\u1EC1u th\u1EE9 h\u01A1n b\u1EA1n ngh\u0129.",
-  "On when prompts should follow on from what the agents just did. Off when command lines may hold secrets.": "B\u1EADt khi prompt c\u1EA7n n\u1ED1i ti\u1EBFp vi\u1EC7c c\xE1c agent v\u1EEBa l\xE0m. T\u1EAFt khi d\xF2ng l\u1EC7nh c\xF3 th\u1EC3 ch\u1EE9a b\xED m\u1EADt.",
-  "Only paths are noted, never the text of a file. A path can still say what you are working on.": "Ch\u1EC9 ghi nh\u1EADn \u0111\u01B0\u1EDDng d\u1EABn, kh\xF4ng bao gi\u1EDD ghi n\u1ED9i dung file. D\xF9 v\u1EADy m\u1ED9t \u0111\u01B0\u1EDDng d\u1EABn v\u1EABn c\xF3 th\u1EC3 cho bi\u1EBFt b\u1EA1n \u0111ang l\xE0m g\xEC.",
-  "On when you edit in Copilot and want those files found first. It changes nothing if you edit elsewhere.": "B\u1EADt khi b\u1EA1n s\u1EEDa file trong Copilot v\xE0 mu\u1ED1n nh\u1EEFng file \u0111\xF3 \u0111\u01B0\u1EE3c t\xECm th\u1EA5y tr\u01B0\u1EDBc. N\u1EBFu b\u1EA1n s\u1EEDa \u1EDF n\u01A1i kh\xE1c th\xEC n\xF3 kh\xF4ng \u0111\u1ED5i g\xEC.",
-  "On for the normal flow. Off to be sure nothing is ever typed for you: Copy still works.": "B\u1EADt cho c\xE1ch d\xF9ng th\xF4ng th\u01B0\u1EDDng. T\u1EAFt \u0111\u1EC3 ch\u1EAFc ch\u1EAFn kh\xF4ng c\xF3 g\xEC \u0111\u01B0\u1EE3c g\xF5 thay b\u1EA1n: Sao ch\xE9p v\u1EABn d\xF9ng \u0111\u01B0\u1EE3c.",
-  "A new agent runs with your user account and its own permission settings: it can change files and run commands.": "Agent m\u1EDBi ch\u1EA1y b\u1EB1ng t\xE0i kho\u1EA3n ng\u01B0\u1EDDi d\xF9ng c\u1EE7a b\u1EA1n v\xE0 theo thi\u1EBFt l\u1EADp quy\u1EC1n c\u1EE7a ch\xEDnh n\xF3: n\xF3 c\xF3 th\u1EC3 s\u1EEDa file v\xE0 ch\u1EA1y l\u1EC7nh.",
-  "On when you often start a fresh agent for each task. It only happens when you press Start.": "B\u1EADt khi b\u1EA1n hay m\u1EDF m\u1ED9t agent m\u1EDBi cho t\u1EEBng vi\u1EC7c. Ch\u1EC9 x\u1EA3y ra khi b\u1EA1n b\u1EA5m M\u1EDF.",
-  "An editor tab opens in Copilot's window. Nothing is read or changed by it.": "M\u1ED9t tab so\u1EA1n th\u1EA3o \u0111\u01B0\u1EE3c m\u1EDF trong c\u1EEDa s\u1ED5 Copilot. Vi\u1EC7c n\xE0y kh\xF4ng \u0111\u1ECDc hay thay \u0111\u1ED5i g\xEC.",
-  "On to look at what was read before you send. Off if the panel should never change what Copilot shows.": "B\u1EADt \u0111\u1EC3 xem l\u1EA1i nh\u1EEFng g\xEC \u0111\xE3 \u0111\u01B0\u1EE3c \u0111\u1ECDc tr\u01B0\u1EDBc khi g\u1EEDi. T\u1EAFt n\u1EBFu b\u1EA1n kh\xF4ng mu\u1ED1n panel thay \u0111\u1ED5i nh\u1EEFng g\xEC Copilot \u0111ang hi\u1EC7n.",
-  "On to reuse earlier prompts and to find your draft again after a restart. Off on a shared machine, or when prompts hold things that must not be kept.": "B\u1EADt \u0111\u1EC3 d\xF9ng l\u1EA1i prompt c\u0169 v\xE0 t\xECm l\u1EA1i b\u1EA3n nh\xE1p sau khi kh\u1EDFi \u0111\u1ED9ng l\u1EA1i. T\u1EAFt tr\xEAn m\xE1y d\xF9ng chung, ho\u1EB7c khi prompt ch\u1EE9a th\u1EE9 kh\xF4ng \u0111\u01B0\u1EE3c ph\xE9p l\u01B0u.",
-  "A key from your environment is sent to that provider like a saved one, and its account pays for the calls.": "Key l\u1EA5y t\u1EEB m\xF4i tr\u01B0\u1EDDng \u0111\u01B0\u1EE3c g\u1EEDi t\u1EDBi nh\xE0 cung c\u1EA5p \u0111\xF3 nh\u01B0 m\u1ED9t key \u0111\xE3 l\u01B0u, v\xE0 t\xE0i kho\u1EA3n c\u1EE7a key \u0111\xF3 tr\u1EA3 ti\u1EC1n cho c\xE1c l\u1EA7n g\u1ECDi.",
-  "On when your keys already live in the environment and you do not want to store them twice. Off to use only the keys you saved in Models.": "B\u1EADt khi key c\u1EE7a b\u1EA1n \u0111\xE3 c\xF3 s\u1EB5n trong m\xF4i tr\u01B0\u1EDDng v\xE0 b\u1EA1n kh\xF4ng mu\u1ED1n l\u01B0u hai n\u01A1i. T\u1EAFt \u0111\u1EC3 ch\u1EC9 d\xF9ng nh\u1EEFng key b\u1EA1n \u0111\xE3 l\u01B0u trong Model.",
-  "On to see new models without updating the plugin. Off for no network traffic besides the model calls.": "B\u1EADt \u0111\u1EC3 th\u1EA5y model m\u1EDBi m\xE0 kh\xF4ng c\u1EA7n c\u1EADp nh\u1EADt plugin. T\u1EAFt n\u1EBFu kh\xF4ng mu\u1ED1n c\xF3 l\u01B0u l\u01B0\u1EE3ng m\u1EA1ng n\xE0o ngo\xE0i c\xE1c l\u1EA7n g\u1ECDi model.",
-  "What it may read": "Plugin \u0111\u01B0\u1EE3c \u0111\u1ECDc g\xEC",
-  "What it may do": "Plugin \u0111\u01B0\u1EE3c l\xE0m g\xEC",
-  "What it may keep and fetch": "Plugin \u0111\u01B0\u1EE3c l\u01B0u v\xE0 t\u1EA3i g\xEC",
-  "working": "\u0111ang l\xE0m",
-  "needs you": "c\u1EA7n b\u1EA1n",
-  "waiting": "\u0111ang ch\u1EDD",
-  "done": "xong",
-  "Read project files": "\u0110\u1ECDc file d\u1EF1 \xE1n",
-  "Run git": "Ch\u1EA1y git",
-  "Read terminal output": "\u0110\u1ECDc output terminal",
-  "Save history": "L\u01B0u l\u1ECBch s\u1EED",
-  "Use API keys from environment variables": "D\xF9ng API key t\u1EEB bi\u1EBFn m\xF4i tr\u01B0\u1EDDng",
-  "Fetch model lists online": "T\u1EA3i danh s\xE1ch model qua m\u1EA1ng",
-  "Agent rules, README, manifest files and the file list of the focused workspace (Standard level and above). Off: only workspace and agent names are used.": "Lu\u1EADt agent, README, file manifest v\xE0 danh s\xE1ch file c\u1EE7a workspace \u0111ang m\u1EDF (m\u1EE9c Chu\u1EA9n tr\u1EDF l\xEAn). T\u1EAFt: ch\u1EC9 d\xF9ng t\xEAn workspace v\xE0 agent.",
-  "Read-only git status, log, diff, ls-files and grep in the focused workspace (Deep and Max levels).": "Ch\u1EC9 \u0111\u1ECDc: git status, log, diff, ls-files v\xE0 grep trong workspace \u0111ang m\u1EDF (m\u1EE9c S\xE2u v\xE0 T\u1ED1i \u0111a).",
-  "The last lines of the terminal you picked, at the Max level only.": "C\xE1c d\xF2ng cu\u1ED1i c\u1EE7a terminal b\u1EA1n ch\u1ECDn, ch\u1EC9 \u1EDF m\u1EE9c T\u1ED1i \u0111a.",
-  "Keep your prompts and enhanced prompts in the History tab, on this machine only.": "L\u01B0u prompt g\u1ED1c v\xE0 prompt \u0111\xE3 c\u1EA3i thi\u1EC7n trong tab L\u1ECBch s\u1EED, ch\u1EC9 tr\xEAn m\xE1y n\xE0y.",
-  "OPENAI_API_KEY, ANTHROPIC_API_KEY and the others, when a model has no saved key.": "OPENAI_API_KEY, ANTHROPIC_API_KEY v\xE0 c\xE1c bi\u1EBFn kh\xE1c, khi model ch\u01B0a c\xF3 key \u0111\xE3 l\u01B0u.",
-  "Stored on this machine": "L\u01B0u tr\xEAn m\xE1y n\xE0y",
-  "Nothing is sent anywhere except your prompt and the context you allow, to the model you run. No tracking or analytics.": "Kh\xF4ng g\u1EEDi g\xEC \u0111i \u0111\xE2u ngo\xE0i prompt v\xE0 ng\u1EEF c\u1EA3nh b\u1EA1n cho ph\xE9p, t\u1EDBi model b\u1EA1n ch\u1EA1y. Kh\xF4ng theo d\xF5i, kh\xF4ng analytics.",
-  "History": "L\u1ECBch s\u1EED",
-  "Saved models": "Model \u0111\xE3 l\u01B0u",
-  "Cached model lists": "Danh s\xE1ch model \u0111\xE3 cache",
-  "Clear model lists": "Xo\xE1 danh s\xE1ch model",
-  "Delete everything": "Xo\xE1 to\xE0n b\u1ED9",
-  "Press again to delete everything": "B\u1EA5m l\u1EA7n n\u1EEFa \u0111\u1EC3 xo\xE1 to\xE0n b\u1ED9",
-  "All plugin data deleted.": "\u0110\xE3 xo\xE1 to\xE0n b\u1ED9 d\u1EEF li\u1EC7u c\u1EE7a plugin.",
-  "History cleared.": "\u0110\xE3 xo\xE1 l\u1ECBch s\u1EED.",
-  "Model lists cleared.": "\u0110\xE3 xo\xE1 danh s\xE1ch model.",
-  "Auto (fallback)": "T\u1EF1 \u0111\u1ED9ng (d\u1EF1 ph\xF2ng)",
-  "Options": "Tu\u1EF3 ch\u1ECDn",
-  "Refine: use the enhanced prompt as the new input": "Tinh ch\u1EC9nh ti\u1EBFp: d\xF9ng prompt \u0111\xE3 c\u1EA3i thi\u1EC7n l\xE0m \u0111\u1EA7u v\xE0o m\u1EDBi",
-  "Add one in the Models tab.": "Th\xEAm trong tab Model.",
-  "Enable": "B\u1EADt",
-  "Disable": "T\u1EAFt",
-  "Uses your subscription": "D\xF9ng g\xF3i subscription c\u1EE7a b\u1EA1n",
-  "default": "m\u1EB7c \u0111\u1ECBnh",
-  "Describe what you want the agent to do\u2026": "M\xF4 t\u1EA3 vi\u1EC7c b\u1EA1n mu\u1ED1n agent l\xE0m\u2026",
-  "Auto": "T\u1EF1 \u0111\u1ED9ng",
-  "Your models": "Model c\u1EE7a b\u1EA1n",
-  "Fallback": "D\u1EF1 ph\xF2ng",
-  "Auto-enhance": "T\u1EF1 c\u1EA3i thi\u1EC7n",
-  "Max context level": "M\u1EE9c ng\u1EEF c\u1EA3nh T\u1ED1i \u0111a",
-  "your default": "m\u1EB7c \u0111\u1ECBnh c\u1EE7a b\u1EA1n",
-  "Choose a model": "Ch\u1ECDn model",
-  "Other (type the id)\u2026": "Kh\xE1c (t\u1EF1 g\xF5 id)\u2026",
-  "Refresh model list": "L\xE0m m\u1EDBi danh s\xE1ch model",
-  "Model id": "Id model",
-  "Loading the model list\u2026": "\u0110ang t\u1EA3i danh s\xE1ch model\u2026",
-  "Could not load the list ({error}). Type the model id.": "Kh\xF4ng t\u1EA3i \u0111\u01B0\u1EE3c danh s\xE1ch ({error}). H\xE3y g\xF5 id model.",
-  "{count} models from {source}, refreshed daily.": "{count} model t\u1EEB {source}, t\u1EF1 l\xE0m m\u1EDBi m\u1ED7i ng\xE0y.",
-  "Uses the model set in the CLI itself.": "D\xF9ng model \u0111ang \u0111\u1EB7t trong ch\xEDnh CLI.",
-  "Add the API key to list the models.": "Nh\u1EADp API key \u0111\u1EC3 hi\u1EC7n danh s\xE1ch model.",
-  "{name} now uses {model}.": "{name} gi\u1EDD d\xF9ng {model}.",
-  "Off": "T\u1EAFt",
-  "Your prompt": "Prompt c\u1EE7a b\u1EA1n",
-  "Style": "Ki\u1EC3u",
-  "Context": "Ng\u1EEF c\u1EA3nh",
-  "Model": "Model",
-  "Output language": "Ng\xF4n ng\u1EEF \u0111\u1EA7u ra",
-  "Output: same as prompt": "\u0110\u1EA7u ra: nh\u01B0 prompt",
-  "Output: English": "\u0110\u1EA7u ra: English",
-  "Output: Vietnamese": "\u0110\u1EA7u ra: Ti\u1EBFng Vi\u1EC7t",
-  "Output: Chinese": "\u0110\u1EA7u ra: \u4E2D\u6587",
-  "Output: default ({value})": "\u0110\u1EA7u ra: m\u1EB7c \u0111\u1ECBnh ({value})",
-  "Cancel": "Hu\u1EF7",
-  "Gathering\u2026": "\u0110ang thu th\u1EADp\u2026",
-  "Send to": "G\u1EEDi t\u1EDBi",
-  "Enhanced prompt": "Prompt \u0111\xE3 c\u1EA3i thi\u1EC7n",
-  "Copy": "Sao ch\xE9p",
-  "Clear": "Xo\xE1",
-  "No model yet": "Ch\u01B0a c\xF3 model",
-  "No API key yet": "Ch\u01B0a c\xF3 API key",
-  "Open Models": "M\u1EDF tab Model",
-  "{kind} \xB7 {chars} chars": "{kind} \xB7 {chars} k\xFD t\u1EF1",
-  "Fell back after: {list}": "\u0110\xE3 chuy\u1EC3n model sau khi l\u1ED7i: {list}",
-  "Cancelled.": "\u0110\xE3 hu\u1EF7.",
-  "Sent to {label}.": "\u0110\xE3 g\u1EEDi t\u1EDBi {label}.",
-  "{label} did not accept the text.": "{label} kh\xF4ng nh\u1EADn n\u1ED9i dung.",
-  "Copied to clipboard.": "\u0110\xE3 sao ch\xE9p.",
-  "Copy failed: {error}": "Sao ch\xE9p l\u1ED7i: {error}",
-  "Saved {name}.": "\u0110\xE3 l\u01B0u {name}.",
-  "Added {name}. Use Test to check it is signed in.": "\u0110\xE3 th\xEAm {name}. B\u1EA5m Ki\u1EC3m tra \u0111\u1EC3 ch\u1EAFc n\xF3 \u0111\xE3 \u0111\u0103ng nh\u1EADp.",
-  "Auto-enhanced ({mode}) a prompt for {agent}.": "\u0110\xE3 t\u1EF1 c\u1EA3i thi\u1EC7n ({mode}) m\u1ED9t prompt cho {agent}.",
-  "an agent": "m\u1ED9t agent",
-  "Dismiss": "\u0110\xF3ng",
-  "Close": "\u0110\xF3ng",
-  "Loading": "\u0110ang t\u1EA3i",
-  "No history yet": "Ch\u01B0a c\xF3 l\u1ECBch s\u1EED",
-  "Enhanced prompts show up here.": "C\xE1c prompt \u0111\xE3 c\u1EA3i thi\u1EC7n s\u1EBD hi\u1EC7n \u1EDF \u0111\xE2y.",
-  "Search history": "T\xECm trong l\u1ECBch s\u1EED",
-  "Open in Enhance tab": "M\u1EDF trong tab C\u1EA3i thi\u1EC7n",
-  "Delete": "Xo\xE1",
-  "{shown} of {total}": "{shown} / {total}",
-  "Clear history": "Xo\xE1 l\u1ECBch s\u1EED",
-  "auto": "t\u1EF1 \u0111\u1ED9ng",
-  "Fallback to the next model when one fails": "Chuy\u1EC3n sang model k\u1EBF ti\u1EBFp khi m\u1ED9t model l\u1ED7i",
-  "Models are tried top to bottom. Disabled models are skipped.": "Model \u0111\u01B0\u1EE3c th\u1EED t\u1EEB tr\xEAn xu\u1ED1ng. Model t\u1EAFt s\u1EBD b\u1ECB b\u1ECF qua.",
-  "Using API keys from your environment": "\u0110ang d\xF9ng API key t\u1EEB bi\u1EBFn m\xF4i tr\u01B0\u1EDDng",
-  "Add a model below to customize; then only your saved models are used.": "Th\xEAm model b\xEAn d\u01B0\u1EDBi \u0111\u1EC3 tu\u1EF3 ch\u1EC9nh; khi \u0111\xF3 ch\u1EC9 d\xF9ng c\xE1c model b\u1EA1n \u0111\xE3 l\u01B0u.",
-  "No models yet": "Ch\u01B0a c\xF3 model n\xE0o",
-  "Use your subscription, no API key": "D\xF9ng g\xF3i subscription, kh\xF4ng c\u1EA7n API key",
-  "Found on this machine. Uses the account the CLI is signed in with.": "T\xECm th\u1EA5y tr\xEAn m\xE1y. D\xF9ng t\xE0i kho\u1EA3n m\xE0 CLI \u0111ang \u0111\u0103ng nh\u1EADp.",
-  "Add model": "Th\xEAm model",
-  "Add a model": "Th\xEAm model",
-  "Edit {name}": "S\u1EEDa {name}",
-  "Preset": "M\u1EABu",
-  "Name": "T\xEAn",
-  "API format": "\u0110\u1ECBnh d\u1EA1ng API",
-  "Base URL": "Base URL",
-  "Model (optional)": "Model (tu\u1EF3 ch\u1ECDn)",
-  "API key": "API key",
-  "Leave empty to keep the saved key": "\u0110\u1EC3 tr\u1ED1ng \u0111\u1EC3 gi\u1EEF key \u0111\xE3 l\u01B0u",
-  "Or set {env}": "Ho\u1EB7c \u0111\u1EB7t bi\u1EBFn {env}",
-  "Not needed for local servers": "Kh\xF4ng c\u1EA7n cho server local",
-  "Command": "L\u1EC7nh",
-  "Arguments": "Tham s\u1ED1",
-  "Found on PATH automatically; or a full path": "T\u1EF1 t\xECm tr\xEAn PATH; ho\u1EB7c \u0111\u01B0\u1EDDng d\u1EABn \u0111\u1EA7y \u0111\u1EE7",
-  "CLI default": "M\u1EB7c \u0111\u1ECBnh c\u1EE7a CLI",
-  "Runs the CLI already signed in on this machine, so it uses your subscription instead of an API key. Slower than an API (a few seconds per call), so it is skipped by auto-enhance.": "Ch\u1EA1y CLI \u0111\xE3 \u0111\u0103ng nh\u1EADp tr\xEAn m\xE1y n\xE0y, n\xEAn d\xF9ng g\xF3i subscription thay cho API key. Ch\u1EADm h\u01A1n API (v\xE0i gi\xE2y m\u1ED7i l\u1EA7n) n\xEAn auto-enhance s\u1EBD b\u1ECF qua.",
-  "Max tokens": "S\u1ED1 token t\u1ED1i \u0111a",
-  "{value} tokens": "{value} token",
-  "Save": "L\u01B0u",
-  "Test": "Ki\u1EC3m tra",
-  "Edit": "S\u1EEDa",
-  "key saved": "\u0111\xE3 l\u01B0u key",
-  "key from env": "key t\u1EEB env",
-  "no key": "ch\u01B0a c\xF3 key",
-  "local": "local",
-  "subscription": "subscription",
-  "Same as the chain": "Gi\u1ED1ng chu\u1ED7i model",
-  "Auto-enhance hook model (needs to answer in under 2 s)": "Model cho auto-enhance (ph\u1EA3i tr\u1EA3 l\u1EDDi d\u01B0\u1EDBi 2 gi\xE2y)",
-  "File picker model (Max context level)": "Model ch\u1ECDn file (m\u1EE9c ng\u1EEF c\u1EA3nh Max)",
-  "Balanced": "C\xE2n b\u1EB1ng",
-  "Concise": "Ng\u1EAFn g\u1ECDn",
-  "Detailed spec": "\u0110\u1EB7c t\u1EA3 chi ti\u1EBFt",
-  "Bug fix": "S\u1EEDa l\u1ED7i",
-  "New feature": "T\xEDnh n\u0103ng m\u1EDBi",
-  "Refactor": "Refactor",
-  "Code review": "Review code",
-  "Plan first": "L\u1EADp k\u1EBF ho\u1EA1ch tr\u01B0\u1EDBc",
-  "Custom only": "Ch\u1EC9 d\xF9ng h\u01B0\u1EDBng d\u1EABn ri\xEAng",
-  "Off: prompt only": "T\u1EAFt: ch\u1EC9 prompt",
-  "Basic: workspace + agent": "C\u01A1 b\u1EA3n: workspace + agent",
-  "Standard: + rules, stack, tree": "Chu\u1EA9n: + lu\u1EADt, stack, c\xE2y th\u01B0 m\u1EE5c",
-  "Deep: + git + relevant code": "S\xE2u: + git + code li\xEAn quan",
-  "Max: + AI-picked files + terminal": "T\u1ED1i \u0111a: + file AI ch\u1ECDn + terminal",
-  "Show more": "Xem th\xEAm",
-  "Press again to clear history": "B\u1EA5m l\u1EA7n n\u1EEFa \u0111\u1EC3 xo\xE1 l\u1ECBch s\u1EED",
-  "Auto-enhance (AI) has no model to use": "T\u1EF1 c\u1EA3i thi\u1EC7n (AI) kh\xF4ng c\xF3 model \u0111\u1EC3 d\xF9ng",
-  "Write a prompt first.": "H\xE3y vi\u1EBFt prompt tr\u01B0\u1EDBc.",
-  "Nothing to send.": "Kh\xF4ng c\xF3 g\xEC \u0111\u1EC3 g\u1EEDi.",
-  "Invalid model profile.": "C\u1EA5u h\xECnh model kh\xF4ng h\u1EE3p l\u1EC7.",
-  "Unknown profile.": "Kh\xF4ng t\xECm th\u1EA5y model n\xE0y.",
-  "{name} \xB7 {model} answered (key: {key}).": "{name} \xB7 {model} \u0111\xE3 tr\u1EA3 l\u1EDDi (key: {key}).",
-  "Invalid API base URL: {url}": "Base URL c\u1EE7a API kh\xF4ng h\u1EE3p l\u1EC7: {url}",
-  "The API base URL must use https (http is allowed only for localhost).": "Base URL c\u1EE7a API ph\u1EA3i d\xF9ng https (ch\u1EC9 localhost \u0111\u01B0\u1EE3c d\xF9ng http).",
-  "Put the API key in the Models tab, not in the URL.": "H\xE3y nh\u1EADp API key trong tab Model, \u0111\u1EEBng \u0111\u1EB7t trong URL.",
-  "The request was cancelled or timed out.": "Y\xEAu c\u1EA7u \u0111\xE3 b\u1ECB hu\u1EF7 ho\u1EB7c h\u1EBFt th\u1EDDi gian ch\u1EDD.",
-  "{model} did not answer within {seconds} s.": "{model} kh\xF4ng tr\u1EA3 l\u1EDDi trong {seconds} gi\xE2y.",
-  "{reason} A lower context level or a faster model answers sooner.": "{reason} M\u1EE9c ng\u1EEF c\u1EA3nh th\u1EA5p h\u01A1n ho\u1EB7c model nhanh h\u01A1n s\u1EBD tr\u1EA3 l\u1EDDi s\u1EDBm h\u01A1n.",
-  "That run is no longer going (the plugin was restarted). Try again.": "L\u01B0\u1EE3t ch\u1EA1y \u0111\xF3 kh\xF4ng c\xF2n n\u1EEFa (plugin \u0111\xE3 \u0111\u01B0\u1EE3c kh\u1EDFi \u0111\u1ED9ng l\u1EA1i). H\xE3y th\u1EED l\u1EA1i.",
-  "{url} stopped answering: {detail}": "{url} ng\u1EEBng tr\u1EA3 l\u1EDDi: {detail}",
-  "{url} did not answer with JSON ({what}). A proxy or sign-in page may be in the way.": "{url} kh\xF4ng tr\u1EA3 v\u1EC1 JSON ({what}). C\xF3 th\u1EC3 m\u1ED9t proxy ho\u1EB7c trang \u0111\u0103ng nh\u1EADp \u0111ang ch\u1EB7n.",
-  "an empty answer": "c\xE2u tr\u1EA3 l\u1EDDi r\u1ED7ng",
-  "No API key. Add one in the Enhance Prompt panel (Models tab).": "Ch\u01B0a c\xF3 API key. Th\xEAm key trong panel Enhance Prompt (tab Model).",
-  "No API key. Add one in the Enhance Prompt panel (Models tab) or set {env}.": "Ch\u01B0a c\xF3 API key. Th\xEAm key trong panel Enhance Prompt (tab Model) ho\u1EB7c \u0111\u1EB7t {env}.",
-  "Could not reach {url}: {detail}": "Kh\xF4ng k\u1EBFt n\u1ED1i \u0111\u01B0\u1EE3c {url}: {detail}",
-  "{status}: {detail}": "{status}: {detail}",
-  "The model returned an empty answer.": "Model tr\u1EA3 v\u1EC1 c\xE2u tr\u1EA3 l\u1EDDi r\u1ED7ng.",
-  "{model} reached its limit of {max} tokens before it finished. Raise Max tokens for this model in the Models tab.": "{model} \u0111\xE3 ch\u1EA1m gi\u1EDBi h\u1EA1n {max} token tr\u01B0\u1EDBc khi vi\u1EBFt xong. H\xE3y t\u0103ng S\u1ED1 token t\u1ED1i \u0111a c\u1EE7a model n\xE0y trong tab Model.",
-  "Unsafe argument for a .cmd launcher.": "Tham s\u1ED1 kh\xF4ng an to\xE0n cho tr\xECnh kh\u1EDFi ch\u1EA1y .cmd.",
-  "{name} was not found. Install it and sign in, or set its full path in the model.": "Kh\xF4ng t\xECm th\u1EA5y {name}. H\xE3y c\xE0i v\xE0 \u0111\u0103ng nh\u1EADp, ho\u1EB7c \u0111\u1EB7t \u0111\u01B0\u1EDDng d\u1EABn \u0111\u1EA7y \u0111\u1EE7 trong model.",
-  "Could not start {binary}: {detail}": "Kh\xF4ng kh\u1EDFi ch\u1EA1y \u0111\u01B0\u1EE3c {binary}: {detail}",
-  "{kind} exited with {code}": "{kind} tho\xE1t v\u1EDBi m\xE3 {code}",
-  "{kind} exited with {code}: {detail}": "{kind} tho\xE1t v\u1EDBi m\xE3 {code}: {detail}",
-  "{text} (run it once in a terminal to sign in)": "{text} (h\xE3y ch\u1EA1y n\xF3 m\u1ED9t l\u1EA7n trong terminal \u0111\u1EC3 \u0111\u0103ng nh\u1EADp)",
-  "{kind} returned an empty answer.": "{kind} tr\u1EA3 v\u1EC1 c\xE2u tr\u1EA3 l\u1EDDi r\u1ED7ng.",
-  "No model configured. Add one in the Models tab.": "Ch\u01B0a c\u1EA5u h\xECnh model. Th\xEAm m\u1ED9t model trong tab Model.",
-  "{name}: no API key": "{name}: ch\u01B0a c\xF3 API key",
-  "All models failed. {list}": "T\u1EA5t c\u1EA3 model \u0111\u1EC1u l\u1ED7i. {list}",
-  "{name}: {reason}": "{name}: {reason}",
-  "Out of time.": "H\u1EBFt th\u1EDDi gian.",
-  "Rules": "Quy t\u1EAFc",
-  "Your rules": "Quy t\u1EAFc c\u1EE7a b\u1EA1n",
-  "Followed in every enhanced prompt and by auto-enhance, on top of the style. A rule you add is for the project you are in.": "\u0110\u01B0\u1EE3c \xE1p d\u1EE5ng cho m\u1ECDi prompt \u0111\u01B0\u1EE3c c\u1EA3i thi\u1EC7n v\xE0 cho t\u1EF1 c\u1EA3i thi\u1EC7n, c\u1ED9ng th\xEAm v\xE0o ki\u1EC3u. Quy t\u1EAFc b\u1EA1n th\xEAm l\xE0 d\xE0nh cho d\u1EF1 \xE1n b\u1EA1n \u0111ang m\u1EDF.",
-  'No rules yet. Example: "Always tell the agent to run pnpm test before finishing."': 'Ch\u01B0a c\xF3 quy t\u1EAFc. V\xED d\u1EE5: "Lu\xF4n y\xEAu c\u1EA7u agent ch\u1EA1y pnpm test tr\u01B0\u1EDBc khi xong."',
-  "Every project": "M\u1ECDi d\u1EF1 \xE1n",
-  "New rule": "Quy t\u1EAFc m\u1EDBi",
-  "e.g. Answer in Vietnamese; keep code identifiers in English.": "VD: Vi\u1EBFt b\u1EB1ng ti\u1EBFng Vi\u1EC7t; gi\u1EEF t\xEAn trong code b\u1EB1ng ti\u1EBFng Anh.",
-  "Only {name}": "Ch\u1EC9 {name}",
-  "Add rule": "Th\xEAm quy t\u1EAFc",
-  "Prompt structures": "C\u1EA5u tr\xFAc prompt",
-  "Pick one under Options in the composer: the prompt is written under these headings instead of the style's shape.": "Ch\u1ECDn trong ph\u1EA7n Tu\u1EF3 ch\u1ECDn c\u1EE7a khung so\u1EA1n: prompt \u0111\u01B0\u1EE3c vi\u1EBFt theo c\xE1c m\u1EE5c n\xE0y thay cho d\u1EA1ng c\u1EE7a ki\u1EC3u.",
-  "built-in": "c\xF3 s\u1EB5n",
-  "Structure name": "T\xEAn c\u1EA5u tr\xFAc",
-  "e.g. My brief": "VD: Brief c\u1EE7a t\xF4i",
-  "Headings, one per line": "C\xE1c m\u1EE5c, m\u1ED7i d\xF2ng m\u1ED9t m\u1EE5c",
-  "Written in any language; the rewriter translates them into the output language.": "Vi\u1EBFt b\u1EB1ng ng\xF4n ng\u1EEF n\xE0o c\u0169ng \u0111\u01B0\u1EE3c; khi vi\u1EBFt l\u1EA1i s\u1EBD d\u1ECBch sang ng\xF4n ng\u1EEF \u0111\u1EA7u ra.",
-  "Add structure": "Th\xEAm c\u1EA5u tr\xFAc",
-  "Structure": "C\u1EA5u tr\xFAc",
-  "By style": "Theo ki\u1EC3u",
-  "Task brief": "Brief nhi\u1EC7m v\u1EE5",
-  "Steps": "C\xE1c b\u01B0\u1EDBc",
-  "Goal": "M\u1EE5c ti\xEAu",
-  "Requirements": "Y\xEAu c\u1EA7u",
-  "Constraints / out of scope": "R\xE0ng bu\u1ED9c / ngo\xE0i ph\u1EA1m vi",
-  "Edge cases": "Tr\u01B0\u1EDDng h\u1EE3p bi\xEAn",
-  "Acceptance criteria": "Ti\xEAu ch\xED ch\u1EA5p nh\u1EADn",
-  "Assumptions / questions": "Gi\u1EA3 \u0111\u1ECBnh / c\xE2u h\u1ECFi",
-  "Verify": "Ki\u1EC3m tra",
-  "Background": "B\u1ED1i c\u1EA3nh",
-  "everywhere": "m\u1ECDi n\u01A1i",
-  "The enhanced prompt is kept for {name}: go back to that project to send it.": "Prompt \u0111\xE3 c\u1EA3i thi\u1EC7n \u0111\u01B0\u1EE3c gi\u1EEF cho {name}: quay l\u1EA1i d\u1EF1 \xE1n \u0111\xF3 \u0111\u1EC3 g\u1EEDi.",
-  "The project this prompt was written for is closed, so its enhanced prompt was dropped.": "D\u1EF1 \xE1n vi\u1EBFt prompt n\xE0y \u0111\xE3 \u0111\xF3ng n\xEAn prompt \u0111\xE3 c\u1EA3i thi\u1EC7n b\u1ECB b\u1ECF.",
-  "Writing the prompt for {name}\u2026": "\u0110ang vi\u1EBFt prompt cho {name}\u2026",
-  "Feedback": "G\xF3p \xFD",
-  "Found a bug, or something that could be better? Open an issue on GitHub: it is how the plugin gets fixed and improved.": "G\u1EB7p l\u1ED7i, ho\u1EB7c th\u1EA5y ch\u1ED7 n\xE0o c\xF3 th\u1EC3 t\u1ED1t h\u01A1n? H\xE3y t\u1EA1o issue tr\xEAn GitHub: \u0111\xF3 l\xE0 c\xE1ch plugin \u0111\u01B0\u1EE3c s\u1EEDa v\xE0 c\u1EA3i thi\u1EC7n.",
-  "Open an issue on GitHub": "T\u1EA1o issue tr\xEAn GitHub",
-  "Open {url} in your browser.": "M\u1EDF {url} trong tr\xECnh duy\u1EC7t.",
-  "Got an idea, or something that could work better? Send your feedback: it is how the plugin improves.": "B\u1EA1n c\xF3 \xFD t\u01B0\u1EDFng, ho\u1EB7c th\u1EA5y ch\u1ED7 n\xE0o c\xF3 th\u1EC3 t\u1ED1t h\u01A1n? H\xE3y g\u1EEDi g\xF3p \xFD: nh\u1EDD \u0111\xF3 plugin ng\xE0y c\xE0ng t\u1ED1t h\u01A1n.",
-  "Send feedback": "G\u1EEDi g\xF3p \xFD",
-  "Don't ask again": "\u0110\u1EEBng h\u1ECFi l\u1EA1i",
-  "No more feedback notes. To turn them back on, open the gear icon and look under Feedback.": "S\u1EBD kh\xF4ng c\xF2n ghi ch\xFA m\u1EDDi g\xF3p \xFD n\u1EEFa. Mu\u1ED1n b\u1EADt l\u1EA1i, m\u1EDF bi\u1EC3u t\u01B0\u1EE3ng b\xE1nh r\u0103ng r\u1ED3i xem m\u1EE5c G\xF3p \xFD.",
-  "Ask for feedback now and then": "Th\u1EC9nh tho\u1EA3ng m\u1EDDi g\xF3p \xFD",
-  "A short note under the enhanced prompt invites your ideas, at most once in {days} days. Off: it never shows.": "M\u1ED9t ghi ch\xFA ng\u1EAFn d\u01B0\u1EDBi prompt \u0111\xE3 c\u1EA3i thi\u1EC7n m\u1EDDi b\u1EA1n g\xF3p \xFD, t\u1ED1i \u0111a {days} ng\xE0y m\u1ED9t l\u1EA7n. T\u1EAFt: kh\xF4ng bao gi\u1EDD hi\u1EC7n.",
-  "Progress: {percent}%": "Ti\u1EBFn \u0111\u1ED9: {percent}%",
-  "{name} is {size}; an image can be at most {max}.": "{name} n\u1EB7ng {size}; m\u1ED7i \u1EA3nh t\u1ED1i \u0111a {max}.",
-  "This model cannot see images: it got their paths only, and the prompt lists them for the agent.": "Model n\xE0y kh\xF4ng xem \u0111\u01B0\u1EE3c \u1EA3nh: n\xF3 ch\u1EC9 nh\u1EADn \u0111\u01B0\u1EDDng d\u1EABn, v\xE0 prompt li\u1EC7t k\xEA c\xE1c \u1EA3nh cho agent.",
-  "Remove {name}": "B\u1ECF {name}",
-  "Finishing\u2026": "S\u1EAFp xong\u2026",
-  "Which folder is this project?": "D\u1EF1 \xE1n n\xE0y \u1EDF th\u01B0 m\u1EE5c n\xE0o?",
-  "Several projects are named {name} on the same branch. Pick its folder so its files are read and its rules are followed.": "C\xF3 nhi\u1EC1u d\u1EF1 \xE1n c\xF9ng t\xEAn {name} tr\xEAn c\xF9ng m\u1ED9t nh\xE1nh. Ch\u1ECDn th\u01B0 m\u1EE5c c\u1EE7a d\u1EF1 \xE1n n\xE0y \u0111\u1EC3 \u0111\u1ECDc \u0111\xFAng file v\xE0 \xE1p d\u1EE5ng \u0111\xFAng quy t\u1EAFc c\u1EE7a n\xF3.",
-  "Project folder": "Th\u01B0 m\u1EE5c d\u1EF1 \xE1n",
-  "Choose a folder": "Ch\u1ECDn th\u01B0 m\u1EE5c",
-  "That attachment could not be received; try attaching it again.": "Kh\xF4ng nh\u1EADn \u0111\u01B0\u1EE3c t\u1EC7p \u0111\xEDnh k\xE8m n\xE0y; h\xE3y \u0111\xEDnh k\xE8m l\u1EA1i.",
-  "The attached file {name} is no longer there (attachments are kept for a day). Attach it again.": "T\u1EC7p \u0111\xEDnh k\xE8m {name} kh\xF4ng c\xF2n n\u1EEFa (t\u1EC7p \u0111\xEDnh k\xE8m ch\u1EC9 \u0111\u01B0\u1EE3c gi\u1EEF m\u1ED9t ng\xE0y). H\xE3y \u0111\xEDnh k\xE8m l\u1EA1i.",
-  "{name} is {size}; an attachment can be at most {max}.": "{name} n\u1EB7ng {size}; m\u1ED7i t\u1EC7p \u0111\xEDnh k\xE8m t\u1ED1i \u0111a {max}.",
-  "At most {max} files per prompt.": "T\u1ED1i \u0111a {max} t\u1EC7p cho m\u1ED7i prompt.",
-  "Drop files to attach": "Th\u1EA3 t\u1EC7p v\xE0o \u0111\u1EC3 \u0111\xEDnh k\xE8m",
-  "Attach files": "\u0110\xEDnh k\xE8m t\u1EC7p",
-  "Add": "Th\xEAm",
-  "Move up": "Chuy\u1EC3n l\xEAn",
-  "Move down": "Chuy\u1EC3n xu\u1ED1ng",
-  "More": "Th\xEAm thao t\xE1c",
-  "edited": "\u0111\xE3 s\u1EEDa",
-  "Restore the default": "Kh\xF4i ph\u1EE5c m\u1EB7c \u0111\u1ECBnh",
-  "Custom instructions": "H\u01B0\u1EDBng d\u1EABn ri\xEAng",
-  "e.g. Write the prompt as a numbered checklist; always ask the agent to run the tests.": "VD: Vi\u1EBFt prompt th\xE0nh danh s\xE1ch vi\u1EC7c \u0111\xE1nh s\u1ED1; lu\xF4n y\xEAu c\u1EA7u agent ch\u1EA1y test.",
-  "What's new": "C\xF3 g\xEC m\u1EDBi",
-  "What's new in {version}": "C\xF3 g\xEC m\u1EDBi trong {version}",
-  "Changelog": "Nh\u1EADt k\xFD thay \u0111\u1ED5i",
-  "agents": "agent kh\xE1c",
-  "agent session": "phi\xEAn agent",
-  "{count} agents": "{count} agent",
-  "Reading other agents' sessions": "\u0110\u1ECDc phi\xEAn c\u1EE7a c\xE1c agent kh\xE1c",
-  "Read other agents' sessions": "\u0110\u1ECDc phi\xEAn c\u1EE7a c\xE1c agent kh\xE1c",
-  "At the Max level: the other agents running in this workspace (kind, title, state) and the last lines of their terminals, with keys and passwords masked. Needs Read terminal output too. Off until you turn it on.": "\u1EDE m\u1EE9c T\u1ED1i \u0111a: c\xE1c agent kh\xE1c \u0111ang ch\u1EA1y trong workspace n\xE0y (lo\u1EA1i, t\xEAn, tr\u1EA1ng th\xE1i) v\xE0 nh\u1EEFng d\xF2ng cu\u1ED1i trong terminal c\u1EE7a ch\xFAng, \u0111\xE3 che key v\xE0 m\u1EADt kh\u1EA9u. C\u1EA7n b\u1EADt c\u1EA3 \u0110\u1ECDc output terminal. M\u1EB7c \u0111\u1ECBnh t\u1EAFt cho t\u1EDBi khi b\u1EA1n b\u1EADt.",
-  "Other agents in this workspace": "C\xE1c agent kh\xE1c trong workspace n\xE0y",
-  "Other agent session: {name}": "Phi\xEAn agent kh\xE1c: {name}",
-  "Open in Copilot": "M\u1EDF trong Copilot",
-  "Or start a new agent": "Ho\u1EB7c m\u1EDF agent m\u1EDBi",
-  "Agent": "Agent",
-  "Start": "B\u1EAFt \u0111\u1EA7u",
-  'Turn on "{name}"?': 'B\u1EADt "{name}"?',
-  "Read what this allows. Nothing is hidden: this is everything it does.": "\u0110\u1ECDc nh\u1EEFng g\xEC c\xF4ng t\u1EAFc n\xE0y cho ph\xE9p. Kh\xF4ng gi\u1EA5u g\xEC: \u0111\xE2y l\xE0 to\xE0n b\u1ED9 nh\u1EEFng vi\u1EC7c n\xF3 l\xE0m.",
-  "You can turn it off at any time here; turning it off also withdraws this confirmation.": "B\u1EA1n c\xF3 th\u1EC3 t\u1EAFt b\u1EA5t c\u1EE9 l\xFAc n\xE0o \u1EDF \u0111\xE2y; t\u1EAFt \u0111i c\u0169ng r\xFAt l\u1EA1i x\xE1c nh\u1EADn n\xE0y.",
-  "I understand, turn it on": "T\xF4i \u0111\xE3 hi\u1EC3u, b\u1EADt l\xEAn",
-  "asks to confirm": "c\u1EA7n x\xE1c nh\u1EADn",
-  "Turned on in Settings, but not confirmed here yet: still off.": "\u0110\xE3 b\u1EADt trong Settings nh\u01B0ng ch\u01B0a x\xE1c nh\u1EADn \u1EDF \u0111\xE2y: v\u1EABn \u0111ang t\u1EAFt.",
-  "Read and confirm": "\u0110\u1ECDc v\xE0 x\xE1c nh\u1EADn",
-  "Notifications": "Th\xF4ng b\xE1o",
-  "Notify when a long enhance finishes": "B\xE1o khi m\u1ED9t l\u1EA7n c\u1EA3i thi\u1EC7n l\xE2u ch\u1EA1y xong",
-  "Watch what agents do": "Theo d\xF5i vi\u1EC7c c\xE1c agent l\xE0m",
-  "Deep and Max levels: each tool an agent runs in Copilot (its name and its target: a file path or a command, never its output) and how sessions end. Kept in memory for 45 minutes, never saved to disk.": "M\u1EE9c S\xE2u v\xE0 T\u1ED1i \u0111a: m\u1ED7i c\xF4ng c\u1EE5 m\u1ED9t agent ch\u1EA1y trong Copilot (t\xEAn v\xE0 \u0111\u1ED1i t\u01B0\u1EE3ng c\u1EE7a n\xF3: \u0111\u01B0\u1EDDng d\u1EABn t\u1EC7p ho\u1EB7c c\xE2u l\u1EC7nh, kh\xF4ng bao gi\u1EDD l\xE0 k\u1EBFt qu\u1EA3) v\xE0 c\xE1ch c\xE1c phi\xEAn k\u1EBFt th\xFAc. Ch\u1EC9 gi\u1EEF trong b\u1ED9 nh\u1EDB 45 ph\xFAt, kh\xF4ng ghi ra \u0111\u0129a.",
-  "Notice files you save": "Ghi nh\u1EADn t\u1EC7p b\u1EA1n l\u01B0u",
-  "Deep and Max levels: the paths of files you save in Copilot's editor (never their text), kept in memory for 45 minutes; they rank first in the code search.": "M\u1EE9c S\xE2u v\xE0 T\u1ED1i \u0111a: \u0111\u01B0\u1EDDng d\u1EABn c\xE1c t\u1EC7p b\u1EA1n l\u01B0u trong tr\xECnh so\u1EA1n th\u1EA3o c\u1EE7a Copilot (kh\xF4ng bao gi\u1EDD l\xE0 n\u1ED9i dung), gi\u1EEF trong b\u1ED9 nh\u1EDB 45 ph\xFAt; ch\xFAng \u0111\u01B0\u1EE3c \u01B0u ti\xEAn khi t\xECm code.",
-  "Start new agents": "M\u1EDF agent m\u1EDBi",
-  "A button that starts a new agent (Claude Code, Codex\u2026) in this workspace with the enhanced prompt, only when you press it.": "M\u1ED9t n\xFAt m\u1EDF agent m\u1EDBi (Claude Code, Codex\u2026) trong workspace n\xE0y k\xE8m prompt \u0111\xE3 c\u1EA3i thi\u1EC7n, ch\u1EC9 khi b\u1EA1n b\u1EA5m.",
-  "Open files in Copilot": "M\u1EDF t\u1EC7p trong Copilot",
-  "Clicking a file in the context list opens it in an editor tab.": "B\u1EA5m v\xE0o m\u1ED9t t\u1EC7p trong danh s\xE1ch ng\u1EEF c\u1EA3nh s\u1EBD m\u1EDF n\xF3 trong tab so\u1EA1n th\u1EA3o.",
-  "That text is sent with your prompt to the model you run (your API provider, or the subscription CLI and its provider). It can contain code, file contents, command output and anything the agents printed.": "\u0110o\u1EA1n v\u0103n b\u1EA3n \u0111\xF3 \u0111\u01B0\u1EE3c g\u1EEDi k\xE8m prompt t\u1EDBi model b\u1EA1n ch\u1EA1y (nh\xE0 cung c\u1EA5p API c\u1EE7a b\u1EA1n, ho\u1EB7c CLI g\xF3i subscription v\xE0 nh\xE0 cung c\u1EA5p c\u1EE7a n\xF3). N\xF3 c\xF3 th\u1EC3 ch\u1EE9a code, n\u1ED9i dung t\u1EC7p, output c\u1EE7a l\u1EC7nh v\xE0 b\u1EA5t c\u1EE9 th\u1EE9 g\xEC c\xE1c agent in ra.",
-  "Values that look like keys, tokens or passwords are masked first, but masking cannot catch everything.": "C\xE1c gi\xE1 tr\u1ECB tr\xF4ng nh\u01B0 key, token hay m\u1EADt kh\u1EA9u \u0111\u01B0\u1EE3c che tr\u01B0\u1EDBc, nh\u01B0ng vi\u1EC7c che kh\xF4ng th\u1EC3 b\u1EAFt \u0111\u01B0\u1EE3c m\u1ECDi th\u1EE9.",
-  "Nothing of it is saved by the plugin. You can untick it in the context list for one run, or turn this switch off at any time.": "Plugin kh\xF4ng l\u01B0u l\u1EA1i g\xEC t\u1EEB \u0111\xF3. B\u1EA1n c\xF3 th\u1EC3 b\u1ECF tick trong danh s\xE1ch ng\u1EEF c\u1EA3nh cho m\u1ED9t l\u1EA7n ch\u1EA1y, ho\u1EB7c t\u1EAFt c\xF4ng t\u1EAFc n\xE0y b\u1EA5t c\u1EE9 l\xFAc n\xE0o.",
-  "Copilot tells the plugin each tool an agent runs in its terminals: the tool name and what it acted on (a file path, a command line, a search pattern or a URL), never the tool's output. Copilot also tells it when a session finishes and how.": "Copilot b\xE1o cho plugin m\u1ED7i c\xF4ng c\u1EE5 m\u1ED9t agent ch\u1EA1y trong terminal: t\xEAn c\xF4ng c\u1EE5 v\xE0 \u0111\u1ED1i t\u01B0\u1EE3ng n\xF3 t\xE1c \u0111\u1ED9ng (\u0111\u01B0\u1EDDng d\u1EABn t\u1EC7p, c\xE2u l\u1EC7nh, m\u1EABu t\xECm ki\u1EBFm ho\u1EB7c URL), kh\xF4ng bao gi\u1EDD l\xE0 k\u1EBFt qu\u1EA3 c\u1EE7a c\xF4ng c\u1EE5. Copilot c\u0169ng b\xE1o khi m\u1ED9t phi\xEAn k\u1EBFt th\xFAc v\xE0 k\u1EBFt th\xFAc ra sao.",
-  "This is kept in the plugin's memory only, for 45 minutes and 60 entries per workspace, and forgotten when you turn this off, delete everything, or Copilot restarts.": "Th\xF4ng tin n\xE0y ch\u1EC9 gi\u1EEF trong b\u1ED9 nh\u1EDB c\u1EE7a plugin, 45 ph\xFAt v\xE0 t\u1ED1i \u0111a 60 m\u1EE5c m\u1ED7i workspace, v\xE0 b\u1ECB qu\xEAn khi b\u1EA1n t\u1EAFt c\xF4ng t\u1EAFc, x\xF3a to\xE0n b\u1ED9, ho\u1EB7c khi Copilot kh\u1EDFi \u0111\u1ED9ng l\u1EA1i.",
-  "At the Deep and Max levels, the recent entries of the focused workspace are sent with your prompt to the model you run. Command lines are masked for obvious keys and passwords.": "\u1EDE m\u1EE9c S\xE2u v\xE0 T\u1ED1i \u0111a, c\xE1c m\u1EE5c g\u1EA7n \u0111\xE2y c\u1EE7a workspace \u0111ang m\u1EDF \u0111\u01B0\u1EE3c g\u1EEDi k\xE8m prompt t\u1EDBi model b\u1EA1n ch\u1EA1y. C\xE1c c\xE2u l\u1EC7nh \u0111\u01B0\u1EE3c che nh\u1EEFng key v\xE0 m\u1EADt kh\u1EA9u d\u1EC5 nh\u1EADn ra.",
-  "The plugin only watches: it never changes or blocks what an agent does.": "Plugin ch\u1EC9 quan s\xE1t: n\xF3 kh\xF4ng bao gi\u1EDD thay \u0111\u1ED5i hay ch\u1EB7n vi\u1EC7c agent l\xE0m.",
-  "Adds a button that starts a new agent (Claude Code, Codex, Gemini\u2026) in a new terminal of this workspace, and types the enhanced prompt into it once it is ready.": "Th\xEAm m\u1ED9t n\xFAt m\u1EDF agent m\u1EDBi (Claude Code, Codex, Gemini\u2026) trong m\u1ED9t terminal m\u1EDBi c\u1EE7a workspace n\xE0y, v\xE0 g\xF5 prompt \u0111\xE3 c\u1EA3i thi\u1EC7n v\xE0o khi agent s\u1EB5n s\xE0ng.",
-  "The agent runs with your user account, exactly as if you had opened it yourself: it can read and change files and run commands, within that agent's own permission settings.": "Agent ch\u1EA1y b\u1EB1ng t\xE0i kho\u1EA3n ng\u01B0\u1EDDi d\xF9ng c\u1EE7a b\u1EA1n, y nh\u01B0 khi b\u1EA1n t\u1EF1 m\u1EDF: n\xF3 c\xF3 th\u1EC3 \u0111\u1ECDc, s\u1EEDa t\u1EC7p v\xE0 ch\u1EA1y l\u1EC7nh, trong ph\u1EA1m vi c\xE0i \u0111\u1EB7t quy\u1EC1n c\u1EE7a ch\xEDnh agent \u0111\xF3.",
-  "It only happens when you press the button. The plugin never starts an agent by itself.": "Vi\u1EC7c n\xE0y ch\u1EC9 x\u1EA3y ra khi b\u1EA1n b\u1EA5m n\xFAt. Plugin kh\xF4ng bao gi\u1EDD t\u1EF1 m\u1EDF agent.",
-  "Enhanced prompt ready ({model}, {seconds} s)": "Prompt \u0111\xE3 c\u1EA3i thi\u1EC7n xong ({model}, {seconds} gi\xE2y)",
-  "Started a new {agent} agent with the prompt.": "\u0110\xE3 m\u1EDF agent {agent} m\u1EDBi v\u1EDBi prompt.",
-  "Recent agent activity": "Ho\u1EA1t \u0111\u1ED9ng g\u1EA7n \u0111\xE2y c\u1EE7a c\xE1c agent",
-  "Files you saved lately": "C\xE1c t\u1EC7p b\u1EA1n v\u1EEBa l\u01B0u",
-  "activity": "ho\u1EA1t \u0111\u1ED9ng",
-  "saved files": "t\u1EC7p \u0111\xE3 l\u01B0u",
-  "Starting new agents is off in Settings, or not confirmed yet.": "M\u1EDF agent m\u1EDBi \u0111ang t\u1EAFt trong C\xE0i \u0111\u1EB7t, ho\u1EB7c ch\u01B0a \u0111\u01B0\u1EE3c x\xE1c nh\u1EADn.",
-  "Opening files in Copilot is off in Settings.": "M\u1EDF t\u1EC7p trong Copilot \u0111ang t\u1EAFt trong C\xE0i \u0111\u1EB7t.",
-  "online model lists are off in Settings": "danh s\xE1ch model tr\u1EF1c tuy\u1EBFn \u0111ang t\u1EAFt trong C\xE0i \u0111\u1EB7t",
-  "Copilot could not store the API key: this machine has no key store for it. Use a key from an environment variable, or a subscription CLI.": "Copilot kh\xF4ng l\u01B0u \u0111\u01B0\u1EE3c API key: m\xE1y n\xE0y kh\xF4ng c\xF3 kho kh\xF3a cho n\xF3. H\xE3y d\xF9ng key t\u1EEB bi\u1EBFn m\xF4i tr\u01B0\u1EDDng, ho\u1EB7c m\u1ED9t CLI \u0111\u0103ng k\xFD.",
-  "{name} is waiting for an answer from you, and what is typed now could be taken as that answer.": "{name} \u0111ang ch\u1EDD b\u1EA1n tr\u1EA3 l\u1EDDi, v\xE0 n\u1ED9i dung g\xF5 v\xE0o l\xFAc n\xE0y c\xF3 th\u1EC3 b\u1ECB coi l\xE0 c\xE2u tr\u1EA3 l\u1EDDi \u0111\xF3.",
-  "The model returned no prompt.": "Model kh\xF4ng tr\u1EA3 v\u1EC1 prompt n\xE0o.",
-  "This version of Copilot cannot do that yet.": "Phi\xEAn b\u1EA3n Copilot n\xE0y ch\u01B0a l\xE0m \u0111\u01B0\u1EE3c vi\u1EC7c \u0111\xF3.",
-  "Invalid request.": "Y\xEAu c\u1EA7u kh\xF4ng h\u1EE3p l\u1EC7.",
-  "Reads which other agents run in this workspace (kind, title, state) and the last lines of each one's terminal, every time you enhance at the Max level: as many agents and lines as you set below the switch (4 agents and 80 lines by default, at most 8 and 300).": "\u0110\u1ECDc c\xE1c agent kh\xE1c \u0111ang ch\u1EA1y trong workspace n\xE0y (lo\u1EA1i, t\xEAn, tr\u1EA1ng th\xE1i) v\xE0 nh\u1EEFng d\xF2ng cu\u1ED1i trong terminal c\u1EE7a t\u1EEBng agent, m\u1ED7i l\u1EA7n b\u1EA1n c\u1EA3i thi\u1EC7n \u1EDF m\u1EE9c T\u1ED1i \u0111a: s\u1ED1 agent v\xE0 s\u1ED1 d\xF2ng theo l\u1EF1a ch\u1ECDn b\xEAn d\u01B0\u1EDBi c\xF4ng t\u1EAFc (m\u1EB7c \u0111\u1ECBnh 4 agent v\xE0 80 d\xF2ng, t\u1ED1i \u0111a 8 v\xE0 300).",
-  "Agents read": "S\u1ED1 agent \u0111\u1ECDc",
-  "Lines per agent": "S\u1ED1 d\xF2ng m\u1ED7i agent",
-  "Used only while this switch is on and confirmed.": "Ch\u1EC9 d\xF9ng khi c\xF4ng t\u1EAFc n\xE0y \u0111ang b\u1EADt v\xE0 \u0111\xE3 x\xE1c nh\u1EADn.",
-  "{model} declined this request ({category}). Use another model, or rephrase the request.": "{model} t\u1EEB ch\u1ED1i y\xEAu c\u1EA7u n\xE0y ({category}). H\xE3y d\xF9ng model kh\xE1c, ho\u1EB7c vi\u1EBFt l\u1EA1i y\xEAu c\u1EA7u.",
-  "Send right after enhancing": "C\u1EA3i thi\u1EC7n xong g\u1EEDi lu\xF4n",
-  "On for small, low-risk requests, with an agent that asks before it does anything hard to undo. Leave it off when the agent runs with wide permissions, or when a wrong instruction would be costly.": "B\u1EADt cho c\xE1c y\xEAu c\u1EA7u nh\u1ECF, \xEDt r\u1EE7i ro, v\u1EDBi agent lu\xF4n h\u1ECFi tr\u01B0\u1EDBc khi l\xE0m vi\u1EC7c kh\xF3 ho\xE0n t\xE1c. \u0110\u1EC3 t\u1EAFt khi agent ch\u1EA1y v\u1EDBi quy\u1EC1n r\u1ED9ng, ho\u1EB7c khi m\u1ED9t ch\u1EC9 d\u1EABn sai s\u1EBD g\xE2y thi\u1EC7t h\u1EA1i l\u1EDBn.",
-  "Whenever one of these does not hold, nothing is sent: the result stays in the composer with a note that says why, and you send it yourself.": "H\u1EC5 m\u1ED9t \u0111i\u1EC1u ki\u1EC7n kh\xF4ng th\u1ECFa th\xEC kh\xF4ng g\u1EEDi g\xEC c\u1EA3: k\u1EBFt qu\u1EA3 n\u1EB1m l\u1EA1i trong khung so\u1EA1n k\xE8m m\u1ED9t ghi ch\xFA n\xF3i r\xF5 l\xFD do, v\xE0 b\u1EA1n t\u1EF1 g\u1EEDi.",
-  "Enhance and send without reading (Ctrl+Enter)": "C\u1EA3i thi\u1EC7n r\u1ED3i g\u1EEDi lu\xF4n, kh\xF4ng \u0111\u1ECDc l\u1EA1i (Ctrl+Enter)",
-  "Not sent by itself.": "Ch\u01B0a t\u1EF1 g\u1EEDi.",
-  "Read the prompt and send it yourself.": "H\xE3y \u0111\u1ECDc prompt r\u1ED3i t\u1EF1 g\u1EEDi.",
-  "Copilot could not tell which project this is.": "Copilot kh\xF4ng x\xE1c \u0111\u1ECBnh \u0111\u01B0\u1EE3c \u0111\xE2y l\xE0 d\u1EF1 \xE1n n\xE0o.",
-  "The project in focus changed while it ran; the prompt waits in the project it was written in.": "D\u1EF1 \xE1n \u0111ang m\u1EDF \u0111\xE3 \u0111\u1ED5i trong l\xFAc ch\u1EA1y; prompt \u0111ang ch\u1EDD \u1EDF d\u1EF1 \xE1n n\u01A1i n\xF3 \u0111\u01B0\u1EE3c vi\u1EBFt.",
-  "The terminal picked when you started is closed or no longer the one picked.": "Terminal \u0111\u01B0\u1EE3c ch\u1ECDn l\xFAc b\u1EA1n b\u1EAFt \u0111\u1EA7u \u0111\xE3 \u0111\xF3ng ho\u1EB7c kh\xF4ng c\xF2n l\xE0 terminal \u0111ang ch\u1ECDn.",
-  "{label} is a plain terminal, not an agent.": "{label} l\xE0 terminal th\u01B0\u1EDDng, kh\xF4ng ph\u1EA3i agent.",
-  "The text changed while it ran.": "N\u1ED9i dung \u0111\xE3 thay \u0111\u1ED5i trong l\xFAc ch\u1EA1y.",
-  "Saved as a file.": "\u0110\xE3 l\u01B0u th\xE0nh file.",
-  "The file could not be saved.": "Kh\xF4ng l\u01B0u \u0111\u01B0\u1EE3c file.",
-  "Save as a file": "L\u01B0u th\xE0nh file",
-  "Saved {when} \xB7 {count} prompts": "L\u01B0u l\xFAc {when} \xB7 {count} prompt",
-  "{name} is still working.": "{name} v\u1EABn \u0111ang l\xE0m vi\u1EC7c.",
-  "{name} is waiting for an answer from you.": "{name} \u0111ang ch\u1EDD b\u1EA1n tr\u1EA3 l\u1EDDi.",
-  "Copilot does not say whether {name} is idle.": "Copilot kh\xF4ng cho bi\u1EBFt {name} c\xF3 \u0111ang r\u1EA3nh hay kh\xF4ng.",
-  "Copilot session unavailable": "Kh\xF4ng k\u1EBFt n\u1ED1i \u0111\u01B0\u1EE3c phi\xEAn Copilot",
-  "Attached Copilot session": "Phi\xEAn Copilot \u0111\u01B0\u1EE3c k\u1EBFt n\u1ED1i",
-  "Send to Copilot (Ctrl+Enter)": "G\u1EEDi t\u1EDBi Copilot (Ctrl+Enter)",
-  "Prompt preferences": "T\xF9y ch\u1ECDn prompt",
-  "Default style": "Ki\u1EC3u m\u1EB7c \u0111\u1ECBnh",
-  "Default context level": "M\u1EE9c ng\u1EEF c\u1EA3nh m\u1EB7c \u0111\u1ECBnh",
-  "Default output language": "Ng\xF4n ng\u1EEF \u0111\u1EA7u ra m\u1EB7c \u0111\u1ECBnh",
-  "Additional context files": "C\xE1c file ng\u1EEF c\u1EA3nh b\u1ED5 sung",
-  "Excluded paths": "\u0110\u01B0\u1EDDng d\u1EABn lo\u1EA1i tr\u1EEB",
-  "Timeout per model (seconds)": "Th\u1EDDi gian ch\u1EDD m\u1ED7i model (gi\xE2y)",
-  "History limit": "Gi\u1EDBi h\u1EA1n l\u1ECBch s\u1EED",
-  "Adapt instructions to Copilot": "\u0110i\u1EC1u ch\u1EC9nh h\u01B0\u1EDBng d\u1EABn cho Copilot",
-  "Auto-enhance appended text": "V\u0103n b\u1EA3n th\xEAm khi t\u1EF1 c\u1EA3i thi\u1EC7n",
-  "Auto-enhance minimum characters": "S\u1ED1 k\xFD t\u1EF1 t\u1ED1i thi\u1EC3u \u0111\u1EC3 t\u1EF1 c\u1EA3i thi\u1EC7n",
-  "Include context in auto-enhance": "Th\xEAm ng\u1EEF c\u1EA3nh khi t\u1EF1 c\u1EA3i thi\u1EC7n",
-  'It does nothing while "Send to Copilot" is off.': "Kh\xF4ng ho\u1EA1t \u0111\u1ED9ng khi t\u1EAFt \u201CG\u1EEDi t\u1EDBi Copilot\u201D.",
-  "Auto-enhance Copilot session prompts": "T\u1EF1 c\u1EA3i thi\u1EC7n prompt c\u1EE7a phi\xEAn Copilot",
-  "These switches control what Enhance Prompt reads, sends and stores. They are checked for every run.": "C\xE1c c\xF4ng t\u1EAFc ki\u1EC3m so\xE1t nh\u1EEFng g\xEC Enhance Prompt \u0111\u1ECDc, g\u1EEDi v\xE0 l\u01B0u. M\u1ED7i l\u1EA7n ch\u1EA1y \u0111\u1EC1u ki\u1EC3m tra ch\xFAng.",
-  "Unavailable in Copilot": "Ch\u01B0a c\xF3 trong Copilot",
-  "The current canvas SDK does not provide this capability.": "SDK canvas hi\u1EC7n t\u1EA1i ch\u01B0a cung c\u1EA5p ch\u1EE9c n\u0103ng n\xE0y.",
-  "API keys (protected by Windows)": "API key (\u0111\u01B0\u1EE3c Windows b\u1EA3o v\u1EC7)",
-  "Copilot prompts are left unchanged.": "Gi\u1EEF nguy\xEAn prompt c\u1EE7a Copilot.",
-  "Appends the text from Prompt preferences when Copilot invokes the prompt hook. No model call.": "Th\xEAm v\u0103n b\u1EA3n trong T\xF9y ch\u1ECDn prompt khi Copilot g\u1ECDi hook. Kh\xF4ng g\u1ECDi model.",
-  "A fast API model rewrites hooked prompts with a two-second budget. Failures preserve the original. Prompts sent from this panel are skipped.": "Model API nhanh vi\u1EBFt l\u1EA1i prompt trong hai gi\xE2y. N\u1EBFu l\u1ED7i th\xEC gi\u1EEF nguy\xEAn. B\u1ECF qua prompt g\u1EEDi t\u1EEB b\u1EA3ng n\xE0y.",
-  "Send to Copilot": "G\u1EEDi t\u1EDBi Copilot",
-  "Send a new message to the attached Copilot session when you click Send. Off: use Copy instead.": "Nh\u1EA5n G\u1EEDi \u0111\u1EC3 g\u1EEDi tin nh\u1EAFn m\u1EDBi v\xE0o phi\xEAn Copilot \u0111\u01B0\u1EE3c k\u1EBFt n\u1ED1i. Khi t\u1EAFt, d\xF9ng Sao ch\xE9p.",
-  "Send starts a new Copilot turn. Busy, blocked, disconnected and unknown sessions refuse the message.": "G\u1EEDi b\u1EAFt \u0111\u1EA7u m\u1ED9t l\u01B0\u1EE3t Copilot m\u1EDBi. Kh\xF4ng g\u1EEDi khi phi\xEAn b\u1EADn, ch\u1EDD tr\u1EA3 l\u1EDDi, m\u1EA5t k\u1EBFt n\u1ED1i ho\u1EB7c kh\xF4ng r\xF5 tr\u1EA1ng th\xE1i.",
-  "Prompts, results and context are saved as plain text in the plugin data folder. Drafts are separated by Copilot session.": "Prompt, k\u1EBFt qu\u1EA3 v\xE0 ng\u1EEF c\u1EA3nh \u0111\u01B0\u1EE3c l\u01B0u d\u1EA1ng v\u0103n b\u1EA3n thu\u1EA7n trong th\u01B0 m\u1EE5c d\u1EEF li\u1EC7u plugin. B\u1EA3n nh\xE1p t\xE1ch ri\xEAng theo phi\xEAn Copilot.",
-  "Ctrl+Enter, or the button next to Enhance, enhances and sends a new Copilot message without review. Enter alone stops at the result. Off until you turn it on.": "Ctrl+Enter ho\u1EB7c n\xFAt c\u1EA1nh C\u1EA3i thi\u1EC7n s\u1EBD c\u1EA3i thi\u1EC7n v\xE0 g\u1EEDi tin nh\u1EAFn Copilot m\xE0 kh\xF4ng xem l\u1EA1i. Enter ch\u1EC9 t\u1EA1o k\u1EBFt qu\u1EA3. M\u1EB7c \u0111\u1ECBnh t\u1EAFt.",
-  "Copilot acts on a prompt you have not read. A model can misunderstand your request or add an unwanted step.": "Copilot th\u1EF1c hi\u1EC7n prompt b\u1EA1n ch\u01B0a \u0111\u1ECDc. Model c\xF3 th\u1EC3 hi\u1EC3u sai ho\u1EB7c th\xEAm b\u01B0\u1EDBc kh\xF4ng mong mu\u1ED1n.",
-  "Adds a second button next to Enhance. Ctrl+Enter enhances the prompt and sends the result as a new Copilot message. Enter alone only enhances.": "Th\xEAm n\xFAt c\u1EA1nh C\u1EA3i thi\u1EC7n. Ctrl+Enter c\u1EA3i thi\u1EC7n r\u1ED3i g\u1EEDi k\u1EBFt qu\u1EA3 th\xE0nh tin nh\u1EAFn Copilot m\u1EDBi. Enter ch\u1EC9 c\u1EA3i thi\u1EC7n.",
-  "Automatic sending requires the same attached session and project, an idle session, and unchanged input. Closing or cancelling the run prevents sending.": "Ch\u1EC9 t\u1EF1 g\u1EEDi khi v\u1EABn c\xF9ng phi\xEAn v\xE0 d\u1EF1 \xE1n, phi\xEAn \u0111ang r\u1EA3nh v\xE0 n\u1ED9i dung kh\xF4ng \u0111\u1ED5i. \u0110\xF3ng ho\u1EB7c h\u1EE7y s\u1EBD kh\xF4ng g\u1EEDi.",
-  'It needs "Send to Copilot" to be on, and the checks of that switch still apply.': "C\u1EA7n b\u1EADt \u201CG\u1EEDi t\u1EDBi Copilot\u201D v\xE0 v\u1EABn ki\u1EC3m tra c\xE1c \u0111i\u1EC1u ki\u1EC7n c\u1EE7a c\xF4ng t\u1EAFc \u0111\xF3.",
-  "Sending to Copilot is off in Settings.": "G\u1EEDi t\u1EDBi Copilot \u0111ang t\u1EAFt trong C\xE0i \u0111\u1EB7t.",
-  "Download started.": "\u0110\xE3 b\u1EAFt \u0111\u1EA7u t\u1EA3i xu\u1ED1ng.",
-  "Changes could not be saved. Check the canvas connection and try again.": "Kh\xF4ng l\u01B0u \u0111\u01B0\u1EE3c thay \u0111\u1ED5i. Ki\u1EC3m tra k\u1EBFt n\u1ED1i canvas r\u1ED3i th\u1EED l\u1EA1i.",
-  "The canvas could not connect. Close it and open Enhance Prompt again from Copilot.": "Kh\xF4ng k\u1EBFt n\u1ED1i \u0111\u01B0\u1EE3c canvas. \u0110\xF3ng r\u1ED3i m\u1EDF l\u1EA1i Enhance Prompt t\u1EEB Copilot.",
-  "Copilot is busy, waiting for your answer, or disconnected. Wait until the session is idle before sending.": "Copilot \u0111ang b\u1EADn, ch\u1EDD b\u1EA1n tr\u1EA3 l\u1EDDi ho\u1EB7c \u0111\xE3 m\u1EA5t k\u1EBFt n\u1ED1i. Ch\u1EDD phi\xEAn r\u1EA3nh tr\u01B0\u1EDBc khi g\u1EEDi.",
-  "A prompt was just sent. Wait for Copilot before sending again.": "V\u1EEBa g\u1EEDi m\u1ED9t prompt. Ch\u1EDD Copilot tr\u01B0\u1EDBc khi g\u1EEDi ti\u1EBFp.",
-  "Changes the text Copilot receives; the chat still shows your original message. Off by default. Ambiguous prompts are left unchanged.": "Thay \u0111\u1ED5i v\u0103n b\u1EA3n Copilot nh\u1EADn \u0111\u01B0\u1EE3c; cu\u1ED9c tr\xF2 chuy\u1EC7n v\u1EABn hi\u1EC3n th\u1ECB tin nh\u1EAFn g\u1ED1c. M\u1EB7c \u0111\u1ECBnh t\u1EAFt. Gi\u1EEF nguy\xEAn n\u1EBFu kh\xF4ng x\xE1c \u0111\u1ECBnh \u0111\u01B0\u1EE3c ph\u1EA7n c\u1EA7n thay."
-};
-var ZH = {
-  "Usage records are kept separately for Usage Insights and are not removed by these controls.": "\u7528\u91CF\u8BB0\u5F55\u4E3A Usage Insights \u5355\u72EC\u4FDD\u7559\uFF0C\u4E0D\u4F1A\u88AB\u8FD9\u4E9B\u64CD\u4F5C\u5220\u9664\u3002",
-  "Copilot usage could not be saved. Check free disk space and plugin data-folder permissions, then open Show Logs. Any remaining helper files have been kept for recovery.": "\u65E0\u6CD5\u4FDD\u5B58 Copilot \u7528\u91CF\u3002\u8BF7\u68C0\u67E5\u78C1\u76D8\u53EF\u7528\u7A7A\u95F4\u548C\u63D2\u4EF6\u6570\u636E\u6587\u4EF6\u5939\u7684\u6743\u9650\uFF0C\u7136\u540E\u6253\u5F00\u201C\u663E\u793A\u65E5\u5FD7\u201D\u3002\u5269\u4F59\u7684\u8F85\u52A9\u4F1A\u8BDD\u6587\u4EF6\u5DF2\u4FDD\u7559\u4EE5\u4FBF\u6062\u590D\u3002",
-  "Copilot model discovery": "Copilot \u6A21\u578B\u53D1\u73B0",
-  "Refresh the Copilot model list first, then reopen these logs. This section is included when you copy the logs.": "\u8BF7\u5148\u5237\u65B0 Copilot \u6A21\u578B\u5217\u8868\uFF0C\u518D\u91CD\u65B0\u6253\u5F00\u65E5\u5FD7\u3002\u590D\u5236\u65E5\u5FD7\u65F6\u4F1A\u5305\u542B\u6B64\u90E8\u5206\u3002",
-  "The plugin could not verify the desktop runtime. Open Show Logs and share the Copilot model discovery section.": "\u63D2\u4EF6\u65E0\u6CD5\u9A8C\u8BC1\u684C\u9762\u8FD0\u884C\u65F6\u3002\u8BF7\u6253\u5F00\u201C\u663E\u793A\u65E5\u5FD7\u201D\u5E76\u5206\u4EAB\u201CCopilot \u6A21\u578B\u53D1\u73B0\u201D\u90E8\u5206\u3002",
-  "The required desktop SDK could not be loaded. Open Show Logs and share the Copilot model discovery section.": "\u65E0\u6CD5\u52A0\u8F7D\u6240\u9700\u7684\u684C\u9762 SDK\u3002\u8BF7\u6253\u5F00\u201C\u663E\u793A\u65E5\u5FD7\u201D\u5E76\u5206\u4EAB\u201CCopilot \u6A21\u578B\u53D1\u73B0\u201D\u90E8\u5206\u3002",
-  "Copilot could not return its model list. Try Refresh, then open Show Logs and share the Copilot model discovery section if it still fails.": "Copilot \u65E0\u6CD5\u8FD4\u56DE\u6A21\u578B\u5217\u8868\u3002\u8BF7\u5C1D\u8BD5\u5237\u65B0\uFF1B\u5982\u679C\u4ECD\u7136\u5931\u8D25\uFF0C\u8BF7\u6253\u5F00\u201C\u663E\u793A\u65E5\u5FD7\u201D\u5E76\u5206\u4EAB\u201CCopilot \u6A21\u578B\u53D1\u73B0\u201D\u90E8\u5206\u3002",
-  "No eligible Copilot models were returned for this session. Check your Copilot sign-in and model access, then refresh. Show Logs includes the model discovery results.": "\u6B64\u4F1A\u8BDD\u672A\u8FD4\u56DE\u7B26\u5408\u6761\u4EF6\u7684 Copilot \u6A21\u578B\u3002\u8BF7\u68C0\u67E5 Copilot \u767B\u5F55\u72B6\u6001\u548C\u6A21\u578B\u8BBF\u95EE\u6743\u9650\uFF0C\u7136\u540E\u5237\u65B0\u3002\u201C\u663E\u793A\u65E5\u5FD7\u201D\u4E2D\u5305\u542B\u6A21\u578B\u53D1\u73B0\u7ED3\u679C\u3002",
-  "Show Logs": "\u663E\u793A\u65E5\u5FD7",
-  "Diagnostic logs": "\u8BCA\u65AD\u65E5\u5FD7",
-  "Copy logs": "\u590D\u5236\u65E5\u5FD7",
-  "Collecting logs\u2026": "\u6B63\u5728\u6536\u96C6\u65E5\u5FD7\u2026",
-  "Reproduce the problem, then open these logs and copy them into your issue. They contain recent operation results and error codes, without prompts, file contents, paths, account names, or API keys. Nothing is uploaded automatically.": "\u8BF7\u5148\u590D\u73B0\u95EE\u9898\uFF0C\u518D\u6253\u5F00\u65E5\u5FD7\u5E76\u590D\u5236\u5230\u95EE\u9898\u62A5\u544A\u4E2D\u3002\u65E5\u5FD7\u5305\u542B\u8FD1\u671F\u64CD\u4F5C\u7ED3\u679C\u548C\u9519\u8BEF\u4EE3\u7801\uFF0C\u4E0D\u5305\u542B\u63D0\u793A\u8BCD\u3001\u6587\u4EF6\u5185\u5BB9\u3001\u8DEF\u5F84\u3001\u8D26\u6237\u540D\u6216 API \u5BC6\u94A5\u3002\u4E0D\u4F1A\u81EA\u52A8\u4E0A\u4F20\u4EFB\u4F55\u5185\u5BB9\u3002",
-  "Up to 200 events per component are kept in memory. Restarting clears them. Reopen this dialog to capture newer events.": "\u6BCF\u4E2A\u7EC4\u4EF6\u5728\u5185\u5B58\u4E2D\u6700\u591A\u4FDD\u7559 200 \u6761\u4E8B\u4EF6\uFF0C\u91CD\u542F\u540E\u4F1A\u6E05\u9664\u3002\u91CD\u65B0\u6253\u5F00\u6B64\u5BF9\u8BDD\u6846\u53EF\u83B7\u53D6\u6700\u65B0\u4E8B\u4EF6\u3002",
-  "The worker could not be reached. These logs include panel diagnostics only.": "\u65E0\u6CD5\u8FDE\u63A5\u540E\u53F0\u8FDB\u7A0B\u3002\u8FD9\u4E9B\u65E5\u5FD7\u4EC5\u5305\u542B\u9762\u677F\u8BCA\u65AD\u4FE1\u606F\u3002",
-  "Clipboard access is unavailable. The logs are selected; copy them with Ctrl+C or Command+C.": "\u65E0\u6CD5\u8BBF\u95EE\u526A\u8D34\u677F\u3002\u65E5\u5FD7\u5DF2\u9009\u4E2D\uFF0C\u8BF7\u6309 Ctrl+C \u6216 Command+C \u590D\u5236\u3002",
-  "No enabled API model: Copilot helpers and subscription CLIs are excluded from the two-second chat hook.": "\u6CA1\u6709\u5DF2\u542F\u7528\u7684 API \u6A21\u578B\uFF1ACopilot \u540E\u53F0\u4F1A\u8BDD\u548C\u8BA2\u9605 CLI \u4E0D\u9002\u7528\u4E8E\u4E24\u79D2\u9650\u5236\u7684\u804A\u5929 hook\u3002",
-  "Refresh API and Copilot model lists and the public Claude Code schema. Copilot rewriting needs this enabled to verify model access.": "\u5237\u65B0 API\u3001Copilot \u6A21\u578B\u5217\u8868\u53CA\u516C\u5F00\u7684 Claude Code \u914D\u7F6E\u67B6\u6784\u3002Copilot \u6539\u5199\u9700\u8981\u5F00\u542F\u6B64\u9009\u9879\u4EE5\u9A8C\u8BC1\u6A21\u578B\u8BBF\u95EE\u6743\u9650\u3002",
-  "Model-list requests use the provider account. List refreshes send no prompt or project context.": "\u6A21\u578B\u5217\u8868\u8BF7\u6C42\u4F7F\u7528\u63D0\u4F9B\u5546\u8D26\u6237\u3002\u5237\u65B0\u5217\u8868\u4E0D\u4F1A\u53D1\u9001\u63D0\u793A\u8BCD\u6216\u9879\u76EE\u4E0A\u4E0B\u6587\u3002",
-  "Models available through this Copilot session. Access is checked again before each rewrite.": "\u6B64 Copilot \u4F1A\u8BDD\u53EF\u7528\u7684\u6A21\u578B\u3002\u6BCF\u6B21\u6539\u5199\u524D\u90FD\u4F1A\u91CD\u65B0\u68C0\u67E5\u8BBF\u95EE\u6743\u9650\u3002",
-  "Refresh to check which Copilot models are available.": "\u5237\u65B0\u4EE5\u68C0\u67E5\u53EF\u7528\u7684 Copilot \u6A21\u578B\u3002",
-  "Uses your GitHub Copilot account in the background. No npm install, API key or separate runtime. Copilot usage charges apply. It never falls back to another provider and is unavailable for chat auto-enhance.": "\u5728\u540E\u53F0\u4F7F\u7528\u4F60\u7684 GitHub Copilot \u8D26\u6237\u3002\u65E0\u9700\u5B89\u88C5 npm\u3001API \u5BC6\u94A5\u6216\u5355\u72EC\u7684\u8FD0\u884C\u65F6\u3002\u6309 Copilot \u7528\u91CF\u8BA1\u8D39\u3002\u4E0D\u4F1A\u56DE\u9000\u5230\u5176\u4ED6\u63D0\u4F9B\u5546\uFF0C\u4E5F\u4E0D\u652F\u6301\u804A\u5929\u81EA\u52A8\u589E\u5F3A\u3002",
-  "GitHub Copilot \xB7 background rewrite": "GitHub Copilot \xB7 \u540E\u53F0\u6539\u5199",
-  "Add GitHub Copilot to rewrite with your Copilot account, or choose an external provider.": "\u6DFB\u52A0 GitHub Copilot\uFF0C\u4F7F\u7528\u4F60\u7684 Copilot \u8D26\u6237\u6539\u5199\uFF0C\u6216\u9009\u62E9\u5916\u90E8\u63D0\u4F9B\u5546\u3002",
-  "It needs an enabled API model. Copilot background rewriting and subscription CLIs are excluded from its two-second limit. Add an API model, or use Rules.": "\u9700\u8981\u4E00\u4E2A\u5DF2\u542F\u7528\u7684 API \u6A21\u578B\u3002Copilot \u540E\u53F0\u6539\u5199\u548C\u8BA2\u9605 CLI \u4E0D\u9002\u7528\u4E8E\u4E24\u79D2\u7684\u65F6\u9650\u3002\u8BF7\u6DFB\u52A0 API \u6A21\u578B\u6216\u4F7F\u7528\u89C4\u5219\u3002",
-  "Copilot background rewriting is unavailable. Restart or update GitHub Copilot and reopen this plugin. No separate SDK or runtime is installed.": "Copilot \u540E\u53F0\u6539\u5199\u4E0D\u53EF\u7528\u3002\u8BF7\u91CD\u542F\u6216\u66F4\u65B0 GitHub Copilot\uFF0C\u7136\u540E\u91CD\u65B0\u6253\u5F00\u63D2\u4EF6\u3002\u4E0D\u4F1A\u5B89\u88C5\u5355\u72EC\u7684 SDK \u6216\u8FD0\u884C\u65F6\u3002",
-  "The background runtime could not verify the same GitHub account as this Copilot session. Check your existing Copilot sign-in. No prompt was sent.": "\u540E\u53F0\u8FD0\u884C\u65F6\u65E0\u6CD5\u786E\u8BA4\u4E0E\u6B64 Copilot \u4F1A\u8BDD\u4F7F\u7528\u540C\u4E00 GitHub \u8D26\u6237\u3002\u8BF7\u68C0\u67E5\u73B0\u6709\u7684 Copilot \u767B\u5F55\u72B6\u6001\u3002\u672A\u53D1\u9001\u4EFB\u4F55\u63D0\u793A\u8BCD\u3002",
-  "This model is not available through GitHub Copilot in both sessions. Refresh the model list and choose a Copilot model.": "\u6B64\u6A21\u578B\u65E0\u6CD5\u5728\u4E24\u4E2A\u4F1A\u8BDD\u4E2D\u90FD\u901A\u8FC7 GitHub Copilot \u4F7F\u7528\u3002\u8BF7\u5237\u65B0\u5217\u8868\u5E76\u9009\u62E9 Copilot \u6A21\u578B\u3002",
-  "This Copilot model does not report image support. Choose a model with image support or remove the images.": "\u6B64 Copilot \u6A21\u578B\u672A\u58F0\u660E\u652F\u6301\u56FE\u7247\u3002\u8BF7\u9009\u62E9\u652F\u6301\u56FE\u7247\u7684\u6A21\u578B\u6216\u79FB\u9664\u56FE\u7247\u3002",
-  "GitHub Copilot": "GitHub Copilot",
-  "A little more thought. A clearer prompt.": "\u591A\u4E00\u5206\u601D\u8003\uFF0C\u8BA9\u63D0\u793A\u8BCD\u66F4\u6E05\u6670\u3002",
-  "A fresh page for your next idea": "\u4E3A\u4E0B\u4E00\u4E2A\u60F3\u6CD5\u5F00\u542F\u65B0\u7684\u4E00\u9875",
-  "Draft ready to enhance": "\u8349\u7A3F\u5DF2\u5C31\u7EEA\uFF0C\u53EF\u4EE5\u589E\u5F3A",
-  "Enhancing your request\u2026": "\u6B63\u5728\u589E\u5F3A\u4F60\u7684\u8BF7\u6C42\u2026",
-  "Prompt ready to review": "\u63D0\u793A\u8BCD\u5DF2\u5C31\u7EEA\uFF0C\u8BF7\u68C0\u67E5",
-  "Enhancement failed": "\u589E\u5F3A\u5931\u8D25",
-  "Enhancement cancelled": "\u589E\u5F3A\u5DF2\u53D6\u6D88",
-  "Switch to light mode": "\u5207\u6362\u5230\u6D45\u8272\u6A21\u5F0F",
-  "Switch to dark mode": "\u5207\u6362\u5230\u6DF1\u8272\u6A21\u5F0F",
-  "Plugin sections": "\u63D2\u4EF6\u5BFC\u822A",
-  "Enhance": "\u4F18\u5316",
-  "Write a request": "\u5199\u4E0B\u9700\u6C42",
-  "Review and send": "\u5BA1\u9605\u5E76\u53D1\u9001",
-  "Enter to enhance \xB7 Shift+Enter for a new line": "Enter \u4F18\u5316 \xB7 Shift+Enter \u6362\u884C",
-  "Enhance and send": "\u4F18\u5316\u5E76\u53D1\u9001",
-  "Enhance and send skips review. Enhance lets you edit first.": "\u201C\u4F18\u5316\u5E76\u53D1\u9001\u201D\u4F1A\u8DF3\u8FC7\u5BA1\u9605\u3002\u201C\u4F18\u5316\u201D\u5141\u8BB8\u5148\u7F16\u8F91\u518D\u53D1\u9001\u3002",
-  "Context to include": "\u8981\u5305\u542B\u7684\u4E0A\u4E0B\u6587",
-  "Uncheck anything you do not want sent to the rewriting model.": "\u53D6\u6D88\u52FE\u9009\u4E0D\u60F3\u53D1\u9001\u7ED9\u6539\u5199\u6A21\u578B\u7684\u5185\u5BB9\u3002",
-  "Edit the enhanced prompt below, then copy it or send it to Copilot.": "\u5728\u4E0B\u65B9\u7F16\u8F91\u4F18\u5316\u540E\u7684\u63D0\u793A\u8BCD\uFF0C\u7136\u540E\u590D\u5236\u6216\u53D1\u9001\u5230 Copilot\u3002",
-  "Copilot session unavailable. You can still copy or save this prompt.": "Copilot \u4F1A\u8BDD\u4E0D\u53EF\u7528\u3002\u4F60\u4ECD\u53EF\u590D\u5236\u6216\u4FDD\u5B58\u6B64\u63D0\u793A\u8BCD\u3002",
-  "Wait for the current operation to finish before sending.": "\u8BF7\u7B49\u5F85\u5F53\u524D\u64CD\u4F5C\u5B8C\u6210\u540E\u518D\u53D1\u9001\u3002",
-  "Reuse": "\u590D\u7528",
-  "Send to Copilot is off in Settings. You can still copy or save this prompt.": "\u8BBE\u7F6E\u4E2D\u5DF2\u5173\u95ED\u201C\u53D1\u9001\u5230 Copilot\u201D\u3002\u4F60\u4ECD\u53EF\u590D\u5236\u6216\u4FDD\u5B58\u6B64\u63D0\u793A\u8BCD\u3002",
-  "AI file picker skipped: {reason}": "\u5DF2\u8DF3\u8FC7 AI \u9009\u62E9\u6587\u4EF6\uFF1A{reason}",
-  "Preview skips the AI file picker.": "\u9884\u89C8\u4F1A\u8DF3\u8FC7 AI \u9009\u62E9\u6587\u4EF6\u3002",
-  "Project files are off in Settings: workspace and agent only.": "\u201C\u8BBE\u7F6E\u201D\u4E2D\u5DF2\u5173\u95ED\u8BFB\u53D6\u9879\u76EE\u6587\u4EF6\uFF1A\u4EC5\u4F7F\u7528\u5DE5\u4F5C\u533A\u548C agent\u3002",
-  "No files matched the prompt; the agent will be told to locate them.": "\u6CA1\u6709\u6587\u4EF6\u5339\u914D\u63D0\u793A\u8BCD\uFF1B\u4F1A\u8BA9 agent \u81EA\u884C\u67E5\u627E\u3002",
-  "Not a git repository: no git context.": "\u4E0D\u662F git \u4ED3\u5E93\uFF1A\u6CA1\u6709 git \u4E0A\u4E0B\u6587\u3002",
-  "Terminal output is off in Settings.": "\u201C\u8BBE\u7F6E\u201D\u4E2D\u5DF2\u5173\u95ED\u8BFB\u53D6\u7EC8\u7AEF\u8F93\u51FA\u3002",
-  "Remote (SSH/WSL) workspace: project files are not readable from the plugin.": "\u8FDC\u7A0B\uFF08SSH/WSL\uFF09\u5DE5\u4F5C\u533A\uFF1A\u63D2\u4EF6\u65E0\u6CD5\u8BFB\u53D6\u9879\u76EE\u6587\u4EF6\u3002",
-  "Could not tell which folder the workspace is in; project files skipped.": "\u65E0\u6CD5\u786E\u5B9A\u5DE5\u4F5C\u533A\u6240\u5728\u7684\u6587\u4EF6\u5939\uFF1B\u5DF2\u8DF3\u8FC7\u9879\u76EE\u6587\u4EF6\u3002",
-  "No focused workspace.": "\u6CA1\u6709\u6253\u5F00\u7684\u5DE5\u4F5C\u533A\u3002",
-  "trimmed": "\u5DF2\u622A\u65AD",
-  "picked by AI": "AI \u9009\u62E9",
-  "keyword match": "\u5173\u952E\u8BCD\u5339\u914D",
-  "terminal": "\u7EC8\u7AEF",
-  "file": "\u6587\u4EF6",
-  "git": "git",
-  "tree": "\u76EE\u5F55\u6811",
-  "stack": "\u6280\u672F\u6808",
-  "rules": "\u89C4\u5219",
-  "agent": "agent",
-  "workspace": "\u5DE5\u4F5C\u533A",
-  "Recent output: {name}": "\u6700\u8FD1\u8F93\u51FA\uFF1A{name}",
-  "Git status ({count} changed)": "Git \u72B6\u6001\uFF08{count} \u5904\u66F4\u6539\uFF09",
-  "Repository tree ({count} files)": "\u76EE\u5F55\u6811\uFF08{count} \u4E2A\u6587\u4EF6\uFF09",
-  "Uncommitted changes": "\u672A\u63D0\u4EA4\u7684\u66F4\u6539",
-  "Recent commits": "\u6700\u8FD1\u63D0\u4EA4",
-  "Stack & commands": "\u6280\u672F\u6808\u4E0E\u547D\u4EE4",
-  "Target agent": "\u76EE\u6807 agent",
-  "Workspace": "\u5DE5\u4F5C\u533A",
-  "{count} lines": "{count} \u884C",
-  "{count} changed": "{count} \u5904\u66F4\u6539",
-  "{count} files": "{count} \u4E2A\u6587\u4EF6",
-  "Starting\u2026": "\u6B63\u5728\u5F00\u59CB\u2026",
-  "Cancelled": "\u5DF2\u53D6\u6D88",
-  "Enhance failed": "\u4F18\u5316\u5931\u8D25",
-  "Try again": "\u91CD\u8BD5",
-  "Done": "\u5B8C\u6210",
-  "Panel language": "\u754C\u9762\u8BED\u8A00",
-  "Reading workspace": "\u8BFB\u53D6\u5DE5\u4F5C\u533A",
-  "Reading project rules and stack": "\u8BFB\u53D6\u9879\u76EE\u89C4\u5219\u548C\u6280\u672F\u6808",
-  "Reading git changes": "\u8BFB\u53D6 git \u66F4\u6539",
-  "Finding relevant code": "\u67E5\u627E\u76F8\u5173\u4EE3\u7801",
-  "AI picking files": "AI \u9009\u62E9\u6587\u4EF6",
-  "Reading terminal output": "\u8BFB\u53D6\u7EC8\u7AEF\u8F93\u51FA",
-  "Writing the prompt": "\u7F16\u5199\u63D0\u793A\u8BCD",
-  "latest": "\u6700\u65B0",
-  "Models": "\u6A21\u578B",
-  "Settings": "\u8BBE\u7F6E",
-  "That terminal is no longer open.": "\u90A3\u4E2A\u7EC8\u7AEF\u5DF2\u7ECF\u5173\u95ED\u3002",
-  "Typed into {label}, without Enter.": "\u5DF2\u8F93\u5165\u5230 {label}\uFF0C\u672A\u6309 Enter\u3002",
-  "Type it without Enter": "\u8F93\u5165\u4F46\u4E0D\u6309 Enter",
-  "Back in the history.": "\u5DF2\u653E\u56DE\u5386\u53F2\u3002",
-  "It could not be brought back.": "\u65E0\u6CD5\u6062\u590D\u3002",
-  "This prompt was written in {name}: read it before you send it here.": "\u8FD9\u6761\u63D0\u793A\u8BCD\u662F\u5728 {name} \u4E2D\u5199\u7684\uFF1A\u5728\u8FD9\u91CC\u53D1\u9001\u524D\u8BF7\u5148\u8BFB\u4E00\u904D\u3002",
-  "Something is still running here. Try again when it has finished.": "\u8FD9\u91CC\u8FD8\u6709\u4EFB\u52A1\u5728\u8FD0\u884C\u3002\u7B49\u5B83\u7ED3\u675F\u540E\u518D\u8BD5\u3002",
-  "Opened from the history. What the composer held was replaced.": "\u5DF2\u4ECE\u5386\u53F2\u6253\u5F00\u3002\u8F93\u5165\u6846\u4E2D\u539F\u6709\u7684\u5185\u5BB9\u5DF2\u88AB\u66FF\u6362\u3002",
-  "Undo": "\u64A4\u9500",
-  "Removed from the history.": "\u5DF2\u4ECE\u5386\u53F2\u4E2D\u5220\u9664\u3002",
-  "Auto-enhance left a prompt for {agent} unchanged: {reason}": "\u81EA\u52A8\u4F18\u5316\u6CA1\u6709\u6539\u52A8\u53D1\u7ED9 {agent} \u7684\u4E00\u6761\u63D0\u793A\u8BCD\uFF1A{reason}",
-  "Found on this machine. It uses your subscription: no API key needed.": "\u5728\u672C\u673A\u627E\u5230\u3002\u5B83\u4F7F\u7528\u4F60\u7684\u8BA2\u9605\uFF1A\u65E0\u9700 API key\u3002",
-  "Use {name}": "\u4F7F\u7528 {name}",
-  "Other models": "\u5176\u4ED6\u6A21\u578B",
-  "Which prompts to show": "\u663E\u793A\u54EA\u4E9B\u63D0\u793A\u8BCD",
-  "Nothing here matches.": "\u6CA1\u6709\u5339\u914D\u7684\u5185\u5BB9\u3002",
-  "Hide the enhanced prompt": "\u6536\u8D77\u4F18\u5316\u540E\u7684\u63D0\u793A\u8BCD",
-  "Show the enhanced prompt": "\u67E5\u770B\u4F18\u5316\u540E\u7684\u63D0\u793A\u8BCD",
-  "API keys cannot be saved on this machine": "\u8FD9\u53F0\u673A\u5668\u65E0\u6CD5\u4FDD\u5B58 API key",
-  "Copilot found no key store here to keep them in. Use a key from an environment variable (the switch for it is in Settings), or a subscription CLI.": "Copilot \u5728\u8FD9\u53F0\u673A\u5668\u4E0A\u627E\u4E0D\u5230\u53EF\u5B58\u653E\u5B83\u4EEC\u7684\u5BC6\u94A5\u5B58\u50A8\u3002\u8BF7\u4F7F\u7528\u73AF\u5883\u53D8\u91CF\u4E2D\u7684 key\uFF08\u5F00\u5173\u5728\u201C\u8BBE\u7F6E\u201D\u91CC\uFF09\uFF0C\u6216\u8BA2\u9605 CLI\u3002",
-  "What this switch does, what can go wrong, and when it is worth turning on.": "\u8FD9\u4E2A\u5F00\u5173\u505A\u4EC0\u4E48\u3001\u53EF\u80FD\u51FA\u4EC0\u4E48\u95EE\u9898\uFF0C\u4EE5\u53CA\u4EC0\u4E48\u65F6\u5019\u503C\u5F97\u5F00\u542F\u3002",
-  "What it does": "\u5B83\u505A\u4EC0\u4E48",
-  "What can go wrong": "\u53EF\u80FD\u7684\u98CE\u9669",
-  "When to turn it on": "\u4EC0\u4E48\u65F6\u5019\u5F00\u542F",
-  "Last prompt ({when}): rewritten for {agent} with {model}.": "\u6700\u8FD1\u4E00\u6761\u63D0\u793A\u8BCD\uFF08{when}\uFF09\uFF1A\u5DF2\u7528 {model} \u4E3A {agent} \u6539\u5199\u3002",
-  "Last prompt ({when}): your text was added for {agent}.": "\u6700\u8FD1\u4E00\u6761\u63D0\u793A\u8BCD\uFF08{when}\uFF09\uFF1A\u5DF2\u4E3A {agent} \u52A0\u4E0A\u4F60\u7684\u6587\u5B57\u3002",
-  "Last prompt ({when}): left unchanged for {agent}. {reason}": "\u6700\u8FD1\u4E00\u6761\u63D0\u793A\u8BCD\uFF08{when}\uFF09\uFF1A\u53D1\u7ED9 {agent} \u65F6\u672A\u6539\u52A8\u3002{reason}",
-  "Risk and when to use it": "\u98CE\u9669\u4E0E\u9002\u7528\u573A\u666F",
-  "File and folder names, your agent rules, the README and manifest files go to the model you run. Files that look like secrets (.env, keys, certificates) are never read.": "\u6587\u4EF6\u548C\u6587\u4EF6\u5939\u540D\u79F0\u3001\u4F60\u7684 agent \u89C4\u5219\u3001README \u548C\u6E05\u5355\u6587\u4EF6\u4F1A\u53D1\u9001\u7ED9\u4F60\u8FD0\u884C\u7684\u6A21\u578B\u3002\u770B\u8D77\u6765\u50CF\u673A\u5BC6\u7684\u6587\u4EF6\uFF08.env\u3001\u5BC6\u94A5\u3001\u8BC1\u4E66\uFF09\u7EDD\u4E0D\u4F1A\u88AB\u8BFB\u53D6\u3002",
-  "Keep it on for prompts that name real files and commands. Turn it off in a project whose contents must not reach a model provider.": "\u4FDD\u6301\u5F00\u542F\uFF0C\u63D0\u793A\u8BCD\u624D\u80FD\u5199\u51FA\u771F\u5B9E\u7684\u6587\u4EF6\u548C\u547D\u4EE4\u3002\u5982\u679C\u9879\u76EE\u5185\u5BB9\u4E0D\u80FD\u4EA4\u7ED9\u6A21\u578B\u63D0\u4F9B\u65B9\uFF0C\u5C31\u5173\u95ED\u5B83\u3002",
-  "Branch names, commit subjects, the list of changed files and the diff of your uncommitted changes go to the model. Nothing in the repository is changed.": "\u5206\u652F\u540D\u3001\u63D0\u4EA4\u6807\u9898\u3001\u5DF2\u66F4\u6539\u6587\u4EF6\u5217\u8868\u4EE5\u53CA\u672A\u63D0\u4EA4\u66F4\u6539\u7684 diff \u4F1A\u53D1\u9001\u7ED9\u6A21\u578B\u3002\u4ED3\u5E93\u4E2D\u7684\u4EFB\u4F55\u5185\u5BB9\u90FD\u4E0D\u4F1A\u88AB\u6539\u52A8\u3002",
-  "On when a prompt should know what you are working on right now. Off when uncommitted changes may hold something you would not share.": "\u5F53\u63D0\u793A\u8BCD\u9700\u8981\u77E5\u9053\u4F60\u773C\u4E0B\u5728\u505A\u4EC0\u4E48\u65F6\u5F00\u542F\u3002\u5982\u679C\u672A\u63D0\u4EA4\u7684\u66F4\u6539\u91CC\u53EF\u80FD\u6709\u4E0D\u60F3\u5206\u4EAB\u7684\u5185\u5BB9\uFF0C\u5C31\u5173\u95ED\u3002",
-  "A terminal shows whatever was printed: paths, logs, data. Values that look like keys, tokens or passwords are masked first, which cannot catch everything.": "\u7EC8\u7AEF\u4F1A\u663E\u793A\u6240\u6709\u6253\u5370\u51FA\u6765\u7684\u5185\u5BB9\uFF1A\u8DEF\u5F84\u3001\u65E5\u5FD7\u3001\u6570\u636E\u3002\u770B\u8D77\u6765\u50CF\u5BC6\u94A5\u3001token \u6216\u5BC6\u7801\u7684\u503C\u4F1A\u5148\u88AB\u906E\u853D\uFF0C\u4F46\u65E0\u6CD5\u4FDD\u8BC1\u5168\u90E8\u906E\u4F4F\u3002",
-  "On to fix an error that is on screen in the terminal. Off when your terminals show secrets or customer data.": "\u8981\u4FEE\u590D\u7EC8\u7AEF\u91CC\u6B63\u663E\u793A\u7684\u9519\u8BEF\u65F6\u5F00\u542F\u3002\u5982\u679C\u7EC8\u7AEF\u4F1A\u663E\u793A\u673A\u5BC6\u6216\u5BA2\u6237\u6570\u636E\uFF0C\u5C31\u5173\u95ED\u3002",
-  "Terminals you did not pick are read too, and their text goes to the model: code, file contents and command output of other work.": "\u4F60\u6CA1\u6709\u9009\u4E2D\u7684\u7EC8\u7AEF\u4E5F\u4F1A\u88AB\u8BFB\u53D6\uFF0C\u5176\u6587\u672C\u4F1A\u53D1\u9001\u7ED9\u6A21\u578B\uFF1A\u5176\u4ED6\u5DE5\u4F5C\u7684\u4EE3\u7801\u3001\u6587\u4EF6\u5185\u5BB9\u548C\u547D\u4EE4\u8F93\u51FA\u3002",
-  "On when several agents share a task and a new prompt must not repeat or undo their work. Otherwise leave it off.": "\u5F53\u591A\u4E2A agent \u534F\u4F5C\u540C\u4E00\u4EFB\u52A1\u3001\u65B0\u63D0\u793A\u8BCD\u4E0D\u80FD\u91CD\u590D\u6216\u63A8\u7FFB\u5B83\u4EEC\u7684\u5DE5\u4F5C\u65F6\u5F00\u542F\u3002\u5176\u4ED6\u60C5\u51B5\u4FDD\u6301\u5173\u95ED\u3002",
-  "Tool names, file paths and command lines of every agent in Copilot are kept in memory and sent with Deep and Max prompts. A command line can carry more than you expect.": "Copilot \u4E2D\u6BCF\u4E2A agent \u7684\u5DE5\u5177\u540D\u3001\u6587\u4EF6\u8DEF\u5F84\u548C\u547D\u4EE4\u884C\u4F1A\u4FDD\u7559\u5728\u5185\u5B58\u4E2D\uFF0C\u5E76\u968F\u201C\u6DF1\u5165\u201D\u548C\u201C\u6700\u5927\u201D\u7EA7\u522B\u7684\u63D0\u793A\u8BCD\u53D1\u9001\u3002\u547D\u4EE4\u884C\u91CC\u7684\u5185\u5BB9\u53EF\u80FD\u6BD4\u4F60\u60F3\u7684\u591A\u3002",
-  "On when prompts should follow on from what the agents just did. Off when command lines may hold secrets.": "\u5F53\u63D0\u793A\u8BCD\u9700\u8981\u63A5\u7740 agent \u521A\u505A\u7684\u4E8B\u60C5\u5199\u65F6\u5F00\u542F\u3002\u5982\u679C\u547D\u4EE4\u884C\u91CC\u53EF\u80FD\u6709\u673A\u5BC6\uFF0C\u5C31\u5173\u95ED\u3002",
-  "Only paths are noted, never the text of a file. A path can still say what you are working on.": "\u53EA\u8BB0\u5F55\u8DEF\u5F84\uFF0C\u7EDD\u4E0D\u8BB0\u5F55\u6587\u4EF6\u5185\u5BB9\u3002\u4E0D\u8FC7\u8DEF\u5F84\u672C\u8EAB\u4E5F\u53EF\u80FD\u900F\u9732\u4F60\u5728\u505A\u4EC0\u4E48\u3002",
-  "On when you edit in Copilot and want those files found first. It changes nothing if you edit elsewhere.": "\u5F53\u4F60\u5728 Copilot \u4E2D\u7F16\u8F91\u5E76\u5E0C\u671B\u8FD9\u4E9B\u6587\u4EF6\u4F18\u5148\u88AB\u627E\u5230\u65F6\u5F00\u542F\u3002\u5982\u679C\u4F60\u5728\u522B\u5904\u7F16\u8F91\uFF0C\u5B83\u4E0D\u8D77\u4F5C\u7528\u3002",
-  "On for the normal flow. Off to be sure nothing is ever typed for you: Copy still works.": "\u65E5\u5E38\u4F7F\u7528\u4FDD\u6301\u5F00\u542F\u3002\u5173\u95ED\u540E\u7EDD\u4E0D\u4F1A\u66FF\u4F60\u8F93\u5165\u4EFB\u4F55\u5185\u5BB9\uFF1A\u590D\u5236\u4ECD\u7136\u53EF\u7528\u3002",
-  "A new agent runs with your user account and its own permission settings: it can change files and run commands.": "\u65B0 agent \u4EE5\u4F60\u7684\u7528\u6237\u8D26\u6237\u548C\u5B83\u81EA\u5DF1\u7684\u6743\u9650\u8BBE\u7F6E\u8FD0\u884C\uFF1A\u5B83\u53EF\u4EE5\u4FEE\u6539\u6587\u4EF6\u5E76\u6267\u884C\u547D\u4EE4\u3002",
-  "On when you often start a fresh agent for each task. It only happens when you press Start.": "\u5F53\u4F60\u5E38\u4E3A\u6BCF\u4E2A\u4EFB\u52A1\u542F\u52A8\u4E00\u4E2A\u65B0 agent \u65F6\u5F00\u542F\u3002\u53EA\u6709\u5728\u4F60\u6309\u4E0B\u201C\u542F\u52A8\u201D\u65F6\u624D\u4F1A\u53D1\u751F\u3002",
-  "An editor tab opens in Copilot's window. Nothing is read or changed by it.": "\u4F1A\u5728 Copilot \u7A97\u53E3\u4E2D\u6253\u5F00\u4E00\u4E2A\u7F16\u8F91\u5668\u6807\u7B7E\u9875\u3002\u5B83\u4E0D\u8BFB\u53D6\u4E5F\u4E0D\u66F4\u6539\u4EFB\u4F55\u5185\u5BB9\u3002",
-  "On to look at what was read before you send. Off if the panel should never change what Copilot shows.": "\u60F3\u5728\u53D1\u9001\u524D\u67E5\u770B\u8BFB\u53D6\u4E86\u4EC0\u4E48\u65F6\u5F00\u542F\u3002\u5982\u679C\u4E0D\u5E0C\u671B\u9762\u677F\u6539\u53D8 Copilot \u663E\u793A\u7684\u5185\u5BB9\uFF0C\u5C31\u5173\u95ED\u3002",
-  "On to reuse earlier prompts and to find your draft again after a restart. Off on a shared machine, or when prompts hold things that must not be kept.": "\u60F3\u590D\u7528\u4EE5\u524D\u7684\u63D0\u793A\u8BCD\u3001\u91CD\u542F\u540E\u627E\u56DE\u8349\u7A3F\u65F6\u5F00\u542F\u3002\u5728\u5171\u7528\u7684\u673A\u5668\u4E0A\uFF0C\u6216\u63D0\u793A\u8BCD\u542B\u6709\u4E0D\u80FD\u4FDD\u7559\u7684\u5185\u5BB9\u65F6\u5173\u95ED\u3002",
-  "A key from your environment is sent to that provider like a saved one, and its account pays for the calls.": "\u73AF\u5883\u4E2D\u7684 key \u4F1A\u50CF\u5DF2\u4FDD\u5B58\u7684 key \u4E00\u6837\u53D1\u9001\u7ED9\u5BF9\u5E94\u7684\u63D0\u4F9B\u65B9\uFF0C\u8C03\u7528\u8D39\u7528\u7531\u8BE5 key \u7684\u8D26\u6237\u627F\u62C5\u3002",
-  "On when your keys already live in the environment and you do not want to store them twice. Off to use only the keys you saved in Models.": "\u5F53 key \u5DF2\u5728\u73AF\u5883\u53D8\u91CF\u4E2D\u3001\u4E0D\u60F3\u518D\u5B58\u4E00\u4EFD\u65F6\u5F00\u542F\u3002\u5173\u95ED\u540E\u53EA\u4F7F\u7528\u4F60\u5728\u201C\u6A21\u578B\u201D\u4E2D\u4FDD\u5B58\u7684 key\u3002",
-  "On to see new models without updating the plugin. Off for no network traffic besides the model calls.": "\u60F3\u4E0D\u66F4\u65B0\u63D2\u4EF6\u5C31\u770B\u5230\u65B0\u6A21\u578B\u65F6\u5F00\u542F\u3002\u9664\u4E86\u6A21\u578B\u8C03\u7528\u5916\u4E0D\u60F3\u6709\u4EFB\u4F55\u7F51\u7EDC\u6D41\u91CF\u65F6\u5173\u95ED\u3002",
-  "What it may read": "\u5141\u8BB8\u8BFB\u53D6",
-  "What it may do": "\u5141\u8BB8\u6267\u884C",
-  "What it may keep and fetch": "\u5141\u8BB8\u4FDD\u5B58\u548C\u83B7\u53D6",
-  "working": "\u5DE5\u4F5C\u4E2D",
-  "needs you": "\u9700\u8981\u4F60",
-  "waiting": "\u7B49\u5F85\u4E2D",
-  "done": "\u5DF2\u5B8C\u6210",
-  "Read project files": "\u8BFB\u53D6\u9879\u76EE\u6587\u4EF6",
-  "Run git": "\u8FD0\u884C git",
-  "Read terminal output": "\u8BFB\u53D6\u7EC8\u7AEF\u8F93\u51FA",
-  "Save history": "\u4FDD\u5B58\u5386\u53F2",
-  "Use API keys from environment variables": "\u4F7F\u7528\u73AF\u5883\u53D8\u91CF\u4E2D\u7684 API key",
-  "Fetch model lists online": "\u5728\u7EBF\u83B7\u53D6\u6A21\u578B\u5217\u8868",
-  "Agent rules, README, manifest files and the file list of the focused workspace (Standard level and above). Off: only workspace and agent names are used.": "\u5F53\u524D\u5DE5\u4F5C\u533A\u7684 agent \u89C4\u5219\u3001README\u3001\u6E05\u5355\u6587\u4EF6\u548C\u6587\u4EF6\u5217\u8868\uFF08\u6807\u51C6\u7EA7\u522B\u53CA\u4EE5\u4E0A\uFF09\u3002\u5173\u95ED\u540E\u53EA\u4F7F\u7528\u5DE5\u4F5C\u533A\u548C agent \u540D\u79F0\u3002",
-  "Read-only git status, log, diff, ls-files and grep in the focused workspace (Deep and Max levels).": "\u5728\u5F53\u524D\u5DE5\u4F5C\u533A\u53EA\u8BFB\u8FD0\u884C git status\u3001log\u3001diff\u3001ls-files \u548C grep\uFF08\u6DF1\u5165\u548C\u6700\u5927\u7EA7\u522B\uFF09\u3002",
-  "The last lines of the terminal you picked, at the Max level only.": "\u6240\u9009\u7EC8\u7AEF\u7684\u6700\u540E\u51E0\u884C\uFF0C\u4EC5\u5728\u6700\u5927\u7EA7\u522B\u3002",
-  "Keep your prompts and enhanced prompts in the History tab, on this machine only.": "\u5728\u201C\u5386\u53F2\u201D\u4E2D\u4FDD\u5B58\u539F\u59CB\u548C\u4F18\u5316\u540E\u7684\u63D0\u793A\u8BCD\uFF0C\u4EC5\u4FDD\u5B58\u5728\u672C\u673A\u3002",
-  "OPENAI_API_KEY, ANTHROPIC_API_KEY and the others, when a model has no saved key.": "\u5F53\u6A21\u578B\u6CA1\u6709\u4FDD\u5B58\u7684 key \u65F6\uFF0C\u4F7F\u7528 OPENAI_API_KEY\u3001ANTHROPIC_API_KEY \u7B49\u3002",
-  "Stored on this machine": "\u672C\u673A\u5B58\u50A8",
-  "Nothing is sent anywhere except your prompt and the context you allow, to the model you run. No tracking or analytics.": "\u9664\u4F60\u5141\u8BB8\u7684\u63D0\u793A\u8BCD\u548C\u4E0A\u4E0B\u6587\u53D1\u9001\u5230\u4F60\u4F7F\u7528\u7684\u6A21\u578B\u5916\uFF0C\u4E0D\u4F1A\u53D1\u9001\u4EFB\u4F55\u5185\u5BB9\u3002\u65E0\u8FFD\u8E2A\u3001\u65E0\u7EDF\u8BA1\u3002",
-  "History": "\u5386\u53F2",
-  "Saved models": "\u5DF2\u4FDD\u5B58\u6A21\u578B",
-  "Cached model lists": "\u5DF2\u7F13\u5B58\u7684\u6A21\u578B\u5217\u8868",
-  "Clear model lists": "\u6E05\u9664\u6A21\u578B\u5217\u8868",
-  "Delete everything": "\u5220\u9664\u5168\u90E8",
-  "Press again to delete everything": "\u518D\u6309\u4E00\u6B21\u5220\u9664\u5168\u90E8",
-  "All plugin data deleted.": "\u5DF2\u5220\u9664\u63D2\u4EF6\u7684\u5168\u90E8\u6570\u636E\u3002",
-  "History cleared.": "\u5DF2\u6E05\u7A7A\u5386\u53F2\u3002",
-  "Model lists cleared.": "\u5DF2\u6E05\u9664\u6A21\u578B\u5217\u8868\u3002",
-  "Auto (fallback)": "\u81EA\u52A8\uFF08\u56DE\u9000\uFF09",
-  "Options": "\u9009\u9879",
-  "Refine: use the enhanced prompt as the new input": "\u7EE7\u7EED\u4F18\u5316\uFF1A\u628A\u7ED3\u679C\u4F5C\u4E3A\u65B0\u7684\u8F93\u5165",
-  "Add one in the Models tab.": "\u5728\u201C\u6A21\u578B\u201D\u6807\u7B7E\u4E2D\u6DFB\u52A0\u3002",
-  "Enable": "\u542F\u7528",
-  "Disable": "\u505C\u7528",
-  "Uses your subscription": "\u4F7F\u7528\u4F60\u7684\u8BA2\u9605",
-  "default": "\u9ED8\u8BA4",
-  "Describe what you want the agent to do\u2026": "\u63CF\u8FF0\u4F60\u5E0C\u671B agent \u505A\u4EC0\u4E48\u2026",
-  "Auto": "\u81EA\u52A8",
-  "Your models": "\u4F60\u7684\u6A21\u578B",
-  "Fallback": "\u56DE\u9000",
-  "Auto-enhance": "\u81EA\u52A8\u4F18\u5316",
-  "Max context level": "\u6700\u5927\u4E0A\u4E0B\u6587\u7EA7\u522B",
-  "your default": "\u4F60\u7684\u9ED8\u8BA4",
-  "Choose a model": "\u9009\u62E9\u6A21\u578B",
-  "Other (type the id)\u2026": "\u5176\u4ED6\uFF08\u8F93\u5165 id\uFF09\u2026",
-  "Refresh model list": "\u5237\u65B0\u6A21\u578B\u5217\u8868",
-  "Model id": "\u6A21\u578B id",
-  "Loading the model list\u2026": "\u6B63\u5728\u52A0\u8F7D\u6A21\u578B\u5217\u8868\u2026",
-  "Could not load the list ({error}). Type the model id.": "\u65E0\u6CD5\u52A0\u8F7D\u5217\u8868\uFF08{error}\uFF09\u3002\u8BF7\u8F93\u5165\u6A21\u578B id\u3002",
-  "{count} models from {source}, refreshed daily.": "{count} \u4E2A\u6A21\u578B\uFF0C\u6765\u81EA {source}\uFF0C\u6BCF\u5929\u81EA\u52A8\u5237\u65B0\u3002",
-  "Uses the model set in the CLI itself.": "\u4F7F\u7528 CLI \u81EA\u8EAB\u8BBE\u7F6E\u7684\u6A21\u578B\u3002",
-  "Add the API key to list the models.": "\u586B\u5199 API key \u540E\u5373\u53EF\u5217\u51FA\u6A21\u578B\u3002",
-  "{name} now uses {model}.": "{name} \u73B0\u5728\u4F7F\u7528 {model}\u3002",
-  "Off": "\u5173\u95ED",
-  "Your prompt": "\u4F60\u7684\u63D0\u793A\u8BCD",
-  "Style": "\u98CE\u683C",
-  "Context": "\u4E0A\u4E0B\u6587",
-  "Model": "\u6A21\u578B",
-  "Output language": "\u8F93\u51FA\u8BED\u8A00",
-  "Output: same as prompt": "\u8F93\u51FA\uFF1A\u4E0E\u63D0\u793A\u8BCD\u76F8\u540C",
-  "Output: English": "\u8F93\u51FA\uFF1AEnglish",
-  "Output: Vietnamese": "\u8F93\u51FA\uFF1ATi\u1EBFng Vi\u1EC7t",
-  "Output: Chinese": "\u8F93\u51FA\uFF1A\u4E2D\u6587",
-  "Output: default ({value})": "\u8F93\u51FA\uFF1A\u9ED8\u8BA4 ({value})",
-  "Cancel": "\u53D6\u6D88",
-  "Gathering\u2026": "\u6536\u96C6\u4E2D\u2026",
-  "Send to": "\u53D1\u9001\u5230",
-  "Enhanced prompt": "\u4F18\u5316\u540E\u7684\u63D0\u793A\u8BCD",
-  "Copy": "\u590D\u5236",
-  "Clear": "\u6E05\u9664",
-  "No model yet": "\u8FD8\u6CA1\u6709\u6A21\u578B",
-  "No API key yet": "\u8FD8\u6CA1\u6709 API key",
-  "Open Models": "\u6253\u5F00\u6A21\u578B",
-  "{kind} \xB7 {chars} chars": "{kind} \xB7 {chars} \u5B57\u7B26",
-  "Fell back after: {list}": "\u5DF2\u56DE\u9000\uFF0C\u5931\u8D25\u7684\u6A21\u578B\uFF1A{list}",
-  "Cancelled.": "\u5DF2\u53D6\u6D88\u3002",
-  "Sent to {label}.": "\u5DF2\u53D1\u9001\u5230 {label}\u3002",
-  "{label} did not accept the text.": "{label} \u672A\u63A5\u6536\u6587\u672C\u3002",
-  "Copied to clipboard.": "\u5DF2\u590D\u5236\u5230\u526A\u8D34\u677F\u3002",
-  "Copy failed: {error}": "\u590D\u5236\u5931\u8D25\uFF1A{error}",
-  "Saved {name}.": "\u5DF2\u4FDD\u5B58 {name}\u3002",
-  "Added {name}. Use Test to check it is signed in.": "\u5DF2\u6DFB\u52A0 {name}\u3002\u70B9\u201C\u6D4B\u8BD5\u201D\u786E\u8BA4\u5DF2\u767B\u5F55\u3002",
-  "Auto-enhanced ({mode}) a prompt for {agent}.": "\u5DF2\u4E3A {agent} \u81EA\u52A8\u4F18\u5316 ({mode}) \u4E00\u6761\u63D0\u793A\u8BCD\u3002",
-  "an agent": "\u67D0\u4E2A agent",
-  "Dismiss": "\u5173\u95ED",
-  "Close": "\u5173\u95ED",
-  "Loading": "\u52A0\u8F7D\u4E2D",
-  "No history yet": "\u6682\u65E0\u5386\u53F2",
-  "Enhanced prompts show up here.": "\u4F18\u5316\u8FC7\u7684\u63D0\u793A\u8BCD\u4F1A\u663E\u793A\u5728\u8FD9\u91CC\u3002",
-  "Search history": "\u641C\u7D22\u5386\u53F2",
-  "Open in Enhance tab": "\u5728\u201C\u4F18\u5316\u201D\u4E2D\u6253\u5F00",
-  "Delete": "\u5220\u9664",
-  "{shown} of {total}": "{shown} / {total}",
-  "Clear history": "\u6E05\u7A7A\u5386\u53F2",
-  "auto": "\u81EA\u52A8",
-  "Fallback to the next model when one fails": "\u6A21\u578B\u5931\u8D25\u65F6\u56DE\u9000\u5230\u4E0B\u4E00\u4E2A",
-  "Models are tried top to bottom. Disabled models are skipped.": "\u6A21\u578B\u6309\u4ECE\u4E0A\u5230\u4E0B\u5C1D\u8BD5\uFF0C\u5DF2\u7981\u7528\u7684\u4F1A\u8DF3\u8FC7\u3002",
-  "Using API keys from your environment": "\u6B63\u5728\u4F7F\u7528\u73AF\u5883\u53D8\u91CF\u4E2D\u7684 API key",
-  "Add a model below to customize; then only your saved models are used.": "\u5728\u4E0B\u65B9\u6DFB\u52A0\u6A21\u578B\u4EE5\u81EA\u5B9A\u4E49\uFF1B\u4E4B\u540E\u53EA\u4F7F\u7528\u5DF2\u4FDD\u5B58\u7684\u6A21\u578B\u3002",
-  "No models yet": "\u8FD8\u6CA1\u6709\u6A21\u578B",
-  "Use your subscription, no API key": "\u4F7F\u7528\u4F60\u7684\u8BA2\u9605\uFF0C\u65E0\u9700 API key",
-  "Found on this machine. Uses the account the CLI is signed in with.": "\u5728\u672C\u673A\u627E\u5230\u3002\u4F7F\u7528 CLI \u5DF2\u767B\u5F55\u7684\u8D26\u53F7\u3002",
-  "Add model": "\u6DFB\u52A0\u6A21\u578B",
-  "Add a model": "\u6DFB\u52A0\u6A21\u578B",
-  "Edit {name}": "\u7F16\u8F91 {name}",
-  "Preset": "\u9884\u8BBE",
-  "Name": "\u540D\u79F0",
-  "API format": "API \u683C\u5F0F",
-  "Base URL": "Base URL",
-  "Model (optional)": "\u6A21\u578B\uFF08\u53EF\u9009\uFF09",
-  "API key": "API key",
-  "Leave empty to keep the saved key": "\u7559\u7A7A\u4EE5\u4FDD\u7559\u5DF2\u4FDD\u5B58\u7684 key",
-  "Or set {env}": "\u6216\u8BBE\u7F6E {env}",
-  "Not needed for local servers": "\u672C\u5730\u670D\u52A1\u65E0\u9700 key",
-  "Command": "\u547D\u4EE4",
-  "Arguments": "\u53C2\u6570",
-  "Found on PATH automatically; or a full path": "\u81EA\u52A8\u4ECE PATH \u67E5\u627E\uFF1B\u6216\u586B\u5199\u5B8C\u6574\u8DEF\u5F84",
-  "CLI default": "CLI \u9ED8\u8BA4",
-  "Runs the CLI already signed in on this machine, so it uses your subscription instead of an API key. Slower than an API (a few seconds per call), so it is skipped by auto-enhance.": "\u8FD0\u884C\u672C\u673A\u5DF2\u767B\u5F55\u7684 CLI\uFF0C\u4F7F\u7528\u4F60\u7684\u8BA2\u9605\u800C\u975E API key\u3002\u6BD4 API \u6162\uFF08\u6BCF\u6B21\u51E0\u79D2\uFF09\uFF0C\u56E0\u6B64\u81EA\u52A8\u4F18\u5316\u4F1A\u8DF3\u8FC7\u5B83\u3002",
-  "Max tokens": "\u6700\u5927 token",
-  "{value} tokens": "{value} token",
-  "Save": "\u4FDD\u5B58",
-  "Test": "\u6D4B\u8BD5",
-  "Edit": "\u7F16\u8F91",
-  "key saved": "\u5DF2\u4FDD\u5B58 key",
-  "key from env": "\u73AF\u5883\u53D8\u91CF key",
-  "no key": "\u65E0 key",
-  "local": "\u672C\u5730",
-  "subscription": "\u8BA2\u9605",
-  "Same as the chain": "\u4E0E\u6A21\u578B\u94FE\u76F8\u540C",
-  "Auto-enhance hook model (needs to answer in under 2 s)": "\u81EA\u52A8\u4F18\u5316\u4F7F\u7528\u7684\u6A21\u578B\uFF08\u9700\u5728 2 \u79D2\u5185\u56DE\u7B54\uFF09",
-  "File picker model (Max context level)": "\u9009\u6587\u4EF6\u6A21\u578B\uFF08Max \u4E0A\u4E0B\u6587\u7EA7\u522B\uFF09",
-  "Balanced": "\u5747\u8861",
-  "Concise": "\u7B80\u6D01",
-  "Detailed spec": "\u8BE6\u7EC6\u89C4\u683C",
-  "Bug fix": "\u4FEE\u590D bug",
-  "New feature": "\u65B0\u529F\u80FD",
-  "Refactor": "\u91CD\u6784",
-  "Code review": "\u4EE3\u7801\u5BA1\u67E5",
-  "Plan first": "\u5148\u505A\u8BA1\u5212",
-  "Custom only": "\u4EC5\u81EA\u5B9A\u4E49\u6307\u4EE4",
-  "Off: prompt only": "\u5173\u95ED\uFF1A\u4EC5\u63D0\u793A\u8BCD",
-  "Basic: workspace + agent": "\u57FA\u7840\uFF1A\u5DE5\u4F5C\u533A + agent",
-  "Standard: + rules, stack, tree": "\u6807\u51C6\uFF1A+ \u89C4\u5219\u3001\u6280\u672F\u6808\u3001\u76EE\u5F55\u6811",
-  "Deep: + git + relevant code": "\u6DF1\u5165\uFF1A+ git + \u76F8\u5173\u4EE3\u7801",
-  "Max: + AI-picked files + terminal": "\u6700\u5927\uFF1A+ AI \u9009\u62E9\u7684\u6587\u4EF6 + \u7EC8\u7AEF",
-  "Show more": "\u663E\u793A\u66F4\u591A",
-  "Press again to clear history": "\u518D\u6309\u4E00\u6B21\u6E05\u7A7A\u5386\u53F2",
-  "Auto-enhance (AI) has no model to use": "\u81EA\u52A8\u4F18\u5316\uFF08AI\uFF09\u6CA1\u6709\u53EF\u7528\u7684\u6A21\u578B",
-  "Write a prompt first.": "\u8BF7\u5148\u5199\u63D0\u793A\u8BCD\u3002",
-  "Nothing to send.": "\u6CA1\u6709\u53EF\u53D1\u9001\u7684\u5185\u5BB9\u3002",
-  "Invalid model profile.": "\u6A21\u578B\u914D\u7F6E\u65E0\u6548\u3002",
-  "Unknown profile.": "\u672A\u77E5\u7684\u6A21\u578B\u914D\u7F6E\u3002",
-  "{name} \xB7 {model} answered (key: {key}).": "{name} \xB7 {model} \u5DF2\u56DE\u590D\uFF08\u5BC6\u94A5\uFF1A{key}\uFF09\u3002",
-  "Invalid API base URL: {url}": "API \u57FA\u7840 URL \u65E0\u6548\uFF1A{url}",
-  "The API base URL must use https (http is allowed only for localhost).": "API \u57FA\u7840 URL \u5FC5\u987B\u4F7F\u7528 https\uFF08\u4EC5 localhost \u53EF\u7528 http\uFF09\u3002",
-  "Put the API key in the Models tab, not in the URL.": "\u8BF7\u5728\u201C\u6A21\u578B\u201D\u4E2D\u586B\u5199 API \u5BC6\u94A5\uFF0C\u4E0D\u8981\u653E\u5728 URL \u91CC\u3002",
-  "The request was cancelled or timed out.": "\u8BF7\u6C42\u5DF2\u53D6\u6D88\u6216\u8D85\u65F6\u3002",
-  "{model} did not answer within {seconds} s.": "{model} \u5728 {seconds} \u79D2\u5185\u6CA1\u6709\u56DE\u7B54\u3002",
-  "{reason} A lower context level or a faster model answers sooner.": "{reason} \u964D\u4F4E\u4E0A\u4E0B\u6587\u7EA7\u522B\u6216\u6362\u7528\u66F4\u5FEB\u7684\u6A21\u578B\uFF0C\u4F1A\u66F4\u5FEB\u5F97\u5230\u56DE\u7B54\u3002",
-  "That run is no longer going (the plugin was restarted). Try again.": "\u90A3\u6B21\u8FD0\u884C\u5DF2\u4E0D\u5B58\u5728\uFF08\u63D2\u4EF6\u5DF2\u91CD\u65B0\u542F\u52A8\uFF09\u3002\u8BF7\u91CD\u8BD5\u3002",
-  "{url} stopped answering: {detail}": "{url} \u505C\u6B62\u54CD\u5E94\uFF1A{detail}",
-  "{url} did not answer with JSON ({what}). A proxy or sign-in page may be in the way.": "{url} \u8FD4\u56DE\u7684\u4E0D\u662F JSON\uFF08{what}\uFF09\u3002\u53EF\u80FD\u88AB\u4EE3\u7406\u6216\u767B\u5F55\u9875\u62E6\u622A\u3002",
-  "an empty answer": "\u7A7A\u54CD\u5E94",
-  "No API key. Add one in the Enhance Prompt panel (Models tab).": "\u6CA1\u6709 API \u5BC6\u94A5\u3002\u8BF7\u5728 Enhance Prompt \u9762\u677F\uFF08\u201C\u6A21\u578B\u201D\uFF09\u4E2D\u6DFB\u52A0\u3002",
-  "No API key. Add one in the Enhance Prompt panel (Models tab) or set {env}.": "\u6CA1\u6709 API \u5BC6\u94A5\u3002\u8BF7\u5728 Enhance Prompt \u9762\u677F\uFF08\u201C\u6A21\u578B\u201D\uFF09\u4E2D\u6DFB\u52A0\uFF0C\u6216\u8BBE\u7F6E {env}\u3002",
-  "Could not reach {url}: {detail}": "\u65E0\u6CD5\u8FDE\u63A5 {url}\uFF1A{detail}",
-  "{status}: {detail}": "{status}\uFF1A{detail}",
-  "The model returned an empty answer.": "\u6A21\u578B\u8FD4\u56DE\u4E86\u7A7A\u56DE\u7B54\u3002",
-  "{model} reached its limit of {max} tokens before it finished. Raise Max tokens for this model in the Models tab.": "{model} \u8FD8\u6CA1\u5199\u5B8C\u5C31\u8FBE\u5230\u4E86 {max} \u4E2A token \u7684\u4E0A\u9650\u3002\u8BF7\u5728\u201C\u6A21\u578B\u201D\u6807\u7B7E\u4E2D\u8C03\u9AD8\u8BE5\u6A21\u578B\u7684\u6700\u5927 token\u3002",
-  "Unsafe argument for a .cmd launcher.": ".cmd \u542F\u52A8\u5668\u7684\u53C2\u6570\u4E0D\u5B89\u5168\u3002",
-  "{name} was not found. Install it and sign in, or set its full path in the model.": "\u672A\u627E\u5230 {name}\u3002\u8BF7\u5B89\u88C5\u5E76\u767B\u5F55\uFF0C\u6216\u5728\u6A21\u578B\u4E2D\u586B\u5199\u5B8C\u6574\u8DEF\u5F84\u3002",
-  "Could not start {binary}: {detail}": "\u65E0\u6CD5\u542F\u52A8 {binary}\uFF1A{detail}",
-  "{kind} exited with {code}": "{kind} \u9000\u51FA\uFF0C\u4EE3\u7801 {code}",
-  "{kind} exited with {code}: {detail}": "{kind} \u9000\u51FA\uFF0C\u4EE3\u7801 {code}\uFF1A{detail}",
-  "{text} (run it once in a terminal to sign in)": "{text}\uFF08\u8BF7\u5148\u5728\u7EC8\u7AEF\u8FD0\u884C\u4E00\u6B21\u4EE5\u767B\u5F55\uFF09",
-  "{kind} returned an empty answer.": "{kind} \u8FD4\u56DE\u4E86\u7A7A\u56DE\u7B54\u3002",
-  "No model configured. Add one in the Models tab.": "\u5C1A\u672A\u914D\u7F6E\u6A21\u578B\u3002\u8BF7\u5728\u201C\u6A21\u578B\u201D\u4E2D\u6DFB\u52A0\u3002",
-  "{name}: no API key": "{name}\uFF1A\u6CA1\u6709 API \u5BC6\u94A5",
-  "All models failed. {list}": "\u6240\u6709\u6A21\u578B\u90FD\u5931\u8D25\u4E86\u3002{list}",
-  "{name}: {reason}": "{name}\uFF1A{reason}",
-  "Out of time.": "\u65F6\u95F4\u5DF2\u7528\u5B8C\u3002",
-  "Rules": "\u89C4\u5219",
-  "Your rules": "\u4F60\u7684\u89C4\u5219",
-  "Followed in every enhanced prompt and by auto-enhance, on top of the style. A rule you add is for the project you are in.": "\u5728\u6BCF\u4E2A\u4F18\u5316\u7684\u63D0\u793A\u8BCD\u548C\u81EA\u52A8\u4F18\u5316\u4E2D\u90FD\u4F1A\u9075\u5FAA\uFF0C\u53E0\u52A0\u5728\u98CE\u683C\u4E4B\u4E0A\u3002\u4F60\u6DFB\u52A0\u7684\u89C4\u5219\u53EA\u7528\u4E8E\u4F60\u5F53\u524D\u6240\u5728\u7684\u9879\u76EE\u3002",
-  'No rules yet. Example: "Always tell the agent to run pnpm test before finishing."': "\u8FD8\u6CA1\u6709\u89C4\u5219\u3002\u4F8B\u5982\uFF1A\u201C\u59CB\u7EC8\u8BA9 agent \u5728\u5B8C\u6210\u524D\u8FD0\u884C pnpm test\u3002\u201D",
-  "Every project": "\u6240\u6709\u9879\u76EE",
-  "New rule": "\u65B0\u89C4\u5219",
-  "e.g. Answer in Vietnamese; keep code identifiers in English.": "\u4F8B\u5982\uFF1A\u7528\u4E2D\u6587\u5199\uFF1B\u4EE3\u7801\u6807\u8BC6\u7B26\u4FDD\u6301\u82F1\u6587\u3002",
-  "Only {name}": "\u4EC5 {name}",
-  "Add rule": "\u6DFB\u52A0\u89C4\u5219",
-  "Prompt structures": "\u63D0\u793A\u8BCD\u7ED3\u6784",
-  "Pick one under Options in the composer: the prompt is written under these headings instead of the style's shape.": "\u5728\u7F16\u8F91\u533A\u7684\u201C\u9009\u9879\u201D\u4E2D\u9009\u62E9\uFF1A\u63D0\u793A\u8BCD\u5C06\u6309\u8FD9\u4E9B\u6807\u9898\u6765\u5199\uFF0C\u4EE3\u66FF\u98CE\u683C\u81EA\u5E26\u7684\u683C\u5F0F\u3002",
-  "built-in": "\u5185\u7F6E",
-  "Structure name": "\u7ED3\u6784\u540D\u79F0",
-  "e.g. My brief": "\u4F8B\u5982\uFF1A\u6211\u7684\u7B80\u62A5",
-  "Headings, one per line": "\u6807\u9898\uFF0C\u6BCF\u884C\u4E00\u4E2A",
-  "Written in any language; the rewriter translates them into the output language.": "\u53EF\u7528\u4EFB\u4F55\u8BED\u8A00\u4E66\u5199\uFF1B\u6539\u5199\u65F6\u4F1A\u8BD1\u6210\u8F93\u51FA\u8BED\u8A00\u3002",
-  "Add structure": "\u6DFB\u52A0\u7ED3\u6784",
-  "Structure": "\u7ED3\u6784",
-  "By style": "\u6309\u98CE\u683C",
-  "Task brief": "\u4EFB\u52A1\u7B80\u62A5",
-  "Steps": "\u6B65\u9AA4",
-  "Goal": "\u76EE\u6807",
-  "Requirements": "\u8981\u6C42",
-  "Constraints / out of scope": "\u7EA6\u675F / \u4E0D\u5728\u8303\u56F4\u5185",
-  "Edge cases": "\u8FB9\u754C\u60C5\u51B5",
-  "Acceptance criteria": "\u9A8C\u6536\u6807\u51C6",
-  "Assumptions / questions": "\u5047\u8BBE / \u95EE\u9898",
-  "Verify": "\u9A8C\u8BC1",
-  "Background": "\u80CC\u666F",
-  "everywhere": "\u5168\u90E8",
-  "The enhanced prompt is kept for {name}: go back to that project to send it.": "\u4F18\u5316\u540E\u7684\u63D0\u793A\u8BCD\u5DF2\u4E3A {name} \u4FDD\u7559\uFF1A\u56DE\u5230\u8BE5\u9879\u76EE\u518D\u53D1\u9001\u3002",
-  "The project this prompt was written for is closed, so its enhanced prompt was dropped.": "\u5199\u8FD9\u4E2A\u63D0\u793A\u8BCD\u7684\u9879\u76EE\u5DF2\u5173\u95ED\uFF0C\u56E0\u6B64\u4F18\u5316\u540E\u7684\u63D0\u793A\u8BCD\u5DF2\u4E22\u5F03\u3002",
-  "Writing the prompt for {name}\u2026": "\u6B63\u5728\u4E3A {name} \u5199\u63D0\u793A\u8BCD\u2026",
-  "Feedback": "\u53CD\u9988",
-  "Found a bug, or something that could be better? Open an issue on GitHub: it is how the plugin gets fixed and improved.": "\u53D1\u73B0\u4E86 bug\uFF0C\u6216\u89C9\u5F97\u54EA\u91CC\u53EF\u4EE5\u66F4\u597D\uFF1F\u8BF7\u5728 GitHub \u4E0A\u63D0 issue\uFF1A\u63D2\u4EF6\u5C31\u662F\u8FD9\u6837\u88AB\u4FEE\u590D\u548C\u6539\u8FDB\u7684\u3002",
-  "Open an issue on GitHub": "\u5728 GitHub \u4E0A\u63D0 issue",
-  "Open {url} in your browser.": "\u8BF7\u5728\u6D4F\u89C8\u5668\u4E2D\u6253\u5F00 {url}\u3002",
-  "Got an idea, or something that could work better? Send your feedback: it is how the plugin improves.": "\u6709\u65B0\u60F3\u6CD5\uFF0C\u6216\u8005\u89C9\u5F97\u54EA\u91CC\u53EF\u4EE5\u66F4\u597D\uFF1F\u6B22\u8FCE\u53CD\u9988\uFF1A\u63D2\u4EF6\u5C31\u662F\u8FD9\u6837\u4E0D\u65AD\u6539\u8FDB\u7684\u3002",
-  "Send feedback": "\u53D1\u9001\u53CD\u9988",
-  "Don't ask again": "\u4E0D\u518D\u8BE2\u95EE",
-  "No more feedback notes. To turn them back on, open the gear icon and look under Feedback.": "\u4E0D\u4F1A\u518D\u663E\u793A\u53CD\u9988\u63D0\u793A\u3002\u8981\u91CD\u65B0\u5F00\u542F\uFF0C\u8BF7\u70B9\u51FB\u9F7F\u8F6E\u56FE\u6807\uFF0C\u5728\u201C\u53CD\u9988\u201D\u4E00\u680F\u4E2D\u8BBE\u7F6E\u3002",
-  "Ask for feedback now and then": "\u5076\u5C14\u9080\u8BF7\u53CD\u9988",
-  "A short note under the enhanced prompt invites your ideas, at most once in {days} days. Off: it never shows.": "\u5728\u4F18\u5316\u540E\u7684\u63D0\u793A\u8BCD\u4E0B\u65B9\u663E\u793A\u4E00\u6761\u7B80\u77ED\u63D0\u793A\uFF0C\u9080\u8BF7\u4F60\u63D0\u51FA\u60F3\u6CD5\uFF0C\u6700\u591A\u6BCF {days} \u5929\u4E00\u6B21\u3002\u5173\u95ED\u540E\u4E0D\u518D\u663E\u793A\u3002",
-  "Progress: {percent}%": "\u8FDB\u5EA6\uFF1A{percent}%",
-  "{name} is {size}; an image can be at most {max}.": "{name} \u5927\u5C0F\u4E3A {size}\uFF1B\u6BCF\u5F20\u56FE\u7247\u6700\u591A {max}\u3002",
-  "This model cannot see images: it got their paths only, and the prompt lists them for the agent.": "\u8BE5\u6A21\u578B\u770B\u4E0D\u5230\u56FE\u7247\uFF1A\u5B83\u53EA\u6536\u5230\u8DEF\u5F84\uFF0C\u63D0\u793A\u8BCD\u4F1A\u4E3A agent \u5217\u51FA\u8FD9\u4E9B\u56FE\u7247\u3002",
-  "Remove {name}": "\u79FB\u9664 {name}",
-  "Finishing\u2026": "\u5373\u5C06\u5B8C\u6210\u2026",
-  "Which folder is this project?": "\u8FD9\u4E2A\u9879\u76EE\u5728\u54EA\u4E2A\u6587\u4EF6\u5939\uFF1F",
-  "Several projects are named {name} on the same branch. Pick its folder so its files are read and its rules are followed.": "\u6709\u591A\u4E2A\u9879\u76EE\u5728\u540C\u4E00\u5206\u652F\u4E0A\u90FD\u53EB {name}\u3002\u8BF7\u9009\u62E9\u5B83\u7684\u6587\u4EF6\u5939\uFF0C\u4EE5\u4FBF\u8BFB\u53D6\u5B83\u7684\u6587\u4EF6\u5E76\u9075\u5FAA\u5B83\u7684\u89C4\u5219\u3002",
-  "Project folder": "\u9879\u76EE\u6587\u4EF6\u5939",
-  "Choose a folder": "\u9009\u62E9\u6587\u4EF6\u5939",
-  "That attachment could not be received; try attaching it again.": "\u672A\u80FD\u63A5\u6536\u8BE5\u9644\u4EF6\uFF0C\u8BF7\u91CD\u65B0\u9644\u52A0\u3002",
-  "The attached file {name} is no longer there (attachments are kept for a day). Attach it again.": "\u9644\u4EF6 {name} \u5DF2\u4E0D\u5B58\u5728\uFF08\u9644\u4EF6\u53EA\u4FDD\u7559\u4E00\u5929\uFF09\u3002\u8BF7\u91CD\u65B0\u9644\u52A0\u3002",
-  "{name} is {size}; an attachment can be at most {max}.": "{name} \u5927\u5C0F\u4E3A {size}\uFF1B\u6BCF\u4E2A\u9644\u4EF6\u6700\u591A {max}\u3002",
-  "At most {max} files per prompt.": "\u6BCF\u4E2A\u63D0\u793A\u6700\u591A {max} \u4E2A\u6587\u4EF6\u3002",
-  "Drop files to attach": "\u62D6\u653E\u6587\u4EF6\u4EE5\u9644\u52A0",
-  "Attach files": "\u9644\u52A0\u6587\u4EF6",
-  "Add": "\u6DFB\u52A0",
-  "Move up": "\u4E0A\u79FB",
-  "Move down": "\u4E0B\u79FB",
-  "More": "\u66F4\u591A",
-  "edited": "\u5DF2\u4FEE\u6539",
-  "Restore the default": "\u6062\u590D\u9ED8\u8BA4",
-  "Custom instructions": "\u81EA\u5B9A\u4E49\u6307\u4EE4",
-  "e.g. Write the prompt as a numbered checklist; always ask the agent to run the tests.": "\u4F8B\u5982\uFF1A\u628A\u63D0\u793A\u5199\u6210\u7F16\u53F7\u6E05\u5355\uFF1B\u603B\u662F\u8981\u6C42\u4EE3\u7406\u8FD0\u884C\u6D4B\u8BD5\u3002",
-  "What's new": "\u65B0\u529F\u80FD",
-  "What's new in {version}": "{version} \u65B0\u529F\u80FD",
-  "Changelog": "\u66F4\u65B0\u65E5\u5FD7",
-  "agents": "\u4EE3\u7406",
-  "agent session": "\u4EE3\u7406\u4F1A\u8BDD",
-  "{count} agents": "{count} \u4E2A\u4EE3\u7406",
-  "Reading other agents' sessions": "\u8BFB\u53D6\u5176\u4ED6\u4EE3\u7406\u7684\u4F1A\u8BDD",
-  "Read other agents' sessions": "\u8BFB\u53D6\u5176\u4ED6\u4EE3\u7406\u7684\u4F1A\u8BDD",
-  "At the Max level: the other agents running in this workspace (kind, title, state) and the last lines of their terminals, with keys and passwords masked. Needs Read terminal output too. Off until you turn it on.": "\u5728\u201C\u6700\u5927\u201D\u7EA7\u522B\uFF1A\u6B64\u5DE5\u4F5C\u533A\u4E2D\u6B63\u5728\u8FD0\u884C\u7684\u5176\u4ED6\u4EE3\u7406\uFF08\u7C7B\u578B\u3001\u6807\u9898\u3001\u72B6\u6001\uFF09\u53CA\u5176\u7EC8\u7AEF\u7684\u6700\u540E\u51E0\u884C\uFF0C\u5BC6\u94A5\u548C\u5BC6\u7801\u4F1A\u88AB\u906E\u76D6\u3002\u8FD8\u9700\u8981\u5F00\u542F\u201C\u8BFB\u53D6\u7EC8\u7AEF\u8F93\u51FA\u201D\u3002\u9ED8\u8BA4\u5173\u95ED\uFF0C\u76F4\u5230\u4F60\u6253\u5F00\u3002",
-  "Other agents in this workspace": "\u6B64\u5DE5\u4F5C\u533A\u4E2D\u7684\u5176\u4ED6\u4EE3\u7406",
-  "Other agent session: {name}": "\u5176\u4ED6\u4EE3\u7406\u4F1A\u8BDD\uFF1A{name}",
-  "Open in Copilot": "\u5728 Copilot \u4E2D\u6253\u5F00",
-  "Or start a new agent": "\u6216\u542F\u52A8\u65B0\u4EE3\u7406",
-  "Agent": "\u4EE3\u7406",
-  "Start": "\u542F\u52A8",
-  'Turn on "{name}"?': "\u5F00\u542F\u201C{name}\u201D\uFF1F",
-  "Read what this allows. Nothing is hidden: this is everything it does.": "\u8BF7\u9605\u8BFB\u6B64\u9879\u5141\u8BB8\u7684\u5185\u5BB9\u3002\u6CA1\u6709\u4EFB\u4F55\u9690\u7792\uFF1A\u8FD9\u5C31\u662F\u5B83\u6240\u505A\u7684\u5168\u90E8\u3002",
-  "You can turn it off at any time here; turning it off also withdraws this confirmation.": "\u4F60\u53EF\u4EE5\u968F\u65F6\u5728\u8FD9\u91CC\u5173\u95ED\uFF1B\u5173\u95ED\u7684\u540C\u65F6\u4E5F\u4F1A\u64A4\u56DE\u6B64\u786E\u8BA4\u3002",
-  "I understand, turn it on": "\u6211\u5DF2\u4E86\u89E3\uFF0C\u5F00\u542F",
-  "asks to confirm": "\u9700\u786E\u8BA4",
-  "Turned on in Settings, but not confirmed here yet: still off.": "\u5DF2\u5728\u8BBE\u7F6E\u4E2D\u5F00\u542F\uFF0C\u4F46\u5C1A\u672A\u5728\u6B64\u786E\u8BA4\uFF1A\u4ECD\u4E3A\u5173\u95ED\u3002",
-  "Read and confirm": "\u9605\u8BFB\u5E76\u786E\u8BA4",
-  "Notifications": "\u901A\u77E5",
-  "Notify when a long enhance finishes": "\u957F\u65F6\u95F4\u4F18\u5316\u5B8C\u6210\u65F6\u901A\u77E5",
-  "Watch what agents do": "\u5173\u6CE8\u4EE3\u7406\u7684\u64CD\u4F5C",
-  "Deep and Max levels: each tool an agent runs in Copilot (its name and its target: a file path or a command, never its output) and how sessions end. Kept in memory for 45 minutes, never saved to disk.": "\u201C\u6DF1\u5165\u201D\u548C\u201C\u6700\u5927\u201D\u7EA7\u522B\uFF1A\u4EE3\u7406\u5728 Copilot \u4E2D\u8FD0\u884C\u7684\u6BCF\u4E2A\u5DE5\u5177\uFF08\u540D\u79F0\u53CA\u5176\u5BF9\u8C61\uFF1A\u6587\u4EF6\u8DEF\u5F84\u6216\u547D\u4EE4\uFF0C\u7EDD\u4E0D\u5305\u542B\u8F93\u51FA\uFF09\u4EE5\u53CA\u4F1A\u8BDD\u5982\u4F55\u7ED3\u675F\u3002\u53EA\u5728\u5185\u5B58\u4E2D\u4FDD\u7559 45 \u5206\u949F\uFF0C\u7EDD\u4E0D\u5199\u5165\u78C1\u76D8\u3002",
-  "Notice files you save": "\u8BB0\u5F55\u4F60\u4FDD\u5B58\u7684\u6587\u4EF6",
-  "Deep and Max levels: the paths of files you save in Copilot's editor (never their text), kept in memory for 45 minutes; they rank first in the code search.": "\u201C\u6DF1\u5165\u201D\u548C\u201C\u6700\u5927\u201D\u7EA7\u522B\uFF1A\u4F60\u5728 Copilot \u7F16\u8F91\u5668\u4E2D\u4FDD\u5B58\u7684\u6587\u4EF6\u8DEF\u5F84\uFF08\u7EDD\u4E0D\u5305\u542B\u5176\u5185\u5BB9\uFF09\uFF0C\u5728\u5185\u5B58\u4E2D\u4FDD\u7559 45 \u5206\u949F\uFF1B\u4EE3\u7801\u641C\u7D22\u65F6\u4F18\u5148\u8003\u8651\u5B83\u4EEC\u3002",
-  "Start new agents": "\u542F\u52A8\u65B0\u4EE3\u7406",
-  "A button that starts a new agent (Claude Code, Codex\u2026) in this workspace with the enhanced prompt, only when you press it.": "\u4E00\u4E2A\u6309\u94AE\uFF0C\u5728\u6B64\u5DE5\u4F5C\u533A\u7528\u4F18\u5316\u540E\u7684\u63D0\u793A\u8BCD\u542F\u52A8\u65B0\u4EE3\u7406\uFF08Claude Code\u3001Codex\u2026\uFF09\uFF0C\u4EC5\u5728\u4F60\u6309\u4E0B\u65F6\u3002",
-  "Open files in Copilot": "\u5728 Copilot \u4E2D\u6253\u5F00\u6587\u4EF6",
-  "Clicking a file in the context list opens it in an editor tab.": "\u70B9\u51FB\u4E0A\u4E0B\u6587\u5217\u8868\u4E2D\u7684\u6587\u4EF6\u4F1A\u5728\u7F16\u8F91\u5668\u6807\u7B7E\u9875\u4E2D\u6253\u5F00\u5B83\u3002",
-  "That text is sent with your prompt to the model you run (your API provider, or the subscription CLI and its provider). It can contain code, file contents, command output and anything the agents printed.": "\u8FD9\u4E9B\u6587\u672C\u4F1A\u968F\u63D0\u793A\u8BCD\u53D1\u9001\u7ED9\u4F60\u8FD0\u884C\u7684\u6A21\u578B\uFF08\u4F60\u7684 API \u63D0\u4F9B\u5546\uFF0C\u6216\u8BA2\u9605 CLI \u53CA\u5176\u63D0\u4F9B\u5546\uFF09\u3002\u5176\u4E2D\u53EF\u80FD\u5305\u542B\u4EE3\u7801\u3001\u6587\u4EF6\u5185\u5BB9\u3001\u547D\u4EE4\u8F93\u51FA\u4EE5\u53CA\u4EE3\u7406\u6253\u5370\u7684\u4EFB\u4F55\u5185\u5BB9\u3002",
-  "Values that look like keys, tokens or passwords are masked first, but masking cannot catch everything.": "\u770B\u8D77\u6765\u50CF\u5BC6\u94A5\u3001\u4EE4\u724C\u6216\u5BC6\u7801\u7684\u503C\u4F1A\u5148\u88AB\u906E\u76D6\uFF0C\u4F46\u906E\u76D6\u65E0\u6CD5\u8986\u76D6\u6240\u6709\u60C5\u51B5\u3002",
-  "Nothing of it is saved by the plugin. You can untick it in the context list for one run, or turn this switch off at any time.": "\u63D2\u4EF6\u4E0D\u4F1A\u4FDD\u5B58\u5176\u4E2D\u4EFB\u4F55\u5185\u5BB9\u3002\u4F60\u53EF\u4EE5\u5728\u4E0A\u4E0B\u6587\u5217\u8868\u4E2D\u4E3A\u67D0\u6B21\u8FD0\u884C\u53D6\u6D88\u52FE\u9009\uFF0C\u6216\u968F\u65F6\u5173\u95ED\u6B64\u5F00\u5173\u3002",
-  "Copilot tells the plugin each tool an agent runs in its terminals: the tool name and what it acted on (a file path, a command line, a search pattern or a URL), never the tool's output. Copilot also tells it when a session finishes and how.": "Copilot \u4F1A\u544A\u8BC9\u63D2\u4EF6\u4EE3\u7406\u5728\u7EC8\u7AEF\u4E2D\u8FD0\u884C\u7684\u6BCF\u4E2A\u5DE5\u5177\uFF1A\u5DE5\u5177\u540D\u79F0\u53CA\u5176\u4F5C\u7528\u5BF9\u8C61\uFF08\u6587\u4EF6\u8DEF\u5F84\u3001\u547D\u4EE4\u884C\u3001\u641C\u7D22\u6A21\u5F0F\u6216 URL\uFF09\uFF0C\u7EDD\u4E0D\u5305\u542B\u5DE5\u5177\u7684\u8F93\u51FA\u3002Copilot \u4E5F\u4F1A\u544A\u8BC9\u63D2\u4EF6\u4F1A\u8BDD\u4F55\u65F6\u7ED3\u675F\u4EE5\u53CA\u7ED3\u679C\u5982\u4F55\u3002",
-  "This is kept in the plugin's memory only, for 45 minutes and 60 entries per workspace, and forgotten when you turn this off, delete everything, or Copilot restarts.": "\u8FD9\u4E9B\u4FE1\u606F\u53EA\u4FDD\u5B58\u5728\u63D2\u4EF6\u7684\u5185\u5B58\u4E2D\uFF0C\u6BCF\u4E2A\u5DE5\u4F5C\u533A\u6700\u591A 45 \u5206\u949F\u300160 \u6761\uFF0C\u5728\u4F60\u5173\u95ED\u6B64\u9879\u3001\u5220\u9664\u5168\u90E8\u6216 Copilot \u91CD\u542F\u65F6\u88AB\u6E05\u9664\u3002",
-  "At the Deep and Max levels, the recent entries of the focused workspace are sent with your prompt to the model you run. Command lines are masked for obvious keys and passwords.": "\u5728\u201C\u6DF1\u5165\u201D\u548C\u201C\u6700\u5927\u201D\u7EA7\u522B\uFF0C\u5F53\u524D\u5DE5\u4F5C\u533A\u7684\u8FD1\u671F\u8BB0\u5F55\u4F1A\u968F\u63D0\u793A\u8BCD\u53D1\u9001\u7ED9\u4F60\u8FD0\u884C\u7684\u6A21\u578B\u3002\u547D\u4EE4\u884C\u4E2D\u660E\u663E\u7684\u5BC6\u94A5\u548C\u5BC6\u7801\u4F1A\u88AB\u906E\u76D6\u3002",
-  "The plugin only watches: it never changes or blocks what an agent does.": "\u63D2\u4EF6\u53EA\u89C2\u5BDF\uFF1A\u7EDD\u4E0D\u66F4\u6539\u6216\u963B\u6B62\u4EE3\u7406\u7684\u64CD\u4F5C\u3002",
-  "Adds a button that starts a new agent (Claude Code, Codex, Gemini\u2026) in a new terminal of this workspace, and types the enhanced prompt into it once it is ready.": "\u6DFB\u52A0\u4E00\u4E2A\u6309\u94AE\uFF0C\u5728\u6B64\u5DE5\u4F5C\u533A\u7684\u65B0\u7EC8\u7AEF\u4E2D\u542F\u52A8\u65B0\u4EE3\u7406\uFF08Claude Code\u3001Codex\u3001Gemini\u2026\uFF09\uFF0C\u5E76\u5728\u5176\u5C31\u7EEA\u540E\u8F93\u5165\u4F18\u5316\u540E\u7684\u63D0\u793A\u8BCD\u3002",
-  "The agent runs with your user account, exactly as if you had opened it yourself: it can read and change files and run commands, within that agent's own permission settings.": "\u4EE3\u7406\u4EE5\u4F60\u7684\u7528\u6237\u8D26\u6237\u8FD0\u884C\uFF0C\u4E0E\u4F60\u4EB2\u81EA\u6253\u5F00\u5B8C\u5168\u76F8\u540C\uFF1A\u5B83\u53EF\u4EE5\u5728\u8BE5\u4EE3\u7406\u81EA\u8EAB\u7684\u6743\u9650\u8BBE\u7F6E\u8303\u56F4\u5185\u8BFB\u53D6\u548C\u4FEE\u6539\u6587\u4EF6\u3001\u8FD0\u884C\u547D\u4EE4\u3002",
-  "It only happens when you press the button. The plugin never starts an agent by itself.": "\u53EA\u6709\u5728\u4F60\u6309\u4E0B\u6309\u94AE\u65F6\u624D\u4F1A\u53D1\u751F\u3002\u63D2\u4EF6\u7EDD\u4E0D\u4F1A\u81EA\u884C\u542F\u52A8\u4EE3\u7406\u3002",
-  "Enhanced prompt ready ({model}, {seconds} s)": "\u4F18\u5316\u540E\u7684\u63D0\u793A\u8BCD\u5DF2\u5C31\u7EEA\uFF08{model}\uFF0C{seconds} \u79D2\uFF09",
-  "Started a new {agent} agent with the prompt.": "\u5DF2\u7528\u63D0\u793A\u8BCD\u542F\u52A8\u65B0\u7684 {agent} \u4EE3\u7406\u3002",
-  "Recent agent activity": "\u4EE3\u7406\u7684\u8FD1\u671F\u6D3B\u52A8",
-  "Files you saved lately": "\u4F60\u6700\u8FD1\u4FDD\u5B58\u7684\u6587\u4EF6",
-  "activity": "\u6D3B\u52A8",
-  "saved files": "\u5DF2\u4FDD\u5B58\u7684\u6587\u4EF6",
-  "Starting new agents is off in Settings, or not confirmed yet.": "\u201C\u8BBE\u7F6E\u201D\u4E2D\u5DF2\u5173\u95ED\u542F\u52A8\u65B0\u4EE3\u7406\uFF0C\u6216\u5C1A\u672A\u786E\u8BA4\u3002",
-  "Opening files in Copilot is off in Settings.": "\u201C\u8BBE\u7F6E\u201D\u4E2D\u5DF2\u5173\u95ED\u5728 Copilot \u4E2D\u6253\u5F00\u6587\u4EF6\u3002",
-  "online model lists are off in Settings": "\u201C\u8BBE\u7F6E\u201D\u4E2D\u5DF2\u5173\u95ED\u5728\u7EBF\u6A21\u578B\u5217\u8868",
-  "Copilot could not store the API key: this machine has no key store for it. Use a key from an environment variable, or a subscription CLI.": "Copilot \u65E0\u6CD5\u4FDD\u5B58 API key\uFF1A\u8FD9\u53F0\u673A\u5668\u6CA1\u6709\u53EF\u7528\u7684\u5BC6\u94A5\u5B58\u50A8\u3002\u8BF7\u6539\u7528\u73AF\u5883\u53D8\u91CF\u4E2D\u7684 key\uFF0C\u6216\u8BA2\u9605 CLI\u3002",
-  "{name} is waiting for an answer from you, and what is typed now could be taken as that answer.": "{name} \u6B63\u5728\u7B49\u4F60\u56DE\u7B54\uFF0C\u73B0\u5728\u8F93\u5165\u7684\u5185\u5BB9\u53EF\u80FD\u4F1A\u88AB\u5F53\u4F5C\u56DE\u7B54\u3002",
-  "The model returned no prompt.": "\u6A21\u578B\u6CA1\u6709\u8FD4\u56DE\u63D0\u793A\u8BCD\u3002",
-  "This version of Copilot cannot do that yet.": "\u6B64\u7248\u672C\u7684 Copilot \u8FD8\u4E0D\u652F\u6301\u6B64\u64CD\u4F5C\u3002",
-  "Invalid request.": "\u65E0\u6548\u7684\u8BF7\u6C42\u3002",
-  "Reads which other agents run in this workspace (kind, title, state) and the last lines of each one's terminal, every time you enhance at the Max level: as many agents and lines as you set below the switch (4 agents and 80 lines by default, at most 8 and 300).": "\u6BCF\u6B21\u4EE5\u201C\u6700\u5927\u201D\u7EA7\u522B\u4F18\u5316\u65F6\uFF0C\u8BFB\u53D6\u6B64\u5DE5\u4F5C\u533A\u4E2D\u8FD0\u884C\u7684\u5176\u4ED6\u4EE3\u7406\uFF08\u7C7B\u578B\u3001\u6807\u9898\u3001\u72B6\u6001\uFF09\u4EE5\u53CA\u6BCF\u4E2A\u4EE3\u7406\u7EC8\u7AEF\u7684\u6700\u540E\u51E0\u884C\uFF1A\u4EE3\u7406\u6570\u548C\u884C\u6570\u6309\u5F00\u5173\u4E0B\u65B9\u7684\u8BBE\u7F6E\uFF08\u9ED8\u8BA4 4 \u4E2A\u4EE3\u7406\u300180 \u884C\uFF0C\u6700\u591A 8 \u4E2A\u548C 300 \u884C\uFF09\u3002",
-  "Agents read": "\u8BFB\u53D6\u7684\u4EE3\u7406\u6570",
-  "Lines per agent": "\u6BCF\u4E2A\u4EE3\u7406\u7684\u884C\u6570",
-  "Used only while this switch is on and confirmed.": "\u4EC5\u5728\u6B64\u5F00\u5173\u5F00\u542F\u5E76\u5DF2\u786E\u8BA4\u65F6\u4F7F\u7528\u3002",
-  "{model} declined this request ({category}). Use another model, or rephrase the request.": "{model} \u62D2\u7EDD\u4E86\u6B64\u8BF7\u6C42\uFF08{category}\uFF09\u3002\u8BF7\u6362\u7528\u5176\u4ED6\u6A21\u578B\uFF0C\u6216\u6539\u5199\u8BF7\u6C42\u3002",
-  "Send right after enhancing": "\u4F18\u5316\u540E\u76F4\u63A5\u53D1\u9001",
-  "On for small, low-risk requests, with an agent that asks before it does anything hard to undo. Leave it off when the agent runs with wide permissions, or when a wrong instruction would be costly.": "\u9002\u5408\u5C0F\u800C\u4F4E\u98CE\u9669\u7684\u8BF7\u6C42\uFF0C\u4E14\u4EE3\u7406\u5728\u505A\u96BE\u4EE5\u64A4\u9500\u7684\u4E8B\u4E4B\u524D\u4F1A\u5148\u8BE2\u95EE\u3002\u5F53\u4EE3\u7406\u6743\u9650\u5F88\u5927\uFF0C\u6216\u4E00\u6761\u9519\u8BEF\u6307\u4EE4\u4EE3\u4EF7\u5F88\u9AD8\u65F6\uFF0C\u8BF7\u4FDD\u6301\u5173\u95ED\u3002",
-  "Whenever one of these does not hold, nothing is sent: the result stays in the composer with a note that says why, and you send it yourself.": "\u53EA\u8981\u6709\u4E00\u6761\u4E0D\u6210\u7ACB\uFF0C\u5C31\u4EC0\u4E48\u90FD\u4E0D\u53D1\u9001\uFF1A\u7ED3\u679C\u7559\u5728\u8F93\u5165\u6846\u4E2D\uFF0C\u5E76\u9644\u4E00\u6761\u8BF4\u660E\u539F\u56E0\u7684\u63D0\u793A\uFF0C\u7531\u4F60\u81EA\u5DF1\u53D1\u9001\u3002",
-  "Enhance and send without reading (Ctrl+Enter)": "\u4F18\u5316\u540E\u76F4\u63A5\u53D1\u9001\uFF0C\u4E0D\u5148\u67E5\u770B\uFF08Ctrl+Enter\uFF09",
-  "Not sent by itself.": "\u672A\u81EA\u52A8\u53D1\u9001\u3002",
-  "Read the prompt and send it yourself.": "\u8BF7\u9605\u8BFB\u63D0\u793A\u8BCD\u540E\u81EA\u884C\u53D1\u9001\u3002",
-  "Copilot could not tell which project this is.": "Copilot \u65E0\u6CD5\u786E\u5B9A\u8FD9\u662F\u54EA\u4E2A\u9879\u76EE\u3002",
-  "The project in focus changed while it ran; the prompt waits in the project it was written in.": "\u8FD0\u884C\u671F\u95F4\u5F53\u524D\u9879\u76EE\u53D1\u751F\u4E86\u53D8\u5316\uFF1B\u63D0\u793A\u8BCD\u4FDD\u7559\u5728\u7F16\u5199\u5B83\u7684\u9879\u76EE\u4E2D\u3002",
-  "The terminal picked when you started is closed or no longer the one picked.": "\u5F00\u59CB\u65F6\u9009\u7684\u7EC8\u7AEF\u5DF2\u5173\u95ED\uFF0C\u6216\u5DF2\u4E0D\u518D\u662F\u6240\u9009\u7EC8\u7AEF\u3002",
-  "{label} is a plain terminal, not an agent.": "{label} \u662F\u666E\u901A\u7EC8\u7AEF\uFF0C\u4E0D\u662F\u4EE3\u7406\u3002",
-  "The text changed while it ran.": "\u8FD0\u884C\u671F\u95F4\u6587\u672C\u53D1\u751F\u4E86\u53D8\u5316\u3002",
-  "Saved as a file.": "\u5DF2\u4FDD\u5B58\u4E3A\u6587\u4EF6\u3002",
-  "The file could not be saved.": "\u6587\u4EF6\u672A\u80FD\u4FDD\u5B58\u3002",
-  "Save as a file": "\u4FDD\u5B58\u4E3A\u6587\u4EF6",
-  "Saved {when} \xB7 {count} prompts": "\u4FDD\u5B58\u4E8E {when} \xB7 {count} \u6761\u63D0\u793A\u8BCD",
-  "{name} is still working.": "{name} \u4ECD\u5728\u5DE5\u4F5C\u3002",
-  "{name} is waiting for an answer from you.": "{name} \u6B63\u5728\u7B49\u4F60\u56DE\u7B54\u3002",
-  "Copilot does not say whether {name} is idle.": "Copilot \u6CA1\u6709\u8BF4\u660E {name} \u662F\u5426\u7A7A\u95F2\u3002",
-  "Copilot session unavailable": "Copilot \u4F1A\u8BDD\u4E0D\u53EF\u7528",
-  "Attached Copilot session": "\u5DF2\u8FDE\u63A5\u7684 Copilot \u4F1A\u8BDD",
-  "Send to Copilot (Ctrl+Enter)": "\u53D1\u9001\u5230 Copilot (Ctrl+Enter)",
-  "Prompt preferences": "\u63D0\u793A\u8BCD\u504F\u597D",
-  "Default style": "\u9ED8\u8BA4\u98CE\u683C",
-  "Default context level": "\u9ED8\u8BA4\u4E0A\u4E0B\u6587\u7EA7\u522B",
-  "Default output language": "\u9ED8\u8BA4\u8F93\u51FA\u8BED\u8A00",
-  "Additional context files": "\u9644\u52A0\u4E0A\u4E0B\u6587\u6587\u4EF6",
-  "Excluded paths": "\u6392\u9664\u7684\u8DEF\u5F84",
-  "Timeout per model (seconds)": "\u6BCF\u4E2A\u6A21\u578B\u7684\u8D85\u65F6\uFF08\u79D2\uFF09",
-  "History limit": "\u5386\u53F2\u8BB0\u5F55\u4E0A\u9650",
-  "Adapt instructions to Copilot": "\u9488\u5BF9 Copilot \u8C03\u6574\u6307\u4EE4",
-  "Auto-enhance appended text": "\u81EA\u52A8\u589E\u5F3A\u9644\u52A0\u6587\u672C",
-  "Auto-enhance minimum characters": "\u81EA\u52A8\u589E\u5F3A\u6700\u5C11\u5B57\u7B26\u6570",
-  "Include context in auto-enhance": "\u81EA\u52A8\u589E\u5F3A\u65F6\u5305\u542B\u4E0A\u4E0B\u6587",
-  'It does nothing while "Send to Copilot" is off.': "\u5173\u95ED\u201C\u53D1\u9001\u5230 Copilot\u201D\u65F6\u4E0D\u8D77\u4F5C\u7528\u3002",
-  "Auto-enhance Copilot session prompts": "\u81EA\u52A8\u589E\u5F3A Copilot \u4F1A\u8BDD\u63D0\u793A\u8BCD",
-  "These switches control what Enhance Prompt reads, sends and stores. They are checked for every run.": "\u8FD9\u4E9B\u5F00\u5173\u63A7\u5236 Enhance Prompt \u8BFB\u53D6\u3001\u53D1\u9001\u548C\u4FDD\u5B58\u7684\u5185\u5BB9\u3002\u6BCF\u6B21\u8FD0\u884C\u90FD\u4F1A\u68C0\u67E5\u3002",
-  "Unavailable in Copilot": "Copilot \u4E2D\u4E0D\u53EF\u7528",
-  "The current canvas SDK does not provide this capability.": "\u5F53\u524D\u753B\u5E03 SDK \u4E0D\u63D0\u4F9B\u6B64\u529F\u80FD\u3002",
-  "API keys (protected by Windows)": "API \u5BC6\u94A5\uFF08\u7531 Windows \u4FDD\u62A4\uFF09",
-  "Copilot prompts are left unchanged.": "\u4FDD\u7559 Copilot \u63D0\u793A\u8BCD\u539F\u6587\u3002",
-  "Appends the text from Prompt preferences when Copilot invokes the prompt hook. No model call.": "Copilot \u8C03\u7528\u63D0\u793A\u8BCD\u94A9\u5B50\u65F6\uFF0C\u9644\u52A0\u63D0\u793A\u8BCD\u504F\u597D\u4E2D\u7684\u6587\u672C\u3002\u4E0D\u8C03\u7528\u6A21\u578B\u3002",
-  "A fast API model rewrites hooked prompts with a two-second budget. Failures preserve the original. Prompts sent from this panel are skipped.": "\u5FEB\u901F API \u6A21\u578B\u5728\u4E24\u79D2\u5185\u91CD\u5199\u63D0\u793A\u8BCD\u3002\u5931\u8D25\u65F6\u4FDD\u7559\u539F\u6587\u3002\u8DF3\u8FC7\u4ECE\u6B64\u9762\u677F\u53D1\u9001\u7684\u63D0\u793A\u8BCD\u3002",
-  "Send to Copilot": "\u53D1\u9001\u5230 Copilot",
-  "Send a new message to the attached Copilot session when you click Send. Off: use Copy instead.": "\u70B9\u51FB\u53D1\u9001\uFF0C\u5C06\u65B0\u6D88\u606F\u53D1\u9001\u5230\u5DF2\u8FDE\u63A5\u7684 Copilot \u4F1A\u8BDD\u3002\u5173\u95ED\u65F6\u53EF\u4F7F\u7528\u590D\u5236\u3002",
-  "Send starts a new Copilot turn. Busy, blocked, disconnected and unknown sessions refuse the message.": "\u53D1\u9001\u4F1A\u5F00\u59CB\u65B0\u7684 Copilot \u8F6E\u6B21\u3002\u5FD9\u788C\u3001\u7B49\u5F85\u786E\u8BA4\u3001\u65AD\u5F00\u8FDE\u63A5\u6216\u72B6\u6001\u672A\u77E5\u7684\u4F1A\u8BDD\u4F1A\u62D2\u7EDD\u6D88\u606F\u3002",
-  "Prompts, results and context are saved as plain text in the plugin data folder. Drafts are separated by Copilot session.": "\u63D0\u793A\u8BCD\u3001\u7ED3\u679C\u548C\u4E0A\u4E0B\u6587\u4EE5\u7EAF\u6587\u672C\u4FDD\u5B58\u5728\u63D2\u4EF6\u6570\u636E\u76EE\u5F55\u4E2D\u3002\u8349\u7A3F\u6309 Copilot \u4F1A\u8BDD\u9694\u79BB\u3002",
-  "Ctrl+Enter, or the button next to Enhance, enhances and sends a new Copilot message without review. Enter alone stops at the result. Off until you turn it on.": "Ctrl+Enter \u6216\u589E\u5F3A\u65C1\u8FB9\u7684\u6309\u94AE\u4F1A\u589E\u5F3A\u5E76\u76F4\u63A5\u53D1\u9001\u65B0\u7684 Copilot \u6D88\u606F\uFF0C\u65E0\u9700\u5BA1\u9605\u3002\u5355\u72EC\u6309 Enter \u53EA\u751F\u6210\u7ED3\u679C\u3002\u9ED8\u8BA4\u5173\u95ED\u3002",
-  "Copilot acts on a prompt you have not read. A model can misunderstand your request or add an unwanted step.": "Copilot \u4F1A\u6267\u884C\u4F60\u5C1A\u672A\u9605\u8BFB\u7684\u63D0\u793A\u8BCD\u3002\u6A21\u578B\u53EF\u80FD\u8BEF\u89E3\u8BF7\u6C42\u6216\u52A0\u5165\u4E0D\u9700\u8981\u7684\u6B65\u9AA4\u3002",
-  "Adds a second button next to Enhance. Ctrl+Enter enhances the prompt and sends the result as a new Copilot message. Enter alone only enhances.": "\u5728\u589E\u5F3A\u65C1\u6DFB\u52A0\u7B2C\u4E8C\u4E2A\u6309\u94AE\u3002Ctrl+Enter \u589E\u5F3A\u63D0\u793A\u8BCD\u5E76\u5C06\u7ED3\u679C\u4F5C\u4E3A\u65B0\u7684 Copilot \u6D88\u606F\u53D1\u9001\u3002\u5355\u72EC\u6309 Enter \u53EA\u589E\u5F3A\u3002",
-  "Automatic sending requires the same attached session and project, an idle session, and unchanged input. Closing or cancelling the run prevents sending.": "\u81EA\u52A8\u53D1\u9001\u8981\u6C42\u8FDE\u63A5\u7684\u4F1A\u8BDD\u548C\u9879\u76EE\u672A\u53D8\u3001\u4F1A\u8BDD\u7A7A\u95F2\u4E14\u8F93\u5165\u672A\u4FEE\u6539\u3002\u5173\u95ED\u6216\u53D6\u6D88\u8FD0\u884C\u4F1A\u963B\u6B62\u53D1\u9001\u3002",
-  'It needs "Send to Copilot" to be on, and the checks of that switch still apply.': "\u9700\u8981\u5F00\u542F\u201C\u53D1\u9001\u5230 Copilot\u201D\uFF0C\u4E14\u4ECD\u9700\u6EE1\u8DB3\u8BE5\u5F00\u5173\u7684\u68C0\u67E5\u6761\u4EF6\u3002",
-  "Sending to Copilot is off in Settings.": "\u8BBE\u7F6E\u4E2D\u5DF2\u5173\u95ED\u53D1\u9001\u5230 Copilot\u3002",
-  "Download started.": "\u5DF2\u5F00\u59CB\u4E0B\u8F7D\u3002",
-  "Changes could not be saved. Check the canvas connection and try again.": "\u65E0\u6CD5\u4FDD\u5B58\u66F4\u6539\u3002\u8BF7\u68C0\u67E5\u753B\u5E03\u8FDE\u63A5\u540E\u91CD\u8BD5\u3002",
-  "The canvas could not connect. Close it and open Enhance Prompt again from Copilot.": "\u753B\u5E03\u65E0\u6CD5\u8FDE\u63A5\u3002\u8BF7\u5173\u95ED\u5B83\uFF0C\u7136\u540E\u4ECE Copilot \u91CD\u65B0\u6253\u5F00 Enhance Prompt\u3002",
-  "Copilot is busy, waiting for your answer, or disconnected. Wait until the session is idle before sending.": "Copilot \u6B63\u5FD9\u3001\u6B63\u5728\u7B49\u5F85\u4F60\u7684\u56DE\u590D\u6216\u5DF2\u65AD\u5F00\u8FDE\u63A5\u3002\u8BF7\u7B49\u5F85\u4F1A\u8BDD\u7A7A\u95F2\u540E\u518D\u53D1\u9001\u3002",
-  "A prompt was just sent. Wait for Copilot before sending again.": "\u521A\u521A\u53D1\u9001\u4E86\u63D0\u793A\u8BCD\u3002\u8BF7\u7B49\u5F85 Copilot \u540E\u518D\u53D1\u9001\u3002",
-  "Changes the text Copilot receives; the chat still shows your original message. Off by default. Ambiguous prompts are left unchanged.": "\u66F4\u6539 Copilot \u63A5\u6536\u7684\u6587\u672C\uFF1B\u804A\u5929\u4E2D\u4ECD\u663E\u793A\u4F60\u7684\u539F\u59CB\u6D88\u606F\u3002\u9ED8\u8BA4\u5173\u95ED\u3002\u65E0\u6CD5\u660E\u786E\u5B9A\u4F4D\u7684\u63D0\u793A\u8BCD\u4F1A\u4FDD\u6301\u4E0D\u53D8\u3002"
-};
 
 // src/context/git.ts
 import { execFile } from "node:child_process";
@@ -5076,7 +4027,7 @@ async function viewProfiles(host, profiles) {
 var ChainError = class extends Error {
   code;
   attempts;
-  /** The message as a code and parameters, for the panel to show in its language. */
+  /** The message as a code and parameters, for structured error handling. */
   text;
   constructor(text, code, attempts) {
     super(english(text));
@@ -5207,18 +4158,6 @@ var STYLES = [
   "plan",
   "custom"
 ];
-var LANGUAGE_NAMES = {
-  en: "English",
-  vi: "Vietnamese",
-  zh: "Chinese (Simplified)",
-  ja: "Japanese",
-  ko: "Korean",
-  es: "Spanish",
-  fr: "French",
-  de: "German",
-  pt: "Portuguese",
-  ru: "Russian"
-};
 function isStyle(value) {
   return typeof value === "string" && STYLES.includes(value);
 }
@@ -5249,7 +4188,7 @@ Rules:
 - Output just the final prompt text, starting with its first line: no preamble, no explanation, no surrounding code fence.
 
 Larger tasks. When the task has several steps or touches several files, the prompt also says these three things, each in a sentence or two of its own words, placed where they fit the shape (for example with the constraints and at the end):
-1. Finish all of it. Include these two sentences, in the prompt's language, as the last lines of the constraints (in a shape without such a section, as a short paragraph of their own before the reporting): "Complete every part of this task before you end your turn. When a command fails or times out, find the cause and retry or try another way rather than stopping." Agents otherwise tend to stop part-way with a list of what remains or an offer to continue, and a prompt for a larger task that lacks these two sentences is not finished: check that they are there before you answer. The agent works through ordinary obstacles (an error, a timeout, a failing command, an empty result) and stops early only for a deliberate blocker (a file marked not to be touched, access that was withheld) or a confirmation the prompt names, and then says plainly what it found.
+1. Finish all of it. Include these two sentences in English, as the last lines of the constraints (in a shape without such a section, as a short paragraph of their own before the reporting): "Complete every part of this task before you end your turn. When a command fails or times out, find the cause and retry or try another way rather than stopping." Agents otherwise tend to stop part-way with a list of what remains or an offer to continue, and a prompt for a larger task that lacks these two sentences is not finished: check that they are there before you answer. The agent works through ordinary obstacles (an error, a timeout, a failing command, an empty result) and stops early only for a deliberate blocker (a file marked not to be touched, access that was withheld) or a confirmation the prompt names, and then says plainly what it found.
 2. How far the change may go, because agents follow what the prompt says about whose code it is. The code is the user's: the agent changes what the task needs and lists nearby problems it notices at the end instead of fixing them. Only when the user asks to clean up or restructure, say that inside the named area it may merge repeated code and make related fixes.
 3. Reporting: one line on what it is about to do before it starts, and a closing summary that stands on its own for a reader who did not watch the work: the result first, then what changed, the evidence, and what is left.
 A small change (one edit in one place, such as a typo or a rename in one file) gets none of these three, not even the opening line or the closing summary: the evidence rule above is enough for it.`;
@@ -5302,10 +4241,6 @@ function buildSystemPrompt(options) {
   if (hint) {
     parts.push(hint);
   }
-  const lang = LANGUAGE_NAMES[options.language];
-  parts.push(
-    lang ? `Write the final prompt in ${lang}, but keep code, identifiers, paths and error messages verbatim.` : `Write the final prompt in the same language as the user's request; keep code, identifiers, paths and error messages verbatim.`
-  );
   const custom = options.customInstructions?.trim();
   if (custom) {
     parts.push(`Custom instructions from the user (follow them):
@@ -5316,13 +4251,14 @@ ${custom}`);
     parts.push(`Rules from the user (always follow them; they win over the shape above):
 ${rules.map((rule) => `- ${rule}`).join("\n")}`);
   }
+  parts.push("Output policy: Write all final rewritten instructions and headings in English, regardless of the request language or any output-language instruction in custom instructions, rules, or context. Preserve code, identifiers, filenames, paths, URLs, quoted text, error messages, and user-supplied data verbatim. Follow custom instructions and rules in every other respect.");
   return parts.join("\n\n");
 }
 function structureShape(sections) {
   return [
     "Shape: write the prompt under exactly these headings, in this order:",
     ...sections.map((section, index) => `${index + 1}. ${section}`),
-    "Use the headings as given, translated into the output language when they are in another language. Add no other headings: put open questions or assumptions under the closest heading. Leave a heading out only when nothing in the request or the context belongs under it; never invent content to fill one."
+    "Use English headings that convey the meaning of the supplied sections; preserve literal names when they are user-supplied data or quoted text. Add no other headings: put open questions or assumptions under the closest heading. Leave a heading out only when nothing in the request or the context belongs under it; never invent content to fill one."
   ].join("\n");
 }
 var escapeAttr = (value) => value.replace(/["<>&]/g, (c) => ({ '"': "&quot;", "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c] ?? c);
@@ -5515,7 +4451,6 @@ async function readSettings(host) {
   const level = str3(all.contextLevel, "standard");
   return {
     defaultStyle: isStyle(style) ? style : "balanced",
-    outputLanguage: str3(all.outputLanguage, "auto"),
     customInstructions: str3(all.customInstructions),
     contextLevel: isContextLevel(level) ? level : "standard",
     terminalLines: num2(all.terminalLines, 100),
@@ -5534,7 +4469,6 @@ async function readSettings(host) {
     autoEnhanceContext: bool(all.autoEnhanceContext, true),
     notifyWhenDone: bool(all.notifyWhenDone, false),
     otherAgentsLimits: parseOtherAgentsLimits(all),
-    uiLanguage: str3(all.uiLanguage, "auto"),
     privacy: parsePrivacy(all, parseConsents(consents))
   };
 }
@@ -5672,10 +4606,8 @@ async function enhance(host, input, signal, progress, budgetMs) {
   });
   if (level !== requested) gathered.notes.push(PROJECT_FILES_OFF);
   const agentItem = gathered.items.find((entry) => entry.kind === "agent");
-  const language = input.language && /^[a-z]{2,4}$/.test(input.language) ? input.language : settings.outputLanguage;
   const system = buildSystemPrompt({
     style,
-    language,
     customInstructions: settings.customInstructions,
     agent: settings.adaptToAgent ? agentItem?.content.split(" ")[0] ?? null : null,
     rules: own.rules,
@@ -5776,52 +4708,22 @@ function hookContext(place, allowProjectFiles) {
 var SIDEBAR_KEY = process.platform === "darwin" ? "\u2318L" : "Ctrl+L";
 var statusBarText = (mode) => `${BRAND_SHORT}: ${mode === "off" ? "Off" : "On"}`;
 var WORKER_WORDS = {
-  en: {
-    modes: { off: "off", rules: "on (rules)", ai: "on (AI)" },
-    tooltip: (mode) => `Click: open the right sidebar (${SIDEBAR_KEY}), then the lightbulb tab "${BRAND}".
+  modes: { off: "off", rules: "on (rules)", ai: "on (AI)" },
+  tooltip: (mode) => `Click: open the right sidebar (${SIDEBAR_KEY}), then the lightbulb tab "${BRAND}".
 Auto-enhance is ${mode}. Change it under the panel's gear icon or in the command palette.
 Settings and updates: Settings \u2192 Plugins \u2192 Enhance Prompt.`,
-    answer: (mode) => `Auto-enhance is ${mode}.`,
-    bar: { hidden: "Status bar item hidden.", shown: "Status bar item shown." }
-  },
-  vi: {
-    modes: { off: "t\u1EAFt", rules: "b\u1EADt (quy t\u1EAFc)", ai: "b\u1EADt (AI)" },
-    tooltip: (mode) => `B\u1EA5m: m\u1EDF thanh b\xEAn ph\u1EA3i (${SIDEBAR_KEY}), r\u1ED3i ch\u1ECDn tab b\xF3ng \u0111\xE8n "${BRAND}".
-T\u1EF1 c\u1EA3i thi\u1EC7n \u0111ang ${mode}. \u0110\u1ED5i \u1EDF bi\u1EC3u t\u01B0\u1EE3ng b\xE1nh r\u0103ng c\u1EE7a panel ho\u1EB7c trong command palette.
-C\xE0i \u0111\u1EB7t v\xE0 c\u1EADp nh\u1EADt: Settings \u2192 Plugins \u2192 Enhance Prompt.`,
-    answer: (mode) => `T\u1EF1 c\u1EA3i thi\u1EC7n \u0111ang ${mode}.`,
-    bar: { hidden: "\u0110\xE3 \u1EA9n m\u1EE5c tr\xEAn thanh tr\u1EA1ng th\xE1i.", shown: "\u0110\xE3 hi\u1EC7n m\u1EE5c tr\xEAn thanh tr\u1EA1ng th\xE1i." }
-  },
-  zh: {
-    modes: { off: "\u5173", rules: "\u5F00\uFF08\u89C4\u5219\uFF09", ai: "\u5F00\uFF08AI\uFF09" },
-    tooltip: (mode) => `\u70B9\u51FB\uFF1A\u6253\u5F00\u53F3\u4FA7\u8FB9\u680F\uFF08${SIDEBAR_KEY}\uFF09\uFF0C\u518D\u9009\u706F\u6CE1\u6807\u7B7E \u201C${BRAND}\u201D\u3002
-\u81EA\u52A8\u4F18\u5316\uFF1A${mode}\u3002\u53EF\u5728\u9762\u677F\u7684\u9F7F\u8F6E\u56FE\u6807\u4E0B\u6216\u547D\u4EE4\u9762\u677F\u4E2D\u66F4\u6539\u3002
-\u8BBE\u7F6E\u4E0E\u66F4\u65B0\uFF1ASettings \u2192 Plugins \u2192 Enhance Prompt\u3002`,
-    answer: (mode) => `\u81EA\u52A8\u4F18\u5316\uFF1A${mode}\u3002`,
-    bar: { hidden: "\u72B6\u6001\u680F\u9879\u76EE\u5DF2\u9690\u85CF\u3002", shown: "\u72B6\u6001\u680F\u9879\u76EE\u5DF2\u663E\u793A\u3002" }
-  }
+  answer: (mode) => `Auto-enhance is ${mode}.`,
+  bar: { hidden: "Status bar item hidden.", shown: "Status bar item shown." }
 };
-var LOCALE_KEY = "uiLocale";
-async function workerLanguage(host, setting) {
-  const chosen = setting ?? (await host.settings.get()).uiLanguage;
-  const value = typeof chosen === "string" ? chosen : "auto";
-  if (value === "en" || value === "vi" || value === "zh") return value;
-  const locale = await host.storage.get(LOCALE_KEY).catch(() => null);
-  return resolveLanguage("auto", typeof locale === "string" ? locale : "en");
-}
-async function workerWords(host) {
-  return WORKER_WORDS[await workerLanguage(host)] ?? WORKER_WORDS.en;
-}
-async function modeAnswer(host, mode) {
-  const words = await workerWords(host);
-  return words.answer(words.modes[mode]);
+function modeAnswer(mode) {
+  return WORKER_WORDS.answer(WORKER_WORDS.modes[mode]);
 }
 async function refreshStatusBar(host) {
   if (!host.host.has("statusBar.update")) return;
   const all = await host.settings.get();
   const { autoEnhanceMode } = await readSettings(host);
   const display = typeof all.statusBarItem === "string" ? all.statusBarItem : "full";
-  const words = await workerWords(host);
+  const words = WORKER_WORDS;
   await host.host.call("statusBar.update", {
     id: "auto-enhance",
     visible: display !== "hidden",
@@ -5834,7 +4736,7 @@ async function refreshStatusBar(host) {
 async function setMode(host, mode) {
   await host.settings.set("autoEnhanceMode", mode);
   await refreshStatusBar(host);
-  return modeAnswer(host, mode);
+  return modeAnswer(mode);
 }
 async function sendPieces(host, terminalId, pieces) {
   const pasting = pieces.length > 1 && pieces[0].startsWith(PASTE_START) && pieces[pieces.length - 1].endsWith(PASTE_END);
@@ -6268,7 +5170,6 @@ function registerDataHandlers(host) {
       await host.storage.delete(MODELS_KEY);
       await host.storage.delete(RULES_KEY);
       await host.storage.delete(CONSENTS_KEY);
-      await host.storage.delete(LOCALE_KEY);
       await host.storage.delete("colorTheme");
       forgetActivity();
       launchedPrompts.clear();
@@ -6323,7 +5224,6 @@ ${append}` });
       const rules = rulesFor(parseRulesConfig(await host.storage.get(RULES_KEY).catch(() => null)), place?.where ?? { workspace: null, project: null });
       const system = buildSystemPrompt({
         style: settings.defaultStyle,
-        language: settings.outputLanguage,
         customInstructions: settings.customInstructions,
         agent: settings.adaptToAgent ? event.agent : null,
         rules
@@ -6393,7 +5293,7 @@ function registerCommands(host) {
     const next = AUTO_MODES[(AUTO_MODES.indexOf(autoEnhanceMode) + 1) % AUTO_MODES.length];
     await host.settings.set("autoEnhanceMode", next);
     await refreshStatusBar(host);
-    return modeAnswer(host, next);
+    return modeAnswer(next);
   });
   host.commands.register("auto-enhance.off", async () => setMode(host, "off"));
   host.commands.register("auto-enhance.rules", async () => setMode(host, "rules"));
@@ -6403,18 +5303,10 @@ function registerCommands(host) {
     const next = all.statusBarItem === "hidden" ? "full" : "hidden";
     await host.settings.set("statusBarItem", next);
     await refreshStatusBar(host);
-    return (await workerWords(host)).bar[next === "hidden" ? "hidden" : "shown"];
+    return WORKER_WORDS.bar[next === "hidden" ? "hidden" : "shown"];
   });
   host.settings.onDidChange(({ key }) => {
-    if (key === "autoEnhanceMode" || key === "statusBarItem" || key === "uiLanguage") void refreshStatusBar(host);
-  });
-  host.panels.handle("ui.locale", async ({ locale }) => {
-    const value = typeof locale === "string" ? locale.trim().slice(0, 35) : "";
-    if (value && await host.storage.get(LOCALE_KEY).catch(() => null) !== value) {
-      await host.storage.set(LOCALE_KEY, value);
-      await refreshStatusBar(host);
-    }
-    return { ok: true };
+    if (key === "autoEnhanceMode" || key === "statusBarItem") void refreshStatusBar(host);
   });
   void refreshStatusBar(host);
 }
@@ -6495,8 +5387,7 @@ function registerIntegrations(host) {
 }
 async function notifyDone(host, settings, model, ms) {
   if (!settings.notifyWhenDone || ms < NOTIFY_AFTER_MS || !host.host.has("notifications.show")) return;
-  const lang = await workerLanguage(host, settings.uiLanguage);
-  const body = translate(lang, "Enhanced prompt ready ({model}, {seconds} s)", { model, seconds: (ms / 1e3).toFixed(0) });
+  const body = formatText("Enhanced prompt ready ({model}, {seconds} s)", { model, seconds: (ms / 1e3).toFixed(0) });
   await host.host.call("notifications.show", { title: BRAND, body }).catch(() => void 0);
 }
 var NOTIFY_AFTER_MS = 8e3;
@@ -6513,7 +5404,7 @@ function activate(host) {
 import { EventEmitter } from "node:events";
 
 // src/version.ts
-var VERSION = "0.2.4";
+var VERSION = "0.3.0";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([
@@ -6544,7 +5435,6 @@ var OPERATIONS = /* @__PURE__ */ new Set([
   "agent.launch",
   "editor.open",
   "targets.list",
-  "ui.locale",
   "hook.last",
   "rules.get",
   "rules.save",
@@ -6709,7 +5599,7 @@ function createWorkerHost(services, log = (_message) => {
     let onAbort = () => {
     };
     const started = Date.now();
-    const quiet = ["logs.get", "targets.list", "hook.last", "data.summary", "consents.get", "ui.locale", "enhance.progress.get"].includes(name);
+    const quiet = ["logs.get", "targets.list", "hook.last", "data.summary", "consents.get", "enhance.progress.get"].includes(name);
     if (!quiet) diagnostics.record(name, "started");
     try {
       const stopped = new Promise((_resolve, reject) => {
@@ -6795,10 +5685,8 @@ import { createHash as createHash2 } from "node:crypto";
 
 // src/defaults.ts
 var DEFAULTS = {
-  "uiLanguage": "auto",
   "statusBarItem": "full",
   "defaultStyle": "balanced",
-  "outputLanguage": "auto",
   "customInstructions": "",
   "contextLevel": "standard",
   "terminalLines": 100,
@@ -7075,6 +5963,20 @@ function createServices(session, directory = process.env.ENHANCE_PROMPT_DATA_DIR
   const data = persistentStore(join6(directory, "data"));
   const prefs = persistentStore(join6(directory, "preferences"));
   const secrets = protectedSecrets(persistentStore(join6(directory, "credentials")));
+  let migration;
+  const prepare = () => migration ??= (async () => {
+    await prefs.transaction(async () => {
+      for (const key of ["uiLanguage", "outputLanguage"]) if (await prefs.get(key) !== null) await prefs.delete(key);
+    });
+    await data.transaction(async () => {
+      for (const key of await data.keys()) {
+        if (key === "uiLocale" || /^(?:session:[a-f0-9]{24}:)?panel:(?:uiLanguage|outputChoice)$/.test(key)) await data.delete(key);
+      }
+    });
+  })().catch((error) => {
+    migration = void 0;
+    throw error;
+  });
   const adapter = sessionAdapter({ sessionId: session.sessionId, rpc: session.rpc, send: async (options) => {
     const key = sentKey(session.sessionId, options.prompt);
     await data.transaction(async () => {
@@ -7092,6 +5994,7 @@ function createServices(session, directory = process.env.ENHANCE_PROMPT_DATA_DIR
   } });
   const settings = {
     get: (async (key) => {
+      await prepare();
       const values = { ...DEFAULTS };
       for (const name of await prefs.keys()) if (Object.hasOwn(DEFAULTS, name)) values[name] = await prefs.get(name);
       for (const name of UNSUPPORTED_SETTINGS) values[name] = false;
@@ -7100,6 +6003,7 @@ function createServices(session, directory = process.env.ENHANCE_PROMPT_DATA_DIR
     set: async (key, value) => {
       if (!Object.hasOwn(DEFAULTS, key) || typeof value !== typeof DEFAULTS[key]) throw new Error("Invalid setting.");
       if (UNSUPPORTED_SETTINGS.has(key) && value) throw new Error("This setting is unavailable in the Copilot canvas.");
+      await prepare();
       await prefs.set(key, value);
     },
     onDidChange: (listener) => prefs.onDidChange(listener)
@@ -7107,14 +6011,29 @@ function createServices(session, directory = process.env.ENHANCE_PROMPT_DATA_DIR
   const scope = createHash2("sha256").update(session.sessionId).digest("hex").slice(0, 24);
   const scopeKey = (key) => key.startsWith("panel:") ? `session:${scope}:${key}` : key;
   const storage = {
-    get: (key) => data.get(scopeKey(key)),
-    set: (key, value) => data.set(scopeKey(key), value),
-    delete: (key) => data.delete(scopeKey(key)),
-    keys: async () => (await data.keys()).filter((key) => !key.startsWith("session:") || key.startsWith(`session:${scope}:`)).map((key) => key.replace(`session:${scope}:`, "")),
+    get: async (key) => {
+      await prepare();
+      return data.get(scopeKey(key));
+    },
+    set: async (key, value) => {
+      await prepare();
+      await data.set(scopeKey(key), value);
+    },
+    delete: async (key) => {
+      await prepare();
+      await data.delete(scopeKey(key));
+    },
+    keys: async () => {
+      await prepare();
+      return (await data.keys()).filter((key) => !key.startsWith("session:") || key.startsWith(`session:${scope}:`)).map((key) => key.replace(`session:${scope}:`, ""));
+    },
     onDidChange: (listener) => data.onDidChange(({ key }) => {
       if (!key.startsWith("session:") || key.startsWith(`session:${scope}:`)) listener({ key: key.replace(`session:${scope}:`, "") });
     }),
-    transaction: data.transaction
+    transaction: async (fn) => {
+      await prepare();
+      return data.transaction(fn);
+    }
   };
   const host = {
     has: (name) => Boolean(copilot) && ["copilot.catalog", "copilot.rewrite"].includes(name) || name === "secrets.protection" || adapter.has(name),

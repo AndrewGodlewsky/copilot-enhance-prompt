@@ -16,6 +16,19 @@ export function createServices(session: CopilotSession, directory = process.env.
   const data = persistentStore(join(directory, 'data'))
   const prefs = persistentStore(join(directory, 'preferences'))
   const secrets = protectedSecrets(persistentStore(join(directory, 'credentials')))
+  // Retire only language preferences, including composer choices saved by older sessions.
+  // Each store uses its normal cross-process transaction; a failed cleanup can be retried.
+  let migration: Promise<void> | undefined
+  const prepare = (): Promise<void> => migration ??= (async () => {
+    await prefs.transaction(async () => {
+      for (const key of ['uiLanguage', 'outputLanguage']) if (await prefs.get(key) !== null) await prefs.delete(key)
+    })
+    await data.transaction(async () => {
+      for (const key of await data.keys()) {
+        if (key === 'uiLocale' || /^(?:session:[a-f0-9]{24}:)?panel:(?:uiLanguage|outputChoice)$/.test(key)) await data.delete(key)
+      }
+    })
+  })().catch(error => { migration = undefined; throw error })
   const adapter = sessionAdapter({ sessionId: session.sessionId, rpc: session.rpc, send: async options => {
     const key = sentKey(session.sessionId, options.prompt)
     await data.transaction(async () => {
@@ -29,6 +42,7 @@ export function createServices(session: CopilotSession, directory = process.env.
   } })
   const settings: SettingsStore = {
     get: (async (key?: string) => {
+      await prepare()
       const values: Record<string, JsonValue> = { ...DEFAULTS }
       for (const name of await prefs.keys()) if (Object.hasOwn(DEFAULTS, name)) values[name] = (await prefs.get(name))!
       for (const name of UNSUPPORTED_SETTINGS) values[name] = false
@@ -37,6 +51,7 @@ export function createServices(session: CopilotSession, directory = process.env.
     set: async (key, value) => {
       if (!Object.hasOwn(DEFAULTS, key) || typeof value !== typeof DEFAULTS[key]) throw new Error('Invalid setting.')
       if (UNSUPPORTED_SETTINGS.has(key) && value) throw new Error('This setting is unavailable in the Copilot canvas.')
+      await prepare()
       await prefs.set(key, value)
     },
     onDidChange: listener => prefs.onDidChange(listener)
@@ -44,10 +59,12 @@ export function createServices(session: CopilotSession, directory = process.env.
   const scope = createHash('sha256').update(session.sessionId).digest('hex').slice(0, 24)
   const scopeKey = (key: string) => key.startsWith('panel:') ? `session:${scope}:${key}` : key
   const storage: KeyValueStore = {
-    get: key => data.get(scopeKey(key)), set: (key, value) => data.set(scopeKey(key), value), delete: key => data.delete(scopeKey(key)),
-    keys: async () => (await data.keys()).filter(key => !key.startsWith('session:') || key.startsWith(`session:${scope}:`)).map(key => key.replace(`session:${scope}:`, '')),
+    get: async key => { await prepare(); return data.get(scopeKey(key)) },
+    set: async (key, value) => { await prepare(); await data.set(scopeKey(key), value) },
+    delete: async key => { await prepare(); await data.delete(scopeKey(key)) },
+    keys: async () => { await prepare(); return (await data.keys()).filter(key => !key.startsWith('session:') || key.startsWith(`session:${scope}:`)).map(key => key.replace(`session:${scope}:`, '')) },
     onDidChange: listener => data.onDidChange(({ key }) => { if (!key.startsWith('session:') || key.startsWith(`session:${scope}:`)) listener({ key: key.replace(`session:${scope}:`, '') }) }),
-    transaction: data.transaction
+    transaction: async fn => { await prepare(); return data.transaction(fn) }
   }
   const host: EnhanceWorker['host'] = {
     has: name => (Boolean(copilot) && ['copilot.catalog', 'copilot.rewrite'].includes(name)) || name === 'secrets.protection' || adapter.has(name),

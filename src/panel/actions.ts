@@ -1,3 +1,4 @@
+import { formatText } from '../format.ts'
 // actions.ts: what the panel does (what its buttons call): requests to the worker, and the changes
 // to the state (state.ts) that follow. No UI here; the web panel (web/src) and the tests call these.
 import { files as panelFiles, plugin, read, set, settings, shell, update, type JsonValue } from '#panel'
@@ -8,12 +9,11 @@ import { attachmentItemId } from '../image-limits.ts'
 import { type Message } from '../messages.ts'
 import { DEFAULT_MAX_TOKENS, isContextLevel, presetById, type ContextItemView, type ProfileView } from '../presets.ts'
 import { isStyle } from '../prompts.ts'
-import { t, uiLanguageSetting } from '../i18n.ts'
 import { NEEDS_CONSENT, parseOtherAgentsLimits, parsePrivacy } from '../privacy.ts'
 import { stepPercent, totalPercent, type Step } from '../progress.ts'
 import { PANEL_REQUEST_LIMIT_MS, type ProfileInput } from '../protocol.ts'
 import { pathInWorkspaceId, pathKey } from '../workspaces.ts'
-import { consents, feedbackAsk, feedbackOff, feedbackShown, files, ruleDraft, ruleScope, structureDraft, type Form, terminalWorkspaces, workspaceChoices, tick, workspaceKey, projectName, parked, MAX_PARKED, type Slot, rulesState, structureChoice, workspaceName, tab, draft, result, style, profileChoice, modelChoice, outputChoice, excluded, target, historyRaw, confirmClearHistory, form, detected, catalogs, catalogLoading, customModel, type Run, run, dataSummary, privacy, confirmWipe, busy, notice, lastRun, contextShown, contextNotes, KEPT, mayKeep, put, forgetSaved, targets, models, defaults, effectiveStyle, effectiveLevel, effectiveEnter, say, message, errorMessage, historyOpen, hookLast, resultFor, sendAfterEnhance, filteredHistory, type NoticeAction } from './state.ts'
+import { consents, feedbackAsk, feedbackOff, feedbackShown, files, ruleDraft, ruleScope, structureDraft, type Form, terminalWorkspaces, workspaceChoices, tick, workspaceKey, projectName, parked, MAX_PARKED, type Slot, rulesState, structureChoice, workspaceName, tab, draft, result, style, profileChoice, modelChoice, excluded, target, historyRaw, confirmClearHistory, form, detected, catalogs, catalogLoading, customModel, type Run, run, dataSummary, privacy, confirmWipe, busy, notice, lastRun, contextShown, contextNotes, KEPT, mayKeep, put, forgetSaved, targets, models, defaults, effectiveStyle, effectiveLevel, effectiveEnter, say, message, errorMessage, historyOpen, hookLast, resultFor, sendAfterEnhance, filteredHistory, type NoticeAction } from './state.ts'
 import { panelDiagnostics } from './diagnostics.ts'
 import { diagnosticError } from '../diagnostics.ts'
 
@@ -163,20 +163,13 @@ export async function refreshDefaults(): Promise<void> {
     pressEnter: all.sendPressEnter === true,
     fallbackEnabled: all.fallbackEnabled !== false,
     fallbackOn: all.fallbackOn === 'transient' ? 'transient' : 'any',
-    outputLanguage: typeof all.outputLanguage === 'string' ? all.outputLanguage : 'auto',
     autoEnhanceMode: typeof all.autoEnhanceMode === 'string' ? all.autoEnhanceMode : 'off',
     notifyWhenDone: all.notifyWhenDone === true,
     otherAgents: parseOtherAgentsLimits(all)
   })
-  set(uiLanguageSetting, typeof all.uiLanguage === 'string' ? all.uiLanguage : 'auto')
   set(privacy, parsePrivacy(all))
   // Saving history is off: nothing typed or produced stays on disk after the panel closes.
   if (!mayKeep()) forgetSaved()
-}
-
-export async function changeUiLanguage(value: string): Promise<void> {
-  set(uiLanguageSetting, value)
-  await settings.set('uiLanguage', value).catch(() => undefined)
 }
 
 export async function refreshModels(): Promise<void> {
@@ -298,7 +291,6 @@ async function runEnhance(): Promise<Enhanced | null> {
       profileId: choice === 'auto' ? null : choice,
       ...(choice !== 'auto' && read(modelChoice) ? { model: read(modelChoice) } : {}),
       // Leave the key out (not undefined): request inputs must be plain JSON.
-      ...(read(outputChoice) === 'default' ? {} : { language: read(outputChoice) }),
       exclude: read(excluded)
     }
     const waiting = { timeoutMs: PANEL_REQUEST_LIMIT_MS, signal: controller.signal }
@@ -318,10 +310,10 @@ async function runEnhance(): Promise<Enhanced | null> {
       // The person moved to another project meanwhile: the prompt waits in its own project.
       const slot = read(parked)[origin.key]
       park(origin.key, { ...(slot ?? snapshotFor(origin.name)), result: answer.enhanced, lastRun: ran, contextShown: answer.context, contextNotes: answer.notes, at: Date.now() })
-      set(notice, { tone: 'neutral', text: t('The enhanced prompt is kept for {name}: go back to that project to send it.', { name: origin.name ?? '?' }) })
+      set(notice, { tone: 'neutral', text: formatText('The enhanced prompt is kept for {name}: go back to that project to send it.', { name: origin.name ?? '?' }) })
     } else {
       // Its project is gone (or unknown): showing it here could send it to the wrong agent.
-      set(notice, { tone: 'warning', text: t('The project this prompt was written for is closed, so its enhanced prompt was dropped.') })
+      set(notice, { tone: 'warning', text: 'The project this prompt was written for is closed, so its enhanced prompt was dropped.' })
     }
     finishRun(runId, 'done')
   } catch (error) {
@@ -454,17 +446,17 @@ async function sendTo(terminalId: string, text: string, force: boolean): Promise
 async function typeInto(terminalId: string, text: string, force: boolean): Promise<void> {
   const item = read(targets).find((entry) => entry.terminalId === terminalId)
   if (!item) {
-    set(notice, { tone: 'warning', text: t('That terminal is no longer open.') })
+    set(notice, { tone: 'warning', text: 'That terminal is no longer open.' })
     return
   }
   const label = targetLabel(item)
   try {
     const { accepted } = await plugin.request('prompt.send', { terminalId, text, enter: read(effectiveEnter), ...(force ? { force: true } : {}) })
-    const done = force ? t('Typed into {label}, without Enter.', { label }) : t('Sent to {label}.', { label })
-    set(notice, accepted ? { tone: 'success', text: done } : { tone: 'warning', text: t('{label} did not accept the text.', { label }) })
+    const done = force ? formatText('Typed into {label}, without Enter.', { label }) : formatText('Sent to {label}.', { label })
+    set(notice, accepted ? { tone: 'success', text: done } : { tone: 'warning', text: formatText('{label} did not accept the text.', { label }) })
   } catch (error) {
     if (!force && errorMessage(error)?.code === 'error.agent_blocked') {
-      set(notice, { tone: 'warning', text: message(error), action: { label: t('Type it without Enter'), run: { kind: 'send.anyway', terminalId, text } } })
+      set(notice, { tone: 'warning', text: message(error), action: { label: 'Type it without Enter', run: { kind: 'send.anyway', terminalId, text } } })
     } else set(notice, { tone: 'danger', text: message(error) })
   }
 }
@@ -497,19 +489,19 @@ function heldBack(start: { terminalId: string | null; key: string | null }, done
   // the run began, or now), this could be a terminal of another project.
   // An empty key is no project at all (the terminals were listed but the host named no workspace).
   const unknown = (value: string | null) => !value || value.startsWith('name:')
-  if (unknown(key) || unknown(start.key)) return t('Copilot could not tell which project this is.')
-  if (key !== start.key) return t('The project in focus changed while it ran; the prompt waits in the project it was written in.')
+  if (unknown(key) || unknown(start.key)) return 'Copilot could not tell which project this is.'
+  if (key !== start.key) return 'The project in focus changed while it ran; the prompt waits in the project it was written in.'
   const item = read(targets).find((entry) => entry.terminalId === start.terminalId)
-  if (!start.terminalId || !item || read(target) !== start.terminalId) return t('The terminal picked when you started is closed or no longer the one picked.')
+  if (!start.terminalId || !item || read(target) !== start.terminalId) return 'The terminal picked when you started is closed or no longer the one picked.'
   // A plain terminal would run the prompt's first line as a command. the host lists an agent with a
   // state, sometimes without saying which kind it is; a row with neither is a terminal with no agent.
-  if (!item.agent && !item.state) return t('{label} is a plain terminal, not an agent.', { label: targetLabel(item) })
+  if (!item.agent && !item.state) return formatText('{label} is a plain terminal, not an agent.', { label: targetLabel(item) })
   // A working agent can ask for an answer at any moment, and what is typed then could be taken as it.
   const name = item.title ?? item.agent ?? item.label
-  if (item.state === 'working') return t('{name} is still working.', { name })
-  if (item.state === 'blocked') return t('{name} is waiting for an answer from you.', { name })
-  if (!item.state || !IDLE_STATES.has(item.state)) return t('Copilot does not say whether {name} is idle.', { name })
-  if (read(draft).trim() !== done.prompt || read(result) !== done.enhanced) return t('The text changed while it ran.')
+  if (item.state === 'working') return formatText('{name} is still working.', { name })
+  if (item.state === 'blocked') return formatText('{name} is waiting for an answer from you.', { name })
+  if (!item.state || !IDLE_STATES.has(item.state)) return formatText('Copilot does not say whether {name} is idle.', { name })
+  if (read(draft).trim() !== done.prompt || read(result) !== done.enhanced) return 'The text changed while it ran.'
   return null
 }
 
@@ -544,7 +536,7 @@ export async function enhanceAndSend(): Promise<void> {
     if (step.cancelled) return
     const why = heldBack(start, done)
     if (why) {
-      set(notice, { tone: 'warning', text: `${t('Not sent by itself.')} ${why} ${t('Read the prompt and send it yourself.')}` })
+      set(notice, { tone: 'warning', text: `${'Not sent by itself.'} ${why} ${'Read the prompt and send it yourself.'}` })
       return
     }
     await typeInto(start.terminalId!, done.enhanced, false)
@@ -566,31 +558,31 @@ export function setSendAfterEnhance(on: boolean): void {
 export async function runNoticeAction(action: NoticeAction): Promise<void> {
   // The composer is in use (a run, a send): what the button would do waits, and says so.
   if (action.kind !== 'history.restore' && read(busy) !== null) {
-    set(notice, { tone: 'warning', text: t('Something is still running here. Try again when it has finished.') })
+    set(notice, { tone: 'warning', text: 'Something is still running here. Try again when it has finished.' })
     return
   }
   if (action.kind === 'composer.restore') restoreComposer()
   else if (action.kind === 'send.anyway') await sendTo(action.terminalId, action.text, true)
   else {
     const answer = await plugin.request('history.restore', { id: action.id }).catch(() => ({ restored: false }))
-    set(notice, answer.restored ? { tone: 'success', text: t('Back in the history.') } : { tone: 'warning', text: t('It could not be brought back.') })
+    set(notice, answer.restored ? { tone: 'success', text: 'Back in the history.' } : { tone: 'warning', text: 'It could not be brought back.' })
   }
 }
 
 export async function copy(text: string): Promise<void> {
   if (!text.trim()) return
   const answer = await plugin.request('prompt.copy', { text }).catch((error) => ({ copied: false, error: message(error) }))
-  set(notice, answer.copied ? { tone: 'success', text: t('Copied to clipboard.') } : { tone: 'danger', text: t('Copy failed: {error}', { error: answer.error ?? 'unknown error' }) })
+  set(notice, answer.copied ? { tone: 'success', text: 'Copied to clipboard.' } : { tone: 'danger', text: formatText('Copy failed: {error}', { error: answer.error ?? 'unknown error' }) })
 }
 
 /** Starts a file export from the user's click; the renderer controls its destination. */
 async function saveFile(name: string, data: string): Promise<void> {
   try {
     const { status } = await panelFiles.saveAs({ suggestedName: name, mimeType: 'text/markdown', data })
-    if (status === 'saved') set(notice, { tone: 'success', text: t('Saved as a file.') })
-    if (status === 'downloaded') set(notice, { tone: 'success', text: t('Download started.') })
+    if (status === 'saved') set(notice, { tone: 'success', text: 'Saved as a file.' })
+    if (status === 'downloaded') set(notice, { tone: 'success', text: 'Download started.' })
   } catch {
-    set(notice, { tone: 'danger', text: t('The file could not be saved.') })
+    set(notice, { tone: 'danger', text: 'The file could not be saved.' })
   }
 }
 
@@ -650,8 +642,8 @@ export function reuse(entry: HistoryEntry): void {
   if (!elsewhere && !replaced) return
   set(notice, {
     tone: elsewhere ? 'warning' : 'neutral',
-    text: elsewhere ? t('This prompt was written in {name}: read it before you send it here.', { name: elsewhere }) : t('Opened from the history. What the composer held was replaced.'),
-    ...(replaced ? { action: { label: t('Undo'), run: { kind: 'composer.restore' as const } } } : {})
+    text: elsewhere ? formatText('This prompt was written in {name}: read it before you send it here.', { name: elsewhere }) : 'Opened from the history. What the composer held was replaced.',
+    ...(replaced ? { action: { label: 'Undo', run: { kind: 'composer.restore' as const } } } : {})
   })
 }
 
@@ -661,7 +653,7 @@ export async function removeEntry(id: string): Promise<void> {
     await plugin.request('history.remove', { id })
     if (read(historyOpen) === id) set(historyOpen, null)
     // Delete sits next to Copy: one press too many is put right with Undo (the worker keeps the entry for a minute).
-    set(notice, { tone: 'neutral', text: t('Removed from the history.'), action: { label: t('Undo'), run: { kind: 'history.restore', id } } })
+    set(notice, { tone: 'neutral', text: 'Removed from the history.', action: { label: 'Undo', run: { kind: 'history.restore', id } } })
   } catch (error) {
     set(notice, { tone: 'danger', text: message(error) })
   }
@@ -741,7 +733,7 @@ export async function addDetected(presetId: string, path: string): Promise<void>
       })
     )
     await detectClis()
-    set(notice, { tone: 'success', text: t('Added {name}. Use Test to check it is signed in.', { name: preset.label }) })
+    set(notice, { tone: 'success', text: formatText('Added {name}. Use Test to check it is signed in.', { name: preset.label }) })
   } catch (error) {
     set(notice, { tone: 'danger', text: message(error) })
   } finally {
@@ -772,7 +764,7 @@ export async function saveForm(): Promise<void> {
     const input: ProfileInput = { ...rest, ...(current.provider === 'copilot' ? { apiKey: '' } : apiKey.trim() || !current.id ? { apiKey: apiKey.trim() } : {}) }
     set(models, await plugin.request('models.save', input))
     set(form, null)
-    set(notice, { tone: 'success', text: t('Saved {name}.', { name: current.name }) })
+    set(notice, { tone: 'success', text: formatText('Saved {name}.', { name: current.name }) })
   } catch (error) {
     set(notice, { tone: 'danger', text: message(error) })
   } finally {
@@ -830,7 +822,7 @@ export async function setRoles(patch: { hookProfileId?: string | null; selectorP
 export async function switchModel(profile: ProfileView, model: string): Promise<void> {
   try {
     set(models, await plugin.request('models.save', { ...profile, model }))
-    set(notice, { tone: 'success', text: t('{name} now uses {model}.', { name: profile.name, model: model || t('CLI default') }) })
+    set(notice, { tone: 'success', text: formatText('{name} now uses {model}.', { name: profile.name, model: model || 'CLI default' }) })
   } catch (error) {
     set(notice, { tone: 'danger', text: message(error) })
   }
@@ -874,7 +866,7 @@ export async function launchAgent(agent: string, prompt: string): Promise<void> 
   set(busy, 'send')
   try {
     await plugin.request('agent.launch', { agent, prompt, ...knownWorkspaceId() })
-    set(notice, { tone: 'success', text: t('Started a new {agent} agent with the prompt.', { agent }) })
+    set(notice, { tone: 'success', text: formatText('Started a new {agent} agent with the prompt.', { agent }) })
   } catch (error) {
     set(notice, { tone: 'danger', text: message(error) })
   } finally {
@@ -919,9 +911,9 @@ export async function clearData(what: 'history' | 'catalogs' | 'all'): Promise<v
     }
     set(confirmWipe, false)
     const done: Record<typeof what, () => string> = {
-      all: () => t('All plugin data deleted.'),
-      history: () => t('History cleared.'),
-      catalogs: () => t('Model lists cleared.')
+      all: () => 'All plugin data deleted.',
+      history: () => 'History cleared.',
+      catalogs: () => 'Model lists cleared.'
     }
     set(notice, { tone: 'success', text: done[what]() })
     await refreshModels()
@@ -981,7 +973,7 @@ export function removeStructure(id: string): void {
 /** The plugin's issue page, in the browser (the host asks before opening a site the first time). */
 export async function openIssues(): Promise<void> {
   const opened = await shell.openExternal(ISSUES_URL).catch(() => ({ opened: false }))
-  if (!opened.opened) set(notice, { tone: 'neutral', text: t('Open {url} in your browser.', { url: ISSUES_URL }) })
+  if (!opened.opened) set(notice, { tone: 'neutral', text: formatText('Open {url} in your browser.', { url: ISSUES_URL }) })
 }
 
 /**
@@ -1025,5 +1017,5 @@ export function setFeedbackNotes(on: boolean): void {
  */
 export function stopFeedback(): void {
   setFeedbackNotes(false)
-  set(notice, { tone: 'neutral', text: t('No more feedback notes. To turn them back on, open the gear icon and look under Feedback.') })
+  set(notice, { tone: 'neutral', text: 'No more feedback notes. To turn them back on, open the gear icon and look under Feedback.' })
 }

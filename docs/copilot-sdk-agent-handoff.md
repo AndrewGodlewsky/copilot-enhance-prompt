@@ -199,7 +199,7 @@ These exports contain no human prompt events. Therefore human-prompt averages an
 
 Log operation, timestamp, duration, outcome, recognized error code and the failed validation stage. For model discovery, log runtime/bootstrap/API booleans and received/eligible/filter counts. The original failure report identified `bootstrapPresent: false`; that was enough to fix the embedded-entry check without exposing raw process arguments.
 
-Keep logs bounded and make them copyable on demand. Replace SDK exceptions with safe plugin errors: raw exceptions can include input or credentials. Surface identity mismatch, SDK unavailability, model filtering, tool/workspace mismatch, timeout and accounting failure distinctly. The reference uses `error.copilot_usage` and `copilot.usage` for recording failures. Adapt these names and translation plumbing to the destination project.
+Keep logs bounded and make them copyable on demand. Replace SDK exceptions with safe plugin errors: raw exceptions can include input or credentials. Surface identity mismatch, SDK unavailability, model filtering, tool/workspace mismatch, timeout and accounting failure distinctly. The reference uses `error.copilot_usage` and `copilot.usage` for recording failures. Adapt these names and message rendering to the destination project.
 
 **Verify the port with fixtures before asking for real use.**
 

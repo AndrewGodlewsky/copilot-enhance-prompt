@@ -1,8 +1,8 @@
+import { formatText } from '../../src/format.ts'
 // Attaching files in the web panel: paste, drop or the paperclip. A frame has no path for a file, so
 // its bytes go to the worker in chunks (`attachments.put`), which keeps it in a temporary folder and
 // answers with the path the run then uses.
 import { plugin, read, set } from '#panel'
-import { t } from '../../src/i18n.ts'
 import { files, notice, message, put, type AttachedFile } from '../../src/panel/state.ts'
 import { ATTACHMENT_CHUNK_BYTES, MAX_ATTACHMENT_BYTES, MAX_IMAGE_BYTES, sizeOver } from '../../src/image-limits.ts'
 
@@ -22,9 +22,9 @@ const megabytes = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`
  */
 export function tooLarge(file: { name: string; size: number; type: string }): string | null {
   if (file.type.startsWith('image/') && file.size > MAX_IMAGE_BYTES) {
-    return t('{name} is {size}; an image can be at most {max}.', { name: file.name, size: sizeOver(file.size, MAX_IMAGE_BYTES), max: megabytes(MAX_IMAGE_BYTES) })
+    return formatText('{name} is {size}; an image can be at most {max}.', { name: file.name, size: sizeOver(file.size, MAX_IMAGE_BYTES), max: megabytes(MAX_IMAGE_BYTES) })
   }
-  if (file.size > MAX_FILE_BYTES) return t('{name} is {size}; an attachment can be at most {max}.', { name: file.name, size: sizeOver(file.size, MAX_FILE_BYTES), max: megabytes(MAX_FILE_BYTES) })
+  if (file.size > MAX_FILE_BYTES) return formatText('{name} is {size}; an attachment can be at most {max}.', { name: file.name, size: sizeOver(file.size, MAX_FILE_BYTES), max: megabytes(MAX_FILE_BYTES) })
   return null
 }
 
@@ -67,7 +67,7 @@ async function uploadOne(file: File, name: string): Promise<AttachedFile> {
 /** Attaches files (from a paste, a drop or the picker); too many or too large ones get a notice. */
 export async function attachFiles(list: readonly File[], refresh: () => void): Promise<void> {
   const room = MAX_FILES - read<AttachedFile[]>(files).length - uploading.length
-  if (list.length > room) set(notice, { tone: 'warning', text: t('At most {max} files per prompt.', { max: MAX_FILES }) })
+  if (list.length > room) set(notice, { tone: 'warning', text: formatText('At most {max} files per prompt.', { max: MAX_FILES }) })
   for (const file of list.slice(0, Math.max(0, room))) {
     const refused = tooLarge(file)
     if (refused) {

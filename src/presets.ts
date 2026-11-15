@@ -169,6 +169,6 @@ export function isContextLevel(value: unknown): value is ContextLevel {
 /** One piece of context the rewriter saw; `id` is stable so the person can exclude it. */
 /**
  * A context item as the panel lists it. `label` and `note` are English (the model reads them);
- * `title` and `why` are the same as Messages, for the panel's language.
+ * `title` and `why` carry structured messages for the panel and diagnostics.
  */
 export type ContextItemView = { id: string; kind: string; label: string; chars: number; note?: string; title?: Message; why?: Message }

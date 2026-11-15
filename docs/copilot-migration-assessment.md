@@ -2,6 +2,8 @@
 
 **Implementation update, November 14, 2026:** the native canvas port, local marketplace package, storage and session adapters, and command-based transformed-prompt hook are now implemented. Unit and installed-runtime integration checks have passed; desktop visual verification remains unfinished. The sections below preserve the initial assessment and its then-open questions. For current behavior and installation, read the [README](../README.md) and [end-to-end workflow](prompt-workflow.md).
 
+**Language update, November 14, 2026:** references below to language selection, translation work and localized release links describe the original migration scope. Version 0.3.0 uses an English interface and English rewritten instructions; follow the current README and workflow for active guidance.
+
 Assessment date: 2026-11-14. Target confirmed: the GitHub Copilot desktop app.
 
 The prompt engine and React interface are reusable. The host integration must

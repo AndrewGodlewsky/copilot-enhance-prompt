@@ -1,9 +1,9 @@
+import { formatText } from '../format.ts'
 // setup.ts: starts the panel. the host's and the worker's events reach the panel's state (state.ts) and
 // the first data is asked for. No UI here: the web panel (web/src/main.tsx) calls it once its frame
 // is ready, and the tests call it on the host's panel runtime (src/panel/testing.ts), so the wiring that
 // ships is the wiring that is tested.
-import { env, on, plugin, read, set, settings } from '#panel'
-import { t } from '../i18n.ts'
+import { on, plugin, read, set, settings } from '#panel'
 import {
   applyProgress,
   cancel,
@@ -40,23 +40,20 @@ export function wirePanel(): () => void {
     plugin.on('hook.enhanced', ({ agent, mode, model }) => {
       set(notice, {
         tone: 'neutral',
-        text: t('Auto-enhanced ({mode}) a prompt for {agent}.', {
+        text: formatText('Auto-enhanced ({mode}) a prompt for {agent}.', {
           mode: model ? `${mode}, ${model}` : mode,
-          agent: agent ?? t('an agent')
+          agent: agent ?? 'an agent'
         })
       })
       void refreshHookLast()
     }),
     // Auto-enhance (AI) let a prompt through as it was: say why, it used to be in the log only.
     plugin.on('hook.skipped', ({ agent, reason }) => {
-      set(notice, { tone: 'warning', text: t('Auto-enhance left a prompt for {agent} unchanged: {reason}', { agent: agent ?? t('an agent'), reason: say(reason) }) })
+      set(notice, { tone: 'warning', text: formatText('Auto-enhance left a prompt for {agent} unchanged: {reason}', { agent: agent ?? 'an agent', reason: say(reason) }) })
       void refreshHookLast()
     })
   ]
   void refreshDefaults()
-  // The worker cannot see which language Copilot runs in; its status bar tooltip and its commands'
-  // answers follow it while the panel's language is Auto.
-  void plugin.request('ui.locale', { locale: env.locale ?? 'en' }).catch(() => undefined)
   void refreshModels()
   void refreshTargets()
   void refreshRules()

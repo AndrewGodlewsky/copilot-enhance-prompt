@@ -4,7 +4,7 @@ Auto-enhance is off by default. The packaged `userPromptTransformed` command hoo
 
 - Off: preserve the prompt.
 - Rules: append the text in Prompt preferences, unless already present.
-- AI: use an enabled API model with a two-second budget. CLI models are excluded because startup can exceed that budget. Failure, timeout or an empty rewrite preserves the original prompt.
+- AI: use an enabled API model with a two-second budget. Rewritten instructions use English while preserving quoted text, code and other supplied data. CLI models are excluded because startup can exceed that budget. Failure, timeout or an empty rewrite preserves the original prompt.
 
 Prompts enhanced and sent by this panel bypass the hook through a short-lived hash scoped to the session. Context reads follow the same privacy switches as manual enhancement and use the working directory supplied by the runtime. The Settings tab reports its session's most recent outcome.
 

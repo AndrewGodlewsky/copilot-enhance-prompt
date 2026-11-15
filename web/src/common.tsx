@@ -4,7 +4,6 @@ import { useEffect, type ReactNode } from 'react'
 import { read, set } from '#panel'
 import { InfoIcon } from 'lucide-react'
 import { toast, Toaster } from 'sonner'
-import { t } from '../../src/i18n.ts'
 import { runNoticeAction } from '../../src/panel/actions.ts'
 import { notice } from '../../src/panel/state.ts'
 import { Button } from '@/components/ui/button'
@@ -36,8 +35,8 @@ export function Notices() {
       position="bottom-center"
       theme={document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
       closeButton
-      containerAriaLabel={t('Notifications')}
-      toastOptions={{ className: 'text-sm', closeButtonAriaLabel: t('Close'), classNames: { closeButton: 'transition-opacity!' } }}
+      containerAriaLabel={'Notifications'}
+      toastOptions={{ className: 'text-sm', closeButtonAriaLabel: 'Close', classNames: { closeButton: 'transition-opacity!' } }}
       style={
         {
           '--normal-bg': 'var(--popover)',

@@ -1,5 +1,5 @@
 import { build } from 'esbuild'
-import { cp, mkdir } from 'node:fs/promises'
+import { cp, mkdir, rm } from 'node:fs/promises'
 import { spawnSync } from 'node:child_process'
 import path from 'node:path'
 
@@ -11,5 +11,10 @@ const directory = 'com.github.copilot/extensions/enhance-prompt'
 await mkdir(directory, { recursive: true })
 await build({ entryPoints: ['src/copilot/extension.ts'], outfile: `${directory}/extension.mjs`, bundle: true, platform: 'node', format: 'esm', target: 'node22', external: ['@github/copilot-sdk', '@github/copilot-sdk/extension'], banner: { js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);" }, legalComments: 'inline' })
 await build({ entryPoints: ['src/copilot/hook-entry.ts'], outfile: 'com.github.copilot/hooks/hook.mjs', bundle: true, platform: 'node', format: 'esm', target: 'node22', banner: { js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);" }, legalComments: 'inline' })
-await cp('src/web-dist', path.join(directory, 'web'), { recursive: true })
+// Replace the generated web directory so deleted Vite chunks cannot survive an upgrade.
+const packagedWeb = path.resolve(directory, 'web')
+const relativeWeb = path.relative(process.cwd(), packagedWeb)
+if (relativeWeb.startsWith('..') || path.isAbsolute(relativeWeb)) throw new Error('Packaged web directory must stay inside the project')
+await rm(packagedWeb, { recursive: true, force: true })
+await cp('src/web-dist', packagedWeb, { recursive: true })
 console.log('Built the Copilot canvas extension and panel.')

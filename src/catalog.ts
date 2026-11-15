@@ -14,7 +14,7 @@ import type { Message } from './messages.ts'
 import type { Provider } from './presets.ts'
 
 export type CatalogModel = { id: string; label: string; description?: string; isDefault?: boolean }
-/** `errorText`: the same as `error` as a message, when the reason is the plugin's own (the panel shows it in its language). */
+/** `errorText`: the same as `error` as a message, when the reason is the plugin's own (also used by diagnostics). */
 export type Catalog = { models: CatalogModel[]; source: string; fetchedAt: number; error?: string; errorText?: Message }
 
 /** A cached catalog from storage, or null when it is missing or malformed. */

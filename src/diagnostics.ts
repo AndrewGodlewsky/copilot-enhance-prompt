@@ -7,7 +7,7 @@ const OPERATIONS = new Set([
   'prompt.enhance', 'prompt.send', 'prompt.copy', 'context.preview', 'attachments.put',
   'models.get', 'models.save', 'models.delete', 'models.move', 'models.roles', 'models.test', 'models.catalog', 'models.detect',
   'history.remove', 'history.clear', 'history.restore', 'consents.get', 'consent.set', 'agent.launch', 'editor.open',
-  'targets.list', 'ui.locale', 'hook.last', 'rules.get', 'rules.save', 'data.summary', 'data.clear',
+  'targets.list', 'hook.last', 'rules.get', 'rules.save', 'data.summary', 'data.clear',
   'copilot.refresh', 'copilot.catalog', 'copilot.runtime', 'copilot.start', 'copilot.session', 'copilot.access', 'copilot.workspace',
   'copilot.tools', 'copilot.images', 'copilot.account', 'copilot.generate', 'copilot.usage', 'copilot.cleanup'
 ])

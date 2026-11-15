@@ -55,12 +55,13 @@ test('a rule is followed everywhere, in its own project, or (saved before 2.6.5)
   assert.deepEqual(parseRulesConfig(null), { rules: [], structures: [] })
 })
 
-test('the system prompt: a structure replaces the style shape, rules are listed last and win', () => {
-  const system = buildSystemPrompt({ style: 'concise', language: 'vi', rules: ['Always run pnpm test.'], structure: { name: 'Mine', sections: ['Mục tiêu', 'Tiêu chí hoàn thành'] } })
+test('the system prompt: a structure replaces the style shape, user data stays verbatim, and English output wins', () => {
+  const system = buildSystemPrompt({ style: 'concise', rules: ['Always run pnpm test.'], structure: { name: 'Mine', sections: ['Mục tiêu', 'Tiêu chí hoàn thành'] } })
   assert.match(system, /under exactly these headings, in this order:\n1\. Mục tiêu\n2\. Tiêu chí hoàn thành/)
   assert.ok(!/tight, unambiguous prompt/.test(system), 'the concise shape should be replaced')
   assert.match(system, /Rules from the user \(always follow them; they win over the shape above\):\n- Always run pnpm test\./)
-  assert.match(buildSystemPrompt({ style: 'concise', language: 'auto' }), /tight, unambiguous prompt/)
+  assert.match(system, /Output policy: Write all final rewritten instructions and headings in English/)
+  assert.match(buildSystemPrompt({ style: 'concise' }), /tight, unambiguous prompt/)
 })
 
 function workerHost(workspace: string) {

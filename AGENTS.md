@@ -19,18 +19,18 @@ Before changing SDK integration, inspect the installed SDK declarations and [mig
 npm ci
 npm --prefix web ci
 npm run typecheck
-npm test
 npm run build
+npm test
 npm run check
 ```
 
-Build after changing backend, panel, translations or release notes. The normal test suite uses Node's test runner and no desktop app. It includes real child-process tests; allow up to five minutes for an individual test. `node scripts/e2e.mjs` tests the built extension with the installed runtime when `COPILOT_SDK_DIR` and `COPILOT_CLI_PATH` are set. It uses a disposable session and a local HTTP model fixture; never send test traffic to a paid provider or an existing session.
+Build after changing backend, panel or release notes. Run the final tests after rebuilding. The normal test suite uses Node's test runner and no desktop app. It includes real child-process tests; allow up to five minutes for an individual test. `node scripts/e2e.mjs` tests the built extension with the installed runtime when `COPILOT_SDK_DIR` and `COPILOT_CLI_PATH` are set. It uses a disposable session and a local HTTP model fixture; never send test traffic to a paid provider or an existing session.
 
 `npm run web:dev` previews sample data at port 5174. `scripts/shot-web.mjs` uses Brave by default. Live model evaluation is separate: `scripts/eval-prompts.mjs` uses an actual CLI subscription, so describe that validation accurately.
 
 ## Behavioral invariants
 
-- Every UI string goes through `t()` with Vietnamese and Chinese translations in the same change. The coverage test scans literal calls and enumerates text tables. Keep `Enhance Prompt` unchanged as a brand; use `BRAND`.
+- Write plugin-authored UI and rewritten prompt text in English. Use literal English strings in the panel and a small `formatText` helper only for interpolation. The English output policy takes precedence over conflicting custom rules, structures or project instructions. Preserve user data, custom rules and structures, Unicode, code, identifiers, filenames, paths, URLs, quoted text and error messages as supplied. Keep `Enhance Prompt` unchanged as a brand; use `BRAND`.
 - Keep flat colors in brand assets and UI imagery. Preserve the MIT license and original copyright.
 - Get the source project from `metadata.snapshot().workingDirectory`, never `session.workspacePath`. Reject remote or uncertain project roots. Project rules use the canonical project path; drafts are scoped to the session.
 - Check privacy switches before every read: preview, normal runs and auto-enhance. Project files go through `readText`; refuse sensitive filenames and links escaping the project. Mask before trimming. Use `redactCode` for source code and `redactSecrets` for terminal-like text.
@@ -46,7 +46,7 @@ Build after changing backend, panel, translations or release notes. The normal t
 
 ## Release artifacts
 
-Keep `plugin.json`, `src/version.ts`, and all three changelogs in sync. Rebuild and check the generated package. Do not commit scratch scripts, test data, private logs or credentials.
+Keep `plugin.json`, `src/version.ts`, and the English `CHANGELOG.md` in sync. Rebuild and check the generated package. Do not commit scratch scripts, test data, private logs or credentials.
 
 Commit and push completed, verified work to `main` unless the owner requests otherwise. Never force-push. Tagging and creating releases remain separate owner decisions; the build/check scripts publish nothing.
 

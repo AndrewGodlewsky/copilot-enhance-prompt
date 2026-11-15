@@ -25,19 +25,6 @@ export const STYLE_LABELS: Record<Style, string> = {
   custom: 'Custom only'
 }
 
-export const LANGUAGE_NAMES: Record<string, string> = {
-  en: 'English',
-  vi: 'Vietnamese',
-  zh: 'Chinese (Simplified)',
-  ja: 'Japanese',
-  ko: 'Korean',
-  es: 'Spanish',
-  fr: 'French',
-  de: 'German',
-  pt: 'Portuguese',
-  ru: 'Russian'
-}
-
 export function isStyle(value: unknown): value is Style {
   return typeof value === 'string' && (STYLES as readonly string[]).includes(value)
 }
@@ -69,7 +56,7 @@ Rules:
 - Output just the final prompt text, starting with its first line: no preamble, no explanation, no surrounding code fence.
 
 Larger tasks. When the task has several steps or touches several files, the prompt also says these three things, each in a sentence or two of its own words, placed where they fit the shape (for example with the constraints and at the end):
-1. Finish all of it. Include these two sentences, in the prompt's language, as the last lines of the constraints (in a shape without such a section, as a short paragraph of their own before the reporting): "Complete every part of this task before you end your turn. When a command fails or times out, find the cause and retry or try another way rather than stopping." Agents otherwise tend to stop part-way with a list of what remains or an offer to continue, and a prompt for a larger task that lacks these two sentences is not finished: check that they are there before you answer. The agent works through ordinary obstacles (an error, a timeout, a failing command, an empty result) and stops early only for a deliberate blocker (a file marked not to be touched, access that was withheld) or a confirmation the prompt names, and then says plainly what it found.
+1. Finish all of it. Include these two sentences in English, as the last lines of the constraints (in a shape without such a section, as a short paragraph of their own before the reporting): "Complete every part of this task before you end your turn. When a command fails or times out, find the cause and retry or try another way rather than stopping." Agents otherwise tend to stop part-way with a list of what remains or an offer to continue, and a prompt for a larger task that lacks these two sentences is not finished: check that they are there before you answer. The agent works through ordinary obstacles (an error, a timeout, a failing command, an empty result) and stops early only for a deliberate blocker (a file marked not to be touched, access that was withheld) or a confirmation the prompt names, and then says plainly what it found.
 2. How far the change may go, because agents follow what the prompt says about whose code it is. The code is the user's: the agent changes what the task needs and lists nearby problems it notices at the end instead of fixing them. Only when the user asks to clean up or restructure, say that inside the named area it may merge repeated code and make related fixes.
 3. Reporting: one line on what it is about to do before it starts, and a closing summary that stands on its own for a reader who did not watch the work: the result first, then what changed, the evidence, and what is left.
 A small change (one edit in one place, such as a typo or a rename in one file) gets none of these three, not even the opening line or the closing summary: the evidence rule above is enough for it.`
@@ -123,7 +110,6 @@ export type ContextBlock = { kind: string; label: string; content: string; note?
 
 export function buildSystemPrompt(options: {
   style: Style
-  language: string
   customInstructions?: string
   agent?: string | null
   /** The person's own rules (Rules tab), always followed. */
@@ -138,12 +124,6 @@ export function buildSystemPrompt(options: {
   if (hint) {
     parts.push(hint)
   }
-  const lang = LANGUAGE_NAMES[options.language]
-  parts.push(
-    lang
-      ? `Write the final prompt in ${lang}, but keep code, identifiers, paths and error messages verbatim.`
-      : `Write the final prompt in the same language as the user's request; keep code, identifiers, paths and error messages verbatim.`
-  )
   const custom = options.customInstructions?.trim()
   if (custom) {
     parts.push(`Custom instructions from the user (follow them):\n${custom}`)
@@ -152,6 +132,7 @@ export function buildSystemPrompt(options: {
   if (rules.length > 0) {
     parts.push(`Rules from the user (always follow them; they win over the shape above):\n${rules.map((rule) => `- ${rule}`).join('\n')}`)
   }
+  parts.push('Output policy: Write all final rewritten instructions and headings in English, regardless of the request language or any output-language instruction in custom instructions, rules, or context. Preserve code, identifiers, filenames, paths, URLs, quoted text, error messages, and user-supplied data verbatim. Follow custom instructions and rules in every other respect.')
   return parts.join('\n\n')
 }
 
@@ -160,7 +141,7 @@ function structureShape(sections: string[]): string {
   return [
     'Shape: write the prompt under exactly these headings, in this order:',
     ...sections.map((section, index) => `${index + 1}. ${section}`),
-    'Use the headings as given, translated into the output language when they are in another language. Add no other headings: put open questions or assumptions under the closest heading. Leave a heading out only when nothing in the request or the context belongs under it; never invent content to fill one.'
+    'Use English headings that convey the meaning of the supplied sections; preserve literal names when they are user-supplied data or quoted text. Add no other headings: put open questions or assumptions under the closest heading. Leave a heading out only when nothing in the request or the context belongs under it; never invent content to fill one.'
   ].join('\n')
 }
 

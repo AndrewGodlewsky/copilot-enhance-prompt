@@ -48,11 +48,9 @@ const store = new Map<string, unknown>([
 ])
 const settingsValues: Record<string, unknown> = {
   ...DEFAULTS,
-  uiLanguage: 'auto',
   defaultStyle: 'balanced',
   // Deep: the level whose steps (git, relevant code) the sample run below goes through.
   contextLevel: 'deep',
-  outputLanguage: 'auto',
   autoEnhanceMode: 'off',
   fallbackEnabled: true,
   fallbackOn: 'any',
@@ -98,24 +96,9 @@ const SAMPLE_PROMPT = `Fix the login page layout on mobile screens (under 640 px
 - No horizontal scroll from 320 px up; the button is visible without zooming.
 - pnpm test and pnpm lint pass.`
 
-const SAMPLE_PROMPT_VI = `Sửa bố cục trang đăng nhập trên màn hình điện thoại (dưới 640 px).
-
-## Bối cảnh
-- Ứng dụng Next.js 15, Tailwind CSS; trang nằm ở app/(auth)/login/page.tsx và components/LoginForm.tsx.
-- Thay đổi gần đây: commit a41c9e2 "Move auth forms to the new Card component".
-
-## Việc cần làm
-1. Tái hiện ở độ rộng 375 px và 414 px: form tràn ra ngoài, nút đăng nhập bị khuất.
-2. Tìm nguyên nhân (có thể do độ rộng cố định trong Card hoặc LoginForm) và sửa bằng class responsive.
-3. Giữ nguyên bố cục trên máy tính.
-
-## Xong khi
-- Không có thanh cuộn ngang từ 320 px trở lên; nút hiện đầy đủ.
-- pnpm test và pnpm lint đều qua.`
-
 /**
  * A context item as the worker lists it: an English label (the model reads it) and the same as a
- * message, for the panel's language; `why` says how a file was found.
+ * message, in English; `why` says how a file was found.
  */
 const contextItem = (id: string, kind: string, title: Message, chars: number, why?: Message) => ({
   id,
@@ -181,7 +164,7 @@ async function enhance(input: Record<string, unknown>, signal?: AbortSignal) {
   const files = (input.files as string[] | undefined) ?? []
   const ms = Date.now() - startedAt
   return {
-    enhanced: `${/[à-ỹ]/i.test(String(input.prompt)) ? SAMPLE_PROMPT_VI : SAMPLE_PROMPT}${files.length ? `\n\nAttached files:\n${files.map((file) => `- ${file}`).join('\n')}` : ''}`,
+    enhanced: `${SAMPLE_PROMPT}${files.length ? `\n\nAttached files:\n${files.map((file) => `- ${file}`).join('\n')}` : ''}`,
     model: answered.model,
     profileName: answered.name,
     ms,
@@ -268,7 +251,6 @@ const handlers: Record<string, (input: Record<string, unknown>, signal?: AbortSi
         : hookDemo === 'skipped'
           ? { at: Date.now() - 4 * 60_000, outcome: 'skipped', agent: 'codex', reason: msg('hook.no_model') }
           : null,
-  'ui.locale': () => ({ ok: true }),
   'data.summary': () => ({ history: (store.get('history') as unknown[]).length, profiles: models.profiles.length, keys: 1, catalogs: 2 }),
   'data.clear': () => null,
   'consents.get': () => ({ granted: [...granted], needed: ['allowOtherAgents', 'allowAgentActivity', 'allowAgentLaunch'] }),
@@ -298,7 +280,6 @@ export async function installMockHost(): Promise<void> {
   } catch {
     // Damaged copy: the defaults above.
   }
-  if (query.get('lang')) settingsValues.uiLanguage = query.get('lang')
   for (const key of UNSUPPORTED_SETTINGS) settingsValues[key] = false
   // ?set=key:value,key:value sets settings; ?consent=key,key confirms switches (pictures of the panel).
   for (const pair of (query.get('set') ?? '').split(',').filter(Boolean)) {
@@ -324,7 +305,6 @@ export async function installMockHost(): Promise<void> {
   }
   const api = {
     api: { major: 1, minor: 99 },
-    locale: navigator.language,
     on: (event: string, handler: Handler) => listen(event, handler),
     plugin: {
       request: async (name: string, input?: Record<string, unknown>, options?: { signal?: AbortSignal; timeoutMs?: number }) => {

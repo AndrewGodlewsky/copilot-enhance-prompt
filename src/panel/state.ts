@@ -6,7 +6,6 @@ import { HISTORY_KEY, parseHistory } from '../history.ts'
 import type { RulesConfig } from '../rules.ts'
 import { isMessage, messageIn, plainText, render, type Message } from '../messages.ts'
 import { type ContextItemView } from '../presets.ts'
-import { t } from '../i18n.ts'
 import { type Step } from '../progress.ts'
 import { type AttemptView, type HookRecord, type ModelsView, type ProfileInput } from '../protocol.ts'
 
@@ -21,7 +20,6 @@ export type Defaults = {
   pressEnter: boolean
   fallbackEnabled: boolean
   fallbackOn: string
-  outputLanguage: string
   autoEnhanceMode: string
   notifyWhenDone: boolean
   /** Read other agents' sessions: how many agents, how many lines each. */
@@ -38,8 +36,6 @@ export const level = atom<string | null>('level', null, { persist: 'plugin' })
 export const profileChoice = atom('profileChoice', 'auto', { persist: 'plugin' })
 /** The model picked for that profile in the composer; '' = the profile's own model. */
 export const modelChoice = atom('modelChoice', '', { persist: 'plugin' })
-/** Per-prompt output language: 'default' uses the setting. */
-export const outputChoice = atom('outputChoice', 'default', { persist: 'plugin' })
 export const excluded = atom<string[]>('excluded', [])
 export const target = atom<string | null>('target', null)
 export const pressEnter = atom<boolean | null>('pressEnter', null)
@@ -111,7 +107,7 @@ export const privacy = atom<Record<string, boolean>>({})
 export const confirmWipe = atom(false)
 /** The Privacy switches the person confirmed in the panel (the worker keeps them); see NEEDS_CONSENT. */
 export const consents = atom<string[]>([])
-/** The composer's options (style, context, output, Enter) are shown. */
+/** The composer's options (style, context, Enter) are shown. */
 export const optionsOpen = atom('optionsOpen', false, { persist: 'plugin' })
 
 export const busy = atom<'enhance' | 'preview' | 'send' | 'test' | 'save' | null>(null)
@@ -220,7 +216,6 @@ export const defaults = atom<Defaults>({
   pressEnter: false,
   fallbackEnabled: true,
   fallbackOn: 'any',
-  outputLanguage: 'auto',
   autoEnhanceMode: 'off',
   notifyWhenDone: false,
   otherAgents: { agents: 4, lines: 80 }
@@ -246,13 +241,13 @@ export const effectiveLevel = derived(() => read(level) ?? read(defaults).level)
 export const effectiveEnter = derived(() => read(pressEnter) ?? read(defaults).pressEnter)
 export const enabledProfiles = derived(() => (read(models)?.profiles ?? []).filter((profile) => profile.enabled))
 
-/** A worker Message in the panel's language; a plain string (saved by an older version) as is. */
+/** A worker Message in English; a plain string (saved by an older version) as is. */
 export function say(text: Message | string): string {
-  return typeof text === 'string' ? text : render(text, (template, params) => t(template, params))
+  return typeof text === 'string' ? text : render(text)
 }
 
 /**
- * An error in the panel's language. The worker's message comes inside the error's text (the host passes
+ * An error in English. The worker's message comes inside the error's text (the host passes
  * on a thrown error's code and text only; see messages.ts); without one, the text is shown as it is.
  */
 export const message = (error: unknown) => {

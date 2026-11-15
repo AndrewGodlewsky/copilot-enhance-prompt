@@ -8,9 +8,10 @@
 //                                                 # the same against another tree's src/ (an exported release)
 // A model answers differently each time: one failing run is not a regression and one clean run is
 // no proof. Compare counts over 20 runs or more before keeping or dropping a wording.
-// It checks what can be checked mechanically: no preamble or fence, the right language, no file
+// It checks what can be checked mechanically: no preamble or fence, no file
 // paths that are not in the context or the request, the user's details kept, sane length, and
-// nothing about what the rewriter itself was or was not given.
+// nothing about what the rewriter itself was or was not given. Review English prose manually
+// with --show; a character-based detector would incorrectly reject preserved Unicode literals.
 import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { join, resolve } from 'node:path'
@@ -48,21 +49,21 @@ const PATH = /\b(?:src|scripts|docs)\/[\w./-]+\.\w+/g
 const known = new Set(context.flatMap((block) => [block.label, ...(block.content.match(PATH) ?? [])]))
 
 const CASES = [
-  { name: 'vague bug, Vietnamese', style: 'bugfix', prompt: 'panel mở chậm quá, sửa đi', language: 'vi', keep: [] },
-  { name: 'feature, nothing in context about it', style: 'feature', prompt: 'add a dark mode toggle to the settings', language: 'en', keep: ['dark mode'], noise: ['zz-'] },
-  { name: 'concise rename', style: 'concise', prompt: 'rename the History tab to Log everywhere, also in the vi and zh translations', language: 'en', keep: ['History', 'Log'], maxChars: 800, noise: ['zz-', 'PANEL_REQUEST_LIMIT_MS'] },
-  { name: 'details kept, Vietnamese', style: 'balanced', prompt: 'khi gửi prompt dài hơn 4096 ký tự vào terminal thì bị lỗi "text: Too big", xử lý giúp', language: 'vi', keep: ['4096', 'Too big'] },
-  { name: 'reason kept, Vietnamese', style: 'balanced', prompt: 'tăng độ trễ trước khi nhấn Enter sau khi gửi lên 300 ms, vì Codex hay nhận thiếu đoạn cuối của prompt dài', language: 'vi', keep: ['300', 'Codex'], reason: true },
-  { name: 'structure', style: 'balanced', prompt: 'thêm nút xuất lịch sử ra file CSV', language: 'vi', keep: ['CSV'], structure: { name: 'Mine', sections: ['Mục tiêu', 'Yêu cầu', 'Tiêu chí hoàn thành'] } },
+  { name: 'vague bug, Vietnamese input', style: 'bugfix', prompt: 'panel mở chậm quá, sửa đi', keep: [] },
+  { name: 'feature, nothing in context about it', style: 'feature', prompt: 'add a dark mode toggle to the settings', keep: ['dark mode'], noise: ['zz-'] },
+  { name: 'concise rename', style: 'concise', prompt: 'rename the History tab to Log everywhere in the UI', keep: ['History', 'Log'], maxChars: 800, noise: ['zz-', 'PANEL_REQUEST_LIMIT_MS'] },
+  { name: 'details kept, Vietnamese input', style: 'balanced', prompt: 'khi gửi prompt dài hơn 4096 ký tự vào terminal thì bị lỗi "text: Too big", xử lý giúp', keep: ['4096', 'Too big'] },
+  { name: 'reason kept, Vietnamese input', style: 'balanced', prompt: 'tăng độ trễ trước khi nhấn Enter sau khi gửi lên 300 ms, vì Codex hay nhận thiếu đoạn cuối của prompt dài', keep: ['300', 'Codex'], reason: true },
+  { name: 'structure', style: 'balanced', prompt: 'thêm nút xuất lịch sử ra file CSV', keep: ['CSV'], structure: { name: 'Mine', sections: ['Goal', 'Requirements', 'Done when'] } },
   // Prompting Claude Fable 5.2: a task with several steps is finished in one go and ends with a summary that stands on its own.
-  { name: 'several steps: finish it, recap', style: 'detailed', prompt: 'move every scripts/*.test.mjs to TypeScript, update scripts/release.mjs to match, and get the whole test suite passing again', language: 'en', keep: ['scripts/release.mjs'], finish: true },
+  { name: 'several steps: finish it, recap', style: 'detailed', prompt: 'move every scripts/*.test.mjs to TypeScript, update scripts/release.mjs to match, and get the whole test suite passing again', keep: ['scripts/release.mjs'], finish: true },
   // ...while a small change gets none of that.
-  { name: 'small change stays small', style: 'balanced', prompt: 'fix the typo "recieve" in README.md', language: 'en', keep: ['recieve', 'README.md'], maxChars: 1100, small: true },
+  { name: 'small change stays small', style: 'balanced', prompt: 'fix the typo "recieve" in README.md', keep: ['recieve', 'README.md'], maxChars: 1100, small: true },
   // The Off level, a remote workspace, project files switched off: the rewriter gets the request alone.
   // The agent has the whole project, so the prompt says what to find, not what the rewriter lacked.
-  { name: 'no project context', style: 'balanced', prompt: 'add dark mode to the settings page', language: 'en', keep: ['dark mode'], bare: true },
+  { name: 'no project context', style: 'balanced', prompt: 'add dark mode to the settings page', keep: ['dark mode'], bare: true },
   // An action the person already approved is written as approved, not asked about again.
-  { name: 'approved action', style: 'balanced', prompt: 'delete the unused scripts/shots.sh and commit it. I confirm the deletion, no need to ask me', language: 'en', keep: ['scripts/shots.sh'], approved: /(ask|confirm|check with)[^.\n]{0,40}before[^.\n]{0,30}delet|wait for (my |the user'?s? )?(confirmation|approval)/i }
+  { name: 'approved action', style: 'balanced', prompt: 'delete the unused scripts/shots.sh and commit it. I confirm the deletion, no need to ask me', keep: ['scripts/shots.sh'], approved: /(ask|confirm|check with)[^.\n]{0,40}before[^.\n]{0,30}delet|wait for (my |the user'?s? )?(confirmation|approval)/i }
 ]
 
 /**
@@ -82,10 +83,9 @@ const GIVEN = new RegExp(
     .join('|'),
   'i'
 )
-const VIETNAMESE = /[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ]/i
 /** One case through the model once: what is wrong with the prompt it wrote (nothing, when it is right). */
 async function runCase(item) {
-  const system =buildSystemPrompt({ style: item.style, language: 'auto', agent: 'claude', structure: item.structure ?? null })
+  const system =buildSystemPrompt({ style: item.style, agent: 'claude', structure: item.structure ?? null })
   const user = buildUserMessage(item.prompt, item.bare ? [] : context)
   const started = Date.now()
   let text
@@ -99,11 +99,6 @@ async function runCase(item) {
   if (/^```/.test(text)) problems.push('wrapped in a code fence')
   const given = GIVEN.exec(text)
   if (given) problems.push(`talks about what the rewriter was given ("${given[0].trim().slice(0, 80)}")`)
-  // Vietnamese if a fair share of its letters carry Vietnamese marks (a quoted word or two does not count).
-  const marked = (text.match(new RegExp(VIETNAMESE.source, 'gi')) ?? []).length
-  const isVi = marked / Math.max(1, (text.match(/\p{L}/gu) ?? []).length) > 0.03
-  if (item.language === 'vi' && !isVi) problems.push('not in Vietnamese')
-  if (item.language === 'en' && isVi) problems.push('not in English')
   for (const word of item.keep) if (!text.includes(word)) problems.push(`lost "${word}"`)
   for (const path of text.match(PATH) ?? []) {
     if (!known.has(path) && !item.prompt.includes(path)) problems.push(`invented path ${path}`)
@@ -186,5 +181,5 @@ for (const item of chosen) {
   if (clean !== runs) failures++
   if (show) for (const entry of results) console.log(`${rule}\n${entry.text}\n${rule}`)
 }
-console.log(failures ? `\n${failures} case(s) need work` : '\nAll cases look right')
+console.log(failures ? `\n${failures} case(s) need work` : '\nMechanical checks passed. Review --show output for English instructions and verbatim user literals.')
 process.exit(failures ? 1 : 0)

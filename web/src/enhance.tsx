@@ -1,3 +1,4 @@
+import { formatText } from '../../src/format.ts'
 // The Enhance section of the web panel: the composer (paste, drop or attach files; Enter enhances),
 // the run's progress, the context sent, and the enhanced prompt with Send.
 import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react'
@@ -19,7 +20,6 @@ import {
   Trash2Icon,
   XIcon
 } from 'lucide-react'
-import { t } from '../../src/i18n.ts'
 import { totalPercent, stepPercent } from '../../src/progress.ts'
 import {
   busy,
@@ -35,7 +35,6 @@ import {
   lastRun,
   level,
   optionsOpen,
-  outputChoice,
   pressEnter,
   put,
   result,
@@ -84,7 +83,6 @@ import {
   modelWarning,
   targetLabel,
   optionsSummary,
-  outputOptions,
   pickModel,
   runSeconds,
   seconds,
@@ -132,7 +130,7 @@ function Attachments() {
           </span>
           <button
             type="button"
-            aria-label={t('Remove {name}', { name: file.name })}
+            aria-label={formatText('Remove {name}', { name: file.name })}
             onClick={() => removeFile(file.path)}
             className="text-muted-foreground hover:text-foreground absolute top-1 right-1 grid size-8 place-items-center rounded-md hover:bg-accent"
           >
@@ -156,7 +154,7 @@ function ModelPicker() {
   const value = currentModelValue()
   return (
     <Pick
-      label={t('Model')}
+      label={'Model'}
       value={options.some((option) => option.value === value) ? value : 'auto'}
       options={options}
       onChange={pickModel}
@@ -209,12 +207,12 @@ function Composer({ refresh }: { refresh: () => void }) {
       }}
       onDrop={onDrop}
     >
-      <h2 className="text-base font-semibold">{t('Write a request')}</h2>
+      <h2 className="text-base font-semibold">{'Write a request'}</h2>
       <Attachments />
       <Textarea
-        aria-label={t('Your prompt')}
+        aria-label={'Your prompt'}
         aria-describedby="composer-help"
-        placeholder={t('Describe what you want the agent to do…')}
+        placeholder={'Describe what you want the agent to do…'}
         value={text}
         rows={3}
         onChange={(event) => put(draft, event.target.value)}
@@ -222,19 +220,19 @@ function Composer({ refresh }: { refresh: () => void }) {
         onPaste={onPaste}
         className="max-h-80 min-h-28 resize-y bg-background shadow-none dark:bg-background"
       />
-      <p id="composer-help" className="text-muted-foreground text-xs">{t('Enter to enhance · Shift+Enter for a new line')}</p>
+      <p id="composer-help" className="text-muted-foreground text-xs">{'Enter to enhance in English · Shift+Enter for a new line'}</p>
       {dragging ? (
         <div className="border-primary text-primary pointer-events-none absolute inset-1 grid place-items-center rounded-lg border-2 border-dashed text-sm font-medium">
-          {t('Drop files to attach')}
+          {'Drop files to attach'}
         </div>
       ) : null}
       <div className="flex items-end gap-2">
-        <Field label={t('Model')} className="flex-1">
+        <Field label={'Model'} className="flex-1">
           <ModelPicker />
         </Field>
         <Button size="sm" variant="outline" aria-expanded={read(optionsOpen)} aria-controls={read(optionsOpen) ? 'prompt-options' : undefined} onClick={() => update(optionsOpen, (open) => !open)}>
           <SlidersHorizontalIcon />
-          {t('Options')}
+          {'Options'}
         </Button>
       </div>
       <p className="text-muted-foreground text-xs">{optionsSummary()}</p>
@@ -252,32 +250,32 @@ function Composer({ refresh }: { refresh: () => void }) {
           />
           <Button size="sm" variant="ghost" onClick={() => picker.current?.click()} disabled={attachedCount >= MAX_FILES}>
             <PaperclipIcon />
-            {t('Attach files')}
+            {'Attach files'}
           </Button>
         <div className="ml-auto flex flex-wrap justify-end gap-2">
           {working === 'enhance' ? (
             <Button size="sm" variant="outline" onClick={cancel}>
               <SquareIcon />
-              {t('Cancel')}
+              {'Cancel'}
             </Button>
           ) : (
             <>
               {/* "Send right after enhancing" is on: the one-step button sits next to Enhance, which still stops at the result. */}
               {sendsAfterEnhance() ? (
-                <Button size="sm" title={t('Enhance and send without reading (Ctrl+Enter)')} variant="outline" onClick={() => void enhanceAndSend()} disabled={!text.trim() || working !== null || !read(target)}>
+                <Button size="sm" title={'Enhance and send without reading (Ctrl+Enter)'} variant="outline" onClick={() => void enhanceAndSend()} disabled={!text.trim() || working !== null || !read(target)}>
                   <SendIcon />
-                  {t('Enhance and send')}
+                  {'Enhance and send'}
                 </Button>
               ) : null}
               <Button size="sm" onClick={() => void enhanceNow()} disabled={!text.trim() || working !== null}>
-                {t('Enhance')}
+                {'Enhance'}
                 <kbd aria-hidden="true"><CornerDownLeftIcon className="size-3" /></kbd>
               </Button>
             </>
           )}
         </div>
       </div>
-      {sendsAfterEnhance() ? <p className="text-muted-foreground text-xs">{t('Enhance and send skips review. Enhance lets you edit first.')}</p> : null}
+      {sendsAfterEnhance() ? <p className="text-muted-foreground text-xs">{'Enhance and send skips review. Enhance lets you edit first.'}</p> : null}
     </div>
   )
 }
@@ -293,11 +291,11 @@ function CustomInstructions() {
   }, [])
   if (text === null) return null
   return (
-    <Field label={t('Custom instructions')}>
+    <Field label={'Custom instructions'}>
       <Textarea
         rows={3}
         value={text}
-        placeholder={t('e.g. Write the prompt as a numbered checklist; always ask the agent to run the tests.')}
+        placeholder={'e.g. Write the prompt as a numbered checklist; always ask the agent to run the tests.'}
         onChange={(event) => setText(event.target.value)}
         onBlur={() => void setSetting('customInstructions', text.slice(0, 4000))}
         className="bg-background"
@@ -306,29 +304,26 @@ function CustomInstructions() {
   )
 }
 
-/** Style, context, output language and structure, under the composer when opened, and the context sent. */
+/** Style, context and structure, under the composer when opened, and the context sent. */
 function PromptOptions() {
   if (!read(optionsOpen)) return null
   return (
     <div id="prompt-options" className="bg-muted/50 flex flex-col gap-3 rounded-lg border p-3">
       <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-2">
-        <Field label={t('Style')}>
-          <Pick label={t('Style')} value={read(effectiveStyle)} options={styleOptions()} onChange={(value) => set(style, value)} />
+        <Field label={'Style'}>
+          <Pick label={'Style'} value={read(effectiveStyle)} options={styleOptions()} onChange={(value) => set(style, value)} />
         </Field>
-        <Field label={t('Context')}>
-          <Pick label={t('Context')} value={read(effectiveLevel)} options={levelOptions()} onChange={(value) => set(level, value)} />
+        <Field label={'Context'}>
+          <Pick label={'Context'} value={read(effectiveLevel)} options={levelOptions()} onChange={(value) => set(level, value)} />
         </Field>
-        <Field label={t('Output language')}>
-          <Pick label={t('Output language')} value={read(outputChoice)} options={outputOptions()} onChange={(value) => set(outputChoice, value)} />
-        </Field>
-        <Field label={t('Structure')}>
-          <Pick label={t('Structure')} value={structureValue()} options={structureOptions()} onChange={(value) => set(structureChoice, value === 'style' ? '' : value)} />
+        <Field label={'Structure'}>
+          <Pick label={'Structure'} value={structureValue()} options={structureOptions()} onChange={(value) => set(structureChoice, value === 'style' ? '' : value)} />
         </Field>
       </div>
       {read(effectiveStyle) === 'custom' ? <CustomInstructions /> : null}
       <div>
-        <h3 className="text-sm font-medium">{t('Context to include')}</h3>
-        <p className="text-muted-foreground text-xs">{t('Uncheck anything you do not want sent to the rewriting model.')}</p>
+        <h3 className="text-sm font-medium">{'Context to include'}</h3>
+        <p className="text-muted-foreground text-xs">{'Uncheck anything you do not want sent to the rewriting model.'}</p>
       </div>
       <ContextList />
     </div>
@@ -345,7 +340,7 @@ function RunCard() {
     return (
       <div className="text-muted-foreground flex items-center gap-2 text-sm">
         <Spinner />
-        <span className="truncate">{t('Writing the prompt for {name}…', { name: current.workspace.name ?? '?' })}</span>
+        <span className="truncate">{formatText('Writing the prompt for {name}…', { name: current.workspace.name ?? '?' })}</span>
       </div>
     )
   }
@@ -355,8 +350,8 @@ function RunCard() {
   const active = steps.find((entry) => entry.status === 'running')
   const finished = steps.filter((entry) => entry.status === 'done' || entry.status === 'skipped')
   const next = steps.find((entry) => entry.status === 'pending')
-  const idle = finished.length === 0 ? t('Starting…') : next ? stepText(next) : t('Finishing…')
-  const title = running ? (active ? stepText(active) : idle) : current.status === 'cancelled' ? t('Cancelled') : t('Enhance failed')
+  const idle = finished.length === 0 ? 'Starting…' : next ? stepText(next) : 'Finishing…'
+  const title = running ? (active ? stepText(active) : idle) : current.status === 'cancelled' ? 'Cancelled' : 'Enhance failed'
   const failed = current.status === 'error'
   return (
     <div className={cn('flex flex-col gap-2 rounded-lg border p-3', failed && 'border-destructive/40')}>
@@ -368,7 +363,7 @@ function RunCard() {
         </div>
         <span className="text-muted-foreground shrink-0 text-xs tabular-nums">{runSeconds(current, now)}</span>
       </div>
-      <Progress value={total} aria-label={t('Progress: {percent}%', { percent: total })} className="h-1.5" />
+      <Progress value={total} aria-label={formatText('Progress: {percent}%', { percent: total })} className="h-1.5" />
       {steps.length > 0 ? (
         <ul className="flex flex-col gap-0.5 text-xs">
           {steps.map((entry) => {
@@ -386,7 +381,7 @@ function RunCard() {
                   <span className="truncate">{`${STEP_GLYPH[entry.status]}  ${stepText(entry)}`}</span>
                   <span className="tabular-nums">{stepShare(entry, now)}</span>
                 </div>
-                {isRunning ? <Progress value={stepPercent(entry, now) ?? 0} aria-label={t(STEP_LABELS[entry.key])} className="h-1" /> : null}
+                {isRunning ? <Progress value={stepPercent(entry, now) ?? 0} aria-label={STEP_LABELS[entry.key]} className="h-1" /> : null}
               </li>
             )
           })}
@@ -397,10 +392,10 @@ function RunCard() {
         <div className="flex gap-1.5">
           <Button size="sm" variant="outline" onClick={() => void enhanceNow()}>
             <RotateCcwIcon />
-            {t('Try again')}
+            {'Try again'}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => set(run, null)}>
-            {t('Dismiss')}
+            {'Dismiss'}
           </Button>
         </div>
       )}
@@ -425,7 +420,7 @@ function ContextList() {
     return working === 'preview' ? (
       <div className="text-muted-foreground flex items-center gap-1.5 px-1 text-xs">
         <Spinner className="size-3.5" />
-        {t('Gathering…')}
+        {'Gathering…'}
       </div>
     ) : null
   }
@@ -438,14 +433,14 @@ function ContextList() {
             <span className="min-w-0">
               <span className="block truncate text-sm">{item.title ? say(item.title) : item.label}</span>
               <span className="text-muted-foreground block text-xs">
-                {t('{kind} · {chars} chars', { kind: contextKind(item.kind), chars: item.chars.toLocaleString() })}
+                {formatText('{kind} · {chars} chars', { kind: contextKind(item.kind), chars: item.chars.toLocaleString('en-US') })}
                 {itemWhy(item)}
               </span>
             </span>
           </label>
           {/* Outside the label: a press here must not tick or untick the item. */}
           {item.id.startsWith('file:') && allowed('allowOpenFiles') ? (
-            <IconAction label={t('Open in Copilot')} className="shrink-0" onClick={() => void openFile(item.id.slice('file:'.length))}>
+            <IconAction label={'Open in Copilot'} className="shrink-0" onClick={() => void openFile(item.id.slice('file:'.length))}>
               <ExternalLinkIcon />
             </IconAction>
           ) : null}
@@ -464,11 +459,11 @@ function ContextList() {
 function TargetPicker() {
   const list = read(targets)
   return (
-    <Field label={t('Send to')}>
+    <Field label={'Send to'}>
       <Pick
-        label={t('Send to')}
+        label={'Send to'}
         value={read(target) ?? undefined}
-        placeholder={list.length === 0 ? t('Copilot session unavailable') : t('Attached Copilot session')}
+        placeholder={list.length === 0 ? 'Copilot session unavailable' : 'Attached Copilot session'}
         options={list.map((item) => ({ value: item.terminalId, label: targetLabel(item) }))}
         onChange={(value) => set(target, value)}
         onOpen={() => void refreshTargets()}
@@ -484,12 +479,12 @@ function ResultCard({ output }: { output: string }) {
   return (
     <div className="bg-card flex flex-col gap-3 rounded-xl border p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-semibold">{t('Review and send')}</h2>
-          {info ? <Badge variant="success-light">{`${t('Done')} · ${seconds(info.ms)}`}</Badge> : null}
+          <h2 className="text-base font-semibold">{'Review and send'}</h2>
+          {info ? <Badge variant="success-light">{`${'Done'} · ${seconds(info.ms)}`}</Badge> : null}
       </div>
-      <p id="result-help" className="text-muted-foreground text-xs">{t('Edit the enhanced prompt below, then copy it or send it to Copilot.')}</p>
+      <p id="result-help" className="text-muted-foreground text-xs">{'Edit the enhanced prompt below, then copy it or send it to Copilot.'}</p>
       <Textarea
-        aria-label={t('Enhanced prompt')}
+        aria-label={'Enhanced prompt'}
         aria-describedby="result-help"
         value={output}
         rows={10}
@@ -504,16 +499,16 @@ function ResultCard({ output }: { output: string }) {
         className="max-h-[60vh] min-h-48 text-sm leading-relaxed"
       />
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Button size="sm" variant="outline" onClick={() => void copy(output)}><CopyIcon />{t('Copy')}</Button>
+        <Button size="sm" variant="outline" onClick={() => void copy(output)}><CopyIcon />{'Copy'}</Button>
         <div className="flex gap-1">
-          <IconAction label={t('Save as a file')} onClick={() => void savePrompt(output)}><DownloadIcon /></IconAction>
-          <IconAction label={t('Refine: use the enhanced prompt as the new input')} onClick={() => { put(draft, output); put(result, '') }}><ArrowUpToLineIcon /></IconAction>
-          <IconAction label={t('Clear')} onClick={() => put(result, '')}><Trash2Icon /></IconAction>
+          <IconAction label={'Save as a file'} onClick={() => void savePrompt(output)}><DownloadIcon /></IconAction>
+          <IconAction label={'Refine: use the enhanced prompt as the new input'} onClick={() => { put(draft, output); put(result, '') }}><ArrowUpToLineIcon /></IconAction>
+          <IconAction label={'Clear'} onClick={() => put(result, '')}><Trash2Icon /></IconAction>
         </div>
       </div>
       {failed.length > 0 ? (
         <p className="text-warning-foreground text-xs">
-          {t('Fell back after: {list}', {
+          {formatText('Fell back after: {list}', {
             list: failed.map((attempt) => `${attempt.name} (${attempt.errorText ? say(attempt.errorText) : (attempt.error ?? 'failed')})`).join(', ')
           })}
         </p>
@@ -524,12 +519,12 @@ function ResultCard({ output }: { output: string }) {
           <TooltipTrigger asChild>
             <Button className="self-end" size="sm" onClick={() => void send(output)} disabled={!allowed('allowTerminalSend') || !read(target) || working !== null}>
               <SendIcon />
-              {t('Send to Copilot')}
+              {'Send to Copilot'}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{t('Send to Copilot (Ctrl+Enter)')}</TooltipContent>
+          <TooltipContent>{'Send to Copilot (Ctrl+Enter)'}</TooltipContent>
         </Tooltip>
-        {!allowed('allowTerminalSend') ? <p className="text-muted-foreground text-xs">{t('Send to Copilot is off in Settings. You can still copy or save this prompt.')}</p> : !read(target) ? <p className="text-muted-foreground text-xs">{t('Copilot session unavailable. You can still copy or save this prompt.')}</p> : working !== null ? <p className="text-muted-foreground text-xs">{t('Wait for the current operation to finish before sending.')}</p> : null}
+        {!allowed('allowTerminalSend') ? <p className="text-muted-foreground text-xs">{'Send to Copilot is off in Settings. You can still copy or save this prompt.'}</p> : !read(target) ? <p className="text-muted-foreground text-xs">{'Copilot session unavailable. You can still copy or save this prompt.'}</p> : working !== null ? <p className="text-muted-foreground text-xs">{'Wait for the current operation to finish before sending.'}</p> : null}
       </div>
       {allowed('allowAgentLaunch') ? <NewAgent output={output} /> : null}
     </div>
@@ -550,11 +545,11 @@ function NewAgent({ output }: { output: string }) {
   const [kind, setKind] = useState(kinds[0])
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-muted-foreground shrink-0 text-xs">{t('Or start a new agent')}</span>
-      <Pick label={t('Agent')} value={kind} options={kinds.map((value) => ({ value, label: value }))} onChange={setKind} className="h-8 w-28" />
+      <span className="text-muted-foreground shrink-0 text-xs">{'Or start a new agent'}</span>
+      <Pick label={'Agent'} value={kind} options={kinds.map((value) => ({ value, label: value }))} onChange={setKind} className="h-8 w-28" />
       <Button size="sm" variant="outline" onClick={() => void launchAgent(kind, output)} disabled={read(busy) !== null}>
         <BotIcon />
-        {t('Start')}
+        {'Start'}
       </Button>
     </div>
   )
@@ -570,17 +565,17 @@ function FeedbackNote() {
     <div className="bg-card flex items-start gap-2 rounded-xl border py-2 pr-1.5 pl-2.5">
       <LightbulbIcon className="text-muted-foreground mt-0.5 size-4 shrink-0" />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <p className="text-muted-foreground text-xs">{t('Got an idea, or something that could work better? Send your feedback: it is how the plugin improves.')}</p>
+        <p className="text-muted-foreground text-xs">{'Got an idea, or something that could work better? Send your feedback: it is how the plugin improves.'}</p>
         <div className="flex flex-wrap items-center gap-1">
           <Button size="xs" variant="outline" onClick={() => void sendFeedback()}>
-            {t('Send feedback')}
+            {'Send feedback'}
           </Button>
           <Button size="xs" variant="ghost" className="text-muted-foreground" onClick={stopFeedback}>
-            {t("Don't ask again")}
+            {"Don't ask again"}
           </Button>
         </div>
       </div>
-      <IconAction label={t('Close')} className="size-8 shrink-0" onClick={closeFeedback}>
+      <IconAction label={'Close'} className="size-8 shrink-0" onClick={closeFeedback}>
         <XIcon />
       </IconAction>
     </div>
@@ -596,13 +591,13 @@ export function WorkspacePicker() {
   if (choices.length === 0) return null
   return (
     <Alert variant="warning">
-      <AlertTitle>{t('Which folder is this project?')}</AlertTitle>
+      <AlertTitle>{'Which folder is this project?'}</AlertTitle>
       <AlertDescription className="flex flex-col gap-2">
-        <span>{t('Several projects are named {name} on the same branch. Pick its folder so its files are read and its rules are followed.', { name: read(workspaceName) ?? '?' })}</span>
+        <span>{formatText('Several projects are named {name} on the same branch. Pick its folder so its files are read and its rules are followed.', { name: read(workspaceName) ?? '?' })}</span>
         <Pick
-          label={t('Project folder')}
+          label={'Project folder'}
           value={undefined}
-          placeholder={t('Choose a folder')}
+          placeholder={'Choose a folder'}
           options={choices.map((choice) => ({ value: choice.id, label: projectLabel(choice) }))}
           onChange={(value) => void pickWorkspace(value)}
         />
@@ -626,27 +621,27 @@ export function EnhanceSection({ refresh }: { refresh: () => void }) {
       {output ? <FeedbackNote /> : null}
       {warning ? (
         <Alert variant="warning">
-          <AlertTitle>{warning === 'no-model' ? t('No model yet') : t('No API key yet')}</AlertTitle>
+          <AlertTitle>{warning === 'no-model' ? 'No model yet' : 'No API key yet'}</AlertTitle>
           <AlertDescription className="flex flex-col gap-2">
             {found.length > 0 ? (
               <>
-                <span>{t('Found on this machine. It uses your subscription: no API key needed.')}</span>
+                <span>{'Found on this machine. It uses your subscription: no API key needed.'}</span>
                 <span className="flex flex-wrap gap-1.5">
                   {found.map((entry) => (
                     <Button key={entry.preset} size="sm" onClick={() => void addDetected(entry.preset, entry.path)}>
-                      {t('Use {name}', { name: entry.label.replace(/ \(.*\)$/, '') })}
+                      {formatText('Use {name}', { name: entry.label.replace(/ \(.*\)$/, '') })}
                     </Button>
                   ))}
                   <Button size="sm" variant="ghost" onClick={() => set(tab, 'models')}>
-                    {t('Other models')}
+                    {'Other models'}
                   </Button>
                 </span>
               </>
             ) : (
               <span className="flex items-center justify-between gap-2">
-                <span>{t('Add one in the Models tab.')}</span>
+                <span>{'Add one in the Models tab.'}</span>
                 <Button size="sm" variant="outline" onClick={() => set(tab, 'models')}>
-                  {t('Open Models')}
+                  {'Open Models'}
                 </Button>
               </span>
             )}

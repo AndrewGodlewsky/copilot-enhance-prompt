@@ -131,7 +131,7 @@ export type ChainOptions = {
 export class ChainError extends Error {
   code: string
   attempts: Attempt[]
-  /** The message as a code and parameters, for the panel to show in its language. */
+  /** The message as a code and parameters, for structured error handling. */
   text: Message
   constructor(text: Message, code: string, attempts: Attempt[]) {
     super(english(text))

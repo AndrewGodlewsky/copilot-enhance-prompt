@@ -8,7 +8,7 @@ import { CLI_BINARIES, detectClis } from './cli.ts'
 import { copyToClipboard } from './clipboard.ts'
 import { forgetActivity, recordSave, recordStatus, recordTool } from './context/activity.ts'
 import { isSensitive } from './context/files.ts'
-import { resolveLanguage, translate, type UiLanguage } from './i18n-dict.ts'
+import { formatText } from './format.ts'
 import { atLeast, cachedStatic, contextItem, findFocusedWorkspace, focusedCandidates, focusedProject, gatherContext, isLocalWorkspace, projectNameOf, staticParts, workspaceOfTerminal, type ContextItem, type Workspace } from './context/index.ts'
 import { forgetTerminals, learnTerminal, loadTerminals } from './context/terminals.ts'
 import { workspaceTitle } from './workspaces.ts'
@@ -63,7 +63,6 @@ const CATALOG_TTL_MS = 24 * 3600_000
 
 export type Settings = {
   defaultStyle: Style
-  outputLanguage: string
   customInstructions: string
   contextLevel: ContextLevel
   terminalLines: number
@@ -84,7 +83,6 @@ export type Settings = {
   notifyWhenDone: boolean
   /** Read other agents' sessions: how many agents and lines (within OTHER_AGENTS_LIMITS). */
   otherAgentsLimits: OtherAgentsLimits
-  uiLanguage: string
   /** The switches as the worker may use them (confirmed where they need it). */
   privacy: Privacy
 }
@@ -101,7 +99,6 @@ export async function readSettings(host: EnhanceWorker): Promise<Settings> {
   const level = str(all.contextLevel, 'standard')
   return {
     defaultStyle: isStyle(style) ? style : 'balanced',
-    outputLanguage: str(all.outputLanguage, 'auto'),
     customInstructions: str(all.customInstructions),
     contextLevel: isContextLevel(level) ? level : 'standard',
     terminalLines: num(all.terminalLines, 100),
@@ -124,14 +121,13 @@ export async function readSettings(host: EnhanceWorker): Promise<Settings> {
     autoEnhanceContext: bool(all.autoEnhanceContext, true),
     notifyWhenDone: bool(all.notifyWhenDone, false),
     otherAgentsLimits: parseOtherAgentsLimits(all),
-    uiLanguage: str(all.uiLanguage, 'auto'),
     privacy: parsePrivacy(all, parseConsents(consents))
   }
 }
 
 /**
  * An error for the panel: a code, and the message as a code and parameters, which the panel shows
- * in its own language. the host passes on an error's code and text only, so the message travels inside
+ * in English. the host passes on an error's code and text only, so the message travels inside
  * the text, after the English sentence (messages.ts); `text` is there for callers in this process.
  */
 function hostError(text: Message, code: string): Error {
@@ -275,7 +271,6 @@ export async function enhance(
     level?: string
     profileId?: string | null
     model?: string
-    language?: string
     exclude?: string[]
     structureId?: string
     /** Attached files of any kind (the panel's paste, drop and picker), by the path attachments.put answered. */
@@ -329,10 +324,8 @@ export async function enhance(
   })
   if (level !== requested) gathered.notes.push(PROJECT_FILES_OFF)
   const agentItem = gathered.items.find((entry) => entry.kind === 'agent')
-  const language = input.language && /^[a-z]{2,4}$/.test(input.language) ? input.language : settings.outputLanguage
   const system = buildSystemPrompt({
     style,
-    language,
     customInstructions: settings.customInstructions,
     agent: settings.adaptToAgent ? (agentItem?.content.split(' ')[0] ?? null) : null,
     rules: own.rules,
@@ -388,7 +381,7 @@ export async function enhance(
     }
   } catch (error) {
     // The step names the model that was tried. Why it failed is the run's error, which the panel
-    // shows in its own language (a step's detail is not translated).
+    // shows in English (a step's detail is plain text).
     step('model', 'failed', tried || undefined)
     if (error instanceof ChainError) {
       // Every model that was tried ran out of time: say what makes a run faster.
@@ -466,7 +459,7 @@ const SIDEBAR_KEY = process.platform === 'darwin' ? '⌘L' : 'Ctrl+L'
 
 /**
  * The status bar item says whether auto-enhance is at work: "Enhance: On" or "Enhance: Off", the
- * same short words in every language, like the brand. Which kind is on (rules or AI) is in the
+ * English text. Which kind is on (rules or AI) is in the
  * tooltip. Its icon is the plugin's own lightbulb, the one on the panel's tab. While on, the item
  * has the accent tone, which the host draws bright; off, the neutral one, which it draws dimmed.
  *
@@ -477,57 +470,18 @@ const SIDEBAR_KEY = process.platform === 'darwin' ? '⌘L' : 'Ctrl+L'
 export const statusBarText = (mode: AutoMode): string => `${BRAND_SHORT}: ${mode === 'off' ? 'Off' : 'On'}`
 
 /**
- * What the worker itself says, per panel language: the status bar's tooltip, and the answers of
- * its commands, which the host shows.
+ * The English words shown in the status bar's tooltip and command answers.
  */
-const WORKER_WORDS: Record<string, { modes: Record<AutoMode, string>; tooltip: (mode: string) => string; answer: (mode: string) => string; bar: { hidden: string; shown: string } }> = {
-  en: {
-    modes: { off: 'off', rules: 'on (rules)', ai: 'on (AI)' },
-    tooltip: (mode) =>
-      `Click: open the right sidebar (${SIDEBAR_KEY}), then the lightbulb tab "${BRAND}".\nAuto-enhance is ${mode}. Change it under the panel's gear icon or in the command palette.\nSettings and updates: Settings → Plugins → Enhance Prompt.`,
-    answer: (mode) => `Auto-enhance is ${mode}.`,
-    bar: { hidden: 'Status bar item hidden.', shown: 'Status bar item shown.' }
-  },
-  vi: {
-    modes: { off: 'tắt', rules: 'bật (quy tắc)', ai: 'bật (AI)' },
-    tooltip: (mode) =>
-      `Bấm: mở thanh bên phải (${SIDEBAR_KEY}), rồi chọn tab bóng đèn "${BRAND}".\nTự cải thiện đang ${mode}. Đổi ở biểu tượng bánh răng của panel hoặc trong command palette.\nCài đặt và cập nhật: Settings → Plugins → Enhance Prompt.`,
-    answer: (mode) => `Tự cải thiện đang ${mode}.`,
-    bar: { hidden: 'Đã ẩn mục trên thanh trạng thái.', shown: 'Đã hiện mục trên thanh trạng thái.' }
-  },
-  zh: {
-    modes: { off: '关', rules: '开（规则）', ai: '开（AI）' },
-    tooltip: (mode) => `点击：打开右侧边栏（${SIDEBAR_KEY}），再选灯泡标签 “${BRAND}”。\n自动优化：${mode}。可在面板的齿轮图标下或命令面板中更改。\n设置与更新：Settings → Plugins → Enhance Prompt。`,
-    answer: (mode) => `自动优化：${mode}。`,
-    bar: { hidden: '状态栏项目已隐藏。', shown: '状态栏项目已显示。' }
-  }
+const WORKER_WORDS = {
+  modes: { off: 'off', rules: 'on (rules)', ai: 'on (AI)' },
+  tooltip: (mode: string) =>
+    `Click: open the right sidebar (${SIDEBAR_KEY}), then the lightbulb tab "${BRAND}".\nAuto-enhance is ${mode}. Change it under the panel's gear icon or in the command palette.\nSettings and updates: Settings → Plugins → Enhance Prompt.`,
+  answer: (mode: string) => `Auto-enhance is ${mode}.`,
+  bar: { hidden: 'Status bar item hidden.', shown: 'Status bar item shown.' }
 }
 
-/**
- * the host's own language, as the panel last reported it (`ui.locale`): a worker cannot see it. Kept
- * in the plugin's storage, so the status bar is in the right language from the host's start, before
- * any panel has opened.
- */
-export const LOCALE_KEY = 'uiLocale'
-
-/** The language the worker speaks: the panel's, and with "Auto" the host's own once a panel has told it (English until then). */
-async function workerLanguage(host: EnhanceWorker, setting?: string): Promise<UiLanguage> {
-  const chosen = setting ?? (await host.settings.get()).uiLanguage
-  const value = typeof chosen === 'string' ? chosen : 'auto'
-  if (value === 'en' || value === 'vi' || value === 'zh') return value
-  const locale = await host.storage.get(LOCALE_KEY).catch(() => null)
-  return resolveLanguage('auto', typeof locale === 'string' ? locale : 'en')
-}
-
-/** The words of that language. */
-async function workerWords(host: EnhanceWorker) {
-  return WORKER_WORDS[await workerLanguage(host)] ?? WORKER_WORDS.en
-}
-
-/** What a command that set the mode answers, in the panel's language. */
-async function modeAnswer(host: EnhanceWorker, mode: AutoMode): Promise<string> {
-  const words = await workerWords(host)
-  return words.answer(words.modes[mode])
+function modeAnswer(mode: AutoMode): string {
+  return WORKER_WORDS.answer(WORKER_WORDS.modes[mode])
 }
 
 async function refreshStatusBar(host: EnhanceWorker): Promise<void> {
@@ -535,7 +489,7 @@ async function refreshStatusBar(host: EnhanceWorker): Promise<void> {
   const all = await host.settings.get()
   const { autoEnhanceMode } = await readSettings(host)
   const display = typeof all.statusBarItem === 'string' ? all.statusBarItem : 'full'
-  const words = await workerWords(host)
+  const words = WORKER_WORDS
   await host.host
     .call('statusBar.update', {
       id: 'auto-enhance',
@@ -551,7 +505,7 @@ async function refreshStatusBar(host: EnhanceWorker): Promise<void> {
 async function setMode(host: EnhanceWorker, mode: AutoMode): Promise<string> {
   await host.settings.set('autoEnhanceMode', mode)
   await refreshStatusBar(host)
-  return modeAnswer(host, mode)
+  return modeAnswer(mode)
 }
 
 /**
@@ -1103,7 +1057,6 @@ function registerDataHandlers(host: EnhanceWorker): void {
       await host.storage.delete(RULES_KEY)
       // Confirmations go too: a switch that needs one asks again; what the host reported is forgotten.
       await host.storage.delete(CONSENTS_KEY)
-      await host.storage.delete(LOCALE_KEY)
       await host.storage.delete('colorTheme')
       forgetActivity()
       launchedPrompts.clear()
@@ -1175,7 +1128,6 @@ function registerAutoEnhance(host: EnhanceWorker): void {
       const rules =rulesFor(parseRulesConfig(await host.storage.get(RULES_KEY).catch(() => null)), place?.where ?? { workspace: null, project: null })
       const system = buildSystemPrompt({
         style: settings.defaultStyle,
-        language: settings.outputLanguage,
         customInstructions: settings.customInstructions,
         agent: settings.adaptToAgent ? event.agent : null,
         rules
@@ -1219,7 +1171,7 @@ function registerAutoEnhance(host: EnhanceWorker): void {
       return next({ ...event, prompt: enhanced })
     } catch (error) {
       host.log(`auto-enhance skipped: ${(error as Error).message}`)
-      // Why, in the panel's language where the plugin knows the reason (a model that was too slow, a failed chain).
+      // Why a model was too slow or a chain failed, as an English structured message.
       const reason = error instanceof ChainError || error instanceof LlmError ? error.text : raw((error as Error).message)
       noteHook(host, { outcome: 'skipped', agent: event.agent, reason })
       return
@@ -1254,7 +1206,7 @@ function registerCommands(host: EnhanceWorker): void {
     const next = AUTO_MODES[(AUTO_MODES.indexOf(autoEnhanceMode) + 1) % AUTO_MODES.length]
     await host.settings.set('autoEnhanceMode', next)
     await refreshStatusBar(host)
-    return modeAnswer(host, next)
+    return modeAnswer(next)
   })
 
   host.commands.register('auto-enhance.off', async () => setMode(host, 'off'))
@@ -1266,20 +1218,11 @@ function registerCommands(host: EnhanceWorker): void {
     const next = all.statusBarItem === 'hidden' ? 'full' : 'hidden'
     await host.settings.set('statusBarItem', next)
     await refreshStatusBar(host)
-    return (await workerWords(host)).bar[next === 'hidden' ? 'hidden' : 'shown']
+    return WORKER_WORDS.bar[next === 'hidden' ? 'hidden' : 'shown']
   })
 
   host.settings.onDidChange(({ key }) => {
-    if (key === 'autoEnhanceMode' || key === 'statusBarItem' || key === 'uiLanguage') void refreshStatusBar(host)
-  })
-  // The panel says which language the host runs in; the status bar follows when that is news.
-  host.panels.handle('ui.locale', async ({ locale }) => {
-    const value = typeof locale === 'string' ? locale.trim().slice(0, 35) : ''
-    if (value && (await host.storage.get(LOCALE_KEY).catch(() => null)) !== value) {
-      await host.storage.set(LOCALE_KEY, value)
-      await refreshStatusBar(host)
-    }
-    return { ok: true as const }
+    if (key === 'autoEnhanceMode' || key === 'statusBarItem') void refreshStatusBar(host)
   })
   void refreshStatusBar(host)
 }
@@ -1393,8 +1336,7 @@ function registerIntegrations(host: EnhanceWorker): void {
 /** After a long panel run: a desktop notification that names the model and time, never the prompt. */
 async function notifyDone(host: EnhanceWorker, settings: Settings, model: string, ms: number): Promise<void> {
   if (!settings.notifyWhenDone || ms < NOTIFY_AFTER_MS || !host.host.has('notifications.show')) return
-  const lang = await workerLanguage(host, settings.uiLanguage)
-  const body = translate(lang, 'Enhanced prompt ready ({model}, {seconds} s)', { model, seconds: (ms / 1000).toFixed(0) })
+  const body = formatText('Enhanced prompt ready ({model}, {seconds} s)', { model, seconds: (ms / 1000).toFixed(0) })
   await host.host.call('notifications.show', { title: BRAND, body }).catch(() => undefined)
 }
 /** Shorter runs end while the person is still looking at the panel. */

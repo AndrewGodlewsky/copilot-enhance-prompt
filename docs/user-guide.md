@@ -1,6 +1,6 @@
 # Using Enhance Prompt
 
-The header switches between Enhance, History, Models, Rules and Settings. The language picker supports English, Vietnamese and Chinese. Auto follows the webview's locale.
+The header switches between Enhance, History, Models, Rules and Settings. The interface and plugin-authored messages are in English.
 
 The Quiet Desk banner changes its still illustration with the current draft and enhancement status. Its window shows morning (05:00–11:59), afternoon (12:00–17:59), or night (18:00–04:59), using your local clock when the panel opens or regains focus. There is no animation. A finished page means a prompt is ready to review, not that it has been sent or verified.
 
@@ -18,7 +18,7 @@ Reports include the plugin version, runtime version, OS/architecture, timestamps
 
 ## Enhance
 
-Write the request, choose style and context level, and optionally select a structure or output language. Paste, drop or pick attachments. Preview the context and exclude anything unnecessary before running a model. Cancel stops the current run. Refine moves the result back into the composer.
+Write the request, choose style and context level, and optionally select a structure. Paste, drop or pick attachments. Preview the context and exclude anything unnecessary before running a model. Cancel stops the current run. Refine moves the result back into the composer. The rewritten instructions and headings use English while preserving your code, paths, quoted text and other supplied data.
 
 Send creates a new message in the attached Copilot session. It checks the session again immediately before submitting. Copy and file download are available for manual handoff. A failed send leaves the result available.
 

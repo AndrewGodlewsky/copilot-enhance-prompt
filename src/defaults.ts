@@ -1,10 +1,8 @@
 // Default preferences for a new Enhance Prompt installation.
 import type { JsonValue } from './runtime.ts'
 export const DEFAULTS: Record<string, JsonValue> = {
-  "uiLanguage": "auto",
   "statusBarItem": "full",
   "defaultStyle": "balanced",
-  "outputLanguage": "auto",
   "customInstructions": "",
   "contextLevel": "standard",
   "terminalLines": 100,

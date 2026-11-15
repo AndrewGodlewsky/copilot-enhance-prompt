@@ -4,7 +4,7 @@ import { build } from 'esbuild'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
-test('Quiet Desk renders every still scene and one translated theme action without the old header logo/version', async () => {
+test('Quiet Desk renders every still scene and English theme actions in a non-English environment', async () => {
   const compiled = await build({
     stdin: {
       contents: `
@@ -14,10 +14,9 @@ test('Quiet Desk renders every still scene and one translated theme action witho
         import { TooltipProvider } from './src/components/ui/tooltip.tsx'
         import { set } from '../src/runtime.ts'
         import { colorTheme } from '../src/panel/appearance.ts'
-        import { uiLanguageSetting } from '../src/i18n.ts'
         export const scene = (time, state) => renderToStaticMarkup(React.createElement(DeskIllustration, { time, state }))
-        export const banner = (theme, language) => {
-          set(colorTheme, theme); set(uiLanguageSetting, language)
+        export const banner = (theme) => {
+          set(colorTheme, theme)
           return renderToStaticMarkup(React.createElement(TooltipProvider, null, React.createElement(QuietDesk)))
         }
       `,
@@ -37,14 +36,17 @@ test('Quiet Desk renders every still scene and one translated theme action witho
     scenes.push(svg)
   }
   assert.equal(new Set(scenes).size, 18)
-  for (const language of ['en', 'vi', 'zh']) {
-    const light = module.exports.banner('light', language)
-    const dark = module.exports.banner('dark', language)
+  const oldLanguage = process.env.LANG
+  process.env.LANG = 'vi_VN.UTF-8'
+  try {
+    const light = module.exports.banner('light')
+    const dark = module.exports.banner('dark')
     assert.equal((light.match(/<button\b/g) ?? []).length, 1)
     assert.equal((dark.match(/<button\b/g) ?? []).length, 1)
     assert.match(light, /GitHub Copilot/)
     assert.match(light, /<h1>Enhance Prompt<\/h1>/)
     assert.doesNotMatch(light, /<img\b|v0\./)
     assert.notEqual(light.match(/aria-label="([^"]+)"/)[1], dark.match(/aria-label="([^"]+)"/)[1])
-  }
+    assert.match(light, /aria-label="[^"]*(?:dark|Dark)[^"]*"/)
+  } finally { process.env.LANG = oldLanguage }
 })

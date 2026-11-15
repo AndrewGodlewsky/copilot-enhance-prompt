@@ -16,27 +16,15 @@ const base: MockRequests = {
 }
 
 test('starting the panel loads its terminals, rules and confirmations, and the settings as they are', async () => {
-  const view = await mountPanel(mockHost({ requests: base, settings: { defaultStyle: 'concise', allowGit: false } }))
+  const view = await mountPanel(mockHost({ requests: base, settings: { defaultStyle: 'concise', allowGit: false, uiLanguage: 'vi', outputLanguage: 'zh' } }))
   assert.deepEqual(read(targets).map((item) => item.terminalId), ['t1'])
   assert.deepEqual(read(rulesState).rules.map((rule) => rule.id), ['r1'])
   assert.deepEqual(read(consents), ['allowAgentLaunch'])
   assert.equal(read(defaults).style, 'concise')
+  assert.equal(Object.hasOwn(read(defaults), 'outputLanguage'), false)
   assert.equal(read(privacy).allowGit, false)
   assert.deepEqual(view.errors, [])
   await view.unmount()
-})
-
-test('starting the panel tells the worker which language Copilot runs in', async () => {
-  const told: string[] = []
-  const requests: MockRequests = { ...base, 'ui.locale': (input: { locale: string }) => (told.push(input.locale), { ok: true as const }) }
-  const view = await mountPanel(mockHost({ requests }), { locale: 'vi-VN' })
-  assert.deepEqual(told, ['vi-VN'])
-  assert.deepEqual(view.errors, [])
-  await view.unmount()
-  // A worker that has no such request (an older one still running after an update) is no error.
-  const older = await mountPanel(mockHost({ requests: base }), { locale: 'vi-VN' })
-  assert.deepEqual(older.errors, [])
-  await older.unmount()
 })
 
 test("the worker's progress and the auto-enhance hook's news reach the panel", async () => {

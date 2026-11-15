@@ -1,6 +1,6 @@
 # Settings
 
-All preferences live inside the canvas. Prompt preferences includes default style, context and output language, custom instructions, extra context files, exclusions, model timeout, history limit and the text appended by Rules auto-enhance. Model fallback is configured in Models.
+All preferences live inside the canvas. Prompt preferences include default style and context, custom instructions, extra context files, exclusions, model timeout, history limit and the text appended by Rules auto-enhance. Model fallback is configured in Models. Rewritten instructions and headings use English; language instructions in custom rules cannot override this policy, while the rules' other guidance still applies.
 
 Privacy switches are checked by the worker on every preview, enhancement and prompt hook. Unsupported controls are disabled in both the UI and backend.
 

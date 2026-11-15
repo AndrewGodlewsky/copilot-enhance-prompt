@@ -24,6 +24,7 @@ const extension = await readFile(`${built}/extension.mjs`, 'utf8')
 assert.match(extension, /@github\/copilot-sdk\/extension/)
 assert.match(extension, /Session connected/)
 async function compare(folder, target) {
+  assert.deepEqual((await readdir(target)).sort(), (await readdir(folder)).sort(), `Unexpected or missing packaged assets: ${target}`)
   for (const entry of await readdir(folder, { withFileTypes: true })) {
     if (entry.isDirectory()) await compare(path.join(folder, entry.name), path.join(target, entry.name))
     else assert.deepEqual(await readFile(path.join(folder, entry.name)), await readFile(path.join(target, entry.name)), `Stale packaged panel: ${entry.name}`)

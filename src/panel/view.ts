@@ -1,15 +1,15 @@
+import { formatText } from '../format.ts'
 // view.ts: what the panel shows, as plain data (labels, options, progress text, the small decisions
 // about what to offer). The web panel (web/src) draws it; the tests check it.
 import { read, set } from '#panel'
 import { CONTEXT_LEVEL_LABELS, CONTEXT_LEVELS, isContextLevel, type ContextItemView, type ProfileView } from '../presets.ts'
 import { isStyle, STYLE_LABELS, STYLES } from '../prompts.ts'
-import { t } from '../i18n.ts'
 import { BRAND } from '../brand.ts'
 import type { HistoryEntry } from '../history.ts'
 import { allStructures, ruleApplies, scopeName, structureById, type Rule, type RulesConfig } from '../rules.ts'
 import { ESTIMATED_STEPS, stepPercent, type Step } from '../progress.ts'
 import type { PrivacyKey } from '../privacy.ts'
-import { type Catalog, type FeedbackAsk, type Run, type Target, catalogs, defaults, enabledProfiles, effectiveLevel, effectiveStyle, modelChoice, models, outputChoice, profileChoice, projectName, rulesState, structureChoice, say, workspaceName } from './state.ts'
+import { type Catalog, type FeedbackAsk, type Run, type Target, catalogs, defaults, enabledProfiles, effectiveLevel, effectiveStyle, modelChoice, models, profileChoice, projectName, rulesState, structureChoice, say, workspaceName } from './state.ts'
 
 /**
  * The names of the panel's sections, on its header icons (the Enhance section shows the brand instead).
@@ -26,34 +26,17 @@ export const AUTO_MODE_HINTS: Record<string, string> = {
   ai: 'A fast API model rewrites hooked prompts with a two-second budget. Failures preserve the original. Prompts sent from this panel are skipped.'
 }
 
-export const UI_LANGUAGE_LABELS: Record<string, string> = { auto: 'Auto', en: 'EN', vi: 'VI', zh: '中文' }
-export const OUTPUT_LANGUAGE_LABELS: Record<string, string> = {
-  auto: 'Output: same as prompt',
-  en: 'Output: English',
-  vi: 'Output: Vietnamese',
-  zh: 'Output: Chinese'
-}
-
-export function outputOptions() {
-  const fallback = read(defaults).outputLanguage
-  const defaultLabel = OUTPUT_LANGUAGE_LABELS[fallback] ? t(OUTPUT_LANGUAGE_LABELS[fallback]) : fallback
-  return [
-    { value: 'default', label: t('Output: default ({value})', { value: defaultLabel.replace(/^[^:：]+[:：]\s*/, '') }) },
-    ...Object.entries(OUTPUT_LANGUAGE_LABELS).map(([value, label]) => ({ value, label: t(label) }))
-  ]
-}
-
 export function modelOptions(catalog: Catalog | undefined, current: string) {
   const options = (catalog?.models ?? []).map((model) => ({
     value: model.id,
-    label: model.isDefault ? `${modelName(model.id, model.label, model.description)} · ${t('your default')}` : modelName(model.id, model.label, model.description)
+    label: model.isDefault ? `${modelName(model.id, model.label, model.description)} · ${'your default'}` : modelName(model.id, model.label, model.description)
   }))
   if (current && !options.some((option) => option.value === current)) options.unshift({ value: current, label: current })
   return options
 }
 
-export const styleOptions = () => STYLES.map((value) => ({ value, label: t(STYLE_LABELS[value]) }))
-export const levelOptions = () => CONTEXT_LEVELS.map((value) => ({ value, label: t(CONTEXT_LEVEL_LABELS[value]) }))
+export const styleOptions = () => STYLES.map((value) => ({ value, label: STYLE_LABELS[value] }))
+export const levelOptions = () => CONTEXT_LEVELS.map((value) => ({ value, label: CONTEXT_LEVEL_LABELS[value] }))
 export const KEY_LABEL: Record<ProfileView['keySource'], string> = {
   secret: 'key saved',
   env: 'key from env',
@@ -112,25 +95,25 @@ export function modelName(id: string, label: string, description?: string): stri
 
 /** Composer names: "Fable 5.1", "GPT-6.1-Sol", or for an alias "sonnet (latest)". */
 export function shortModelName(id: string, label: string): string {
-  if (label.includes(': ')) return `${id} (${t('latest')})`
+  if (label.includes(': ')) return `${id} (${'latest'})`
   return label || id
 }
 
-/** Context item names and kinds come from the worker in English; show them in the panel's language. */
+/** Context item names and kinds come from the worker in English; show them in English. */
 export function contextKind(kind: string): string {
   const kinds: Record<string, () => string> = {
-    workspace: () => t('workspace'),
-    agent: () => t('agent'),
-    rules: () => t('rules'),
-    stack: () => t('stack'),
-    tree: () => t('tree'),
-    git: () => t('git'),
-    file: () => t('file'),
-    terminal: () => t('terminal'),
-    agents: () => t('agents'),
-    session: () => t('agent session'),
-    activity: () => t('activity'),
-    saved: () => t('saved files')
+    workspace: () => 'workspace',
+    agent: () => 'agent',
+    rules: () => 'rules',
+    stack: () => 'stack',
+    tree: () => 'tree',
+    git: () => 'git',
+    file: () => 'file',
+    terminal: () => 'terminal',
+    agents: () => 'agents',
+    session: () => 'agent session',
+    activity: () => 'activity',
+    saved: () => 'saved files'
   }
   return kinds[kind]?.() ?? kind
 }
@@ -154,14 +137,14 @@ export const STEP_LABELS: Record<Step['key'], string> = {
 export const STEP_GLYPH: Record<Step['status'], string> = { pending: '○', running: '●', done: '✓', skipped: '–', failed: '✕' }
 
 export function stepText(entry: Step): string {
-  const label = t(STEP_LABELS[entry.key])
+  const label = STEP_LABELS[entry.key]
   if (!entry.detail) return label
   const count = Number(entry.detail)
   if (entry.key === 'workspace' || entry.key === 'model' || !Number.isFinite(count)) return `${label} · ${entry.detail}`
-  if (entry.key === 'terminal') return `${label} · ${t('{count} lines', { count })}`
-  if (entry.key === 'git') return `${label} · ${t('{count} changed', { count })}`
-  if (entry.key === 'agents') return `${label} · ${t('{count} agents', { count })}`
-  return `${label} · ${t('{count} files', { count })}`
+  if (entry.key === 'terminal') return `${label} · ${formatText('{count} lines', { count })}`
+  if (entry.key === 'git') return `${label} · ${formatText('{count} changed', { count })}`
+  if (entry.key === 'agents') return `${label} · ${formatText('{count} agents', { count })}`
+  return `${label} · ${formatText('{count} files', { count })}`
 }
 
 /** A step's share as shown: "≈" when estimated from time, "–" when skipped. */
@@ -178,15 +161,15 @@ export const shortLabel = (label: string) => label.split(/[:：]/)[0].trim()
 /** An agent's state as the host reports it, in words for the terminal picker. */
 export const AGENT_STATE_LABELS: Record<string, string> = { working: 'working', blocked: 'needs you', waiting: 'waiting', done: 'done' }
 
-/** A terminal as the picker and the notices name it: an agent by its title and its state, in the panel's language. */
+/** A terminal as the picker and the notices name it: an agent by its title and its state, in English. */
 export function targetLabel(item: Target): string {
   if (!item.title || !item.state) return item.label
   const state = AGENT_STATE_LABELS[item.state]
-  return `${item.title} · ${state ? t(state) : item.state}`
+  return `${item.title} · ${state ? state : item.state}`
 }
 
 const two = (value: number) => String(value).padStart(2, '0')
-/** A moment as `2026-11-13 14:05`, in the machine's own time: the same in every language, and it sorts. */
+/** A moment as `2026-11-13 14:05`, in the machine's own time: locale independent, and it sorts. */
 export function stamp(at: number): string {
   const date = new Date(at)
   return `${date.getFullYear()}-${two(date.getMonth() + 1)}-${two(date.getDate())} ${two(date.getHours())}:${two(date.getMinutes())}`
@@ -210,10 +193,10 @@ export function fenced(text: string): string {
  * headings do not become headings of the document.
  */
 export function historyMarkdown(entries: readonly HistoryEntry[], now = Date.now()): string {
-  const parts = [`# ${BRAND}: ${t('History')}`, t('Saved {when} · {count} prompts', { when: stamp(now), count: entries.length })]
+  const parts = [`# ${BRAND}: ${'History'}`, formatText('Saved {when} · {count} prompts', { when: stamp(now), count: entries.length })]
   for (const entry of entries) {
-    const facts = [stamp(entry.at), entry.project ?? '', t(STYLE_LABELS[isStyle(entry.style) ? entry.style : 'balanced']), entry.model, entry.source === 'hook' ? t('auto') : '']
-    parts.push(`## ${facts.filter(Boolean).join(' · ')}`, `### ${t('Your prompt')}`, fenced(entry.original), `### ${t('Enhanced prompt')}`, fenced(entry.enhanced))
+    const facts = [stamp(entry.at), entry.project ?? '', STYLE_LABELS[isStyle(entry.style) ? entry.style : 'balanced'], entry.model, entry.source === 'hook' ? 'auto' : '']
+    parts.push(`## ${facts.filter(Boolean).join(' · ')}`, `### ${'Your prompt'}`, fenced(entry.original), `### ${'Enhanced prompt'}`, fenced(entry.enhanced))
   }
   return `${parts.join('\n\n')}\n`
 }
@@ -222,11 +205,9 @@ export function historyMarkdown(entries: readonly HistoryEntry[], now = Date.now
 export function optionsSummary(): string {
   const styleValue = read(effectiveStyle)
   const levelValue = read(effectiveLevel)
-  const output = outputOptions().find((option) => option.value === read(outputChoice))
   return [
-    t(STYLE_LABELS[isStyle(styleValue) ? styleValue : 'balanced']),
-    shortLabel(t(CONTEXT_LEVEL_LABELS[isContextLevel(levelValue) ? levelValue : 'standard'])),
-    read(outputChoice) !== 'default' && output ? output.label.replace(/^[^:：]+[:：]\s*/, '') : ''
+    STYLE_LABELS[isStyle(styleValue) ? styleValue : 'balanced'],
+    shortLabel(CONTEXT_LEVEL_LABELS[isContextLevel(levelValue) ? levelValue : 'standard'])
   ]
     .filter(Boolean)
     .join(' · ')
@@ -245,7 +226,7 @@ export function rulesHere(): Rule[] {
 }
 
 /** Where a rule is followed, as its row says it. */
-export const ruleScopeLabel = (rule: Pick<Rule, 'scope'>): string => (rule.scope ? t('Only {name}', { name: scopeName(rule.scope) }) : t('everywhere'))
+export const ruleScopeLabel = (rule: Pick<Rule, 'scope'>): string => (rule.scope ? formatText('Only {name}', { name: scopeName(rule.scope) }) : 'everywhere')
 
 /**
  * Where a rule added now would go, as the composer says it: this project, or every project while
@@ -253,15 +234,15 @@ export const ruleScopeLabel = (rule: Pick<Rule, 'scope'>): string => (rule.scope
  */
 export function newRuleLabel(): string {
   const project = read(projectName)
-  return project ? t('Only {name}', { name: project }) : t('Every project')
+  return project ? formatText('Only {name}', { name: project }) : 'Every project'
 }
 
 /** "By style" plus every built-in and saved structure. */
 export function structureOptions() {
   const config = rulesConfig()
   return [
-    { value: 'style', label: t('By style') },
-    ...allStructures(config).map(({ structure, builtIn, edited }) => ({ value: structure.id, label: builtIn && !edited ? t(structure.name) : structure.name }))
+    { value: 'style', label: 'By style' },
+    ...allStructures(config).map(({ structure }) => ({ value: structure.id, label: structure.name }))
   ]
 }
 
@@ -274,7 +255,7 @@ export function structureValue(): string {
 /** Every model of every enabled profile, from its live list, plus Auto. */
 export function modelMenu() {
   const options: { value: string; label: string }[] = [
-    { value: 'auto', label: read(defaults).fallbackEnabled ? t('Auto (fallback)') : t('Auto') }
+    { value: 'auto', label: read(defaults).fallbackEnabled ? 'Auto (fallback)' : 'Auto' }
   ]
   for (const profile of read(enabledProfiles)) {
     const catalog = read(catalogs)[profile.id]
@@ -286,10 +267,10 @@ export function modelMenu() {
       const saved = id !== '' && id === profile.effectiveModel
       options.push({
         value: `${profile.id}${MODEL_SEP}${id || PROFILE_DEFAULT}`,
-        label: `${profile.name} · ${label}${saved ? ` · ${t('default')}` : ''}`
+        label: `${profile.name} · ${label}${saved ? ` · ${'default'}` : ''}`
       })
     }
-    if (profile.provider === 'cli' && !profile.effectiveModel) add('', t('CLI default'))
+    if (profile.provider === 'cli' && !profile.effectiveModel) add('', 'CLI default')
     else if (profile.effectiveModel && !listed.some((model) => model.id === profile.effectiveModel)) add(profile.effectiveModel, profile.effectiveModel)
     for (const model of listed) add(model.id, shortModelName(model.id, model.label))
   }

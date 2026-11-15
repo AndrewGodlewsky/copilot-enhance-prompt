@@ -6,13 +6,13 @@ Turn a rough request into a clear prompt using the project's files, rules and Gi
 
 [Read the complete workflow and editable diagrams](docs/prompt-workflow.md). The rewriting model produces the task prompt; Copilot receives that prompt and does the work. Optional chat auto-enhance changes the model-facing text while the visible chat keeps your original message.
 
-The React panel retains model chains and fallback, prompt styles, reusable rules and structures, attachments, context preview, history, and English, Vietnamese and Chinese translations. Choose **GitHub Copilot** in Models to rewrite through your Copilot account in the background. External APIs, local models and subscription CLIs remain available as explicit alternatives.
+The English-language React panel retains model chains and fallback, prompt styles, reusable rules and structures, attachments, context preview, and history. Rewritten instructions and headings are in English; your original text, custom rules, code, paths and quotations remain intact. Choose **GitHub Copilot** in Models to rewrite through your Copilot account in the background. External APIs, local models and subscription CLIs remain available as explicit alternatives.
 
-[Tiếng Việt](docs/readme/README.vi.md) · [简体中文](docs/readme/README.zh-CN.md) · [User guide](docs/user-guide.md) · [Changes](CHANGELOG.md)
+[User guide](docs/user-guide.md) · [Changes](CHANGELOG.md)
 
 ## Download and install
 
-**Development preview, version 0.2.4.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
+**Development preview, version 0.3.0.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
 
 ### Requirements
 
@@ -87,7 +87,7 @@ The native tab uses the compact SVG declared in `plugin.json`. Version 0.1.5 rem
 The Quiet Desk banner changes its still scene with local time and the current enhancement state. Use the single button at its top right to toggle light/dark mode; your choice is remembered across sessions. The footer links to this repository, Settings, Show Logs and Feedback, with the version in plain gray text. Release notes appear once after an update. See the [user guide](docs/user-guide.md) for the scene's triggers and support logs.
 
 1. In **Models**, click **Add a model**, keep the **GitHub Copilot** preset, choose a model from the live list, and save. Existing profiles are preserved; select the new Copilot profile explicitly in Enhance if another profile was already first. Claude models in this preset use GitHub Copilot, not Claude Code. The separate Claude Code preset still uses Claude Code's authentication and billing.
-2. In **Enhance → Write a request**, describe the task and choose a model. **Options** opens style, context, output language and structure settings. Preview the context and uncheck items to exclude them; use **Attach files** for explicit attachments.
+2. In **Enhance → Write a request**, describe the task and choose a model. **Options** opens style, context and structure settings. Preview the context and uncheck items to exclude them; use **Attach files** for explicit attachments.
 3. Click **Enhance**. Progress reports the context and model steps; Cancel stops the run.
 4. In **Review and send**, edit the enhanced prompt. **Send to Copilot** submits a new message to the attached session shown in **Send to**. **Copy** keeps the handoff manual. The download icon saves a file; the up-arrow uses the result as a new input for refinement.
 

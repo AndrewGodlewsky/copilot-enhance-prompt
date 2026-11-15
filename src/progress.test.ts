@@ -207,7 +207,7 @@ test('the panel shows live steps, ignores old runs, and ends with the result or 
   await view.unmount()
 })
 
-test('a failed run says why in the panel\'s language, although Copilot passes on only the error\'s code and text', async () => {
+test('a failed run uses English despite a legacy language preference, with only the error code and text', async () => {
   // What the real Copilot hands the panel when the worker's handler throws: an Error with a code and
   // the text, and no other field of the thrown error.
   let thrown = withMessage(msg('error.too_slow', { reason: msg('error.model_timeout', { model: 'claude-fable-5-2', seconds: 109 }) }))
@@ -226,7 +226,7 @@ test('a failed run says why in the panel\'s language, although Copilot passes on
   put(draft, 'fix it')
   await enhanceNow()
   assert.equal(read(run)?.status, 'error')
-  assert.equal(read(run)?.error, 'claude-fable-5-2 không trả lời trong 109 giây. Mức ngữ cảnh thấp hơn hoặc model nhanh hơn sẽ trả lời sớm hơn.')
+  assert.equal(read(run)?.error, 'claude-fable-5-2 did not answer within 109 s. A lower context level or a faster model answers sooner.')
   // Cut short on the way: the sentence as it came, without the marks of what it carried.
   thrown = thrown.slice(0, -6)
   await enhanceNow()

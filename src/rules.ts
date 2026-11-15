@@ -32,7 +32,7 @@ export type RuleWhere = { workspace: string | null; project: string | null }
 export type Structure = { id: string; name: string; sections: string[] }
 export type RulesConfig = { rules: Rule[]; structures: Structure[] }
 
-/** Always available; section names are translated into the output language by the rewriter. */
+/** Always available; built-in names and headings are English. */
 export const BUILT_IN_STRUCTURES: Structure[] = [
   {
     id: 'brief',

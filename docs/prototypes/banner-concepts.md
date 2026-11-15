@@ -2,6 +2,8 @@
 
 Status: archived review prototypes, created against v0.1.5. Quiet Desk was selected for v0.1.6.
 
+The language-selector and translation proposals below were superseded by English-only support in v0.3.0. The archived sketches now omit the retired language label.
+
 Decision recorded after review: the owner selected **B, Quiet Desk**, with “GitHub Copilot” replacing the logo/version row and a single theme toggle replacing the two buttons. The original sketches below are retained as the review record; the [approved design](../superpowers/specs/2026-11-14-quiet-desk-design.md) governs implementation in v0.1.6.
 
 Open [the interactive prototypes](banner-concepts.html) in a browser to compare them. The same preview is supplied in the chat. Each theme control changes its entire sample panel; the controls above each panel simulate circumstances. Navigation and composer content are visual context only. Everything is local sample data, with no model calls or saved changes.

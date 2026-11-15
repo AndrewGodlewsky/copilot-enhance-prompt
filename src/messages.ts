@@ -1,9 +1,8 @@
-// Messages the worker sends the panel (notes, context labels, errors) as a code and parameters, so
-// the panel shows them in its own language. The English templates below are also the keys of the
-// translations in src/i18n.ts. No Node imports: the worker and the panel both load this file.
+// Structured notes, context labels and errors shared by the worker, panel and diagnostics.
+import { formatText } from './format.ts'
 
 export const MESSAGES = {
-  // Shown text that came from outside (a provider's error, a file name): never translated.
+  // Text from outside the plugin (a provider's error, a file name) stays verbatim.
   raw: '{text}',
 
   // Context notes: why something was left out.
@@ -109,7 +108,7 @@ export type Message = { code: MessageCode; params?: Record<string, MessageParam>
  * So the message travels inside the text: the English sentence (for logs and the command line),
  * then the message itself between these marks, as percent-encoded JSON: it then holds no bracket
  * and no space, so whatever a provider's own text contains, the marks are found again. The panel
- * reads it back and shows it in its own language; where the marks did not survive, the sentence
+ * reads it back for structured error handling; where the marks did not survive, the sentence
  * alone is shown.
  */
 const WIRE_OPEN = ' [[message:'
@@ -150,23 +149,20 @@ export function isMessage(value: unknown): value is Message {
 }
 
 /**
- * Fills a message with `lookup` turning each template into the shown text: the panel passes its
- * translator, the worker passes English. Lists join with " · ".
+ * Renders an English message, including nested errors. Lists join with " · ".
  */
-export function render(message: Message, lookup: (template: string, params: Record<string, string>) => string): string {
+export function render(message: Message): string {
   const param = (value: MessageParam): string => {
     if (Array.isArray(value)) return value.map(param).join(' · ')
-    if (isMessage(value)) return render(value, lookup)
+    if (isMessage(value)) return render(value)
     return String(value)
   }
-  const params: Record<string, string> = {}
+  const params: Record<string, string> = Object.create(null)
   for (const [key, value] of Object.entries(message.params ?? {})) params[key] = param(value)
-  return lookup(MESSAGES[message.code], params)
+  return formatText(MESSAGES[message.code], params)
 }
-
-const fill = (template: string, params: Record<string, string>) => template.replace(/\{(\w+)\}/g, (match, key: string) => params[key] ?? match)
 
 /** The English text: for logs, error messages and the model. */
 export function english(message: Message): string {
-  return render(message, fill)
+  return render(message)
 }

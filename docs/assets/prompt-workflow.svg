@@ -43,12 +43,12 @@
 <g><rect x="586" y="696" width="52" height="20" fill="#fafafa"/><text x="612" y="710" class="arrow-label" text-anchor="middle">RESULT</text></g>
 <g class="node"><rect x="40" y="284" width="244" height="116" rx="6" class="input"/><text x="60" y="316" class="node-name" >Your request</text><text x="60" y="340" class="body" >Rough text + explicit attachments</text><text x="60" y="358" class="body" >Text excerpts, images and paths</text><text x="60" y="376" class="body" >Preview context; exclude items</text></g>
 <g class="node"><rect x="320" y="284" width="284" height="116" rx="6" class="step"/><text x="340" y="316" class="node-name" >Allowed project context</text><text x="340" y="340" class="body" >Off → Max, with privacy switches</text><text x="340" y="358" class="body" >Safe paths; selective secret masking</text><text x="340" y="376" class="body" >Max: selector sees task + file paths</text></g>
-<g class="node"><rect x="640" y="284" width="280" height="116" rx="6" class="step"/><text x="660" y="316" class="node-name" >How to rewrite</text><text x="660" y="340" class="body" >Global + project rules; custom text</text><text x="660" y="358" class="body" >Style or structure; output language</text><text x="660" y="376" class="body" >Optional Copilot-specific guidance</text></g>
+<g class="node"><rect x="640" y="284" width="280" height="116" rx="6" class="step"/><text x="660" y="316" class="node-name" >How to rewrite</text><text x="660" y="340" class="body" >Global + project rules; custom text</text><text x="660" y="358" class="body" >Style or structure; English output</text><text x="660" y="376" class="body" >Optional Copilot-specific guidance</text></g>
 <g class="node"><rect x="40" y="448" width="880" height="160" rx="6" class="payload"/>
   <text x="60" y="480" class="node-name" >One enhancement request, two parts</text>
   <line x1="472" y1="504" x2="472" y2="588" class="separator"/>
   <text x="60" y="520" class="group-title" >System instructions</text>
-  <text x="60" y="544" class="body" >Preserve intent; use grounded details.</text><text x="60" y="564" class="body" >Apply the selected rules, shape and language.</text><text x="60" y="584" class="body" >Return only the final prompt.</text>
+  <text x="60" y="544" class="body" >Preserve intent; use grounded details.</text><text x="60" y="564" class="body" >Apply rules and shape; write in English.</text><text x="60" y="584" class="body" >Return only the final prompt.</text>
   <text x="496" y="520" class="group-title" >User payload + supported images</text>
   <text x="496" y="544" class="technical" >&lt;project_context&gt; allowed context &lt;/project_context&gt;</text><text x="496" y="564" class="technical" >&lt;request&gt; original text &lt;/request&gt;</text>
   <text x="496" y="584" class="body" >Attached text and file paths; image input where supported.</text>

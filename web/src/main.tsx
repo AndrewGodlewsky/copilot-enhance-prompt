@@ -3,16 +3,14 @@
 import { lazy, StrictMode, Suspense, useReducer } from 'react'
 import { createRoot } from 'react-dom/client'
 import { onPersistenceError, read, set } from '#panel'
-import { BookOpenIcon, BotIcon, LanguagesIcon, ScrollTextIcon, SettingsIcon, SparklesIcon } from 'lucide-react'
+import { BookOpenIcon, BotIcon, ScrollTextIcon, SettingsIcon, SparklesIcon } from 'lucide-react'
 import './index.css'
-import { t, UI_LANGUAGES, uiLanguageSetting } from '../../src/i18n.ts'
-import { SECTION_LABELS, UI_LANGUAGE_LABELS } from '../../src/panel/view.ts'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { SECTION_LABELS } from '../../src/panel/view.ts'
 import { BRAND } from '../../src/brand.ts'
 import { busy, draft, files, history, historyOpen, notice, optionsOpen, put, say, sendAfterEnhance, tab } from '../../src/panel/state.ts'
 import { msg } from '../../src/messages.ts'
 import { previews } from './attach'
-import { changeUiLanguage, enhanceAndSend, enhanceNow, refreshDataSummary, refreshHookLast, refreshTargets } from '../../src/panel/actions.ts'
+import { enhanceAndSend, enhanceNow, refreshDataSummary, refreshHookLast, refreshTargets } from '../../src/panel/actions.ts'
 import { closePanel, wirePanel } from '../../src/panel/setup.ts'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Notices } from './common'
@@ -42,29 +40,6 @@ const SECTIONS = [
   { value: 'privacy', Icon: SettingsIcon }
 ] as const
 
-/** The panel language, beside the navigation (Auto follows Copilot). */
-function LanguagePicker() {
-  return (
-    <Select value={read(uiLanguageSetting)} onValueChange={(value) => void changeUiLanguage(value)}>
-      <SelectTrigger
-        size="sm"
-        aria-label={t('Panel language')}
-        className="w-auto gap-2 border-transparent bg-transparent px-2 text-xs shadow-none hover:bg-accent dark:bg-transparent"
-      >
-        <LanguagesIcon className="size-3.5" />
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent position="popper">
-        {UI_LANGUAGES.map((value) => (
-          <SelectItem key={value} value={value}>
-            {value === 'auto' ? t('Auto') : UI_LANGUAGE_LABELS[value]}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  )
-}
-
 function openSection(value: string): void {
   set(tab, value)
   if (value === 'privacy') {
@@ -84,7 +59,7 @@ function App() {
         <header className="flex flex-col gap-3">
           <QuietDesk />
           <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
-            <nav aria-label={t('Plugin sections')} className="flex flex-wrap gap-1">
+            <nav aria-label={'Plugin sections'} className="flex flex-wrap gap-1">
               {SECTIONS.map(({ value, Icon }) => (
                 <Button
                   key={value}
@@ -95,12 +70,11 @@ function App() {
                   onClick={() => openSection(value)}
                 >
                   <Icon className="hidden sm:block" />
-                  {value === 'enhance' ? t('Enhance') : t(SECTION_LABELS[value])}
+                  {value === 'enhance' ? 'Enhance' : SECTION_LABELS[value]}
                   {value === 'history' && read(history).length > 0 ? <span className="text-muted-foreground text-xs tabular-nums">{read(history).length}</span> : null}
                 </Button>
               ))}
             </nav>
-            <LanguagePicker />
           </div>
         </header>
         <Suspense fallback={null}>
@@ -126,7 +100,7 @@ function App() {
 async function start(): Promise<void> {
   onPersistenceError(() => {
     panelDiagnostics.record('panel.persistence', 'failed')
-    set(notice, { tone: 'danger', text: t('Changes could not be saved. Check the canvas connection and try again.') })
+    set(notice, { tone: 'danger', text: 'Changes could not be saved. Check the canvas connection and try again.' })
   })
   // In a plain browser (npm run dev) there is no Copilot: a mock stands in, with sample data.
   if (import.meta.env.DEV) {
@@ -157,12 +131,12 @@ async function start(): Promise<void> {
     const entry = query.get('entry')
     if (entry) set(historyOpen, entry)
     if (query.get('toast') === 'undo') {
-      setTimeout(() => set(notice, { tone: 'neutral', text: t('Removed from the history.'), action: { label: t('Undo'), run: { kind: 'history.restore', id: 'none' } } }), 600)
+      setTimeout(() => set(notice, { tone: 'neutral', text: 'Removed from the history.', action: { label: 'Undo', run: { kind: 'history.restore', id: 'none' } } }), 600)
     }
     // ?toast=blocked: what Send says for an agent that is waiting for an answer, once the demo's result is there.
     if (query.get('toast') === 'blocked') {
       const text = say(msg('error.agent_blocked', { name: 'Claude Code' }))
-      setTimeout(() => set(notice, { tone: 'warning', text, action: { label: t('Type it without Enter'), run: { kind: 'send.anyway', terminalId: 'none', text: '' } } }), 6000)
+      setTimeout(() => set(notice, { tone: 'warning', text, action: { label: 'Type it without Enter', run: { kind: 'send.anyway', terminalId: 'none', text: '' } } }), 6000)
     }
     // ?onestep=1: "Send right after enhancing" is on, so its button is drawn next to Enhance;
     // ?onestep=run: the demo prompt also goes through it (enhanced, then sent or held back);
@@ -208,6 +182,6 @@ async function start(): Promise<void> {
 void start().catch(error => {
   panelDiagnostics.record('panel.start', 'failed', diagnosticError(error))
   createRoot(document.getElementById('root')!).render(
-    <div className="p-6"><h1>{BRAND}</h1><p role="alert">{t('The canvas could not connect. Close it and open Enhance Prompt again from Copilot.')}</p><LogsButton /></div>
+    <div className="p-6"><h1>{BRAND}</h1><p role="alert">{'The canvas could not connect. Close it and open Enhance Prompt again from Copilot.'}</p><LogsButton /></div>
   )
 })

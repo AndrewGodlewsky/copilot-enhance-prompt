@@ -1,5 +1,5 @@
 // A worker's error reaches the panel as a code and a text, nothing else: that is what the host passes on
-// when a handler throws. The message the panel translates therefore travels inside the text.
+// when a handler throws. The structured message therefore travels inside the text.
 import { assert, test } from '#testing'
 import { english, messageIn, msg, plainText, raw, withMessage } from './messages.ts'
 

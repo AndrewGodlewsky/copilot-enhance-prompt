@@ -50,8 +50,6 @@ export interface PluginRequests {
         profileId?: string | null
         /** A model of that profile for this prompt only (from its live list). */
         model?: string
-        /** Output language for this prompt (auto, en, vi, zh, ...); the setting when absent. */
-        language?: string
         exclude?: string[]
         /** Set by the panel to receive `enhance.progress` for this run. */
         runId?: string
@@ -117,7 +115,7 @@ export interface PluginRequests {
       /** `workspaceId`: the host's id of the focused workspace (null when it cannot tell): the panel keeps each
        *  project's draft and result apart by it. `workspacePath`: its folder. */
       output: {
-        /** `title` and `state` (an agent's: working, blocked, waiting, done) are what `label` is made of, for the panel's language. */
+        /** `title` and `state` (an agent's: working, blocked, waiting, done) are what `label` is made of. */
         targets: { terminalId: string; label: string; agent: string | null; title?: string; state?: string }[]
         workspace?: string | null
         project?: string | null
@@ -164,11 +162,6 @@ export interface PluginRequests {
     'history.clear': { output: { ok: true } }
     /** Undo of history.remove: brings back the entry of that id, if this worker removed it a moment ago. */
     'history.restore': { input: { id: string }; output: { restored: boolean } }
-    /**
-     * the host's own language (the panel sees it, the worker does not): what the worker itself says, the
-     * status bar's tooltip and its commands' answers, follows it while the panel's language is Auto.
-     */
-    'ui.locale': { input: { locale: string }; output: { ok: true } }
     /** What auto-enhance did with the last prompt it saw, or null. */
     'hook.last': { output: HookRecord | null }
     /** Rules tab: your rules and prompt structures. */

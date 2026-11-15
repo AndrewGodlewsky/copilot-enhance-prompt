@@ -56,7 +56,7 @@ export async function mountWorker(module: { default: (api: EnhanceWorker) => voi
   await delay(5)
   return { ...worker, logs, posts }
 }
-export type MountOptions = { host: MockHost; locale?: string; persisted?: { plugin?: Record<string, any>; workspace?: Record<string, any> } }
+export type MountOptions = { host: MockHost; persisted?: { plugin?: Record<string, any>; workspace?: Record<string, any> } }
 export async function mount(module: { setup: () => (() => void) | void; default?: () => unknown }, options: MountOptions) {
   const { host } = options
   const persisted = { plugin: { ...options.persisted?.plugin }, workspace: { ...options.persisted?.workspace } }
@@ -65,7 +65,7 @@ export async function mount(module: { setup: () => (() => void) | void; default?
   const posts = new EventEmitter()
   const listen = (bus: EventEmitter, name: string, handler: (...args: any[]) => void) => { bus.on(name, handler); return { dispose: () => { bus.off(name, handler) } } }
   const client: PanelClient = {
-    locale: options.locale ?? 'en', settings: host.settings,
+    settings: host.settings,
     storage: { ...host.storage, set: async (key, value) => { if (key.startsWith('panel:')) persisted.plugin[key.slice(6)] = structuredClone(value); await host.storage.set(key, value) } },
     plugin: {
       request: async (name, input, requestOptions) => {

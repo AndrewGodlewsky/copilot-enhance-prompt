@@ -1,2 +1,2 @@
 // Kept equal to plugin.json and shown in the panel footer.
-export const VERSION = '0.2.4'
+export const VERSION = '0.3.0'

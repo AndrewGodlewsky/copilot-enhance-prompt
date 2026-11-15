@@ -117,6 +117,25 @@ test('standard level: rules, stack and tree, never .env; adapts to Claude', asyn
   await worker.deactivate()
 })
 
+test('panel rewrite ignores stale language overrides and keeps Unicode input in the model request', async () => {
+  const calls = stubFetch(() => openaiAnswer('Fix the login flow in src/auth/session.ts; preserve "text: Too big".'))
+  const host = mockHost({
+    settings: { outputLanguage: 'vi', uiLanguage: 'zh', customInstructions: 'Use pnpm. Write the final prompt in Vietnamese.' },
+    storage: { models: { profiles: [profile('main', 'openai')] } },
+    secrets: { 'apiKey.main': 'k' },
+    results: hostFor(null)
+  })
+  const worker = await mountWorker(main, { host })
+  const request = { prompt: 'Sửa lỗi đăng nhập ở src/auth/session.ts: "text: Too big"', level: 'off', language: 'zh' }
+  const answer = await worker.request('prompt.enhance', request as { prompt: string; level: string })
+  assert.match(answer.enhanced, /Fix the login flow/)
+  const messages = calls[0].body.messages as { content: string }[]
+  assert.match(messages[0].content, /Write the final prompt in Vietnamese/)
+  assert.match(messages[0].content, /Output policy: Write all final rewritten instructions and headings in English/)
+  assert.match(messages[1].content, /Sửa lỗi đăng nhập ở src\/auth\/session\.ts: "text: Too big"/)
+  await worker.deactivate()
+})
+
 test('deep level finds relevant code; exclusions are honoured', async () => {
   const root = project()
   const calls = stubFetch(() => openaiAnswer('ok'))
@@ -163,6 +182,8 @@ test('falls back to the next model and reports attempts', async () => {
   assert.deepEqual(answer.attempts.map((a) => a.ok), [false, true])
   assert.match(answer.attempts[0].error ?? '', /429/)
   assert.equal(calls.length, 2)
+  assert.match((calls[0].body.messages as { content: string }[])[0].content, /Output policy: Write all final rewritten instructions and headings in English/)
+  assert.match((calls[1].body.system as string), /Output policy: Write all final rewritten instructions and headings in English/)
   await worker.deactivate()
 })
 
@@ -261,7 +282,7 @@ test('auto-enhance hook: off passes, rules appends, AI rewrites with the hook mo
   const calls = stubFetch(() => openaiAnswer('Build a login page with email + password.'))
   const ai = await mountWorker(main, {
     host: mockHost({
-      settings: { autoEnhanceMode: 'ai' },
+      settings: { autoEnhanceMode: 'ai', outputLanguage: 'vi', customInstructions: 'Write in Vietnamese.' },
       storage: { models: { profiles: [profile('slow', 'anthropic'), profile('fast', 'groq')], hookProfileId: 'fast' } },
       secrets: { 'apiKey.slow': 'a', 'apiKey.fast': 'g' },
       results: hostFor(null)
@@ -270,6 +291,9 @@ test('auto-enhance hook: off passes, rules appends, AI rewrites with the hook mo
   const rewritten = await ai.hooks.fire('agent.prompt.before', event)
   assert.equal(rewritten.kind === 'continue' && rewritten.event.prompt, 'Build a login page with email + password.')
   assert.ok(calls[0].url.startsWith('https://api.groq.com'))
+  const hookMessages = calls[0].body.messages as { content: string }[]
+  assert.match(hookMessages[0].content, /Write in Vietnamese\./)
+  assert.match(hookMessages[0].content, /Output policy: Write all final rewritten instructions and headings in English/)
   await ai.deactivate()
 })
 
@@ -280,16 +304,16 @@ test('the status bar says Enhance: On or Off under the plugin\'s lightbulb; whic
   const shown = () => host.callsOf('statusBar.update').at(-1) as Shown
   const worker = await mountWorker(main, { host })
   await settled()
-  // Auto-enhance is off: the same words in every language, like the brand; the lightbulb, dimmed (neutral).
+  // Auto-enhance is off: the lightbulb is dimmed (neutral).
   assert.deepEqual([shown().id, shown().text, shown().icon, shown().tone, shown().visible], ['auto-enhance', 'Enhance: Off', 'lightbulb', 'neutral', true])
-  assert.match(shown().tooltip, /Tự cải thiện đang tắt\. Đổi ở biểu tượng bánh răng của panel/)
+  assert.match(shown().tooltip, /Auto-enhance is off\./)
   // On, with rules or with AI: "On" either way, still the lightbulb (no lightning), now bright (accent).
   await worker.command('auto-enhance.rules')
   assert.deepEqual([shown().text, shown().icon, shown().tone], ['Enhance: On', 'lightbulb', 'accent'])
-  assert.match(shown().tooltip, /Tự cải thiện đang bật \(quy tắc\)\./)
+  assert.match(shown().tooltip, /Auto-enhance is on \(rules\)\./)
   await worker.command('auto-enhance.ai')
   assert.deepEqual([shown().text, shown().icon, shown().tone], ['Enhance: On', 'lightbulb', 'accent'])
-  assert.match(shown().tooltip, /Tự cải thiện đang bật \(AI\)\./)
+  assert.match(shown().tooltip, /Auto-enhance is on \(AI\)\./)
   await worker.command('auto-enhance.off')
   assert.deepEqual([shown().text, shown().icon, shown().tone], ['Enhance: Off', 'lightbulb', 'neutral'])
   // Hidden with the command, and back.
@@ -319,50 +343,25 @@ test('cycle command switches auto-enhance mode', async () => {
   assert.equal(host.data().settings.autoEnhanceMode, 'rules')
   assert.equal(await worker.command('auto-enhance.off'), 'Auto-enhance is off.')
   await worker.deactivate()
-  // Copilot shows a command's answer: it is in the panel's language, like the status bar's tooltip.
-  const vietnamese = await mountWorker(main, { host: mockHost({ settings: { uiLanguage: 'vi' }, results: { 'statusBar.update': { ok: true } } }) })
-  assert.equal(await vietnamese.command('auto-enhance.ai'), 'Tự cải thiện đang bật (AI).')
-  assert.equal(await vietnamese.command('status-bar.toggle'), 'Đã ẩn mục trên thanh trạng thái.')
-  assert.equal(await vietnamese.command('status-bar.toggle'), 'Đã hiện mục trên thanh trạng thái.')
-  await vietnamese.deactivate()
+  const legacy = await mountWorker(main, { host: mockHost({ settings: { uiLanguage: 'vi' }, results: { 'statusBar.update': { ok: true } } }) })
+  assert.equal(await legacy.command('auto-enhance.ai'), 'Auto-enhance is on (AI).')
+  assert.equal(await legacy.command('status-bar.toggle'), 'Status bar item hidden.')
+  assert.equal(await legacy.command('status-bar.toggle'), 'Status bar item shown.')
+  await legacy.deactivate()
 })
 
-test('with the panel\'s language on Auto, the worker speaks Copilot\'s language once a panel has told it which', async () => {
-  const settled = () => new Promise((resolve) => setTimeout(resolve, 30))
-  const host = mockHost({ results: { 'statusBar.update': { ok: true } } })
-  const tooltip = () => (host.callsOf('statusBar.update').at(-1) as { tooltip: string }).tooltip
+test('legacy language settings and locale storage do not change English worker text', async () => {
+  const host = mockHost({
+    settings: { uiLanguage: 'vi', outputLanguage: 'zh' },
+    storage: { uiLocale: 'zh-CN' },
+    results: { 'statusBar.update': { ok: true } }
+  })
   const worker = await mountWorker(main, { host })
-  await settled()
-  // A worker cannot see Copilot's language: English until a panel has opened.
-  assert.match(tooltip(), /Auto-enhance is off\./)
+  await new Promise((resolve) => setTimeout(resolve, 30))
+  assert.match((host.callsOf('statusBar.update').at(-1) as { tooltip: string }).tooltip, /Auto-enhance is off\./)
   assert.equal(await worker.command('auto-enhance.rules'), 'Auto-enhance is on (rules).')
-  // The panel reports it (src/panel/setup.ts): the status bar follows at once, and so do the answers.
-  assert.deepEqual(await worker.request('ui.locale', { locale: 'vi-VN' }), { ok: true })
-  assert.match(tooltip(), /Tự cải thiện đang bật \(quy tắc\)\./)
-  assert.equal(await worker.command('auto-enhance.off'), 'Tự cải thiện đang tắt.')
-  assert.equal(host.data().storage[main.LOCALE_KEY], 'vi-VN')
-  // The same language again is no news: the status bar is not written a second time.
-  const writes = host.callsOf('statusBar.update').length
-  await worker.request('ui.locale', { locale: 'vi-VN' })
-  assert.equal(host.callsOf('statusBar.update').length, writes)
   await worker.deactivate()
-
-  // Kept across restarts: the next worker is in that language before any panel opens.
-  const again = mockHost({ storage: { [main.LOCALE_KEY]: 'zh-CN' }, results: { 'statusBar.update': { ok: true } } })
-  const second = await mountWorker(main, { host: again })
-  await settled()
-  assert.match((again.callsOf('statusBar.update').at(-1) as { tooltip: string }).tooltip, /自动优化：关/)
-  await second.deactivate()
-  // A picked language wins over what Copilot runs in.
-  const picked = mockHost({ settings: { uiLanguage: 'en' }, storage: { [main.LOCALE_KEY]: 'vi-VN' }, results: { 'statusBar.update': { ok: true } } })
-  const third = await mountWorker(main, { host: picked })
-  assert.equal(await third.command('auto-enhance.rules'), 'Auto-enhance is on (rules).')
-  // Delete everything forgets it with the rest.
-  await third.request('data.clear', { what: 'all' })
-  assert.equal(picked.data().storage[main.LOCALE_KEY], undefined)
-  await third.deactivate()
 })
-
 test('a long send closes its bracketed paste when a later piece is refused or fails', async () => {
   for (const failure of ['refuse', 'throw'] as const) {
     let calls = 0
