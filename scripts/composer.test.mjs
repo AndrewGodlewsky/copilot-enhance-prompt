@@ -46,7 +46,7 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
     for (const label of ['Context Level', 'Style', 'Effort']) {
       assert.equal((html.match(new RegExp(`aria-label="${label}"`, 'g')) ?? []).length, 1)
     }
-    assert.doesNotMatch(html, /aria-label="Model"|Enter to enhance|Shift\+Enter for a new line/)
+    assert.doesNotMatch(html, /Or start a new agent|aria-label="Model"|Enter to enhance|Shift\+Enter for a new line/)
     const request = inputs.find(input => input['aria-label'] === 'Your prompt')
     assert.ok(request)
     assert.equal(request.onKeyDown, undefined, 'plain, modified and IME Enter never trigger an action')
@@ -64,4 +64,40 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
     assert.match(html, />Enhance</)
     assert.ok(inputs.some(input => input !== request && typeof input.onKeyDown === 'function'), 'reviewed-result send shortcut remains')
   }
+})
+
+
+test('settings and model setup expose only supported Copilot controls', async () => {
+  const compiled = await build({
+    stdin: { contents: `
+      import React from 'react'
+      import { renderToStaticMarkup } from 'react-dom/server'
+      import { SettingsSection, ModelsSection, RulesSection } from './src/sections.tsx'
+      import { TooltipProvider } from './src/components/ui/tooltip.tsx'
+      import { set } from '../src/runtime.ts'
+      import { models, form, catalogs, dataSummary } from '../src/panel/state.ts'
+      export function render(editing = false, unavailableSelector = false) {
+        set(models, { profiles: [], selectorProfileId: unavailableSelector ? 'retired' : null })
+        set(dataSummary, { history: 0, profiles: 0, catalogs: 0 })
+        set(catalogs, { form: { models: [{ id: 'gpt-5', label: 'GPT-5' }], source: 'copilot', fetchedAt: 1 } })
+        set(form, editing ? { name: 'GitHub Copilot', preset: 'copilot', provider: 'copilot', model: 'gpt-5', enabled: true } : null)
+        return renderToStaticMarkup(React.createElement(TooltipProvider, null,
+          React.createElement(SettingsSection), React.createElement(ModelsSection), React.createElement(RulesSection)))
+      }
+    `, resolveDir: fileURLToPath(new URL('../web/', import.meta.url)) },
+    tsconfig: 'web/tsconfig.json', bundle: true, write: false, platform: 'node', format: 'cjs', logLevel: 'silent',
+    define: { 'import.meta.env.DEV': 'false' }
+  })
+  const module = { exports: {} }
+  new Function('require', 'module', 'exports', compiled.outputFiles[0].text)(createRequire(import.meta.url), module, module.exports)
+  for (const editing of [false, true]) {
+    const html = module.exports.render(editing)
+    assert.doesNotMatch(html, /Start new agents|Auto-enhance|Notify when|Ask for feedback|API key|API format|Max tokens|external provider|aria-label="Preset"/i)
+    for (const label of ['Effort models', 'Feedback', 'Open an issue on GitHub', 'Send right after enhancing']) assert.ok(html.includes(label), label)
+    assert.match(html, /Copilot/)
+    if (!editing) assert.match(html, /Select a Copilot model/)
+  }
+  const retired = module.exports.render(false, true)
+  assert.match(retired, /saved file picker model is unavailable/)
+  assert.match(retired, /aria-label="File picker model/)
 })

@@ -1,20 +1,15 @@
 // The plugin's worker: gathers project context at the chosen level, runs the model chain with
-// fallback, sends prompts to agent terminals, keeps history, manages model profiles, and runs the
-// optional agent.prompt.before auto-enhance hook.
+// fallback, sends prompts to the attached session, keeps history, and manages Copilot model profiles.
 import type { PluginRequests } from '#panel'
 import type { JsonValue, EnhanceWorker } from '#host'
-import { apiCatalog, claudeCatalog, claudeProgramSignature, codexCatalog, geminiCatalog, parseCatalog, type Catalog } from './catalog.ts'
-import { CLI_BINARIES, detectClis } from './cli.ts'
 import { copyToClipboard } from './clipboard.ts'
 import { forgetActivity, recordSave, recordStatus, recordTool } from './context/activity.ts'
 import { researchContext, RESEARCH_LIMITS } from './context/research.ts'
 import { isSensitive } from './context/files.ts'
-import { formatText } from './format.ts'
 import { EFFORT_LABELS, EFFORT_SETTINGS, isEffort, parseModelAssignment } from './effort.ts'
-import { atLeast, cachedStatic, contextItem, findFocusedWorkspace, focusedCandidates, focusedProject, gatherContext, isLocalWorkspace, projectNameOf, staticParts, workspaceOfTerminal, type ContextItem, type Workspace } from './context/index.ts'
+import { atLeast, contextItem, findFocusedWorkspace, focusedCandidates, focusedProject, gatherContext, projectNameOf, type ContextItem } from './context/index.ts'
 import { forgetTerminals, learnTerminal, loadTerminals } from './context/terminals.ts'
-import { workspaceTitle } from './workspaces.ts'
-import { imagesBlock, imageSupport, withImagePaths } from './images.ts'
+import { imagesBlock, withImagePaths } from './images.ts'
 import { cleanAttachments, clearAttachments, loadFiles, putChunk } from './attachments.ts'
 import { attachmentItemId } from './image-limits.ts'
 import { parseRulesConfig, RULES_KEY, rulesFor, rulesToJson, structureById, type RulesConfig, type RuleWhere } from './rules.ts'
@@ -23,27 +18,20 @@ import {
   candidates,
   ChainError,
   loadModels,
-  resolveKey,
   runChain,
   saveModels,
-  secretName,
   viewProfiles,
   type ChainOptions
 } from './models.ts'
-import { isContextLevel, newProfileId, normalizeProfile, presetById, PRESETS, type ContextLevel, type ModelProfile, type ModelsConfig } from './presets.ts'
+import { isContextLevel, newProfileId, normalizeProfile, type ContextLevel, type ModelProfile, type ModelsConfig } from './presets.ts'
 import { buildSystemPrompt, buildUserMessage, cleanOutput, isStyle, PASTE_END, PASTE_START, terminalChunks, terminalSafe, type Style } from './prompts.ts'
-import { PANEL_REQUEST_LIMIT_MS, type HookRecord, type ModelsView } from './protocol.ts'
+import { PANEL_REQUEST_LIMIT_MS, type ModelsView } from './protocol.ts'
 import { CONSENTS_KEY, NEEDS_CONSENT, parseConsents, parseOtherAgentsLimits, parsePrivacy, type OtherAgentsLimits, type Privacy, type PrivacyKey } from './privacy.ts'
 import { createProgress, planSteps, type StepReporter } from './progress.ts'
 import { MODELS_KEY } from './presets.ts'
-import { BRAND, BRAND_SHORT } from './brand.ts'
 import { LlmError, messageOf } from './llm.ts'
 import { english, msg, raw, withMessage, type Message } from './messages.ts'
 
-const AUTO_MODES = ['off', 'rules', 'ai'] as const
-type AutoMode = (typeof AUTO_MODES)[number]
-/** the host waits 2 s for a hook; leave room to answer. */
-const HOOK_BUDGET_MS = 1700
 /**
  * How long a panel run may take. the host ends a panel's request after 120 s, so:
  * - `budgetMs`: a run that must answer within one request (a caller that does not say it keeps
@@ -60,9 +48,6 @@ const HOOK_BUDGET_MS = 1700
  */
 export const RUN_LIMITS = { budgetMs: PANEL_REQUEST_LIMIT_MS - 5_000, pickerMs: 25_000, sliceMs: 90_000, totalMs: 300_000, orphanMs: 10_000 }
 
-/** Model lists are fetched again after a day, or on Refresh. */
-const CATALOG_TTL_MS = 24 * 3600_000
-
 export type Settings = {
   defaultStyle: Style
   customInstructions: string
@@ -77,12 +62,6 @@ export type Settings = {
   sendMode: string
   sendPressEnter: boolean
   historyLimit: number
-  autoEnhanceMode: AutoMode
-  autoEnhanceAppend: string
-  autoEnhanceMinLength: number
-  autoEnhanceContext: boolean
-  /** A desktop notification when a long run finishes. */
-  notifyWhenDone: boolean
   /** Read other agents' sessions: how many agents and lines (within OTHER_AGENTS_LIMITS). */
   otherAgentsLimits: OtherAgentsLimits
   /** The switches as the worker may use them (confirmed where they need it). */
@@ -96,7 +75,6 @@ const bool = (value: JsonValue | undefined, fallback: boolean) => (typeof value 
 
 export async function readSettings(host: EnhanceWorker): Promise<Settings> {
   const [all, consents] = await Promise.all([host.settings.get(), host.storage.get(CONSENTS_KEY).catch(() => null)])
-  const mode = str(all.autoEnhanceMode, 'off')
   const style = str(all.defaultStyle, 'balanced')
   const level = str(all.contextLevel, 'standard')
   return {
@@ -117,11 +95,6 @@ export async function readSettings(host: EnhanceWorker): Promise<Settings> {
     sendMode: str(all.sendMode, 'paste'),
     sendPressEnter: bool(all.sendPressEnter, false),
     historyLimit: num(all.historyLimit, 50),
-    autoEnhanceMode: (AUTO_MODES as readonly string[]).includes(mode) ? (mode as AutoMode) : 'off',
-    autoEnhanceAppend: str(all.autoEnhanceAppend),
-    autoEnhanceMinLength: num(all.autoEnhanceMinLength, 8),
-    autoEnhanceContext: bool(all.autoEnhanceContext, true),
-    notifyWhenDone: bool(all.notifyWhenDone, false),
     otherAgentsLimits: parseOtherAgentsLimits(all),
     privacy: parsePrivacy(all, parseConsents(consents))
   }
@@ -147,7 +120,7 @@ function chainOptions(settings: Settings, signal?: AbortSignal, extra: Partial<C
 }
 
 /**
- * History is read, changed and written back, so two writers at once (a panel run and the hook, or
+ * History is read, changed and written back, so two writers at once (two panel runs, or
  * Clear history) would lose one change. Every history change runs after the previous one.
  */
 let historyQueue: Promise<unknown> = Promise.resolve()
@@ -308,12 +281,15 @@ export async function enhance(
   )
   if (list.length === 0) throw hostError(msg('error.no_model'), 'invalid_params')
   // File selection is part of the same data/billing route as rewriting.
-  const pickerProfiles = config.profiles.filter(profile => (profile.provider === 'copilot') === (list[0]?.provider === 'copilot'))
+  const pickerProfiles = config.profiles
   const pickerConfig = { ...config, profiles: pickerProfiles.map(profile => profile.id === config.selectorProfileId ? profile : list.find(candidate => candidate.id === profile.id) ?? profile),
-    selectorProfileId: pickerProfiles.some(profile => profile.id === config.selectorProfileId) ? config.selectorProfileId : list[0]?.id ?? null }
+    selectorProfileId: config.selectorProfileId ?? list[0]?.id ?? null }
   const style: Style = isStyle(input.style) ? input.style : settings.defaultStyle
   const requested: ContextLevel = isContextLevel(input.level) ? input.level : settings.contextLevel
   const level = allowedLevel(requested, settings)
+  if (level === 'max' && config.selectorProfileId && !config.profiles.some(profile => profile.id === config.selectorProfileId && profile.enabled)) {
+    throw hostError(msg('error.selector_model'), 'invalid_params')
+  }
   const privacy = gatherPrivacy(settings)
   const step = progress?.(level, settings.privacy.allowProjectFiles, privacy.allowOtherAgents) ?? (() => undefined)
   // Which project this run is for, settled before anything slow: the person may look at another
@@ -401,8 +377,6 @@ export async function enhance(
       })
     )
     step('model', 'done', `${result.profile.name} · ${result.attempts.find((attempt) => attempt.ok)?.model ?? ''}`)
-    // A model that cannot see images still got their paths; say so, and keep every path in the prompt.
-    if (images.length > 0 && imageSupport(result.profile) === 'none') gathered.notes.push(msg('note.images_paths_only'))
     return {
       enhanced: withAttachedPaths(withImagePaths(cleanOutput(result.text), images), otherFiles),
       profile: result.profile,
@@ -430,116 +404,7 @@ const view = (items: ContextItem[]) => items.map(({ content: _content, ...rest }
 
 async function modelsView(host: EnhanceWorker): Promise<ModelsView> {
   const config = await loadModels(host)
-  // Without an OS key store the host cannot keep an API key: the Models tab says so before one is typed.
-  const keys = host.host.has('secrets.protection') ? await host.host.call('secrets.protection', {}).catch(() => null) : null
-  return {
-    profiles: await viewProfiles(host, config.profiles),
-    hookProfileId: config.hookProfileId,
-    selectorProfileId: config.selectorProfileId,
-    fromEnv: config.fromEnv,
-    presets: PRESETS,
-    ...(keys?.status === 'unavailable' ? { keysUnavailable: true } : {})
-  }
-}
-
-/** Stored profiles only; env-derived ones become real profiles once the person edits anything. */
-async function editableModels(host: EnhanceWorker): Promise<ModelsConfig> {
-  const { fromEnv: _fromEnv, ...config } = await loadModels(host)
-  return config
-}
-
-/** Prompt-independent context for the hook: whatever the cache holds for the focused workspace. */
-type HookPlace = { workspace: Workspace | null; label: string; where: RuleWhere }
-
-/**
- * Where a prompt the host is sending belongs: the workspace of the terminal it goes to, when the host's
- * agent events said which one that is (context/terminals.ts); else the focused workspace, but only
- * when the terminal is one of its own. Null when neither holds: the project is not known then, and
- * nothing of one project is used in another. The hook used to take the focused workspace always,
- * so an agent in another project got the rules and the context of the project the person happened
- * to be looking at.
- */
-export async function hookPlace(host: EnhanceWorker, terminalId: string): Promise<HookPlace | null> {
-  // The focus is read first: it is what a kept pairing of this terminal is checked against.
-  const focused = await host.host.call('workspace.readContext', {}).catch(() => null)
-  const own = await workspaceOfTerminal(host, terminalId, focused)
-  if (own) {
-    return {
-      workspace: own,
-      label: `${workspaceTitle(own.name, own.project)}${own.branch ? ` (branch ${own.branch})` : ''}`,
-      where: { workspace: own.name, project: own.project?.trim() || own.name }
-    }
-  }
-  if (!focused || !focused.terminals.some((terminal) => terminal.id === terminalId)) return null
-  const workspace = await findFocusedWorkspace(host, focused)
-  return {
-    workspace,
-    label: `${workspaceTitle(focused.displayName, workspace?.project)}${focused.branch ? ` (branch ${focused.branch})` : ''}`,
-    where: { workspace: focused.displayName, project: await projectNameOf(host, focused, workspace) }
-  }
-}
-
-function hookContext(place: HookPlace | null, settings: Settings): ContextItem[] {
-  if (!place) return []
-  const items: ContextItem[] = [{ id: 'workspace', kind: 'workspace', label: 'Workspace', content: place.label, chars: place.label.length }]
-  if (!settings.privacy.allowProjectFiles) return items
-  const cached = place.workspace && isLocalWorkspace(place.workspace) ? cachedStatic(place.workspace.path, settings) : null
-  if (cached) items.push(...cached.items.filter((entry) => entry.kind !== 'tree'))
-  return items
-}
-
-/** the host's default shortcut for the right sidebar (`sidebar.right.toggle`, Mod+L). */
-const SIDEBAR_KEY = process.platform === 'darwin' ? '⌘L' : 'Ctrl+L'
-
-/**
- * The status bar item says whether auto-enhance is at work: "Enhance: On" or "Enhance: Off", the
- * English text. Which kind is on (rules or AI) is in the
- * tooltip. Its icon is the plugin's own lightbulb, the one on the panel's tab. While on, the item
- * has the accent tone, which the host draws bright; off, the neutral one, which it draws dimmed.
- *
- * All of this is set here, at run time. The manifest's entry stays exactly as it was approved:
- * the host tells one status bar item from another by its whole declaration, so a new text or icon
- * there would make every user approve the update again (src/manifest.test.ts).
- */
-export const statusBarText = (mode: AutoMode): string => `${BRAND_SHORT}: ${mode === 'off' ? 'Off' : 'On'}`
-
-/**
- * The English words shown in the status bar's tooltip and command answers.
- */
-const WORKER_WORDS = {
-  modes: { off: 'off', rules: 'on (rules)', ai: 'on (AI)' },
-  tooltip: (mode: string) =>
-    `Click: open the right sidebar (${SIDEBAR_KEY}), then the lightbulb tab "${BRAND}".\nAuto-enhance is ${mode}. Change it under the panel's gear icon or in the command palette.\nSettings and updates: Settings → Plugins → Enhance Prompt.`,
-  answer: (mode: string) => `Auto-enhance is ${mode}.`,
-  bar: { hidden: 'Status bar item hidden.', shown: 'Status bar item shown.' }
-}
-
-function modeAnswer(mode: AutoMode): string {
-  return WORKER_WORDS.answer(WORKER_WORDS.modes[mode])
-}
-
-async function refreshStatusBar(host: EnhanceWorker): Promise<void> {
-  if (!host.host.has('statusBar.update')) return
-  const all = await host.settings.get()
-  const { autoEnhanceMode } = await readSettings(host)
-  const display = typeof all.statusBarItem === 'string' ? all.statusBarItem : 'full'
-  const words = WORKER_WORDS
-  await host.host
-    .call('statusBar.update', {
-      id: 'auto-enhance',
-      visible: display !== 'hidden',
-      text: display === 'icon' ? '' : statusBarText(autoEnhanceMode),
-      icon: 'lightbulb',
-      tone: autoEnhanceMode === 'off' ? 'neutral' : 'accent',
-      tooltip: words.tooltip(words.modes[autoEnhanceMode])
-    })
-    .catch(() => undefined)
-}
-
-async function setMode(host: EnhanceWorker, mode: AutoMode): Promise<string> {
-  await host.settings.set('autoEnhanceMode', mode)
-  await refreshStatusBar(host)
-  return modeAnswer(mode)
+  return { profiles: viewProfiles(config.profiles), selectorProfileId: config.selectorProfileId }
 }
 
 /**
@@ -561,24 +426,6 @@ export async function sendPieces(host: EnhanceWorker, terminalId: string, pieces
     }
   }
   return { accepted: sent === pieces.length }
-}
-
-/** Fetches one model list from its source: the CLI itself, or the provider's API. */
-async function fetchCatalog(
-  host: EnhanceWorker,
-  source: { presetId: string; env: string; provider: string; baseUrl: string; command: string; profile?: ModelProfile; typedKey?: string }
-): Promise<Catalog> {
-  const { privacy } = await readSettings(host)
-  const online = privacy.allowOnlineModelLists
-  if (source.presetId === 'claude-code') return claudeCatalog(source.command, online)
-  if (source.presetId === 'codex') return codexCatalog(source.command)
-  if (source.presetId === 'gemini-cli') return geminiCatalog(source.command, online)
-  if (source.provider === 'cli') return { models: [], source: 'custom CLI', fetchedAt: Date.now() }
-  if (!online) return { models: [], source: 'GET /models', fetchedAt: Date.now(), error: english(msg('error.lists_off')), errorText: msg('error.lists_off') }
-  // Privacy: an environment key is used only while "Use API keys from environment variables" is on.
-  const envKey = privacy.allowEnvKeys && source.env ? (process.env[source.env] ?? null) : null
-  const savedKey = source.profile ? (await resolveKey(host, source.profile)).key : null
-  return apiCatalog(source.provider === 'anthropic' ? 'anthropic' : 'openai', source.baseUrl, source.typedKey || savedKey || envKey)
 }
 
 /** The latest progress of recent runs, by run id, for callers that cannot hear panel events (the web panel's dev server). */
@@ -687,7 +534,6 @@ async function waitForRun(host: EnhanceWorker, run: LiveRun, signal: AbortSignal
     if (!first.ok) throw first.error
     const { result } = first
     const model = result.attempts.find((attempt) => attempt.ok)?.model ?? result.profile.model
-    void notifyDone(host, result.settings, model, Date.now() - run.started)
     await addHistory(host, result.settings, {
       original: run.input.prompt.trim(),
       enhanced: result.enhanced,
@@ -854,48 +700,40 @@ function registerRunHandlers(host: EnhanceWorker): void {
   })
 }
 
-/** Model profiles, their live model lists and the subscription CLIs found on this machine. */
+/** Copilot profiles and the attached account's model list. */
 function registerModelHandlers(host: EnhanceWorker): void {
-  const catalogsInFlight = new Map<string, Promise<Catalog>>()
-
+  const rejectExternalOptions = (input: object) => {
+    const raw = input as Record<string, unknown>
+    if (['baseUrl', 'command', 'args', 'apiKey'].some(key => raw[key] !== undefined && raw[key] !== '')) {
+      throw hostError(msg('error.invalid_profile'), 'invalid_params')
+    }
+  }
   host.panels.handle('models.get', async () => modelsView(host))
 
   host.panels.handle('models.save', async (input) => {
-    const config = await editableModels(host)
+    rejectExternalOptions(input)
+    const config = await loadModels(host)
     const existing = input.id ? config.profiles.findIndex((profile) => profile.id === input.id) : -1
-    const id = existing >= 0 ? config.profiles[existing].id : newProfileId(input.name || input.preset)
-    const profile = normalizeProfile({ ...input, id })
+    if (input.id !== undefined && existing < 0) throw hostError(msg('error.invalid_profile'), 'invalid_params')
+    const id = existing >= 0 ? config.profiles[existing].id : newProfileId(input.name || 'copilot')
+    const profile = normalizeProfile({ preset: 'copilot', provider: 'copilot', ...input, id })
     if (!profile) throw hostError(msg('error.invalid_profile'), 'invalid_params')
-    // The key first: where this machine has no OS key store the host refuses it, and a model saved
-    // without its key would look ready and fail on its first run.
-    if (profile.provider === 'copilot' && input.apiKey?.trim()) throw hostError(msg('error.invalid_profile'), 'invalid_params')
-    if (input.apiKey?.trim()) {
-      try {
-        await host.secrets.set(secretName(id), input.apiKey.trim())
-      } catch (error) {
-        host.log(`models.save: the key was not stored: ${(error as Error).message}`)
-        throw hostError(msg('error.key_not_saved'), 'action_failed')
-      }
-    }
     if (existing >= 0) config.profiles[existing] = profile
     else config.profiles.push(profile)
     await saveModels(host, config)
-    if (input.apiKey !== undefined && !input.apiKey.trim()) await host.secrets.delete(secretName(id)).catch(() => undefined)
     return modelsView(host)
   })
 
   host.panels.handle('models.delete', async ({ id }) => {
-    const config = await editableModels(host)
+    const config = await loadModels(host)
     config.profiles = config.profiles.filter((profile) => profile.id !== id)
-    if (config.hookProfileId === id) config.hookProfileId = null
     if (config.selectorProfileId === id) config.selectorProfileId = null
     await saveModels(host, config)
-    await host.secrets.delete(secretName(id)).catch(() => undefined)
     return modelsView(host)
   })
 
   host.panels.handle('models.move', async ({ id, direction, to }) => {
-    const config = await editableModels(host)
+    const config = await loadModels(host)
     const index = config.profiles.findIndex((profile) => profile.id === id)
     const step = direction === 'up' ? -1 : 1
     const target = typeof to === 'number' ? Math.round(to) : index + step
@@ -907,13 +745,12 @@ function registerModelHandlers(host: EnhanceWorker): void {
     return modelsView(host)
   })
 
-  host.panels.handle('models.roles', async ({ hookProfileId, selectorProfileId }) => {
-    const config = await editableModels(host)
-    const valid = (id: string | null) => (id && config.profiles.some((profile) => profile.id === id) ? id : null)
-    // The hook cannot use a CLI model (too slow for its 2 s), so it is never stored as the hook's.
-    const hook = valid(hookProfileId)
-    config.hookProfileId = hook && ['openai', 'anthropic'].includes(config.profiles.find((profile) => profile.id === hook)?.provider ?? '') ? hook : null
-    config.selectorProfileId = valid(selectorProfileId)
+  host.panels.handle('models.roles', async ({ selectorProfileId }) => {
+    const config = await loadModels(host)
+    if (selectorProfileId !== null && !config.profiles.some(profile => profile.id === selectorProfileId && profile.enabled)) {
+      throw hostError(msg('error.selector_model'), 'invalid_params')
+    }
+    config.selectorProfileId = selectorProfileId
     await saveModels(host, config)
     return modelsView(host)
   })
@@ -932,8 +769,7 @@ function registerModelHandlers(host: EnhanceWorker): void {
         'ping',
         chainOptions(settings, signal, { timeoutMs: 30_000, fallback: false })
       )
-      const keySource = (await resolveKey(host, profile)).source
-      const text = msg('result.test_ok', { name: profile.name, model: attempts[0]?.model || 'default', key: keySource })
+      const text = msg('result.test_ok', { name: profile.name, model: attempts[0]?.model || 'default' })
       return { ok: true, message: english(text), text, ms: Date.now() - started }
     } catch (error) {
       const text = messageOf(error)
@@ -942,68 +778,19 @@ function registerModelHandlers(host: EnhanceWorker): void {
   })
 
   host.panels.handle('models.catalog', async (input) => {
-    const preset = presetById(input.preset)
+    rejectExternalOptions(input)
+    const raw = input as Record<string, unknown>
+    if ((raw.preset !== undefined && raw.preset !== 'copilot') || (raw.provider !== undefined && raw.provider !== 'copilot')) {
+      throw hostError(msg('error.invalid_profile'), 'invalid_params')
+    }
     const config = await loadModels(host)
-    const profile = input.profileId ? config.profiles.find((entry) => entry.id === input.profileId) : undefined
-    const provider = preset.id === 'custom'
-      ? (input.provider ?? profile?.provider) === 'anthropic' ? 'anthropic' : 'openai'
-      : preset.provider
-    if (provider === 'copilot') {
-      if (!(await readSettings(host)).privacy.allowOnlineModelLists) return { models: [], source: 'GitHub Copilot', fetchedAt: Date.now(), error: english(msg('error.lists_off')), errorText: msg('error.lists_off') }
-      // Account and policy dependent: never persist or reuse a cross-session catalog.
-      try { return await host.host.call('copilot.catalog', {}) }
-      catch (error) { return { models: [], source: 'GitHub Copilot', fetchedAt: Date.now(), error: english(messageOf(error)), errorText: messageOf(error) } }
+    if (input.profileId !== undefined && !config.profiles.some(profile => profile.id === input.profileId)) {
+      throw hostError(msg('error.invalid_profile'), 'invalid_params')
     }
-    const baseUrl = (input.baseUrl ?? profile?.baseUrl ?? '').trim() || preset.baseUrl
-    const command = (input.command ?? profile?.command ?? '').trim()
-    // CLIs share one catalog per preset; APIs one per endpoint (keys differ per profile, lists rarely do).
-    const cliKey = `catalog:v3:${preset.id}`
-    // Claude Code's list is read from its program: a new version (other size or date) is a new list.
-    let cacheKey = provider === 'cli' ? cliKey : `catalog:v3:${provider}:${baseUrl}`
-    if (preset.id === 'claude-code') cacheKey = `${cliKey}:${await claudeProgramSignature(command)}`
-    if (!input.refresh) {
-      const cached = parseCatalog(await host.storage.get(cacheKey))
-      if (cached && cached.models.length > 0 && Date.now() - cached.fetchedAt < CATALOG_TTL_MS) {
-        return cached
-      }
-    }
-    // Opening the panel asks for every profile's list at once; requests for the same list share one
-    // fetch (a Claude Code scan reads its whole program file). A key typed in the form is its own fetch.
-    const flightKey = `${cacheKey}${input.apiKey?.trim() ? ':typed' : ''}`
-    const running = catalogsInFlight.get(flightKey)
-    if (running) return running
-    const fetching = (async (): Promise<Catalog> => {
-      const catalog = await fetchCatalog(host, { presetId: preset.id, env: preset.env, provider, baseUrl, command, profile, typedKey: input.apiKey?.trim() })
-      if (catalog.models.length > 0) {
-        await host.storage.set(cacheKey, { ...catalog, models: catalog.models.map((model) => ({ ...model })) })
-        // Lists of earlier Claude Code versions are never read again.
-        if (preset.id === 'claude-code') {
-          for (const key of await host.storage.keys()) {
-            if ((key === cliKey || key.startsWith(`${cliKey}:`)) && key !== cacheKey) await host.storage.delete(key)
-          }
-        }
-      }
-      return catalog
-    })()
-    catalogsInFlight.set(flightKey, fetching)
-    try {
-      return await fetching
-    } finally {
-      catalogsInFlight.delete(flightKey)
-    }
-  })
-
-  host.panels.handle('models.detect', async () => {
-    const config = await loadModels(host)
-    const found = detectClis().map(({ kind, path }) => ({
-      preset: kind,
-      label: presetById(kind).label,
-      path,
-      added: config.profiles.some(
-        (profile) => profile.preset === kind && (!profile.command || profile.command === path || profile.command === CLI_BINARIES[kind])
-      )
-    }))
-    return { found }
+    if (!(await readSettings(host)).privacy.allowOnlineModelLists) return { models: [], source: 'GitHub Copilot', fetchedAt: Date.now(), error: english(msg('error.lists_off')), errorText: msg('error.lists_off') }
+    // Account and policy dependent: never persist or reuse a cross-session catalog.
+    try { return await host.host.call('copilot.catalog', {}) }
+    catch (error) { return { models: [], source: 'GitHub Copilot', fetchedAt: Date.now(), error: english(messageOf(error)), errorText: messageOf(error) } }
   })
 }
 
@@ -1066,12 +853,9 @@ function registerDataHandlers(host: EnhanceWorker): void {
     const keys = await host.storage.keys()
     const config = await loadModels(host)
     const history = parseHistory(await host.storage.get(HISTORY_KEY))
-    let secretsStored = 0
-    for (const profile of config.profiles) if (await host.secrets.get(secretName(profile.id)).catch(() => null)) secretsStored++
     return {
       history: history.length,
-      profiles: config.fromEnv ? 0 : config.profiles.length,
-      keys: secretsStored,
+      profiles: config.profiles.length,
       catalogs: keys.filter((key) => key.startsWith('catalog:')).length
     }
   })
@@ -1086,8 +870,6 @@ function registerDataHandlers(host: EnhanceWorker): void {
       for (const key of keys.filter((entry) => entry.startsWith('catalog:'))) await host.storage.delete(key)
     }
     if (what === 'all') {
-      const config = await loadModels(host)
-      for (const profile of config.profiles) await host.secrets.delete(secretName(profile.id)).catch(() => undefined)
       await host.storage.delete(MODELS_KEY)
       for (const key of Object.values(EFFORT_SETTINGS)) await host.settings.set(key, 'auto')
       await host.storage.delete(RULES_KEY)
@@ -1095,172 +877,12 @@ function registerDataHandlers(host: EnhanceWorker): void {
       await host.storage.delete(CONSENTS_KEY)
       await host.storage.delete('colorTheme')
       forgetActivity()
-      launchedPrompts.clear()
-      lastHook = null
       await forgetTerminals(host)
       // The copies of attached files (the panel forgets its list of them as well).
       await clearAttachments().catch((error) => host.log(`attachments: ${(error as Error).message}`))
     }
     return { ok: true as const }
   })
-}
-
-/**
- * Prompts the panel itself started an agent with, for a short while: they are enhanced already, so
- * the auto-enhance hook lets them through (the host may run it on a launch's prompt like on any other).
- */
-const LAUNCH_MEMORY_MS = 120_000
-const launchedPrompts = new Map<string, number>()
-function wasLaunchedHere(prompt: string): boolean {
-  const now = Date.now()
-  for (const [text, until] of launchedPrompts) if (until < now) launchedPrompts.delete(text)
-  return launchedPrompts.has(terminalSafe(prompt).trim())
-}
-
-/** Projects whose context the hook is reading for the next prompt that goes there. */
-const warming = new Set<string>()
-
-/** What auto-enhance did last, for the Settings section: a prompt it let through unchanged says why. */
-let lastHook: HookRecord | null = null
-function noteHook(host: EnhanceWorker, record: Omit<HookRecord, 'at'>): void {
-  lastHook = { at: Date.now(), ...record }
-  if (record.outcome === 'skipped' && record.reason) host.panels.post('hook.skipped', { agent: record.agent, reason: record.reason })
-}
-
-/** The agent.prompt.before hook, and keeping its project context warm. */
-function registerAutoEnhance(host: EnhanceWorker): void {
-  host.panels.handle('hook.last', async () => lastHook ?? await host.storage.get('panel:hookLast') as HookRecord | null)
-
-  host.hooks.on('agent.prompt.before', async (event, next) => {
-    const started = Date.now()
-    const settings = await readSettings(host)
-    const prompt = event.prompt
-    if (settings.autoEnhanceMode === 'off' || prompt.trim().length < settings.autoEnhanceMinLength) return
-    if (wasLaunchedHere(prompt)) return
-    if (settings.autoEnhanceMode === 'rules') {
-      const append = settings.autoEnhanceAppend.trim()
-      if (!append || prompt.includes(append)) return
-      host.panels.post('hook.enhanced', { agent: event.agent, mode: 'rules' })
-      noteHook(host, { outcome: 'appended', agent: event.agent })
-      return next({ ...event, prompt: `${prompt.trimEnd()}\n\n${append}` })
-    }
-    try {
-      const config = await loadModels(host)
-      // The project the prompt goes to, which need not be the one in focus.
-      const place = await hookPlace(host, event.terminalId)
-      const items = settings.autoEnhanceContext ? hookContext(place, settings) : []
-      // A project that is not in focus has not been read yet: read it now, for the next prompt that
-      // goes there (this one has 2 s and goes with the workspace's name alone).
-      if (settings.autoEnhanceContext && settings.privacy.allowProjectFiles && place?.workspace && isLocalWorkspace(place.workspace) && !cachedStatic(place.workspace.path, settings)) {
-        const root = place.workspace.path
-        // Once per project at a time: several tasks sent to one project start one read, not one each.
-        if (!warming.has(root)) {
-          warming.add(root)
-          void staticParts(root, settings.extraContextFiles, true, settings.privacy.allowGit, undefined, undefined, settings)
-            .catch(() => undefined)
-            .finally(() => warming.delete(root))
-        }
-      }
-      const rules =rulesFor(parseRulesConfig(await host.storage.get(RULES_KEY).catch(() => null)), place?.where ?? { workspace: null, project: null })
-      const system = buildSystemPrompt({
-        style: settings.defaultStyle,
-        customInstructions: settings.customInstructions,
-        agent: settings.adaptToAgent ? event.agent : null,
-        rules
-      })
-      // Copilot helpers and CLIs take too long for the hook's two-second budget.
-      const apiProfiles = config.profiles.filter(profile => profile.enabled && ['openai', 'anthropic'].includes(profile.provider))
-      const hookProfileId = apiProfiles.some(profile => profile.id === config.hookProfileId) ? config.hookProfileId : null
-      const list = candidates(apiProfiles, hookProfileId, settings.fallbackEnabled)
-      if (list.length === 0) {
-        // The panel's Auto-enhance section warns about this; the prompt goes through unchanged.
-        host.log('auto-enhance skipped: no enabled API model (subscription CLIs are too slow for the hook)')
-        noteHook(host, { outcome: 'skipped', agent: event.agent, reason: msg('hook.no_model') })
-        return
-      }
-      const result = await runChain(
-        host,
-        list,
-        system,
-        buildUserMessage(prompt, items),
-        chainOptions(settings, undefined, { totalMs: HOOK_BUDGET_MS - (Date.now() - started) })
-      )
-      // the host types the rewrite into the agent's terminal: no control characters from a model, and
-      // never nothing in place of the prompt that was going out.
-      const enhanced = terminalSafe(cleanOutput(result.text)).trim()
-      if (!enhanced) {
-        host.log('auto-enhance skipped: the model returned no prompt')
-        noteHook(host, { outcome: 'skipped', agent: event.agent, reason: msg('hook.empty') })
-        return
-      }
-      const model = result.attempts.find((attempt) => attempt.ok)?.model ?? result.profile.model
-      void addHistory(host, settings, {
-        original: prompt,
-        enhanced,
-        style: settings.defaultStyle,
-        model,
-        source: 'hook',
-        ...(place?.where.project ? { project: place.where.project } : {})
-      }).catch(() => undefined)
-      host.panels.post('hook.enhanced', { agent: event.agent, mode: 'ai', model })
-      noteHook(host, { outcome: 'rewritten', agent: event.agent, model })
-      return next({ ...event, prompt: enhanced })
-    } catch (error) {
-      host.log(`auto-enhance skipped: ${(error as Error).message}`)
-      // Why a model was too slow or a chain failed, as an English structured message.
-      const reason = error instanceof ChainError || error instanceof LlmError ? error.text : raw((error as Error).message)
-      noteHook(host, { outcome: 'skipped', agent: event.agent, reason })
-      return
-    }
-  })
-
-  // Keep the prompt-independent context warm, so the hook has it within its 2 s.
-  let warmTimer: ReturnType<typeof setTimeout> | null = null
-  host.events.on('workspace.changed', ({ context }) => {
-    if (!context) return
-    if (warmTimer) clearTimeout(warmTimer)
-    warmTimer = setTimeout(async () => {
-      try {
-        const settings = await readSettings(host)
-        const wantsHook = settings.autoEnhanceMode === 'ai' && settings.autoEnhanceContext
-        if (!wantsHook && !atLeast(settings.contextLevel, 'standard')) return
-        const workspace = await findFocusedWorkspace(host, context)
-        if (workspace && isLocalWorkspace(workspace) && settings.privacy.allowProjectFiles) {
-          await staticParts(workspace.path, settings.extraContextFiles, true, settings.privacy.allowGit, undefined, undefined, settings)
-        }
-      } catch (error) {
-        host.log(`context warm-up: ${(error as Error).message}`)
-      }
-    }, 1500)
-  })
-}
-
-/** Commands and the status bar item. */
-function registerCommands(host: EnhanceWorker): void {
-  host.commands.register('auto-enhance.cycle', async () => {
-    const { autoEnhanceMode } = await readSettings(host)
-    const next = AUTO_MODES[(AUTO_MODES.indexOf(autoEnhanceMode) + 1) % AUTO_MODES.length]
-    await host.settings.set('autoEnhanceMode', next)
-    await refreshStatusBar(host)
-    return modeAnswer(next)
-  })
-
-  host.commands.register('auto-enhance.off', async () => setMode(host, 'off'))
-  host.commands.register('auto-enhance.rules', async () => setMode(host, 'rules'))
-  host.commands.register('auto-enhance.ai', async () => setMode(host, 'ai'))
-
-  host.commands.register('status-bar.toggle', async () => {
-    const all = await host.settings.get()
-    const next = all.statusBarItem === 'hidden' ? 'full' : 'hidden'
-    await host.settings.set('statusBarItem', next)
-    await refreshStatusBar(host)
-    return WORKER_WORDS.bar[next === 'hidden' ? 'hidden' : 'shown']
-  })
-
-  host.settings.onDidChange(({ key }) => {
-    if (key === 'autoEnhanceMode' || key === 'statusBarItem') void refreshStatusBar(host)
-  })
-  void refreshStatusBar(host)
 }
 
 // ---- the host integrations: what agents do, files saved in the editor, new agents, opening files
@@ -1293,9 +915,6 @@ async function focusedWorkspaceId(host: EnhanceWorker, hint: unknown): Promise<s
   if (!focused) return null
   return (await findFocusedWorkspace(host, focused, typeof hint === 'string' ? hint : null))?.id ?? null
 }
-
-/** The agent kinds a new agent can be started with: ids as the host names them (letters, digits, - _). */
-const AGENT_KIND = /^[a-z][a-z0-9_-]{0,31}$/
 
 function registerIntegrations(host: EnhanceWorker): void {
   void refreshLive(host)
@@ -1338,24 +957,6 @@ function registerIntegrations(host: EnhanceWorker): void {
     return { granted: [...NEEDS_CONSENT].filter((entry) => consents[entry] === true) }
   })
 
-  /** Starts a new agent in the focused workspace with the enhanced prompt (Privacy, confirmed). */
-  host.panels.handle('agent.launch', async ({ agent, prompt, workspaceId }) => {
-    const settings = await readSettings(host)
-    if (!settings.privacy.allowAgentLaunch) throw hostError(msg('error.launch_off'), 'not_permitted')
-    if (!host.host.has('agent.launch')) throw hostError(msg('error.unsupported'), 'unavailable')
-    if (typeof agent !== 'string' || !AGENT_KIND.test(agent)) throw hostError(msg('error.invalid_request'), 'invalid_params')
-    const text = terminalSafe(String(prompt ?? '')).trim().slice(0, 20_000)
-    if (!text) throw hostError(msg('error.nothing_to_send'), 'invalid_params')
-    const id = await focusedWorkspaceId(host, workspaceId)
-    if (!id) throw hostError(msg('note.no_workspace'), 'invalid_params')
-    // This prompt is already enhanced: if the host runs the auto-enhance hook on it, it goes through as it is.
-    launchedPrompts.set(text, Date.now() + LAUNCH_MEMORY_MS)
-    const started = await host.host.call('agent.launch', { workspaceId: id, agent, prompt: text })
-    // The new terminal is in that workspace: known from now on, before the host's first event about it.
-    learnTerminal(host, started.terminalId, id)
-    return started
-  })
-
   /** Opens a file of the focused workspace in the host's editor (a context item the person clicked). */
   host.panels.handle('editor.open', async ({ path, workspaceId }) => {
     const settings = await readSettings(host)
@@ -1369,20 +970,9 @@ function registerIntegrations(host: EnhanceWorker): void {
   })
 }
 
-/** After a long panel run: a desktop notification that names the model and time, never the prompt. */
-async function notifyDone(host: EnhanceWorker, settings: Settings, model: string, ms: number): Promise<void> {
-  if (!settings.notifyWhenDone || ms < NOTIFY_AFTER_MS || !host.host.has('notifications.show')) return
-  const body = formatText('Enhanced prompt ready ({model}, {seconds} s)', { model, seconds: (ms / 1000).toFixed(0) })
-  await host.host.call('notifications.show', { title: BRAND, body }).catch(() => undefined)
-}
-/** Shorter runs end while the person is still looking at the panel. */
-const NOTIFY_AFTER_MS = 8000
-
 export default function activate(host: EnhanceWorker): void {
   registerIntegrations(host)
   registerRunHandlers(host)
   registerModelHandlers(host)
   registerDataHandlers(host)
-  registerAutoEnhance(host)
-  registerCommands(host)
 }

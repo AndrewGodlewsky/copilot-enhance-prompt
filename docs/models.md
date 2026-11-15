@@ -1,85 +1,25 @@
 # Models
 
-Enhance Prompt runs on models you choose: GitHub Copilot, the subscription CLIs already signed in on your machine, API providers, or a local server. Manage them in the panel's **Models** tab and assign them to Low, Medium, and High in **Settings → Effort models**.
+Enhance Prompt uses the models available through your GitHub Copilot account. Manage saved profiles in **Models**, then assign them to Low, Medium and High in **Settings > Effort models**. Claude, GPT and other model families shown in this catalog all use Copilot authentication and usage accounting.
 
-## Subscription CLIs
+## Add and choose a model
 
-If Claude Code, Codex or Gemini CLI is installed and signed in, it appears under **Use your subscription**. Click it to add it, then click **Test** (✓) on its card.
+Click **Add a model**, choose a model from the live Copilot list, and save. Each profile has a name, model and enabled switch. The helper reuses the SDK and executable supplied by the running Copilot desktop app; it needs no API key, separate SDK installation or runtime download.
 
-| CLI | Plan it uses | How it runs |
-| --- | --- | --- |
-| Claude Code | Claude Pro or Max | `claude -p` with no tools and no saved session |
-| Codex CLI | ChatGPT | `codex exec` in a read-only sandbox, ephemeral |
-| Gemini CLI | Your Google account | `gemini -p` |
-| Custom CLI | Any | Your command; it must read the prompt on stdin and print the answer |
+The helper must verify the same GitHub account as the attached session. A desktop sign-in that is unavailable to the helper produces an access error. See [background rewriting](copilot-background-rewriting.md) for account checks and compatibility limits.
 
-The prompt is passed on stdin and the CLI runs in an empty temporary folder, so it loads none of your project's rules, hooks or files on its own. The project context Enhance gathered is in the prompt.
+The **Model** field lists eligible models from the attached Copilot session. **Refresh model list** retries discovery without generating text. The **Fetch model lists online** privacy switch must be enabled because each rewrite verifies current model access. A model name alone does not establish access; the runtime must identify it as an eligible Copilot model.
 
-Notes:
-
-- A CLI takes a few seconds to start, so [auto-enhance](auto-enhance.md) skips CLI models.
-- Each call counts against the CLI's own limits. Codex adds a large system prompt of its own to every call.
-- If the extension cannot find a CLI, set its full path in **Command** when you edit the model.
-
-## API models
-
-Click **Add model** and pick a preset:
-
-| Preset | Endpoint | Key |
-| --- | --- | --- |
-| OpenAI | `https://api.openai.com/v1` | `OPENAI_API_KEY` |
-| Anthropic | `https://api.anthropic.com` | `ANTHROPIC_API_KEY` |
-| OpenRouter | `https://openrouter.ai/api/v1` | `OPENROUTER_API_KEY` |
-| Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai` | `GEMINI_API_KEY` |
-| Groq | `https://api.groq.com/openai/v1` | `GROQ_API_KEY` |
-| DeepSeek | `https://api.deepseek.com/v1` | `DEEPSEEK_API_KEY` |
-| Mistral | `https://api.mistral.ai/v1` | `MISTRAL_API_KEY` |
-| Ollama | `http://localhost:11434/v1` | none |
-| LM Studio | `http://localhost:1234/v1` | none |
-| Custom | any OpenAI-compatible or Anthropic-style endpoint | optional |
-
-- On Windows, pasted keys are protected with DPAPI for your Windows account and never shown again. Other platforms do not support saved keys yet. Environment keys work only when the host makes them available to the extension; Copilot may strip sensitive variables. A signed-in CLI or a local model needs no pasted API key.
-- Endpoints must use `https`, except `http://localhost` for local servers.
-- If you have no saved models, the plugin uses any of those environment variables it finds, and the Models tab says so.
-- **Max tokens** is the most one answer may take: 8,000 for a model you add now. Current models think before they answer, and that thinking counts too. When an answer stops at the limit, the panel says so (and fallback moves on) instead of showing half a prompt; raise the limit for that model then.
-- The plugin sends no sampling settings such as temperature: current models refuse a request that sets them.
-
-## Model lists stay current
-
-You don't type model ids. The **Model** field lists what each source offers today:
-
-| Source | Where the list comes from |
-| --- | --- |
-| Claude Code | Every model by name (Opus 5.5, Sonnet 5.5, Fable 5.1, Haiku 5.5, then older ones such as Opus 4.8 or Sonnet 4.6), read from the model table built into the installed Claude Code, the list its `/model` menu shows. Then the aliases (`haiku`, `sonnet`, `opus`, `fable`…), which always point at the newest model, from `claude --help` and the [Claude Code settings schema](https://www.schemastore.org/claude-code-settings.json). Limited to your `availableModels` if you set one, with your default marked. |
-| Codex CLI | `codex debug models`: the same catalog Codex shows, with your `config.toml` model marked. |
-| Gemini CLI | Known models plus the one in `~/.gemini/settings.json`. |
-| API presets | The provider's `GET /models` (Anthropic: `/v1/models`), newest first. |
-
-Lists are cached for a day. Click **Refresh model list** (↻) next to the field to fetch them now. **Other (type the id)…** takes any id that is not listed. On each card, the model menu switches models in place.
+Direct provider APIs, local model servers, subscription CLIs and custom commands are no longer supported. Upgrade removes their saved profiles from active configuration instead of converting them into Copilot models. An effort assignment that referred to a removed profile needs an explicit replacement in Settings, including an explicit selection saved before effort levels existed. A retired AI-assisted file picker selection remains unavailable until you choose a Copilot model or Follow the selected effort in Models. Existing Copilot profiles and assignments are retained.
 
 ## Fallback
 
-Models are tried from top to bottom. The **#** menu on each card sets its position (pick **#1** to try it first), and the switch skips it.
+The **#** menu on each card sets its position; the switch skips that profile. The model assigned to the selected effort is tried first. With **Fallback to the next model when one fails** enabled, remaining eligible Copilot profiles can back it up within the run's time budget.
 
-> [!NOTE]
-> Use the position menu to reorder models.
+**Fall back on** selects either any model error or only network errors, timeouts, rate limits and server errors. Accounting failures stop fallback. The result identifies the model that answered and any failed attempts.
 
-- **Fallback to the next model when one fails** (on by default).
-- **Fall back on**:
-  - **Any error**: a bad key, an unknown model, a network error, a timeout, a rate limit, a server error.
-  - **Only network, timeout, rate limit, 5xx**: a configuration mistake stops the chain, so you notice it.
-- Models without a key are skipped.
-- After an enhance, the panel shows which model answered and which ones failed first, for example *Fell back after: OpenAI (429: rate limit)*.
-
-The **Effort** menu on Enhance selects the Low, Medium, or High assignment from Settings. With fallback on, the rest of the chain still backs up the assigned model within the same Copilot or external-provider route. The result identifies the model actually used. [Effort settings](settings.md#effort-models).
-
-## Models for special jobs
-
-With two or more models:
-
-- **Auto-enhance hook model** (in the panel's Settings section, with the auto-enhance mode): the model [auto-enhance](auto-enhance.md) uses. It must answer in under 2 seconds, so pick a fast API model such as Groq or a small OpenAI model.
-- **File picker model**: the model that picks files at the [AI-assisted context level](context-levels.md).
+The **File picker model** selects the profile used for [AI-assisted context](context-levels.md). **AI Test** uses the selected effort's model for its research rounds and does not use research fallback. All of these requests stay within Copilot.
 
 ## Test a model
 
-**Test** (✓) on a card sends a tiny request through that model alone and reports the time, or the exact error.
+**Test** on a card sends a small request through that model alone and reports its duration or error. It uses your Copilot plan and can incur usage. Refreshing the model list does not make this request.

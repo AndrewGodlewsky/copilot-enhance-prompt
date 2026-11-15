@@ -235,7 +235,7 @@ export async function focusedProject(host: EnhanceWorker, hint?: string | readon
   return { workspace: focused.displayName, project: await projectNameOf(host, focused, await findFocusedWorkspace(host, focused, hint)) }
 }
 
-// ---- prompt-independent parts, cached per workspace root (also what the hook uses) ----
+// ---- prompt-independent parts, cached per workspace root ----
 
 type StaticParts = { at: number; key: string; files: string[]; refused: string[]; isGit: boolean; items: ContextItem[] }
 const staticCache = new Map<string, StaticParts>()
@@ -504,6 +504,7 @@ async function dynamicParts(
       step('pick', 'done', String(picked.length))
     } catch (error) {
       stopIfCancelled(signal)
+      if (messageOf(error).code === 'error.copilot_usage') throw error
       notes.push(msg('note.picker_skipped', { reason: messageOf(error) }))
       step('pick', 'skipped')
     }

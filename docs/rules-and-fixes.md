@@ -12,7 +12,7 @@ the agent to run `pnpm test` before finishing", "Keep code identifiers in Englis
 - A rule marked "everywhere" is followed in every project.
 - Type a rule and press Enter (Shift+Enter for a new line), or **Add rule**.
 - The switch pauses a rule; the trash icon deletes it.
-- Rules are used by every Enhance and by [AI auto-enhance](auto-enhance.md).
+- Rules are used by every canvas enhancement.
 - They win over the style's shape when the two disagree.
 
 The style **Custom only** follows your own instructions instead of a built-in shape, subject to the English output policy; write them in

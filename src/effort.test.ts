@@ -9,7 +9,7 @@ import type { CopilotSession } from './copilot/session.ts'
 import * as main from './worker.ts'
 
 const profile = (id: string, provider = 'copilot') => ({ id, name: id, preset: provider, provider,
-  model: `${id}-default`, baseUrl: '', maxTokens: 2000, enabled: true, command: '', args: '' })
+  model: `${id}-default`, enabled: true })
 const unused = async (): Promise<never> => { throw new Error('No session RPC or paid provider calls in this test.') }
 const session = (sessionId: string): CopilotSession => ({ sessionId, send: unused,
   rpc: { metadata: { snapshot: unused, activity: unused, isProcessing: unused }, permissions: { pendingRequests: unused }, queue: { pendingItems: unused } } })
@@ -48,7 +48,6 @@ test('Auto migrates to the first enabled model; an empty installation remains us
     const dir = await mkdtemp(join(tmpdir(), 'enhance-effort-test-'))
     try {
       const data = persistentStore(join(dir, 'data'))
-      await persistentStore(join(dir, 'preferences')).set('allowEnvKeys', false)
       if (configured) await data.set('models', { profiles: [{ ...profile('disabled'), enabled: false }, profile('first')] })
       const services = createServices(session('auto'), dir)
       const all = await services.settings.get()
@@ -83,30 +82,6 @@ test('worker resolves each effort at run time and ignores stale direct model ove
     await worker.request('data.clear', { what: 'all' })
     for (const key of ['effortLowModel', 'effortMediumModel', 'effortHighModel']) assert.equal(await host.settings.get(key), 'auto')
   } finally { await worker.deactivate() }
-})
-
-test('migration preserves an environment profile override and respects the environment-key privacy switch', async () => {
-  const beforeOpenAI = process.env.OPENAI_API_KEY
-  const beforeAnthropic = process.env.ANTHROPIC_API_KEY
-  process.env.OPENAI_API_KEY = 'fixture-only'
-  process.env.ANTHROPIC_API_KEY = 'fixture-only'
-  try {
-    for (const allowed of [true, false]) {
-      const dir = await mkdtemp(join(tmpdir(), 'enhance-effort-test-'))
-      try {
-        const data = persistentStore(join(dir, 'data'))
-        const prefs = persistentStore(join(dir, 'preferences'))
-        await data.set('panel:profileChoice', 'env-anthropic')
-        await data.set('panel:modelChoice', 'custom-claude')
-        await prefs.set('allowEnvKeys', allowed)
-        const all = await createServices(session('env'), dir).settings.get()
-        for (const key of ['effortLowModel', 'effortMediumModel', 'effortHighModel']) assert.equal(all[key], allowed ? 'env-anthropic|custom-claude' : 'auto')
-      } finally { await rm(dir, { recursive: true, force: true }) }
-    }
-  } finally {
-    if (beforeOpenAI === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = beforeOpenAI
-    if (beforeAnthropic === undefined) delete process.env.ANTHROPIC_API_KEY; else process.env.ANTHROPIC_API_KEY = beforeAnthropic
-  }
 })
 
 test('missing, disabled and invalid effort assignments fail before calling a model', async () => {

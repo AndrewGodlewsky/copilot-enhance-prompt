@@ -8,10 +8,9 @@ import { draft, historyFilter, notice, put, result, sendAfterEnhance, target, ty
 import { closePanel, wirePanel } from './panel/setup.ts'
 import { mountPanel } from './panel/testing.ts'
 import { DISCLOSURES, exportName, fenced, historyMarkdown, SEND_AFTER_ROW, stamp, switchRow } from './panel/view.ts'
-import { PRESETS } from './presets.ts'
 import type { HistoryEntry } from './history.ts'
 
-const models = { profiles: [], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS }
+const models = { profiles: [], selectorProfileId: null }
 const answer = (enhanced: string) => ({ enhanced, model: 'm', profileName: 'P', ms: 900, attempts: [], context: [], notes: [] })
 const agent = (state: string, terminalId = 't1'): Target => ({ terminalId, label: `Claude · ${state}`, agent: 'claude', title: 'Claude', state })
 
@@ -48,7 +47,7 @@ async function panel(options: { settings?: Record<string, boolean>; fail?: boole
         return { accepted: true }
       },
       'data.clear': { ok: true },
-      'data.summary': { history: 0, profiles: 0, keys: 0, catalogs: 0 }
+      'data.summary': { history: 0, profiles: 0, catalogs: 0 }
     }
   })
   const view = await mountPanel(host)

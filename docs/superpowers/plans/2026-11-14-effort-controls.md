@@ -1,5 +1,7 @@
 # Effort controls implementation plan
 
+> Historical planning record. This captures the design and verification at that time; current behavior is documented in the [README](../../../README.md) and [Copilot-only plan](../plans/2026-11-15-copilot-only.md).
+
 > **For agentic workers:** Use superpowers:executing-plans to implement this plan in the current worktree.
 
 **Goal:** Replace composer model selection with three configurable effort tiers and require explicit enhancement buttons.

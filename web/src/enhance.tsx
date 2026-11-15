@@ -13,9 +13,7 @@ import {
   FileTextIcon,
   PaperclipIcon,
   ArrowUpToLineIcon,
-  BotIcon,
   ExternalLinkIcon,
-  LightbulbIcon,
   RotateCcwIcon,
   SendIcon,
   SlidersHorizontalIcon,
@@ -38,7 +36,6 @@ import {
   effectiveLevel,
   effectiveStyle,
   excluded,
-  feedbackShown,
   files,
   lastRun,
   level,
@@ -57,16 +54,12 @@ import {
   workspaceChoices,
   workspaceKey,
   workspaceName,
-  detected
 } from '../../src/panel/state.ts'
 import {
-  addDetected,
   allowed,
-  launchAgent,
   openFile,
   openSection,
   cancel,
-  closeFeedback,
   copy,
   enhanceAndSend,
   enhanceNow,
@@ -76,10 +69,8 @@ import {
   removeFile,
   savePrompt,
   send,
-  sendFeedback,
   sendsAfterEnhance,
   setSetting,
-  stopFeedback,
   toggleItem
 } from '../../src/panel/actions.ts'
 import {
@@ -519,58 +510,6 @@ function ResultCard({ output }: { output: string }) {
         </Tooltip>
         {!allowed('allowTerminalSend') ? <p className="text-muted-foreground text-xs">{'Send to Copilot is off in Settings. You can still copy or save this prompt.'}</p> : !read(target) ? <p className="text-muted-foreground text-xs">{'Copilot session unavailable. You can still copy or save this prompt.'}</p> : working !== null ? <p className="text-muted-foreground text-xs">{'Wait for the current operation to finish before sending.'}</p> : null}
       </div>
-      {allowed('allowAgentLaunch') ? <NewAgent output={output} /> : null}
-    </div>
-  )
-}
-
-/** Agents a new session can start with: those running here, then the usual ones. */
-function agentKinds(): string[] {
-  const running = read(targets)
-    .map((item) => item.agent)
-    .filter((agent): agent is string => Boolean(agent))
-  return [...new Set([...running, 'claude', 'codex', 'gemini'])]
-}
-
-/** Starts a new agent with the enhanced prompt (Privacy: Start new agents, confirmed). */
-function NewAgent({ output }: { output: string }) {
-  const kinds = agentKinds()
-  const [kind, setKind] = useState(kinds[0])
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-muted-foreground shrink-0 text-xs">{'Or start a new agent'}</span>
-      <Pick label={'Agent'} value={kind} options={kinds.map((value) => ({ value, label: value }))} onChange={setKind} className="h-8 w-28" />
-      <Button size="sm" variant="outline" onClick={() => void launchAgent(kind, output)} disabled={read(busy) !== null}>
-        <BotIcon />
-        {'Start'}
-      </Button>
-    </div>
-  )
-}
-
-/**
- * Now and then, under a result: asks for ideas and feedback (src/panel/view.ts says when). Three
- * ways out: send some, close the note for now, or never be asked again (the switch in the settings).
- */
-function FeedbackNote() {
-  if (!read(feedbackShown)) return null
-  return (
-    <div className="bg-card flex items-start gap-2 rounded-xl border py-2 pr-1.5 pl-2.5">
-      <LightbulbIcon className="text-muted-foreground mt-0.5 size-4 shrink-0" />
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <p className="text-muted-foreground text-xs">{'Got an idea, or something that could work better? Send your feedback: it is how the plugin improves.'}</p>
-        <div className="flex flex-wrap items-center gap-1">
-          <Button size="xs" variant="outline" onClick={() => void sendFeedback()}>
-            {'Send feedback'}
-          </Button>
-          <Button size="xs" variant="ghost" className="text-muted-foreground" onClick={stopFeedback}>
-            {"Don't ask again"}
-          </Button>
-        </div>
-      </div>
-      <IconAction label={'Close'} className="size-8 shrink-0" onClick={closeFeedback}>
-        <XIcon />
-      </IconAction>
     </div>
   )
 }
@@ -605,42 +544,22 @@ export function EnhanceSection({ refresh }: { refresh: () => void }) {
   const crew = useWordCrew(current, read(draft), read(workspaceKey), percent)
   const output = read(result)
   const warning = modelWarning()
-  // With no model yet, an agent CLI found on this machine is one press away: it runs on the
-  // subscription the person already has, with no key to paste.
-  const found = warning === 'no-model' ? read(detected).filter((entry) => !entry.added) : []
   return (
     <div className="flex flex-col gap-3">
       <WorkspacePicker />
       <Composer refresh={refresh} crew={crew} />
       <RunCard finishing={crew.finishing} />
       {output ? <ResultCard output={output} /> : null}
-      {output ? <FeedbackNote /> : null}
       {warning ? (
         <Alert variant="warning">
-          <AlertTitle>{warning === 'no-model' ? 'No model yet' : 'No API key yet'}</AlertTitle>
+          <AlertTitle>{'No Copilot model yet'}</AlertTitle>
           <AlertDescription className="flex flex-col gap-2">
-            {found.length > 0 ? (
-              <>
-                <span>{'Found on this machine. It uses your subscription: no API key needed.'}</span>
-                <span className="flex flex-wrap gap-1.5">
-                  {found.map((entry) => (
-                    <Button key={entry.preset} size="sm" onClick={() => void addDetected(entry.preset, entry.path)}>
-                      {formatText('Use {name}', { name: entry.label.replace(/ \(.*\)$/, '') })}
-                    </Button>
-                  ))}
-                  <Button size="sm" variant="ghost" onClick={() => set(tab, 'models')}>
-                    {'Other models'}
-                  </Button>
-                </span>
-              </>
-            ) : (
-              <span className="flex items-center justify-between gap-2">
-                <span>{'Add one in the Models tab.'}</span>
-                <Button size="sm" variant="outline" onClick={() => set(tab, 'models')}>
-                  {'Open Models'}
-                </Button>
-              </span>
-            )}
+            <span className="flex items-center justify-between gap-2">
+              <span>{'Select a Copilot model in the Models tab.'}</span>
+              <Button size="sm" variant="outline" onClick={() => set(tab, 'models')}>
+                {'Open Models'}
+              </Button>
+            </span>
           </AlertDescription>
         </Alert>
       ) : null}

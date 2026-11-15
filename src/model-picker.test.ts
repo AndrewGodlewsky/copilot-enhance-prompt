@@ -1,51 +1,21 @@
 // Effort assignments reuse every enabled profile and its live model list in Settings.
 import { assert, mockHost, mountWorker, test } from '#testing'
-import { enhanceNow, setSetting, openSection, openForm, applyPreset, patchForm, formCatalogInput, saveForm } from './panel/actions.ts'
-import { draft, put, form, effort, effortModels, dataSummary, tab } from './panel/state.ts'
+import { enhanceNow, setSetting, openSection } from './panel/actions.ts'
+import { draft, put, effort, effortModels, dataSummary, tab } from './panel/state.ts'
 import { read, set } from '#panel'
 import { mountPanel } from './panel/testing.ts'
 import { modelMenu, effortModelOptions, effortModelLabel } from './panel/view.ts'
-import { PRESETS, type ProfileView } from './presets.ts'
+import { type ProfileView } from './presets.ts'
 import * as main from './worker.ts'
 
-test('switching a keyed form to Copilot clears the key and never sends it in catalog or save requests', async () => {
-  const models = { profiles: [], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS }
-  const host = mockHost({ requests: { 'models.get': models, 'models.save': models, 'models.catalog': { models: [], source: 'fixture', fetchedAt: 0 } } })
-  const panel = await mountPanel(host)
-  try {
-    openForm()
-    applyPreset('openai')
-    patchForm({ apiKey: 'private-key' })
-    applyPreset('copilot')
-    assert.equal(read(form)?.apiKey, '')
-    assert.equal(formCatalogInput({ ...read(form)!, apiKey: 'stale-key' }).apiKey, undefined)
-    await saveForm()
-    const saved = host.callsOf('plugin.request').find(call => call.name === 'models.save')
-    assert.equal(saved.input.apiKey, '')
-  } finally { await panel.unmount() }
-})
-
 const claude: ProfileView = {
-  id: 'claude',
-  name: 'Claude Code',
-  preset: 'claude-code',
-  provider: 'cli',
-  baseUrl: '',
-  model: 'haiku',
-  maxTokens: 2000,
-  enabled: true,
-  command: '',
-  args: '',
-  keySource: 'subscription',
-  envName: '',
-  effectiveBaseUrl: '',
-  effectiveModel: 'haiku'
+  id: 'claude', name: 'Claude Sonnet', preset: 'copilot', provider: 'copilot', model: 'claude-sonnet-4.5', enabled: true, effectiveModel: 'claude-sonnet-4.5'
 }
-const codex: ProfileView = { ...claude, id: 'codex', name: 'Codex', preset: 'codex', model: '', effectiveModel: '' }
+const gpt: ProfileView = { ...claude, id: 'gpt', name: 'GPT-5 mini', model: 'gpt-5-mini', effectiveModel: 'gpt-5-mini' }
 
 test('opening effort settings loads the Settings data on first navigation', async () => {
-  const summary = { history: 2, profiles: 1, keys: 0, catalogs: 1 }
-  const host = mockHost({ requests: { 'models.get': { profiles: [claude], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS }, 'data.summary': summary, 'hook.last': null } })
+  const summary = { history: 2, profiles: 1, catalogs: 1 }
+  const host = mockHost({ requests: { 'models.get': { profiles: [claude], selectorProfileId: null }, 'data.summary': summary } })
   const panel = await mountPanel(host)
   try {
     assert.equal(read(dataSummary), null)
@@ -53,7 +23,7 @@ test('opening effort settings loads the Settings data on first navigation', asyn
     await panel.settled()
     assert.equal(read(tab), 'privacy')
     assert.deepEqual(read(dataSummary), summary)
-    assert.ok(host.callsOf('plugin.request').some(call => call.name === 'hook.last'))
+    assert.ok(!host.callsOf('plugin.request').some(call => call.name === 'hook.last'))
   } finally { await panel.unmount() }
 })
 
@@ -61,25 +31,15 @@ test('lists models for effort settings and sends the selected effort without sta
   const sent: { effort?: string; profileId?: string | null; model?: string }[] = []
   const host = mockHost({
     requests: {
-      'models.get': { profiles: [claude, codex], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS },
+      'models.get': { profiles: [claude, gpt], selectorProfileId: null },
       'targets.list': { targets: [] },
-      'models.detect': { found: [] },
-      'models.catalog': ({ preset }: { preset: string }) => ({
-        models:
-          preset === 'claude-code'
-            ? [
-                { id: 'claude-opus-5-5', label: 'Opus 5.5', description: 'For complex work and everyday tasks' },
-                { id: 'haiku', label: 'haiku: Haiku, newest (fastest)' },
-                { id: 'sonnet', label: 'sonnet: Sonnet, newest', isDefault: true },
-                { id: 'opus', label: 'opus: Opus, newest' }
-              ]
-            : [{ id: 'gpt-6.1-sol', label: 'GPT-6.1-Sol' }],
-        source: 'test',
-        fetchedAt: 1
+      'models.catalog': () => ({
+        models: [{ id: 'claude-sonnet-4.5', label: 'Claude Sonnet 4.5' }, { id: 'gpt-5-mini', label: 'GPT-5 mini' }],
+        source: 'Copilot', fetchedAt: 1
       }),
       'prompt.enhance': (input) => {
         sent.push(input)
-        return { enhanced: 'ok', model: input.model ?? 'haiku', profileName: 'Claude Code', ms: 1, attempts: [], context: [], notes: [] }
+        return { enhanced: 'ok', model: input.model ?? 'claude-sonnet-4.5', profileName: 'Claude Sonnet', ms: 1, attempts: [], context: [], notes: [] }
       }
     }
   })
@@ -88,19 +48,17 @@ test('lists models for effort settings and sends the selected effort without sta
     modelMenu().map((option) => option.label),
     [
       'Auto (fallback)',
-      'Claude Code · Opus 5.5',
-      'Claude Code · haiku (latest) · default',
-      'Claude Code · sonnet (latest)',
-      'Claude Code · opus (latest)',
-      'Codex · CLI default',
-      'Codex · GPT-6.1-Sol'
+      'Claude Sonnet · Claude Sonnet 4.5 · default',
+      'Claude Sonnet · GPT-5 mini',
+      'GPT-5 mini · Claude Sonnet 4.5',
+      'GPT-5 mini · GPT-5 mini · default'
     ]
   )
-  await setSetting('effortLowModel', 'claude|claude-opus-5-5')
-  await setSetting('effortMediumModel', 'claude|haiku')
-  await setSetting('effortHighModel', 'codex|__profile_default__')
-  assert.equal(read(effortModels).low, 'claude|claude-opus-5-5')
-  assert.match(effortModelLabel('low'), /Opus 5.5/)
+  await setSetting('effortLowModel', 'claude|claude-sonnet-4.5')
+  await setSetting('effortMediumModel', 'claude|gpt-5-mini')
+  await setSetting('effortHighModel', 'gpt|gpt-5-mini')
+  assert.equal(read(effortModels).low, 'claude|claude-sonnet-4.5')
+  assert.match(effortModelLabel('low'), /Claude Sonnet 4.5/)
   put(draft, 'fix it')
   for (const tier of ['low', 'medium', 'high']) {
     set(effort, tier)
@@ -123,26 +81,18 @@ test('lists models for effort settings and sends the selected effort without sta
   await view.unmount()
 })
 
-test('the worker runs the picked model on the picked profile only', async () => {
-  const calls: { url: string; model: string }[] = []
-  const realFetch = globalThis.fetch
-  globalThis.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
-    const body = JSON.parse(String(init?.body))
-    calls.push({ url: String(url), model: body.model })
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'done' } }] }), { status: 200 })
-  }) as typeof fetch
+test('the worker runs the picked Copilot model and preserves its saved profile', async () => {
+  const profile = { id: 'copilot', name: 'GitHub Copilot', preset: 'copilot', provider: 'copilot', model: 'gpt-5-mini', enabled: true }
+  const host = mockHost({ storage: { models: { profiles: [profile] } }, results: {
+    'workspace.readContext': null,
+    'copilot.catalog': { models: [{ id: 'gpt-5', label: 'GPT-5' }, { id: 'gpt-5-mini', label: 'GPT-5 mini' }], source: 'Copilot', fetchedAt: 1 },
+    'copilot.rewrite': { text: 'done' }
+  } })
+  const worker = await mountWorker(main, { host })
   try {
-    const profile = { id: 'oa', name: 'OpenAI', preset: 'openai', provider: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4.1-mini', maxTokens: 2000, enabled: true, command: '', args: '' }
-    const host = mockHost({ storage: { models: { profiles: [profile] } }, secrets: { 'apiKey.oa': 'k' }, results: { 'workspace.readContext': null } })
-    const worker = await mountWorker(main, { host })
-    const answer = await worker.request('prompt.enhance', { prompt: 'x y z', level: 'off', profileId: 'oa', model: 'gpt-4.1' })
-    assert.equal(calls[0].model, 'gpt-4.1')
-    assert.equal(answer.model, 'gpt-4.1')
-    // Saved profile untouched.
-    const view = await worker.request('models.get')
-    assert.equal(view.profiles[0].model, 'gpt-4.1-mini')
-    await worker.deactivate()
-  } finally {
-    globalThis.fetch = realFetch
-  }
+    const answer = await worker.request('prompt.enhance', { prompt: 'x y z', level: 'off', profileId: 'copilot', model: 'gpt-5' })
+    assert.equal(host.callsOf('copilot.rewrite')[0].model, 'gpt-5')
+    assert.equal(answer.model, 'gpt-5')
+    assert.equal((await worker.request('models.get')).profiles[0].model, 'gpt-5-mini')
+  } finally { await worker.deactivate() }
 })

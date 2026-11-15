@@ -128,15 +128,15 @@ try {
   assert.ok(freshPreview.context.some(item => item.id === 'rules:.github/copilot-instructions.md' && item.chars === 'UPDATED_CONTEXT_RULE_FIXTURE'.length))
   assert.ok(!freshPreview.context.some(item => item.id === 'file:src/service.ts'))
   console.log('All context levels, fresh file edits, file exclusions, non-Git source search and privacy verified through the packaged adapter.')
-  await setting('autoEnhanceMode', 'rules')
-  await setting('autoEnhanceAppend', 'HOOK FIXTURE: verify the result.')
-  await session.sendAndWait({ prompt: 'Inspect the disposable project README' }, 15_000)
-  assert.ok(JSON.stringify(captured.at(-1)).includes('HOOK FIXTURE: verify the result.'), 'packaged transformed hook reaches the model')
-  console.log('Packaged prompt hook verified against local model fixture.')
-  await request('models.save', { name: 'Local fixture', preset: 'ollama', provider: 'openai', baseUrl, model: 'fixture', maxTokens: 2000, enabled: true })
-  const enhanced = await request('prompt.enhance', { prompt: 'Improve this test request', level: 'standard' })
-  assert.equal(enhanced.enhanced, 'Fixture enhanced prompt')
-  assert.match(JSON.stringify(captured.at(-1)), /UPDATED_CONTEXT_RULE_FIXTURE/)
+  for (const key of ['autoEnhanceMode', 'notifyWhenDone', 'allowEnvKeys']) {
+    const response = await fetch(opened.url + 'api', { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ method: 'settings.set', input: { key, value: true } }) })
+    assert.equal(response.status, 400, `${key} is retired`)
+  }
+  const externalSave = await fetch(opened.url + 'api', { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ method: 'request', name: 'models.save', input: { name: 'Retired provider', preset: 'ollama', provider: 'openai', baseUrl, model: 'fixture', enabled: true } }) })
+  assert.equal(externalSave.status, 400, 'external providers are rejected by the packaged worker')
+  // The runtime fixture has no Copilot catalog. Rewrite execution is covered by the
+  // fake-Copilot unit tests and e2e-copilot-provider.mjs, never a paid live model here.
+  const enhanced = { enhanced: 'Fixture reviewed prompt' }
   const beforeSend = captured.length
   const sent = await request('prompt.send', { terminalId: session.sessionId, text: enhanced.enhanced })
   assert.equal(sent.accepted, true)
@@ -144,17 +144,15 @@ try {
   assert.ok(captured.length > beforeSend, 'panel Send reached the attached session')
   const latestUser = captured.at(-1).messages.filter(message => message.role === 'user').at(-1)
   assert.ok(JSON.stringify(latestUser).includes(enhanced.enhanced))
-  assert.ok(!JSON.stringify(latestUser).includes('HOOK FIXTURE:'), 'panel send bypasses automatic enhancement')
-  console.log('Manual enhancement, session submission and hook bypass verified.')
+  console.log('Retired settings/provider rejection and guarded session submission verified.')
   const diagnostics = await request('logs.get')
-  assert.ok(diagnostics.entries.some(entry => entry.operation === 'prompt.enhance' && entry.outcome === 'ok'))
   assert.ok(diagnostics.entries.some(entry => entry.operation === 'prompt.send' && entry.outcome === 'ok'))
   for (const privateValue of [project, 'Improve this test request', 'Fixture enhanced prompt', token, session.sessionId]) {
     assert.ok(!JSON.stringify(diagnostics).includes(privateValue), 'diagnostics exclude private request and connection data')
   }
   console.log('Copyable diagnostic report verified without prompts, project paths or connection tokens.')
   await session.rpc.canvas.close({ instanceId: 'enhance-smoke' })
-  console.log('PASS: installed runtime discovered the canvas, read session metadata and context, and applied its packaged hook. No external model called.')
+  console.log('PASS: installed runtime discovered the canvas, read session metadata and context, and submitted to its fixture session. No paid model called.')
 } catch (error) {
   await mkdir('.artifacts', { recursive: true })
   await cp(join(temporary, 'copilot', 'logs'), '.artifacts/runtime-logs', { recursive: true }).catch(() => {})

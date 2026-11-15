@@ -8,7 +8,7 @@ test('the canvas rejects unauthenticated, cross-origin and oversized requests, a
   const directory = await mkdtemp(join(tmpdir(), 'enhance-http-'))
   await writeFile(join(directory, 'index.html'), '<html>test</html>')
   const host = mockHost()
-  const worker = await mountWorker({ default: api => { api.panels.handle('models.get', () => ({ profiles: [], presets: [], hookProfileId: null, selectorProfileId: null, fromEnv: false })) } }, { host })
+  const worker = await mountWorker({ default: api => { api.panels.handle('models.get', () => ({ profiles: [], selectorProfileId: null })) } }, { host })
   const server = await createCanvasServer({ worker, assets: directory })
   try {
     const url = server.open('one')
@@ -20,6 +20,10 @@ test('the canvas rejects unauthenticated, cross-origin and oversized requests, a
     assert.equal((await post({ method: 'storage.set', input: { key: 'models', value: [] } })).status, 400)
     assert.equal((await post({ method: 'storage.set', input: { key: 'panel:outputChoice', value: 'vi' } })).status, 400)
     assert.equal((await post({ method: 'storage.get', input: { key: 'panel:outputChoice' } })).status, 400)
+    for (const key of ['panel:feedbackAsk', 'panel:feedbackOff', 'panel:hookLast']) {
+      assert.equal((await post({ method: 'storage.set', input: { key, value: true } })).status, 400)
+      assert.equal((await post({ method: 'storage.get', input: { key } })).status, 400)
+    }
     assert.equal((await post({ method: 'request', name: 'ui.locale', input: { locale: 'zh-CN' } })).status, 400)
     assert.equal((await post({ method: 'storage.set', input: { key: 'colorTheme', value: 'light' } })).status, 200)
     assert.deepEqual(await (await post({ method: 'storage.get', input: { key: 'colorTheme' } })).json(), { result: 'light' })

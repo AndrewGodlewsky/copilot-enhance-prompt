@@ -26,7 +26,7 @@ The source repository is `https://github.com/AndrewGodlewsky/copilot-enhance-pro
 | [src/copilot/usage.ts](../src/copilot/usage.ts) | Filtered accounting, atomic persistence, deduplication and recovery from the stopped helper's journal. |
 | [src/copilot/extension.ts](../src/copilot/extension.ts) | Obtain the attached session with the extension SDK; connect backend and lifecycle. |
 | [src/copilot/services.ts](../src/copilot/services.ts) | Map project-owned requests to the adapter. `copilot.rewrite` is our service name, not an SDK API. |
-| [src/models.ts](../src/models.ts) | Keep fallback within the chosen provider route; stop fallback on accounting errors. |
+| [src/models.ts](../src/models.ts) | Keep every model request within Copilot; stop fallback on accounting errors. |
 | [src/diagnostics.ts](../src/diagnostics.ts) | Safe operation/stage/error diagnostics and catalog failure details. |
 | [scripts/build.mjs](../scripts/build.mjs) | Leave both SDK imports external to the generated backend bundle. |
 | [Background rewriting](copilot-background-rewriting.md) | Current behavior, privacy and compatibility limits. |
@@ -230,4 +230,4 @@ At the reference release, Enhance Prompt passed 299 tests plus build/type/packag
 
 Choose task-specific timeout, concurrency and maximum input/output sizes based on the destination feature. The reference uses one helper per task and permits multiple active tasks; it does not provide a global concurrency queue. Persistent helpers, tool-enabled agents, structured outputs or shared-memory behavior require their own design and tests rather than a mechanical copy.
 
-Keep any automatic prompt hook separate. Enhance Prompt's two-second hook excludes SDK helpers; manual background generation does not establish acceptable hook latency or recursion behavior. Preserve applicable MIT notices when reusing source. Follow the destination repository's contribution and release instructions: this project's standing instruction to push completed work to `main` is not a global rule for other projects.
+Enhance Prompt retired its automatic chat hook when it became Copilot-only: the old two-second API path could not use this helper. Before considering a new hook, read the [retirement and recovery note](chat-auto-enhance-retirement.md). Manual background generation does not establish acceptable hook latency or recursion behavior. Preserve applicable MIT notices when reusing source. Follow the destination repository's contribution and release instructions: this project's standing instruction to push completed work to `main` is not a global rule for other projects.

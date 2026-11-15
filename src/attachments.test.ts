@@ -3,15 +3,11 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSyn
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { after } from 'node:test'
-import { afterEach, assert, mockHost, mountWorker, test } from '#testing'
+import { assert, mockHost, mountWorker, test } from '#testing'
 import { ATTACHMENTS_DIR, excerpt, loadFiles, MAX_ATTACHMENT_BYTES, putChunk, safeName, TEXT_MAX } from './attachments.ts'
 import { ATTACHMENT_CHUNK_BYTES, attachmentItemId, MAX_CHUNK_BASE64, MAX_IMAGE_BYTES, REQUEST_INPUT_LIMIT } from './image-limits.ts'
 import * as main from './worker.ts'
 
-const realFetch = globalThis.fetch
-afterEach(() => {
-  globalThis.fetch = realFetch
-})
 // The tests' own folder (see ATTACHMENTS_DIR) goes when they are done.
 after(() => rmSync(ATTACHMENTS_DIR, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }))
 
@@ -42,18 +38,16 @@ test('a run uses attached files: images as images, short text in the context, ev
   const image = await putChunk({ id: 'att-test-3', name: 'screen.png', index: 0, total: 1, data: PNG.toString('base64') })
   const log = await putChunk({ id: 'att-test-4', name: 'build.log', index: 0, total: 1, data: Buffer.from('ERROR: cannot find module x').toString('base64') })
   assert.ok('path' in image && 'path' in log)
-  const bodies: { messages: { role: string; content: unknown }[] }[] = []
-  globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
-    bodies.push(JSON.parse(String(init?.body)))
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'Fix the missing module.' } }] }), { status: 200 })
-  }) as typeof fetch
-  const profile = { id: 'gpt', name: 'gpt', preset: 'openai', provider: 'openai', baseUrl: '', model: '', maxTokens: 2000, enabled: true }
-  const worker = await mountWorker(main, { host: mockHost({ storage: { models: { profiles: [profile] } }, secrets: { 'apiKey.gpt': 'k' } }) })
+  const bodies: { user: string; images: { type: string; base64: string }[] }[] = []
+  const profile = { id: 'gpt', name: 'GPT in Copilot', preset: 'copilot', provider: 'copilot', model: 'gpt-test', enabled: true }
+  const worker = await mountWorker(main, { host: mockHost({ storage: { models: { profiles: [profile] } }, results: {
+    'copilot.rewrite': (input: typeof bodies[number]) => { bodies.push(input); return { text: 'Fix the missing module.' } }
+  } }) })
   const answer = await worker.request('prompt.enhance', { prompt: 'fix the build', level: 'off', files: [image.path, log.path] })
-  const user = bodies[0].messages[1].content as { type: string; text?: string; image_url?: { url: string } }[]
-  assert.equal(user[1].type, 'image_url')
-  assert.match(user[0].text ?? '', /ERROR: cannot find module x/)
-  assert.match(user[0].text ?? '', /<attached_files>\n1\. .*build\.log/)
+  assert.equal(bodies[0].images[0].type, 'image/png')
+  assert.equal(bodies[0].images[0].base64, PNG.toString('base64'))
+  assert.match(bodies[0].user, /ERROR: cannot find module x/)
+  assert.match(bodies[0].user, /<attached_files>\n1\. .*build\.log/)
   assert.ok(answer.enhanced.includes(image.path) && answer.enhanced.includes(log.path), answer.enhanced)
   // A short text is whole: listed as a file of the context, with no "trimmed" next to it.
   const item = answer.context.find((entry) => entry.id === 'attach:att-test-4/build.log')
@@ -73,16 +67,13 @@ async function attach(id: string, name: string, content: string | Buffer): Promi
   return done.path
 }
 
-/** A worker with one OpenAI model, and what it sent: the user message of each call. */
+/** A worker with one Copilot model and the user message of each call. */
 async function workerWithModel() {
   const sent: string[] = []
-  globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
-    const body = JSON.parse(String(init?.body)) as { messages: { content: unknown }[] }
-    sent.push(String(body.messages[1].content))
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'Fix the build.' } }] }), { status: 200 })
-  }) as typeof fetch
-  const profile = { id: 'gpt', name: 'gpt', preset: 'openai', provider: 'openai', baseUrl: '', model: '', maxTokens: 2000, enabled: true }
-  const worker = await mountWorker(main, { host: mockHost({ storage: { models: { profiles: [profile] } }, secrets: { 'apiKey.gpt': 'k' } }) })
+  const profile = { id: 'gpt', name: 'GPT in Copilot', preset: 'copilot', provider: 'copilot', model: 'gpt-test', enabled: true }
+  const worker = await mountWorker(main, { host: mockHost({ storage: { models: { profiles: [profile] } }, results: {
+    'copilot.rewrite': (input: { user: string }) => { sent.push(input.user); return { text: 'Fix the build.' } }
+  } }) })
   return { worker, sent }
 }
 
@@ -227,12 +218,10 @@ test('"Delete everything" removes the attached files; one kept for more than a d
 
 test('a run reads only files the panel attached: any other path is refused before a model is called', async () => {
   let calls = 0
-  globalThis.fetch = (async () => {
-    calls++
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }), { status: 200 })
-  }) as typeof fetch
-  const profile = { id: 'gpt', name: 'gpt', preset: 'openai', provider: 'openai', baseUrl: '', model: '', maxTokens: 2000, enabled: true }
-  const worker = await mountWorker(main, { host: mockHost({ storage: { models: { profiles: [profile] } }, secrets: { 'apiKey.gpt': 'k' } }) })
+  const profile = { id: 'gpt', name: 'GPT in Copilot', preset: 'copilot', provider: 'copilot', model: 'gpt-test', enabled: true }
+  const worker = await mountWorker(main, { host: mockHost({ storage: { models: { profiles: [profile] } }, results: {
+    'copilot.rewrite': () => { calls++; return { text: 'ok' } }
+  } }) })
   const enhance = (files: string[]) => worker.request('prompt.enhance', { prompt: 'fix it', level: 'off', files })
 
   // A file of this machine that was never attached: its text must not reach a model.

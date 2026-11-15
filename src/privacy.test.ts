@@ -3,16 +3,10 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { after } from 'node:test'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, assert, mockHost, mountWorker, test } from '#testing'
-import { cachedStatic } from './context/index.ts'
-import { forgetTerminals } from './context/terminals.ts'
+import { assert, mountWorker, test } from '#testing'
 import * as main from './worker.ts'
+import { mockModelHost as mockHost, setRewrite } from './model-testing.ts'
 
-// A test that stubs fetch never leaks it into the next one.
-const realFetch = globalThis.fetch
-afterEach(() => {
-  globalThis.fetch = realFetch
-})
 
 // Every temporary folder a test makes is removed when the file's tests are done.
 const tempDirs: string[] = []
@@ -31,17 +25,16 @@ function tempDir(prefix: string): string {
   return folder
 }
 
-const profile = { id: 'oa', name: 'OpenAI', preset: 'openai', provider: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4.1-mini', maxTokens: 2000, enabled: true, command: '', args: '' }
+const profile = { id: 'oa', name: 'Copilot', preset: 'copilot', provider: 'copilot', model: 'gpt-4.1-mini', enabled: true }
 
-function stubFetch(): void {
-  globalThis.fetch = (async () => new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }), { status: 200 })) as typeof fetch
+function stubRewrite(): void {
+  setRewrite(() => 'ok')
 }
 
 function hostWith(settings: Record<string, boolean | string>, root: string | null = null) {
   return mockHost({
     settings,
     storage: { models: { profiles: [profile] } },
-    secrets: { 'apiKey.oa': 'k' },
     results: {
       'workspace.readContext': { branch: 'main', displayName: 'demo', terminals: [] },
       'workspace.list': { workspaces: root ? [{ id: 'w', kind: 'folder', name: 'demo', path: root, branch: 'main', hostId: null }] : [], truncated: false },
@@ -52,7 +45,7 @@ function hostWith(settings: Record<string, boolean | string>, root: string | nul
 }
 
 test('project files off: Standard falls back to workspace and agent only', async () => {
-  stubFetch()
+  stubRewrite()
   const root = tempDir('privacy-')
   writeFileSync(join(root, 'AGENTS.md'), 'secret rules')
   const worker = await mountWorker(main, { host: hostWith({ allowProjectFiles: false }, root) })
@@ -71,7 +64,7 @@ test('sending off: the worker refuses to type into terminals', async () => {
 })
 
 test('history off: nothing is saved', async () => {
-  stubFetch()
+  stubRewrite()
   const host = hostWith({ saveHistory: false })
   const worker = await mountWorker(main, { host })
   await worker.request('prompt.enhance', { prompt: 'do it', level: 'off' })
@@ -79,46 +72,28 @@ test('history off: nothing is saved', async () => {
   await worker.deactivate()
 })
 
-test('environment keys off: a model without a saved key is not used', async () => {
-  const previous = process.env.GROQ_API_KEY
-  process.env.GROQ_API_KEY = 'from-env'
-  try {
-    const host = mockHost({ settings: { allowEnvKeys: false }, results: { 'workspace.readContext': null } })
-    const worker = await mountWorker(main, { host })
-    const view = await worker.request('models.get')
-    assert.equal(view.fromEnv, false)
-    assert.equal(view.profiles.length, 0)
-    await worker.deactivate()
-  } finally {
-    if (previous === undefined) delete process.env.GROQ_API_KEY
-    else process.env.GROQ_API_KEY = previous
-  }
-})
-
-test('online lists off: no request to the provider', async () => {
-  let calls = 0
-  globalThis.fetch = (async () => {
-    calls++
-    return new Response('{}', { status: 200 })
-  }) as typeof fetch
-  const worker = await mountWorker(main, { host: hostWith({ allowOnlineModelLists: false }) })
-  const catalog = await worker.request('models.catalog', { preset: 'openai', profileId: 'oa' })
-  assert.equal(calls, 0)
+test('online lists off prevents Copilot catalog and rewrite calls', async () => {
+  const host = hostWith({ allowOnlineModelLists: false })
+  host.respond('copilot.catalog', { models: [], source: 'GitHub Copilot', fetchedAt: 1 })
+  const worker = await mountWorker(main, { host })
+  const catalog = await worker.request('models.catalog', { preset: 'copilot', profileId: 'oa' })
+  assert.equal(host.callsOf('copilot.catalog').length, 0)
   assert.match(catalog.error ?? '', /off in Settings/)
+  await assert.rejects(worker.request('prompt.enhance', { prompt: 'Improve this', level: 'off' }), /off in Settings/)
+  assert.equal(host.callsOf('copilot.rewrite').length, 0)
   await worker.deactivate()
 })
 
 test('data summary and delete everything', async () => {
-  stubFetch()
+  stubRewrite()
   const host = hostWith({})
   await host.storage.set('colorTheme', 'dark')
   const worker = await mountWorker(main, { host })
   await worker.request('prompt.enhance', { prompt: 'do it', level: 'off' })
-  assert.deepEqual(await worker.request('data.summary'), { history: 1, profiles: 1, keys: 1, catalogs: 0 })
+  assert.deepEqual(await worker.request('data.summary'), { history: 1, profiles: 1, catalogs: 0 })
   await worker.request('data.clear', { what: 'all' })
   assert.equal(await host.storage.get('colorTheme'), null)
-  assert.deepEqual(await worker.request('data.summary'), { history: 0, profiles: 0, keys: 0, catalogs: 0 })
-  assert.equal(host.data().secrets['apiKey.oa'], undefined)
+  assert.deepEqual(await worker.request('data.summary'), { history: 0, profiles: 0, catalogs: 0 })
   await worker.deactivate()
 })
 
@@ -152,15 +127,14 @@ test('Preview context obeys the same Privacy switches as a run', async () => {
 test('the picked terminal\'s output is masked for keys and passwords, in a preview and in a run alike', async () => {
   const root = tempDir('privacy-terminal-mask-')
   const bodies: string[] = []
-  globalThis.fetch = (async (_url: unknown, init?: { body?: unknown }) => {
-    bodies.push(String(init?.body ?? ''))
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }), { status: 200 })
-  }) as typeof fetch
+  setRewrite(async input => {
+    bodies.push(JSON.stringify(input))
+    return 'ok'
+  })
   const worker = await mountWorker(main, {
     host: mockHost({
       settings: { allowGit: false },
       storage: { models: { profiles: [profile] } },
-      secrets: { 'apiKey.oa': 'k' },
       results: {
         'workspace.readContext': { branch: 'main', displayName: 'demo', terminals: [{ id: 't1', title: 'Claude' }] },
         'workspace.list': { workspaces: [{ id: 'w', kind: 'folder', name: 'demo', path: root, branch: 'main', hostId: null }], truncated: false },
@@ -200,10 +174,10 @@ test('a key that sits in a source file is masked in the lines a run sends; the c
     ].join('\n')
   )
   const bodies: string[] = []
-  globalThis.fetch = (async (_url: unknown, init?: { body?: unknown }) => {
-    bodies.push(String(init?.body ?? ''))
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }), { status: 200 })
-  }) as typeof fetch
+  setRewrite(async input => {
+    bodies.push(JSON.stringify(input))
+    return 'ok'
+  })
   const worker = await mountWorker(main, { host: hostWith({ allowGit: false }, root) })
   await worker.request('prompt.enhance', { prompt: 'fix the payment client', level: 'deep' })
   const sent = bodies.at(-1) ?? ''
@@ -218,87 +192,11 @@ test('a key that sits in a source file is masked in the lines a run sends; the c
   await worker.deactivate()
 })
 
-test('auto-enhance (AI) leaves cached project context out while project files are off', async () => {
-  const root = tempDir('privacy-hook-')
-  writeFileSync(join(root, 'AGENTS.md'), 'Use pnpm, secret rules.')
-  stubFetch()
-  // Warm the cache with project files allowed.
-  const warm = await mountWorker(main, { host: hostWith({}, root) })
-  await warm.request('prompt.enhance', { prompt: 'warm up', level: 'standard' })
-  await warm.deactivate()
-
-  const bodies: string[] = []
-  globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
-    bodies.push(String(init?.body))
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'rewritten' } }] }), { status: 200 })
-  }) as typeof fetch
-  const hook = await mountWorker(main, { host: hostWith({ autoEnhanceMode: 'ai', allowProjectFiles: false }, root) })
-  const decision = await hook.hooks.fire('agent.prompt.before', { agent: 'claude', terminalId: 't1', prompt: 'add a login page', inputKind: 'launch' })
-  assert.equal(decision.kind === 'continue' && decision.event.prompt, 'rewritten')
-  assert.equal(bodies.length, 1)
-  assert.ok(!bodies[0].includes('secret rules'))
-  await hook.deactivate()
-})
-
-test('auto-enhance reads a project that is not in focus only while project files are on, and then for the next prompt', async () => {
-  const focusedRoot = tempDir('privacy-hook-focus-')
-  const otherRoot = tempDir('privacy-hook-other-')
-  writeFileSync(join(otherRoot, 'AGENTS.md'), 'Other project: always use bun.')
-  const bodies: string[] = []
-  globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
-    bodies.push(String(init?.body))
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'rewritten' } }] }), { status: 200 })
-  }) as typeof fetch
-  const listed = (path: string) => path.replace(/\\/g, '/')
-  const twoProjects = (settings: Record<string, boolean | string>) =>
-    mockHost({
-      settings: { autoEnhanceMode: 'ai', allowGit: false, ...settings },
-      storage: { models: { profiles: [profile] } },
-      secrets: { 'apiKey.oa': 'k' },
-      results: {
-        'workspace.readContext': { branch: 'main', displayName: 'here', terminals: [{ id: 't-here', title: 'Claude' }] },
-        'workspace.list': {
-          workspaces: [
-            { id: 'w-here', kind: 'folder', name: 'here', path: listed(focusedRoot), branch: 'main', hostId: 'local' },
-            { id: 'w-other', kind: 'folder', name: 'other', path: listed(otherRoot), branch: 'main', hostId: 'local' }
-          ],
-          truncated: false
-        },
-        'agents.list': { agents: [] },
-        'statusBar.update': { ok: true }
-      }
-    })
-  const event = { agent: 'claude', terminalId: 't-other', prompt: 'add a health check endpoint', inputKind: 'orchestration' as const }
-  const settled = () => new Promise((resolve) => setTimeout(resolve, 300))
-
-  // Project files off: the other project is not read, now or for later.
-  const off = await mountWorker(main, { host: twoProjects({ allowProjectFiles: false }) })
-  await off.emit('agent.status.changed', { workspaceId: 'w-other', paneKey: 'p', terminalId: 't-other', state: 'working', receivedAt: Date.now() })
-  await off.hooks.fire('agent.prompt.before', event)
-  await settled()
-  assert.equal(cachedStatic(listed(otherRoot)), null)
-  assert.ok(!bodies.at(-1)?.includes('always use bun'))
-  await off.deactivate()
-  await forgetTerminals()
-
-  // On: this prompt has 2 s and goes with the project's name alone; the project is read for the next one.
-  const on = await mountWorker(main, { host: twoProjects({}) })
-  await on.emit('agent.status.changed', { workspaceId: 'w-other', paneKey: 'p', terminalId: 't-other', state: 'working', receivedAt: Date.now() })
-  await on.hooks.fire('agent.prompt.before', event)
-  assert.ok(!bodies.at(-1)?.includes('always use bun'))
-  await settled()
-  assert.notEqual(cachedStatic(listed(otherRoot)), null)
-  await on.hooks.fire('agent.prompt.before', event)
-  assert.match(bodies.at(-1) ?? '', /Other project: always use bun\./)
-  await on.deactivate()
-  await forgetTerminals()
-})
-
 test('history keeps both entries when two runs finish at the same time', async () => {
-  globalThis.fetch = (async () => {
+  setRewrite(async input => {
     await new Promise((resolve) => setTimeout(resolve, 5))
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }), { status: 200 })
-  }) as typeof fetch
+    return 'ok'
+  })
   const host = hostWith({})
   const worker = await mountWorker(main, { host })
   await Promise.all([
@@ -335,14 +233,12 @@ test('the gear section links to GitHub issues for feedback', async () => {
   const { mountPanel } = await import('./panel/testing.ts')
   const { openIssues } = await import('./panel/actions.ts')
   const { notice } = await import('./panel/state.ts')
-  const { PRESETS } = await import('./presets.ts')
   const host = mockHost({
     requests: {
-      'models.get': { profiles: [], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS },
+      'models.get': { profiles: [], selectorProfileId: null,  },
       'targets.list': { targets: [] },
-      'models.detect': { found: [] },
       'rules.get': { rules: [], structures: [] },
-      'data.summary': { history: 0, profiles: 0, keys: 0, catalogs: 0 }
+      'data.summary': { history: 0, profiles: 0, catalogs: 0 }
     }
   })
   const view = await mountPanel(host, { persisted: { plugin: { tab: 'privacy' } } })
@@ -368,7 +264,6 @@ function agentsHost(settings: Record<string, boolean | string | number>, consent
     settings,
     // The switch also needs the person's confirmation in the panel (kept by the worker).
     storage: { models: { profiles: [profile] }, ...(consented ? { consents: { allowOtherAgents: true } } : {}) },
-    secrets: { 'apiKey.oa': 'k' },
     results: {
       'workspace.readContext': { branch: 'main', displayName: 'demo', terminals: [{ id: 't1', title: 'Claude' }] },
       'workspace.list': { workspaces: [], truncated: false },
@@ -387,7 +282,7 @@ function agentsHost(settings: Record<string, boolean | string | number>, consent
 const readTerminals = (host: ReturnType<typeof agentsHost>) => host.callsOf('terminal.read').map((params) => (params as { terminalId: string }).terminalId)
 
 test("other agents' sessions are not read while their switch is off (the default) or not confirmed, in a run and in Preview", async () => {
-  stubFetch()
+  stubRewrite()
   const cases: [Record<string, boolean>, boolean][] = [
     [{}, true],
     [{ allowOtherAgents: true, allowTerminalRead: false }, true],
@@ -408,7 +303,7 @@ test("other agents' sessions are not read while their switch is off (the default
 })
 
 test("with the switch on, Max reads the other agents (not the target), masks secrets, and obeys unticking", async () => {
-  stubFetch()
+  stubRewrite()
   const host = agentsHost({ allowOtherAgents: true })
   const worker = await mountWorker(main, { host })
   for (const kind of ['prompt.enhance', 'context.preview'] as const) {
@@ -434,17 +329,8 @@ test("with the switch on, Max reads the other agents (not the target), masks sec
   await worker.deactivate()
 })
 
-test("auto-enhance never reads other agents' sessions (its 2 s budget), even with the switch on", async () => {
-  stubFetch()
-  const host = agentsHost({ allowOtherAgents: true, autoEnhanceMode: 'ai' })
-  const worker = await mountWorker(main, { host })
-  await worker.hooks.fire('agent.prompt.before', { agent: 'claude', terminalId: 't1', prompt: 'add a login page', inputKind: 'launch' })
-  assert.equal(readTerminals(host).length, 0)
-  await worker.deactivate()
-})
-
 test("the number of agents and lines set for other agents' sessions is what a Max run reads", async () => {
-  stubFetch()
+  stubRewrite()
   const host = agentsHost({ allowOtherAgents: true, otherAgentsMax: 1, otherAgentsLines: 25 })
   const worker = await mountWorker(main, { host })
   for (const kind of ['prompt.enhance', 'context.preview'] as const) {
@@ -466,7 +352,7 @@ test('out-of-range or wrong amounts are brought back within their limits; while 
   assert.deepEqual(parseOtherAgentsLimits({ otherAgentsMax: 'abc', otherAgentsLines: null }), { agents: 4, lines: 80 })
   assert.deepEqual(parseOtherAgentsLimits({ otherAgentsMax: '3', otherAgentsLines: 2.6 * 10 }), { agents: 3, lines: 26 })
 
-  stubFetch()
+  stubRewrite()
   // Amounts changed while the switch is off, or on but not confirmed: no other terminal is read.
   for (const [settings, consented] of [
     [{ otherAgentsMax: 8, otherAgentsLines: 300 }, true],

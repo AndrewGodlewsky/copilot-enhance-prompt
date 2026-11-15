@@ -8,10 +8,9 @@ import { busy, contextShown, draft, filteredHistory, history, historyByProject, 
 import { mountPanel } from './panel/testing.ts'
 import { targetLabel } from './panel/view.ts'
 import { msg, withMessage } from './messages.ts'
-import { PRESETS } from './presets.ts'
 import type { HistoryEntry } from './history.ts'
 
-const models = { profiles: [], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS }
+const models = { profiles: [], selectorProfileId: null }
 const answer = (enhanced: string) => ({ enhanced, model: 'm', profileName: 'P', ms: 900, attempts: [], context: [], notes: [] })
 const entry = (id: string, original: string, project?: string): HistoryEntry => ({
   id,

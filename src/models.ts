@@ -1,113 +1,22 @@
-// Model profiles in storage, their keys in secrets, and the fallback chain.
+// Copilot model profiles in storage and their fallback chain.
 import type { EnhanceWorker } from '#host'
-import { runCli, type CliKind } from './cli.ts'
-import { complete, isLocalUrl, isTransient, LlmError, messageOf } from './llm.ts'
+import { isTransient, LlmError, messageOf } from './llm.ts'
 import { english, msg, type Message } from './messages.ts'
-import { imageSupport, type ImageData } from './images.ts'
-import {
-  DEFAULT_MAX_TOKENS,
-  MODELS_KEY,
-  modelsToJson,
-  parseModelsConfig,
-  presetById,
-  PRESETS,
-  type ModelProfile,
-  type ModelsConfig,
-  type ProfileView
-} from './presets.ts'
+import type { ImageData } from './images.ts'
+import { MODELS_KEY, modelsToJson, parseModelsConfig, type ModelProfile, type ModelsConfig, type ProfileView } from './presets.ts'
 
-export const secretName = (profileId: string) => `apiKey.${profileId}`
-
-/** Profiles synthesized from environment keys when the person has not added any. */
-export function envProfiles(): ModelProfile[] {
-  const out: ModelProfile[] = []
-  for (const preset of PRESETS) {
-    if (preset.env && process.env[preset.env]) {
-      out.push({
-        id: `env-${preset.id}`,
-        name: `${preset.label} (env)`,
-        preset: preset.id,
-        provider: preset.provider,
-        baseUrl: preset.baseUrl,
-        model: preset.model,
-        maxTokens: DEFAULT_MAX_TOKENS,
-        enabled: true,
-        command: '',
-        args: ''
-      })
-    }
-  }
-  return out
-}
-
-/** Privacy: may API keys come from environment variables? */
-async function envKeysAllowed(host: EnhanceWorker): Promise<boolean> {
-  return (await host.settings.get('allowEnvKeys').catch(() => true)) !== false
-}
-
-export async function loadModels(host: EnhanceWorker): Promise<ModelsConfig & { fromEnv: boolean }> {
-  const config = parseModelsConfig(await host.storage.get(MODELS_KEY))
-  if (config.profiles.length > 0 || !(await envKeysAllowed(host))) {
-    return { ...config, fromEnv: false }
-  }
-  return { profiles: envProfiles(), hookProfileId: null, selectorProfileId: null, fromEnv: true }
+export async function loadModels(host: EnhanceWorker): Promise<ModelsConfig> {
+  return parseModelsConfig(await host.storage.get(MODELS_KEY))
 }
 
 export async function saveModels(host: EnhanceWorker, config: ModelsConfig): Promise<void> {
   await host.storage.set(MODELS_KEY, modelsToJson(config))
 }
 
-export function needsKey(profile: ModelProfile): boolean {
-  if (profile.provider === 'cli' || profile.provider === 'copilot') return false
-  return !(profile.provider === 'openai' && isLocalUrl(effectiveBaseUrl(profile)))
-}
+export function effectiveModel(profile: ModelProfile): string { return profile.model }
 
-export function effectiveBaseUrl(profile: ModelProfile): string {
-  return profile.baseUrl || presetById(profile.preset).baseUrl
-}
-
-/**
- * The model a run uses. An API needs one, so '' means the preset's model. A CLI does not: '' means
- * "CLI default" (no --model flag), even when its preset suggests one for new profiles.
- */
-export function effectiveModel(profile: ModelProfile): string {
-  if (profile.provider === 'cli') return profile.model
-  return profile.model || presetById(profile.preset).model
-}
-
-export async function resolveKey(
-  host: EnhanceWorker,
-  profile: ModelProfile
-): Promise<{ key: string | null; source: ProfileView['keySource'] }> {
-  if (profile.provider === 'copilot') return { key: null, source: 'copilot' }
-  if (profile.provider === 'cli') {
-    return { key: null, source: 'subscription' }
-  }
-  if (!needsKey(profile)) {
-    const stored = await host.secrets.get(secretName(profile.id)).catch(() => null)
-    return { key: stored, source: stored ? 'secret' : 'not-needed' }
-  }
-  const stored = await host.secrets.get(secretName(profile.id)).catch(() => null)
-  if (stored) {
-    return { key: stored, source: 'secret' }
-  }
-  const env = presetById(profile.preset).env
-  if (env && process.env[env] && (await envKeysAllowed(host))) {
-    return { key: process.env[env] ?? null, source: 'env' }
-  }
-  return { key: null, source: 'none' }
-}
-
-export async function viewProfiles(host: EnhanceWorker, profiles: ModelProfile[]): Promise<ProfileView[]> {
-  return Promise.all(
-    profiles.map(async (profile) => ({
-      ...profile,
-      effectiveBaseUrl: effectiveBaseUrl(profile),
-      effectiveModel: effectiveModel(profile),
-      keySource: (await resolveKey(host, profile)).source,
-      envName: presetById(profile.preset).env
-    }))
-  )
+export function viewProfiles(profiles: ModelProfile[]): ProfileView[] {
+  return profiles.map(profile => ({ ...profile, effectiveModel: effectiveModel(profile) }))
 }
 
 /** `error` is English (logs, history); `errorText` the same as a Message for the panel. */
@@ -118,13 +27,13 @@ export type ChainOptions = {
   signal?: AbortSignal
   /** Per-model timeout. */
   timeoutMs: number
-  /** Whole chain budget (the hook's 2 s); defaults to unlimited. */
+  /** Whole chain budget; defaults to unlimited. */
   totalMs?: number
   fallback: boolean
   fallbackOn: 'any' | 'transient'
   /** Progress: called before each model is tried (1-based `attempt` of `total`). */
   onAttempt?: (profile: ModelProfile, model: string, attempt: number, total: number) => void
-  /** Pictures attached to the prompt: each model gets them the way it can (see imageSupport). */
+  /** Pictures attached to the prompt, validated by the Copilot model adapter. */
   images?: readonly ImageData[]
 }
 
@@ -146,13 +55,12 @@ export class ChainError extends Error {
  * profiles in their saved order.
  */
 export function candidates(profiles: ModelProfile[], preferredId: string | null, fallback: boolean): ModelProfile[] {
-  const enabled = profiles.filter((profile) => profile.enabled)
+  const supported = profiles.filter(profile => profile.provider === 'copilot' && profile.preset === 'copilot')
+  const enabled = supported.filter((profile) => profile.enabled)
   const preferred = preferredId ? profiles.find((profile) => profile.id === preferredId) : undefined
-  if (preferredId && !preferred) return []
+  if (preferredId && (!preferred || preferred.provider !== 'copilot' || preferred.preset !== 'copilot')) return []
   const ordered = preferred ? [preferred, ...enabled.filter((p) => p.id !== preferred.id)] : enabled
-  // A fallback must never change between Copilot billing/auth and an external provider.
-  const sameRoute = ordered.filter(profile => (profile.provider === 'copilot') === (ordered[0]?.provider === 'copilot'))
-  return fallback ? sameRoute : sameRoute.slice(0, 1)
+  return fallback ? ordered : ordered.slice(0, 1)
 }
 
 export async function runChain(
@@ -167,7 +75,9 @@ export async function runChain(
     throw new ChainError(msg('error.no_model'), 'invalid_params', attempts)
   }
   const started = Date.now()
-  list = list.filter(profile => (profile.provider === 'copilot') === (list[0]?.provider === 'copilot'))
+  if (list.some(profile => profile.provider !== 'copilot' || profile.preset !== 'copilot')) {
+    throw new ChainError(msg('error.invalid_profile'), 'invalid_params', attempts)
+  }
   let lastError: unknown = null
   for (const profile of list) {
     if (options.signal?.aborted) {
@@ -180,12 +90,6 @@ export async function runChain(
     const attemptStart = Date.now()
     const model = effectiveModel(profile)
     options.onAttempt?.(profile, model, attempts.length + 1, list.length)
-    const { key } = await resolveKey(host, profile)
-    if (!key && needsKey(profile)) {
-      attempts.push({ profileId: profile.id, name: profile.name, model, ok: false, error: 'no API key', errorText: msg('error.no_key'), ms: 0 })
-      lastError = new LlmError(msg('error.profile_no_key', { name: profile.name }), 'invalid_params')
-      continue
-    }
     const controller = new AbortController()
     // The per-model timeout keeps time for the model that comes next. The last one to try has no
     // next: within a run's own limit it may use all that is left, since stopping a slow answer
@@ -200,39 +104,10 @@ export async function runChain(
     const onAbort = () => controller.abort()
     options.signal?.addEventListener('abort', onAbort)
     try {
-      if (profile.provider === 'copilot' && (await host.settings.get('allowOnlineModelLists')) === false) {
+      if ((await host.settings.get('allowOnlineModelLists')) === false) {
         throw new LlmError(msg('error.lists_off'), 'unavailable')
       }
-      const text =
-        profile.provider === 'copilot'
-          ? (await host.host.call('copilot.rewrite', { model, system, user, images: (options.images ?? []).map(image => ({ type: image.type, base64: image.base64 })) }, { signal: controller.signal })).text
-          : profile.provider === 'cli'
-          ? await runCli(
-              {
-                kind: profile.preset as CliKind,
-                command: profile.command,
-                model,
-                customArgs: profile.args,
-                images: imageSupport(profile) === 'file' ? (options.images ?? []).map((image) => image.path) : []
-              },
-              system,
-              user,
-              controller.signal
-            )
-          : await complete(
-        {
-          provider: profile.provider,
-          baseUrl: effectiveBaseUrl(profile),
-          model,
-          apiKey: key,
-          envName: presetById(profile.preset).env,
-          maxTokens: profile.maxTokens
-        },
-        system,
-        user,
-        controller.signal,
-        imageSupport(profile) === 'data' ? (options.images ?? []).map((image) => ({ type: image.type, base64: image.base64 })) : []
-      )
+      const { text } = await host.host.call('copilot.rewrite', { model, system, user, images: (options.images ?? []).map(image => ({ type: image.type, base64: image.base64 })) }, { signal: controller.signal })
       attempts.push({ profileId: profile.id, name: profile.name, model, ok: true, ms: Date.now() - attemptStart })
       return { text, profile, attempts }
     } catch (caught) {

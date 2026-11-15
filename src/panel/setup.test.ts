@@ -2,24 +2,22 @@
 // changed elsewhere all reach the panel's state, and closing the panel ends its run.
 import { read, settings } from '#panel'
 import { assert, mockHost, test, type MockRequests } from '#testing'
-import { PRESETS } from '../presets.ts'
 import { beginRun, cancel, enhanceNow } from './actions.ts'
 import { consents, defaults, draft, notice, privacy, put, result, rulesState, run, targets } from './state.ts'
 import { mountPanel } from './testing.ts'
 
 const base: MockRequests = {
-  'models.get': { profiles: [], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS },
-  'models.detect': { found: [] },
+  'models.get': { profiles: [], selectorProfileId: null },
   'targets.list': { targets: [{ terminalId: 't1', label: 'Claude · waiting', agent: 'claude' }], workspace: 'demo', workspaceId: 'ws-1' },
   'rules.get': { rules: [{ id: 'r1', text: 'Run the tests.', enabled: true, scope: '' }], structures: [] },
-  'consents.get': { granted: ['allowAgentLaunch'], needed: ['allowOtherAgents', 'allowAgentActivity', 'allowAgentLaunch'] }
+  'consents.get': { granted: ['allowOtherAgents'], needed: ['allowOtherAgents', 'allowAgentActivity'] }
 }
 
 test('starting the panel loads its terminals, rules and confirmations, and the settings as they are', async () => {
   const view = await mountPanel(mockHost({ requests: base, settings: { defaultStyle: 'concise', allowGit: false, uiLanguage: 'vi', outputLanguage: 'zh' } }))
   assert.deepEqual(read(targets).map((item) => item.terminalId), ['t1'])
   assert.deepEqual(read(rulesState).rules.map((rule) => rule.id), ['r1'])
-  assert.deepEqual(read(consents), ['allowAgentLaunch'])
+  assert.deepEqual(read(consents), ['allowOtherAgents'])
   assert.equal(read(defaults).style, 'concise')
   assert.equal(Object.hasOwn(read(defaults), 'outputLanguage'), false)
   assert.equal(read(privacy).allowGit, false)
@@ -27,15 +25,11 @@ test('starting the panel loads its terminals, rules and confirmations, and the s
   await view.unmount()
 })
 
-test("the worker's progress and the auto-enhance hook's news reach the panel", async () => {
+test("the worker's progress reaches the panel", async () => {
   const view = await mountPanel(mockHost({ requests: base }))
   beginRun('r1')
   await view.post('enhance.progress', { runId: 'r1', startedAt: Date.now(), steps: [{ key: 'workspace', status: 'done' }, { key: 'model', status: 'running' }] })
   assert.deepEqual(read(run)?.steps.map((step) => `${step.key}:${step.status}`), ['workspace:done', 'model:running'])
-  await view.post('hook.enhanced', { agent: 'claude', mode: 'ai', model: 'gpt-4.1-mini' })
-  assert.deepEqual(read(notice), { tone: 'neutral', text: 'Auto-enhanced (ai, gpt-4.1-mini) a prompt for claude.' })
-  await view.post('hook.enhanced', { agent: null, mode: 'rules' })
-  assert.deepEqual(read(notice), { tone: 'neutral', text: 'Auto-enhanced (rules) a prompt for an agent.' })
   await view.unmount()
 })
 

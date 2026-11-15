@@ -4,17 +4,17 @@ import { formatText } from '../format.ts'
 // to the state (state.ts) that follow. No UI here; the web panel (web/src) and the tests call these.
 import { files as panelFiles, plugin, read, set, settings, shell, update, type JsonValue } from '#panel'
 import { MAX_RULE_CHARS, MAX_RULES, MAX_SECTIONS, MAX_STRUCTURES, newId, projectScope, type RulesConfig } from '../rules.ts'
-import { exportName, feedbackDue, historyMarkdown, ISSUES_URL, targetLabel } from './view.ts'
+import { exportName, historyMarkdown, ISSUES_URL, targetLabel } from './view.ts'
 import { type HistoryEntry } from '../history.ts'
 import { attachmentItemId } from '../image-limits.ts'
 import { type Message } from '../messages.ts'
-import { DEFAULT_MAX_TOKENS, isContextLevel, presetById, type ContextItemView, type ProfileView } from '../presets.ts'
+import { isContextLevel, type ContextItemView, type ProfileView } from '../presets.ts'
 import { isStyle } from '../prompts.ts'
 import { NEEDS_CONSENT, parseOtherAgentsLimits, parsePrivacy } from '../privacy.ts'
 import { stepPercent, totalPercent, type Step } from '../progress.ts'
-import { PANEL_REQUEST_LIMIT_MS, type ProfileInput } from '../protocol.ts'
+import { PANEL_REQUEST_LIMIT_MS } from '../protocol.ts'
 import { pathInWorkspaceId, pathKey } from '../workspaces.ts'
-import { consents, feedbackAsk, feedbackOff, feedbackShown, files, ruleDraft, ruleScope, structureDraft, type Form, terminalWorkspaces, workspaceChoices, tick, workspaceKey, projectName, parked, MAX_PARKED, type Slot, rulesState, structureChoice, workspaceName, tab, draft, result, style, effectiveEffort, effortModels, excluded, target, historyRaw, confirmClearHistory, form, detected, catalogs, catalogLoading, customModel, type Run, run, dataSummary, privacy, confirmWipe, busy, notice, lastRun, contextShown, contextNotes, KEPT, mayKeep, put, forgetSaved, targets, models, defaults, effectiveStyle, effectiveLevel, effectiveEnter, say, message, errorMessage, historyOpen, hookLast, resultFor, sendAfterEnhance, filteredHistory, type NoticeAction } from './state.ts'
+import { consents, files, ruleDraft, ruleScope, structureDraft, type Form, terminalWorkspaces, workspaceChoices, tick, workspaceKey, projectName, parked, MAX_PARKED, type Slot, rulesState, structureChoice, workspaceName, tab, draft, result, style, effectiveEffort, effortModels, excluded, target, historyRaw, confirmClearHistory, form, catalogs, catalogLoading, type Run, run, dataSummary, privacy, confirmWipe, busy, notice, lastRun, contextShown, contextNotes, KEPT, mayKeep, put, forgetSaved, targets, models, defaults, effectiveStyle, effectiveLevel, effectiveEnter, say, message, errorMessage, historyOpen, resultFor, sendAfterEnhance, filteredHistory, type NoticeAction } from './state.ts'
 import { contextPreferences } from './state.ts'
 import { cancelContextPreview, contextKey, knownWorkspaceId, showContext } from './context-preview.ts'
 export { knownWorkspaceId, showContext, previewContext } from './context-preview.ts'
@@ -157,7 +157,6 @@ export function openSection(value: string): void {
   set(tab, value)
   if (value === 'privacy') {
     void refreshDataSummary()
-    void refreshHookLast()
   }
 }
 
@@ -169,8 +168,6 @@ export async function refreshDefaults(): Promise<void> {
     pressEnter: all.sendPressEnter === true,
     fallbackEnabled: all.fallbackEnabled !== false,
     fallbackOn: all.fallbackOn === 'transient' ? 'transient' : 'any',
-    autoEnhanceMode: typeof all.autoEnhanceMode === 'string' ? all.autoEnhanceMode : 'off',
-    notifyWhenDone: all.notifyWhenDone === true,
     otherAgents: parseOtherAgentsLimits(all)
   })
   set(effortModels, { low: String(all[EFFORT_SETTINGS.low] ?? 'auto') || '__invalid__', medium: String(all[EFFORT_SETTINGS.medium] ?? 'auto') || '__invalid__', high: String(all[EFFORT_SETTINGS.high] ?? 'auto') || '__invalid__' })
@@ -184,7 +181,7 @@ export async function refreshModels(): Promise<void> {
   try {
     const view = await plugin.request('models.get')
     set(models, view)
-    // Lists come from cache (a day) or the CLI/API; cards use them for quick model switching.
+    // Cards use the Copilot catalog for quick model switching.
     for (const profile of view.profiles) {
       if (!read(catalogs)[profile.id]) void loadCatalog(profile.id, { preset: profile.preset, profileId: profile.id })
     }
@@ -195,35 +192,28 @@ export async function refreshModels(): Promise<void> {
 
 export async function loadCatalog(
   key: string,
-  input: { preset: string; profileId?: string; baseUrl?: string; provider?: string; command?: string; apiKey?: string },
+  input: { preset?: 'copilot'; profileId?: string },
   refresh = false
 ): Promise<void> {
   update(catalogLoading, (map) => ({ ...map, [key]: true }))
   const operation = refresh ? 'copilot.refresh' : 'copilot.catalog'
   const started = Date.now()
-  if (input.preset === 'copilot') panelDiagnostics.record(operation, 'started')
+  panelDiagnostics.record(operation, 'started')
   try {
     const clean = Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined && value !== ''))
     const catalog = await plugin.request('models.catalog', { preset: input.preset, ...clean, refresh }, { timeoutMs: 40_000 })
-    if (input.preset === 'copilot') panelDiagnostics.record(operation, catalog.error ? 'failed' : 'ok', { ms: Date.now() - started, ...(catalog.error ? diagnosticError({ text: catalog.errorText }) : {}) })
+    panelDiagnostics.record(operation, catalog.error ? 'failed' : 'ok', { ms: Date.now() - started, ...(catalog.error ? diagnosticError({ text: catalog.errorText }) : {}) })
     update(catalogs, (map) => ({ ...map, [key]: catalog }))
   } catch (error) {
     update(catalogs, (map) => ({ ...map, [key]: { models: [], source: '', fetchedAt: Date.now(), error: message(error) } }))
-    if (input.preset === 'copilot') panelDiagnostics.record(operation, 'failed', { ms: Date.now() - started, ...diagnosticError(error) })
+    panelDiagnostics.record(operation, 'failed', { ms: Date.now() - started, ...diagnosticError(error) })
   } finally {
     update(catalogLoading, (map) => ({ ...map, [key]: false }))
   }
 }
 
 export function formCatalogInput(current: Form) {
-  return {
-    preset: current.preset,
-    ...(current.id ? { profileId: current.id } : {}),
-    baseUrl: current.baseUrl,
-    provider: current.provider,
-    command: current.command ?? '',
-    ...(current.provider === 'copilot' ? {} : { apiKey: current.apiKey })
-  }
+  return { preset: 'copilot' as const, ...(current.id ? { profileId: current.id } : {}) }
 }
 
 export async function refreshTargets(): Promise<void> {
@@ -277,7 +267,6 @@ async function runEnhance(): Promise<Enhanced | null> {
   const runId = beginRun(`${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`, origin)
   set(busy, 'enhance')
   set(notice, null)
-  set(feedbackShown, false)
   try {
     const input = {
       prompt,
@@ -305,7 +294,6 @@ async function runEnhance(): Promise<Enhanced | null> {
       set(resultFor, prompt)
       put(lastRun, ran)
       showContext(answer.context, answer.notes, contextAtStart)
-      askForFeedback()
       shown = { prompt, enhanced: answer.enhanced }
     } else if (origin.key !== null && !removedWorkspaces.has(origin.key)) {
       // The person moved to another project meanwhile: the prompt waits in its own project.
@@ -652,74 +640,9 @@ export async function setSetting(key: string, value: JsonValue): Promise<void> {
 // ---- model profiles
 
 export function openForm(profile?: ProfileView): void {
-  set(customModel, false)
-  if (profile) {
-    set(form, {
-      id: profile.id,
-      name: profile.name,
-      preset: profile.preset,
-      provider: profile.provider,
-      baseUrl: profile.baseUrl,
-      model: profile.model,
-      maxTokens: profile.maxTokens,
-      enabled: profile.enabled,
-      command: profile.command,
-      args: profile.args,
-      apiKey: ''
-    })
-  } else {
-    const preset = presetById('copilot')
-    set(form, { name: preset.label, preset: preset.id, provider: preset.provider, baseUrl: preset.baseUrl, model: preset.model, maxTokens: DEFAULT_MAX_TOKENS, enabled: true, command: '', args: '', apiKey: '' })
-  }
-  const current = read(form)
-  if (current) void loadCatalog('form', formCatalogInput(current))
-}
-
-export async function detectClis(): Promise<void> {
-  try {
-    const { found } = await plugin.request('models.detect')
-    set(detected, found)
-  } catch {
-    set(detected, [])
-  }
-}
-
-/** One click: adds a detected subscription CLI as a model with its defaults. */
-export async function addDetected(presetId: string, path: string): Promise<void> {
-  if (read(busy)) return
-  const preset = presetById(presetId)
-  set(busy, 'save')
-  try {
-    set(
-      models,
-      await plugin.request('models.save', {
-        name: preset.label.replace(/ \(.*\)$/, ''),
-        preset: preset.id,
-        provider: preset.provider,
-        baseUrl: '',
-        model: preset.model,
-        maxTokens: DEFAULT_MAX_TOKENS,
-        enabled: true,
-        command: path,
-        args: ''
-      })
-    )
-    await detectClis()
-    set(notice, { tone: 'success', text: formatText('Added {name}. Use Test to check it is signed in.', { name: preset.label }) })
-  } catch (error) {
-    set(notice, { tone: 'danger', text: message(error) })
-  } finally {
-    set(busy, null)
-  }
-}
-
-export function applyPreset(id: string): void {
-  const preset = presetById(id)
-  update(form, (current) => {
-    if (!current) return current
-    const name = current.id ? current.name : preset.label
-    return { ...current, preset: preset.id, provider: preset.provider, baseUrl: preset.baseUrl, model: preset.model, command: '', args: '', name, ...(preset.provider === 'copilot' ? { apiKey: '' } : {}) }
-  })
+  set(form, profile
+    ? { id: profile.id, name: profile.name, preset: 'copilot', provider: 'copilot', model: profile.model, enabled: profile.enabled }
+    : { name: 'GitHub Copilot', preset: 'copilot', provider: 'copilot', model: '', enabled: true })
   const current = read(form)
   if (current) void loadCatalog('form', formCatalogInput(current))
 }
@@ -731,10 +654,7 @@ export async function saveForm(): Promise<void> {
   if (!current) return
   set(busy, 'save')
   try {
-    const { apiKey, ...rest } = current
-    // Editing: an empty key field keeps the saved key.
-    const input: ProfileInput = { ...rest, ...(current.provider === 'copilot' ? { apiKey: '' } : apiKey.trim() || !current.id ? { apiKey: apiKey.trim() } : {}) }
-    set(models, await plugin.request('models.save', input))
+    set(models, await plugin.request('models.save', current))
     set(form, null)
     set(notice, { tone: 'success', text: formatText('Saved {name}.', { name: current.name }) })
   } catch (error) {
@@ -776,13 +696,12 @@ export async function testProfile(id: string): Promise<void> {
   }
 }
 
-export async function setRoles(patch: { hookProfileId?: string | null; selectorProfileId?: string | null }): Promise<void> {
+export async function setRoles(patch: { selectorProfileId?: string | null }): Promise<void> {
   const current = read(models)
   try {
     set(
       models,
       await plugin.request('models.roles', {
-        hookProfileId: patch.hookProfileId !== undefined ? patch.hookProfileId : (current?.hookProfileId ?? null),
         selectorProfileId: patch.selectorProfileId !== undefined ? patch.selectorProfileId : (current?.selectorProfileId ?? null)
       })
     )
@@ -794,7 +713,7 @@ export async function setRoles(patch: { hookProfileId?: string | null; selectorP
 export async function switchModel(profile: ProfileView, model: string): Promise<void> {
   try {
     set(models, await plugin.request('models.save', { ...profile, model }))
-    set(notice, { tone: 'success', text: formatText('{name} now uses {model}.', { name: profile.name, model: model || 'CLI default' }) })
+    set(notice, { tone: 'success', text: formatText('{name} now uses {model}.', { name: profile.name, model }) })
   } catch (error) {
     set(notice, { tone: 'danger', text: message(error) })
   }
@@ -832,20 +751,6 @@ export function allowed(key: string): boolean {
   return NEEDS_CONSENT.has(key as never) ? on && read(consents).includes(key) : on
 }
 
-/** Starts a new agent of this kind in the focused workspace with the prompt. */
-export async function launchAgent(agent: string, prompt: string): Promise<void> {
-  if (!prompt.trim()) return
-  set(busy, 'send')
-  try {
-    await plugin.request('agent.launch', { agent, prompt, ...knownWorkspaceId() })
-    set(notice, { tone: 'success', text: formatText('Started a new {agent} agent with the prompt.', { agent }) })
-  } catch (error) {
-    set(notice, { tone: 'danger', text: message(error) })
-  } finally {
-    set(busy, null)
-  }
-}
-
 /** Opens a file of the project in the host's editor. */
 export async function openFile(path: string): Promise<void> {
   try {
@@ -853,11 +758,6 @@ export async function openFile(path: string): Promise<void> {
   } catch (error) {
     set(notice, { tone: 'danger', text: message(error) })
   }
-}
-
-/** What auto-enhance did with the last prompt it saw (the Settings section shows it). */
-export async function refreshHookLast(): Promise<void> {
-  set(hookLast, await plugin.request('hook.last').catch(() => null))
 }
 
 export async function refreshDataSummary(): Promise<void> {
@@ -874,7 +774,6 @@ export async function clearData(what: 'history' | 'catalogs' | 'all'): Promise<v
       if (read(run)?.status !== 'running') set(run, null)
       for (const [now, , empty] of KEPT) set(now, empty as never)
       set(rulesState, { rules: [], structures: [] })
-      set(hookLast, null)
       set(resultFor, null)
       // A confirmation like the others: gone with everything else, and asked for again.
       set(sendAfterEnhance, false)
@@ -946,48 +845,4 @@ export function removeStructure(id: string): void {
 export async function openIssues(): Promise<void> {
   const opened = await shell.openExternal(ISSUES_URL).catch(() => ({ opened: false }))
   if (!opened.opened) set(notice, { tone: 'neutral', text: formatText('Open {url} in your browser.', { url: ISSUES_URL }) })
-}
-
-/**
- * A prompt was enhanced and its result is on screen: shows the note that asks for ideas and feedback
- * when it is due (view.ts: after the first few prompts, then now and then). Prompts are counted only
- * until the note has shown once, and not at all while the person has turned the note off. Exported
- * for tests.
- */
-export function askForFeedback(now = Date.now()): void {
-  if (read(feedbackOff)) return
-  const ask = read(feedbackAsk)
-  const counted = ask.shownAt === 0 ? { ...ask, runs: ask.runs + 1 } : ask
-  if (feedbackDue(counted, now)) {
-    set(feedbackAsk, { ...counted, shownAt: now })
-    set(feedbackShown, true)
-  } else if (counted !== ask) {
-    set(feedbackAsk, counted)
-  }
-}
-
-export function closeFeedback(): void {
-  set(feedbackShown, false)
-}
-
-/** The note's button: the plugin's issue page, like Feedback in the settings. */
-export async function sendFeedback(): Promise<void> {
-  set(feedbackShown, false)
-  // Called at once, inside the press: the host opens a link only from a gesture.
-  await openIssues()
-}
-
-/** The switch under Feedback in the settings section: whether the note may come at all. */
-export function setFeedbackNotes(on: boolean): void {
-  set(feedbackOff, !on)
-  if (!on) set(feedbackShown, false)
-}
-
-/**
- * "Don't ask again" in the note: the same switch, turned off, and a word on where to turn it back
- * on, so the choice is never a dead end.
- */
-export function stopFeedback(): void {
-  setFeedbackNotes(false)
-  set(notice, { tone: 'neutral', text: 'No more feedback notes. To turn them back on, open the gear icon and look under Feedback.' })
 }

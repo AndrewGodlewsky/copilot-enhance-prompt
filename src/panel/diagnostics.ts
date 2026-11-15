@@ -12,7 +12,7 @@ export async function collectDiagnostics(): Promise<{ text: string; connected: b
   const catalog = read(catalogs).form
   const discovery = {
     worker: worker?.copilotModelDiscovery ?? null,
-    panel: { copilotFormOpen: read(form)?.provider === 'copilot', loading: read(catalogLoading).form === true,
+    panel: { copilotFormOpen: read(form) !== null, loading: read(catalogLoading).form === true,
       modelCount: catalog?.models.length ?? 0, modelSelected: Boolean(read(form)?.model),
       ...(catalog?.error ? { failure: diagnosticError({ text: catalog.errorText }) } : {}) }
   }

@@ -4,30 +4,18 @@
 import { read, set } from '#panel'
 import { assert, mockHost, test } from '#testing'
 import { attachmentItemId } from './image-limits.ts'
-import { applyPreset, closeFeedback, enhanceNow, openForm, patchForm, removeFile, saveForm, send, sendFeedback, setFeedbackNotes, stopFeedback, toggleItem } from './panel/actions.ts'
-import { contextShown, draft, enabledProfiles, excluded, feedbackAsk, feedbackOff, feedbackShown, files, form, lastRun, notice, put, result } from './panel/state.ts'
+import { enhanceNow, openForm, patchForm, removeFile, saveForm, send, openIssues, toggleItem } from './panel/actions.ts'
+import { contextShown, draft, enabledProfiles, excluded, files, form, lastRun, notice, put, result } from './panel/state.ts'
 import { mountPanel } from './panel/testing.ts'
-import { FEEDBACK_EVERY_DAYS, FEEDBACK_FIRST_RUNS, feedbackDue, ISSUES_URL, modelWarning, optionsSummary } from './panel/view.ts'
-import { PRESETS, type ProfileView } from './presets.ts'
+import { ISSUES_URL, modelWarning, optionsSummary } from './panel/view.ts'
+import { type ProfileView } from './presets.ts'
 import type { ModelsView, ProfileInput } from './protocol.ts'
 
 const gpt: ProfileView = {
-  id: 'gpt',
-  name: 'OpenAI',
-  preset: 'openai',
-  provider: 'openai',
-  baseUrl: 'https://api.openai.com/v1',
-  model: 'gpt-4.1-mini',
-  maxTokens: 2000,
-  enabled: true,
-  command: '',
-  args: '',
-  keySource: 'secret',
-  envName: 'OPENAI_API_KEY',
-  effectiveBaseUrl: 'https://api.openai.com/v1',
-  effectiveModel: 'gpt-4.1-mini'
+  id: 'gpt', name: 'GitHub Copilot', preset: 'copilot', provider: 'copilot', model: 'gpt-5-mini', enabled: true, effectiveModel: 'gpt-5-mini'
 }
-const modelsView = (profiles: ProfileView[]): ModelsView => ({ profiles, hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS })
+
+const modelsView = (profiles: ProfileView[]): ModelsView => ({ profiles, selectorProfileId: null })
 
 test('enhances with context, then sends to the chosen agent', async () => {
   const sent: { terminalId: string; text: string }[] = []
@@ -140,113 +128,19 @@ test('an attached text can be unticked like any context item, and leaves the lis
   await view.unmount()
 })
 
-test('a note asks for ideas and feedback now and then: after the fifth enhanced prompt, then at most once in 3 days, and never once it is turned off', async () => {
-  const DAY = 24 * 3600_000
-  let fail = false
-  const host = mockHost({
-    requests: {
-      'models.get': modelsView([gpt]),
-      'targets.list': { targets: [] },
-      'prompt.enhance': (input) => {
-        if (fail) throw Object.assign(new Error('All models failed.'), { code: 'action_failed' })
-        return { enhanced: `Better: ${input.prompt}`, model: 'gpt-4.1-mini', profileName: 'OpenAI', ms: 10, attempts: [], context: [], notes: [] }
-      }
-    }
-  })
+test('Feedback opens the issue page without reminder state', async () => {
+  const host = mockHost({ requests: {
+    'models.get': modelsView([gpt]), 'targets.list': { targets: [] },
+    'prompt.enhance': () => ({ enhanced: 'Improved prompt', model: 'gpt-5-mini', profileName: 'GitHub Copilot', ms: 1, attempts: [], context: [], notes: [] })
+  } })
   const view = await mountPanel(host)
-  put(draft, 'add tests')
-  assert.deepEqual(read(feedbackAsk), { runs: 0, shownAt: 0 })
-
-  // The first four prompts are counted and nothing shows; a run that fails is not counted.
-  for (let prompts = 1; prompts <= 4; prompts++) {
-    await enhanceNow()
-    assert.equal(read(feedbackShown), false, `shown after ${prompts} prompts`)
-  }
-  fail = true
-  await enhanceNow()
-  fail = false
-  assert.deepEqual(read(feedbackAsk), { runs: 4, shownAt: 0 })
-
-  // The fifth: the note shows, and when it did is kept across panel runs.
-  const before = Date.now()
-  await enhanceNow()
-  assert.equal(read(feedbackShown), true)
-  const first = read(feedbackAsk)
-  assert.equal(first.runs, 5)
-  assert.ok(first.shownAt >= before && first.shownAt <= Date.now())
-  await view.settled()
-  assert.deepEqual(view.persisted.plugin.feedbackAsk, first)
-
-  // The next prompt takes the note away. It stays away, and prompts are no longer counted.
-  await enhanceNow()
-  assert.equal(read(feedbackShown), false)
-  assert.deepEqual(read(feedbackAsk), first)
-
-  // Two days after it showed: still quiet. Three: it shows again, from then on.
-  assert.equal(FEEDBACK_EVERY_DAYS, 3)
-  set(feedbackAsk, { runs: 5, shownAt: Date.now() - 2 * DAY })
-  await enhanceNow()
-  assert.equal(read(feedbackShown), false)
-  set(feedbackAsk, { runs: 5, shownAt: Date.now() - 3 * DAY - 1000 })
-  await enhanceNow()
-  assert.equal(read(feedbackShown), true)
-  assert.equal(read(feedbackShown), true)
-  assert.ok(Date.now() - read(feedbackAsk).shownAt < 5000)
-  // A run that fails takes it away too, and does not bring it back.
-  fail = true
-  await enhanceNow()
-  fail = false
-  assert.equal(read(feedbackShown), false)
-
-  // Its close button hides it; its Send feedback button opens the plugin's issue page.
-  set(feedbackShown, true)
-  closeFeedback()
-  assert.equal(read(feedbackShown), false)
-  set(feedbackShown, true)
-  await sendFeedback()
-  assert.equal(read(feedbackShown), false)
+  put(draft, 'Improve this prompt')
+  for (let run = 0; run < 6; run++) await enhanceNow()
+  await openIssues()
   assert.deepEqual(host.callsOf('shell.openExternal'), [{ url: ISSUES_URL }])
-
-  // "Don't ask again" in the note: the notes are off from then on, across panel runs, the note goes,
-  // and a notice says where the switch is, so it can be turned back on.
-  assert.equal(read(feedbackOff), false)
-  set(feedbackShown, true)
-  stopFeedback()
-  assert.equal(read(feedbackShown), false)
-  assert.equal(read(feedbackOff), true)
-  assert.deepEqual(read(notice), { tone: 'neutral', text: 'No more feedback notes. To turn them back on, open the gear icon and look under Feedback.' })
   await view.settled()
-  assert.equal(view.persisted.plugin.feedbackOff, true)
-  // Off: prompts are not counted, and a note that is due does not come.
-  set(feedbackAsk, { runs: 2, shownAt: 0 })
-  for (let prompts = 0; prompts < 4; prompts++) await enhanceNow()
-  assert.deepEqual(read(feedbackAsk), { runs: 2, shownAt: 0 })
-  const longAgo = { runs: 5, shownAt: Date.now() - 30 * DAY }
-  set(feedbackAsk, longAgo)
-  await enhanceNow()
-  assert.equal(read(feedbackShown), false)
-  assert.deepEqual(read(feedbackAsk), longAgo)
-  // Turned back on with the switch under Feedback: it is due, so the next prompt brings it.
-  setFeedbackNotes(true)
-  assert.equal(read(feedbackOff), false)
-  await enhanceNow()
-  assert.equal(read(feedbackShown), true)
-  // Turned off with that switch while the note is on screen: it goes at once.
-  setFeedbackNotes(false)
-  assert.equal(read(feedbackShown), false)
-  assert.equal(read(feedbackOff), true)
-  // None of this touches Copilot's settings: the switch is the panel's own.
-  assert.deepEqual(host.callsOf('settings.set'), [])
-
-  // The rule itself: a clock set back does not silence the note for good.
-  const now = Date.now()
-  assert.equal(feedbackDue({ runs: FEEDBACK_FIRST_RUNS - 1, shownAt: 0 }, now), false)
-  assert.equal(feedbackDue({ runs: FEEDBACK_FIRST_RUNS, shownAt: 0 }, now), true)
-  assert.equal(feedbackDue({ runs: 5, shownAt: now - FEEDBACK_EVERY_DAYS * DAY + 60_000 }, now), false)
-  assert.equal(feedbackDue({ runs: 5, shownAt: now - FEEDBACK_EVERY_DAYS * DAY }, now), true)
-  assert.equal(feedbackDue({ runs: 5, shownAt: now + DAY }, now), false)
-  assert.equal(feedbackDue({ runs: 5, shownAt: now + 30 * DAY }, now), true)
-  assert.deepEqual(view.errors, [])
+  assert.equal(Object.hasOwn(view.persisted.plugin, 'feedbackAsk'), false)
+  assert.equal(Object.hasOwn(view.persisted.plugin, 'feedbackOff'), false)
   await view.unmount()
 })
 
@@ -258,31 +152,21 @@ test('warns when no model is configured, and adds one from the Models tab', asyn
       'targets.list': { targets: [] },
       'models.save': (input) => {
         saved.push(input)
-        return modelsView([{ ...gpt, ...input, id: 'new', keySource: 'secret', envName: 'GROQ_API_KEY' }])
+        return modelsView([{ ...gpt, ...input, id: 'new' }])
       }
     }
   })
   const view = await mountPanel(host)
   assert.equal(modelWarning(), 'no-model')
-  // Add model: pick the Groq preset, type its key, Save.
+  // Add model: select a model available through the attached Copilot session.
   openForm()
-  applyPreset('groq')
-  patchForm({ apiKey: 'gsk-1' })
+  patchForm({ model: 'gpt-5-mini' })
   await saveForm()
-  assert.equal(saved[0].preset, 'groq')
-  assert.equal(saved[0].baseUrl, 'https://api.groq.com/openai/v1')
-  assert.equal(saved[0].apiKey, 'gsk-1')
+  assert.deepEqual(saved[0], { name: 'GitHub Copilot', preset: 'copilot', provider: 'copilot', model: 'gpt-5-mini', enabled: true })
   // The form closes, the model is there and the warning is gone.
   assert.equal(read(form), null)
   assert.deepEqual(read(enabledProfiles).map((profile) => profile.id), ['new'])
   assert.equal(modelWarning(), null)
   assert.deepEqual(view.errors, [])
-  await view.unmount()
-})
-
-test('an enabled model without a key warns about the key, not about a missing model', async () => {
-  const host = mockHost({ requests: { 'models.get': modelsView([{ ...gpt, keySource: 'none' }]), 'targets.list': { targets: [] } } })
-  const view = await mountPanel(host)
-  assert.equal(modelWarning(), 'no-key')
   await view.unmount()
 })

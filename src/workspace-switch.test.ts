@@ -5,7 +5,7 @@ import { assert, mockHost, test, type MockRequests, type TestPanel } from '#test
 import { enhanceNow, pickWorkspace, send } from './panel/actions.ts'
 import { draft, lastRun, notice, parked, put, result, run, target, workspaceChoices, workspaceKey } from './panel/state.ts'
 import { mountPanel } from './panel/testing.ts'
-import { PRESETS, type ProfileView } from './presets.ts'
+import { type ProfileView } from './presets.ts'
 
 type Space = { id: string; name: string; agent: string; terminal: string }
 const A: Space = { id: 'ws-a', name: 'app-a', agent: 'Claude A', terminal: 'term-a' }
@@ -13,8 +13,7 @@ const B: Space = { id: 'ws-b', name: 'app-b', agent: 'Claude B', terminal: 'term
 const C: Space = { id: 'ws-c', name: 'app-c', agent: 'Claude C', terminal: 'term-c' }
 
 const gpt: ProfileView = {
-  id: 'gpt', name: 'gpt', preset: 'openai', provider: 'openai', baseUrl: '', model: '', maxTokens: 2000, enabled: true,
-  command: '', args: '', effectiveBaseUrl: 'https://api.openai.com/v1', effectiveModel: 'gpt-4.1-mini', keySource: 'secret', envName: ''
+  id: 'gpt', name: 'GitHub Copilot', preset: 'copilot', provider: 'copilot', model: 'gpt-5-mini', enabled: true, effectiveModel: 'gpt-5-mini'
 }
 
 const wait = (ms = 30) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -29,8 +28,7 @@ function world() {
   const pending: { prompt: string; resolve: (text: string) => void }[] = []
   const sent: { terminalId: string; text: string }[] = []
   const requests: MockRequests = {
-    'models.get': { profiles: [gpt], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS },
-    'models.detect': { found: [] },
+    'models.get': { profiles: [gpt], selectorProfileId: null },
     'models.catalog': { models: [], source: '', fetchedAt: 1 },
     'rules.get': { rules: [], structures: [] },
     'targets.list': () => ({
@@ -239,8 +237,7 @@ test('a project Copilot removes is forgotten, although the event names it by ano
   let focused = one
   const host = mockHost({
     requests: {
-      'models.get': { profiles: [], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS },
-      'models.detect': { found: [] },
+      'models.get': { profiles: [], selectorProfileId: null },
       'rules.get': { rules: [], structures: [] },
       'targets.list': () => ({ targets: [{ terminalId: focused.terminal, label: 'Claude · waiting', agent: 'claude' }], workspace: 'main', workspaceId: focused.id, workspacePath: focused.path })
     }
@@ -273,8 +270,7 @@ test('two projects named "main": a prompt that finishes after you moved on is ke
   const pending: ((text: string) => void)[] = []
   const host = mockHost({
     requests: {
-      'models.get': { profiles: [gpt], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS },
-      'models.detect': { found: [] },
+      'models.get': { profiles: [gpt], selectorProfileId: null },
       'models.catalog': { models: [], source: '', fetchedAt: 1 },
       'rules.get': { rules: [], structures: [] },
       // Both workspaces are "main" to Copilot; the worker adds each one's project.
@@ -313,8 +309,7 @@ test('the panel learns a terminal\'s workspace from Copilot\'s agent events, and
   ]
   const host = mockHost({
     requests: {
-      'models.get': { profiles: [], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS },
-      'models.detect': { found: [] },
+      'models.get': { profiles: [], selectorProfileId: null },
       'rules.get': { rules: [], structures: [] },
       'targets.list': (input) => {
         known.push({ ...(input?.known ?? {}) })
@@ -354,8 +349,7 @@ for (const how of ['the person picks the folder', 'an agent event names the work
     const sent: { terminalId: string; text: string }[] = []
     const host = mockHost({
       requests: {
-        'models.get': { profiles: [gpt], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS },
-        'models.detect': { found: [] },
+        'models.get': { profiles: [gpt], selectorProfileId: null },
         'models.catalog': { models: [], source: '', fetchedAt: 1 },
         'rules.get': { rules: [], structures: [] },
         'targets.list': (input) => {
@@ -400,8 +394,7 @@ test('two projects of one name: what was written in the one Copilot cannot tell 
   let focused: 'first' | 'second' = 'first'
   const host = mockHost({
     requests: {
-      'models.get': { profiles: [gpt], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS },
-      'models.detect': { found: [] },
+      'models.get': { profiles: [gpt], selectorProfileId: null },
       'models.catalog': { models: [], source: '', fetchedAt: 1 },
       'rules.get': { rules: [], structures: [] },
       'targets.list': () =>

@@ -1,6 +1,6 @@
 // Your own rules for the rewriter (for every project or one), and prompt structures: the sections a
 // prompt is written in. Kept in the plugin's storage under RULES_KEY; the panel edits them, the worker
-// reads them for every run and for auto-enhance. No Node imports: both sides load this file.
+// reads them for every run. No Node imports: both sides load this file.
 import type { JsonValue } from '#panel'
 
 export const RULES_KEY = 'rules'

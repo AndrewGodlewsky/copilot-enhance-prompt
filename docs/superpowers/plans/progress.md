@@ -1,5 +1,7 @@
 # Execution ledger: 2026-11-14-copilot-canvas.md
 
+> Historical planning record. This captures the design and verification at that time; current behavior is documented in the [README](../../../README.md) and [Copilot-only plan](../plans/2026-11-15-copilot-only.md).
+
 - Design approved; owner requested implementation with questions only when assistance is needed.
 - Worktree already isolated on `AndrewGodlewsky/ningyo`; implement inline.
 - Preflight: tasks share the typed panel/worker service interfaces; preserve protocol types while replacing runtime implementations.

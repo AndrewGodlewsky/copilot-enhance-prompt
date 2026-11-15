@@ -1,7 +1,6 @@
 // Default preferences for a new Enhance Prompt installation.
 import type { JsonValue } from './runtime.ts'
 export const DEFAULTS: Record<string, JsonValue> = {
-  "statusBarItem": "full",
   "defaultStyle": "balanced",
   "customInstructions": "",
   "contextLevel": "standard",
@@ -18,11 +17,6 @@ export const DEFAULTS: Record<string, JsonValue> = {
   "sendMode": "paste",
   "sendPressEnter": false,
   "historyLimit": 50,
-  "notifyWhenDone": false,
-  "autoEnhanceMode": "off",
-  "autoEnhanceAppend": "Before you finish: keep changes minimal and focused, follow the existing code style, run the relevant tests or type checks, and summarize what you changed.",
-  "autoEnhanceMinLength": 8,
-  "autoEnhanceContext": true,
   "allowProjectFiles": true,
   "allowGit": true,
   "allowTerminalRead": true,
@@ -32,9 +26,7 @@ export const DEFAULTS: Record<string, JsonValue> = {
   "allowAgentActivity": false,
   "allowEditorSaves": false,
   "allowTerminalSend": true,
-  "allowAgentLaunch": false,
   "allowOpenFiles": true,
   "saveHistory": true,
-  "allowEnvKeys": true,
   "allowOnlineModelLists": true
 }

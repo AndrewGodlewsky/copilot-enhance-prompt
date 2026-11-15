@@ -1,5 +1,7 @@
 # Effort controls
 
+> Historical planning record. This captures the design and verification at that time; current behavior is documented in the [README](../../../README.md) and [Copilot-only plan](../plans/2026-11-15-copilot-only.md).
+
 The request composer will show **Context Level**, **Style**, and **Effort** where the Model picker was. Effort has Low, Medium, and High; Medium is initially selected. The user approved initializing all three assignments from the current model until final defaults are chosen.
 
 Reuse the existing saved profiles and live model lists in Settings. Three independently saved assignments select the rewriting model. This is simpler than introducing another model configuration system and keeps credentials in their existing protected store. Show the selected assignment below the composer controls, with a Settings link. Effort does not change project context, the separate AI file selector, chat auto-enhance, or a provider's internal reasoning setting.

@@ -10,7 +10,11 @@ if (vite.status !== 0) process.exit(vite.status ?? 1)
 const directory = 'com.github.copilot/extensions/enhance-prompt'
 await mkdir(directory, { recursive: true })
 await build({ entryPoints: ['src/copilot/extension.ts'], outfile: `${directory}/extension.mjs`, bundle: true, platform: 'node', format: 'esm', target: 'node22', external: ['@github/copilot-sdk', '@github/copilot-sdk/extension'], banner: { js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);" }, legalComments: 'inline' })
-await build({ entryPoints: ['src/copilot/hook-entry.ts'], outfile: 'com.github.copilot/hooks/hook.mjs', bundle: true, platform: 'node', format: 'esm', target: 'node22', banner: { js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);" }, legalComments: 'inline' })
+// A previous build may still contain the retired automatic chat hook.
+const retiredHooks = path.resolve('com.github.copilot/hooks')
+const relativeHooks = path.relative(process.cwd(), retiredHooks)
+if (relativeHooks.startsWith('..') || path.isAbsolute(relativeHooks)) throw new Error('Retired hook directory must stay inside the project')
+await rm(retiredHooks, { recursive: true, force: true })
 // Replace the generated web directory so deleted Vite chunks cannot survive an upgrade.
 const packagedWeb = path.resolve(directory, 'web')
 const relativeWeb = path.relative(process.cwd(), packagedWeb)

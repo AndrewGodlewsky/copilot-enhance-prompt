@@ -1,5 +1,7 @@
 # Context Reliability Implementation Plan
 
+> Historical planning record. This captures the design and verification at that time; current behavior is documented in the [README](../../../README.md) and [Copilot-only plan](../plans/2026-11-15-copilot-only.md).
+
 > **For agentic workers:** Use superpowers:executing-plans for implementation and a fresh whole-change review at the end.
 
 **Goal:** Make context controls reliable and clarify the speed/context choices.

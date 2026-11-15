@@ -1,7 +1,7 @@
 // The panel <-> worker contract, declared once: the panel (src/panel/, web/src) and src/worker.ts both read it.
 import type { Message } from './messages.ts'
 import type { RulesConfig } from './rules.ts'
-import type { ContextItemView, ProfileView, Preset, Provider } from './presets.ts'
+import type { ContextItemView, ProfileView } from './presets.ts'
 
 /** The longest a panel may wait for its worker (the host caps `timeoutMs` at 120000). */
 export const PANEL_REQUEST_LIMIT_MS = 120_000
@@ -10,31 +10,12 @@ export type AttemptView = { profileId: string; name: string; model: string; ok: 
 export type ProfileInput = {
   id?: string
   name: string
-  preset: string
-  provider: Provider
-  baseUrl: string
+  preset?: 'copilot'
+  provider?: 'copilot'
   model: string
-  maxTokens: number
   enabled: boolean
-  /** CLI profiles: executable name or path. */
-  command?: string
-  /** Custom CLI: arguments. */
-  args?: string
-  /** New API key; undefined keeps the current one, '' removes it. */
-  apiKey?: string
 }
-/** What auto-enhance last did with a prompt the host was sending (kept in the worker's memory). */
-export type HookRecord = { at: number; outcome: 'rewritten' | 'appended' | 'skipped'; agent: string | null; model?: string; reason?: Message }
-export type ModelsView = {
-  /** This machine has no OS key store: the host cannot save an API key (`secrets.protection`). */
-  keysUnavailable?: boolean
-  profiles: ProfileView[]
-  hookProfileId: string | null
-  selectorProfileId: string | null
-  fromEnv: boolean
-  presets: Preset[]
-}
-
+export type ModelsView = { profiles: ProfileView[]; selectorProfileId: string | null }
 
   // oxlint-disable-next-line typescript/consistent-type-definitions -- declaration merging needs an interface
 export interface PluginRequests {
@@ -102,8 +83,6 @@ export interface PluginRequests {
     'consents.get': { output: { granted: string[]; needed: string[] } }
     /** The person confirmed (or withdrew) a switch that needs it, after reading what it allows. */
     'consent.set': { input: { key: string; granted: boolean }; output: { granted: string[] } }
-    /** Starts a new agent (`agent`: claude, codex…) in the focused workspace with this prompt. */
-    'agent.launch': { input: { agent: string; prompt: string; workspaceId?: string }; output: { terminalId: string } }
     /** Opens a file of the focused workspace (a path relative to it) in the host's editor. */
     'editor.open': { input: { path: string; workspaceId?: string }; output: { opened: true } }
     /** Agent terminals of the focused workspace, agents first. */
@@ -127,28 +106,17 @@ export interface PluginRequests {
       }
     }
     'models.get': { output: ModelsView }
-    /** Adds or updates a profile (and its key). */
+    /** Adds or updates a Copilot profile. */
     'models.save': { input: ProfileInput; output: ModelsView }
     'models.delete': { input: { id: string }; output: ModelsView }
     /** Moves a profile one step, or straight to position `to` (0 = tried first). */
     'models.move': { input: { id: string; direction?: 'up' | 'down'; to?: number }; output: ModelsView }
-    'models.roles': { input: { hookProfileId: string | null; selectorProfileId: string | null }; output: ModelsView }
+    'models.roles': { input: { selectorProfileId: string | null }; output: ModelsView }
     /** Sends a tiny request through one profile. */
     'models.test': { input: { id: string }; output: { ok: boolean; message: string; text?: Message; ms: number } }
-    /**
-     * The models a preset or saved profile can use, kept current from the CLI or the API itself.
-     * Cached for a day; `refresh` fetches again. `apiKey` lets an unsaved form list API models.
-     */
+    /** Models available through the attached Copilot account and policy. */
     'models.catalog': {
-      input: {
-        preset: string
-        profileId?: string
-        baseUrl?: string
-        provider?: string
-        command?: string
-        apiKey?: string
-        refresh?: boolean
-      }
+      input: { preset?: 'copilot'; profileId?: string; refresh?: boolean }
       output: {
         models: { id: string; label: string; description?: string; isDefault?: boolean }[]
         source: string
@@ -164,25 +132,18 @@ export interface PluginRequests {
     'history.clear': { output: { ok: true } }
     /** Undo of history.remove: brings back the entry of that id, if this worker removed it a moment ago. */
     'history.restore': { input: { id: string }; output: { restored: boolean } }
-    /** What auto-enhance did with the last prompt it saw, or null. */
-    'hook.last': { output: HookRecord | null }
     /** Rules tab: your rules and prompt structures. */
     'rules.get': { output: RulesConfig }
     /** Replaces them (cleaned and capped); answers with what was saved. */
     'rules.save': { input: { config: RulesConfig }; output: RulesConfig }
-    /** What the plugin keeps: history entries, saved models, saved keys, cached model lists. */
-    'data.summary': { output: { history: number; profiles: number; keys: number; catalogs: number } }
-    /** Deletes history, cached model lists, or everything (models and their keys too). */
+    /** What the plugin keeps: history entries, saved models and cached model lists. */
+    'data.summary': { output: { history: number; profiles: number; catalogs: number } }
+    /** Deletes history, cached model lists, or everything (models too). */
     'data.clear': { input: { what: 'history' | 'catalogs' | 'all' }; output: { ok: true } }
-    /** Agent CLIs found on this machine (usable with the person's subscription). */
-    'models.detect': { output: { found: { preset: string; label: string; path: string; added: boolean }[] } }
+
   }
   // oxlint-disable-next-line typescript/consistent-type-definitions -- declaration merging needs an interface
 export interface PluginPanelEvents {
-    /** The auto-enhance hook rewrote a prompt the host was sending. */
-    'hook.enhanced': { agent: string | null; mode: string; model?: string }
-    /** Auto-enhance (AI) let a prompt through unchanged, and why. */
-    'hook.skipped': { agent: string | null; reason: Message }
     /** The steps of the panel's enhance run, a full snapshot on every change. */
     'enhance.progress': {
       runId: string

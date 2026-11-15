@@ -1,5 +1,7 @@
 # Enhance Prompt: GitHub Copilot desktop port
 
+> Historical planning record. This captures the design and verification at that time; current behavior is documented in the [README](../../../README.md) and [Copilot-only plan](../plans/2026-11-15-copilot-only.md).
+
 Status: approved by the owner on 2026-11-14. The owner selected a native
 canvas with the existing panel and features and authorized implementation.
 

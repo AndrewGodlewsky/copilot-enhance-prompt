@@ -5,21 +5,15 @@ import { after } from 'node:test'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { read, set } from '#panel'
-import { afterEach, assert, mockHost, mountWorker, test } from '#testing'
+import { assert, mockHost, mountWorker, test } from '#testing'
 import { messageIn, msg, plainText, withMessage } from './messages.ts'
 import { applyProgress, beginRun, cancel, enhanceNow, finishRun } from './panel/actions.ts'
 import { draft, lastRun, put, result, run, tick } from './panel/state.ts'
 import { mountPanel } from './panel/testing.ts'
 import { runSeconds, seconds, stepShare, stepText } from './panel/view.ts'
-import { PRESETS, type ProfileView } from './presets.ts'
+import { type ProfileView } from './presets.ts'
 import { createProgress, planSteps, stepPercent, STEP_WEIGHTS, totalPercent, type ProgressSnapshot, type Step } from './progress.ts'
 import * as main from './worker.ts'
-
-// A test that stubs fetch never leaks it into the next one.
-const realFetch = globalThis.fetch
-afterEach(() => {
-  globalThis.fetch = realFetch
-})
 
 // Every temporary folder a test makes is removed when the file's tests are done.
 const tempDirs: string[] = []
@@ -58,12 +52,12 @@ test('createProgress sends a full snapshot on every change, with when each step 
   step('git', 'running', undefined, 2 / 3)
   step('git', 'done', '3')
   now = 2000
-  step('model', 'running', 'OpenAI · gpt')
+  step('model', 'running', 'GitHub Copilot · gpt')
   assert.equal(sent.length, 7)
   assert.deepEqual(sent.at(-1)!.steps, [
     { key: 'workspace', status: 'done', detail: 'demo', startedAt: 1000 },
     { key: 'git', status: 'done', detail: '3', startedAt: 1100 },
-    { key: 'model', status: 'running', detail: 'OpenAI · gpt', startedAt: 2000 }
+    { key: 'model', status: 'running', detail: 'GitHub Copilot · gpt', startedAt: 2000 }
   ])
   assert.equal(sent[4].steps[1].fraction, 2 / 3)
 })
@@ -105,11 +99,10 @@ test('the worker reports the real steps of a Deep run, in order, to the asking p
   const root = tempDir('progress-')
   writeFileSync(join(root, 'AGENTS.md'), 'Use pnpm.')
   writeFileSync(join(root, 'login.ts'), 'export const login = 1\n')
-  globalThis.fetch = (async () => new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }), { status: 200 })) as typeof fetch
   const host = mockHost({
-    storage: { models: { profiles: [{ id: 'oa', name: 'OpenAI', preset: 'openai', provider: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4.1-mini', maxTokens: 2000, enabled: true, command: '', args: '' }] } },
-    secrets: { 'apiKey.oa': 'k' },
+    storage: { models: { profiles: [{ id: 'oa', name: 'GitHub Copilot', preset: 'copilot', provider: 'copilot', model: 'gpt-4.1-mini', enabled: true }] } },
     results: {
+      'copilot.rewrite': { text: 'ok' },
       'workspace.readContext': { branch: 'main', displayName: 'demo', terminals: [] },
       'workspace.list': { workspaces: [{ id: 'w', kind: 'folder', name: 'demo', path: root, branch: 'main', hostId: null }], truncated: false },
       'agents.list': { agents: [] }
@@ -125,7 +118,7 @@ test('the worker reports the real steps of a Deep run, in order, to the asking p
   const last = snapshots.at(-1)!.steps
   assert.deepEqual(last.map((step) => step.key), ['workspace', 'project', 'git', 'search', 'model'])
   assert.deepEqual(last.map((step) => step.status), ['done', 'done', 'skipped', 'done', 'done'])
-  assert.match(last[4].detail ?? '', /OpenAI · gpt-4.1-mini/)
+  assert.match(last[4].detail ?? '', /GitHub Copilot · gpt-4.1-mini/)
   // Without a runId (other callers), nothing is posted.
   const before = worker.posts.length
   await worker.request('prompt.enhance', { prompt: 'fix login', level: 'off' })
@@ -134,24 +127,22 @@ test('the worker reports the real steps of a Deep run, in order, to the asking p
 })
 
 test('a failing model marks the model step failed', async () => {
-  globalThis.fetch = (async () => new Response(JSON.stringify({ error: { message: 'bad key' } }), { status: 401 })) as typeof fetch
   const host = mockHost({
-    storage: { models: { profiles: [{ id: 'oa', name: 'OpenAI', preset: 'openai', provider: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt', maxTokens: 2000, enabled: true, command: '', args: '' }] } },
-    secrets: { 'apiKey.oa': 'k' },
-    results: { 'workspace.readContext': null }
+    storage: { models: { profiles: [{ id: 'oa', name: 'GitHub Copilot', preset: 'copilot', provider: 'copilot', model: 'gpt', enabled: true }] } },
+    results: { 'workspace.readContext': null, 'copilot.rewrite': () => { throw new Error('Copilot unavailable') } }
   })
   const worker = await mountWorker(main, { host })
   // Why it failed is the run's error (which the panel shows in its own language)...
-  await assert.rejects(worker.request('prompt.enhance', { prompt: 'x', level: 'off', runId: 'r' }), /401: bad key/)
+  await assert.rejects(worker.request('prompt.enhance', { prompt: 'x', level: 'off', runId: 'r' }), /Copilot unavailable/)
   const last = (worker.posts.filter((post) => post.event === 'enhance.progress').at(-1)!.payload as ProgressSnapshot).steps
   assert.equal(last.at(-1)!.status, 'failed')
   // ...and the failed step names the model that was tried, not an English sentence.
-  assert.equal(last.at(-1)!.detail, 'OpenAI · gpt')
+  assert.equal(last.at(-1)!.detail, 'GitHub Copilot · gpt')
   await worker.deactivate()
 })
 
-const gpt: ProfileView = { id: 'gpt', name: 'OpenAI', preset: 'openai', provider: 'openai', baseUrl: '', model: 'gpt-4.1-mini', maxTokens: 2000, enabled: true, command: '', args: '', keySource: 'secret', envName: '', effectiveBaseUrl: 'https://api.openai.com/v1', effectiveModel: 'gpt-4.1-mini' }
-const models = { profiles: [gpt], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS }
+const gpt: ProfileView = { id: 'gpt', name: 'GitHub Copilot', preset: 'copilot', provider: 'copilot', model: 'gpt-4.1-mini', enabled: true, effectiveModel: 'gpt-4.1-mini' }
+const models = { profiles: [gpt], selectorProfileId: null }
 
 test('the panel shows live steps, ignores old runs, and ends with the result or Try again', async () => {
   let fail = false
@@ -159,10 +150,9 @@ test('the panel shows live steps, ignores old runs, and ends with the result or 
     requests: {
       'models.get': models,
       'targets.list': { targets: [] },
-      'models.detect': { found: [] },
       'prompt.enhance': (input) => {
         if (fail) throw Object.assign(new Error('All models failed.'), { code: 'action_failed' })
-        return { enhanced: `Better: ${input.prompt}`, model: 'gpt-4.1-mini', profileName: 'OpenAI', ms: 1500, attempts: [], context: [], notes: [] }
+        return { enhanced: `Better: ${input.prompt}`, model: 'gpt-4.1-mini', profileName: 'GitHub Copilot', ms: 1500, attempts: [], context: [], notes: [] }
       }
     }
   })
@@ -175,11 +165,11 @@ test('the panel shows live steps, ignores old runs, and ends with the result or 
     startedAt: Date.now(),
     steps: [
       { key: 'workspace', status: 'done', detail: 'demo' },
-      { key: 'model', status: 'running', detail: 'OpenAI · gpt-4.1-mini' }
+      { key: 'model', status: 'running', detail: 'GitHub Copilot · gpt-4.1-mini' }
     ]
   })
   const live = read(run)!
-  assert.equal(stepText(live.steps[1]), 'Writing the prompt · OpenAI · gpt-4.1-mini')
+  assert.equal(stepText(live.steps[1]), 'Writing the prompt · GitHub Copilot · gpt-4.1-mini')
   // Workspace done (weight 0.5), model just started (weight 5): 100 × 0.5 / 5.5 ≈ 9%.
   assert.equal(totalPercent(live.steps, read(tick)), 9)
   assert.equal(stepShare(live.steps[0], read(tick)), '100%')
@@ -216,7 +206,6 @@ test('a failed run uses English despite a legacy language preference, with only 
     requests: {
       'models.get': models,
       'targets.list': { targets: [] },
-      'models.detect': { found: [] },
       'prompt.enhance': () => {
         throw Object.assign(new Error(thrown), { code: 'timeout' })
       }
@@ -251,7 +240,6 @@ test('a run that outlasts one request: the panel keeps asking until the prompt i
     requests: {
       'models.get': models,
       'targets.list': { targets: [] },
-      'models.detect': { found: [] },
       'prompt.enhance': async (input) => {
         inputs.push({ ...input })
         if (holding) await new Promise<void>((_resolve, reject) => (stopWaiting = reject))
@@ -299,24 +287,22 @@ test('a slow model: the only one may use the rest of the run; one with another a
   // Each model answers after its own delay, unless it is stopped first.
   const delays: Record<string, number> = { slow: 500, hung: 5000, quick: 20 }
   const stopped: string[] = []
-  globalThis.fetch = ((_url: RequestInfo | URL, init?: RequestInit) =>
+  const rewrite = ({ model }: { model: string }, options?: { signal?: AbortSignal }) =>
     new Promise((resolve, reject) => {
-      const model = String(JSON.parse(String(init?.body)).model)
-      const timer = setTimeout(() => resolve(new Response(JSON.stringify({ choices: [{ message: { content: `answer of ${model}` } }] }), { status: 200 })), delays[model])
-      init?.signal?.addEventListener('abort', () => {
+      const timer = setTimeout(() => resolve({ text: `answer of ${model}` }), delays[model])
+      options?.signal?.addEventListener('abort', () => {
         clearTimeout(timer)
         stopped.push(model)
         reject(new DOMException('aborted', 'AbortError'))
       })
-    })) as typeof fetch
-  const profile = (id: string) => ({ id, name: id, preset: 'openai', provider: 'openai', baseUrl: 'https://api.openai.com/v1', model: id, maxTokens: 2000, enabled: true, command: '', args: '' })
+    })
+  const profile = (id: string) => ({ id, name: id, preset: 'copilot', provider: 'copilot', model: id, enabled: true })
   const hostWith = (ids: string[]) =>
     mockHost({
       storage: { models: { profiles: ids.map(profile) } },
-      secrets: Object.fromEntries(ids.map((id) => [`apiKey.${id}`, 'k'])),
       // 0.2 s per model: far less than the slow model needs.
       settings: { timeoutSeconds: 0.2, fallbackEnabled: true },
-      results: { 'workspace.readContext': null }
+      results: { 'workspace.readContext': null, 'copilot.rewrite': rewrite }
     })
   try {
     // The only model: it is not cut at 0.2 s, since nothing comes after it. It answers at 0.5 s.
@@ -361,7 +347,6 @@ test('the run card shows the total and every step in percent, ≈ for an estimat
     requests: {
       'models.get': models,
       'targets.list': { targets: [] },
-      'models.detect': { found: [] },
       'rules.get': { rules: [], structures: [] }
     }
   })
@@ -394,7 +379,7 @@ test('the run card shows the total and every step in percent, ≈ for an estimat
       { key: 'project', status: 'done' },
       { key: 'git', status: 'skipped' },
       { key: 'search', status: 'done', detail: '3' },
-      { key: 'model', status: 'running', detail: 'OpenAI · gpt', startedAt: now - 8000 }
+      { key: 'model', status: 'running', detail: 'GitHub Copilot · gpt', startedAt: now - 8000 }
     ]
   })
   steps = read(run)!.steps
@@ -418,7 +403,7 @@ test('the run card shows the total and every step in percent, ≈ for an estimat
 })
 
 test("the run card never shows a negative time: its clock starts with the run, and the worker's later clock counts as zero", async () => {
-  const host = mockHost({ requests: { 'models.get': models, 'targets.list': { targets: [] }, 'models.detect': { found: [] } } })
+  const host = mockHost({ requests: { 'models.get': models, 'targets.list': { targets: [] } } })
   const view = await mountPanel(host)
   // The card's clock only moves while a run goes: here it still shows a moment long before this run.
   set(tick, Date.now() - 60_000)

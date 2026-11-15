@@ -39,10 +39,10 @@ const store = new Map<string, unknown>([
   [
     'history',
     [
-      { id: 'h1', at: Date.now() - 3600_000, original: 'login page is broken on mobile', enhanced: HISTORY_SAMPLE, style: 'bugfix', model: 'sonnet', source: 'panel', project: PROJECT },
+      { id: 'h1', at: Date.now() - 3600_000, original: 'login page is broken on mobile', enhanced: HISTORY_SAMPLE, style: 'bugfix', model: 'claude-sonnet-4.5', source: 'panel', project: PROJECT },
       { id: 'h2', at: Date.now() - 3 * 3600_000, original: 'add dark mode toggle', enhanced: 'Add a dark mode toggle to settings…', style: 'feature', model: 'gpt-5-mini', source: 'panel', project: PROJECT },
-      { id: 'h3', at: Date.now() - 86_400_000, original: 'review the payment webhook handler', enhanced: 'Review src/api/webhooks/stripe.ts…', style: 'review', model: 'sonnet', source: 'panel', project: 'billing-api' },
-      { id: 'h4', at: Date.now() - 2 * 86_400_000, original: 'split the settings page into tabs', enhanced: 'Refactor app/settings/page.tsx…', style: 'refactor', model: 'haiku', source: 'hook', project: PROJECT },
+      { id: 'h3', at: Date.now() - 86_400_000, original: 'review the payment webhook handler', enhanced: 'Review src/api/webhooks/stripe.ts…', style: 'review', model: 'claude-sonnet-4.5', source: 'panel', project: 'billing-api' },
+      { id: 'h4', at: Date.now() - 2 * 86_400_000, original: 'split the settings page into tabs', enhanced: 'Refactor app/settings/page.tsx…', style: 'refactor', model: 'claude-haiku-4.5', source: 'hook', project: PROJECT },
       { id: 'h5', at: Date.now() - 4 * 86_400_000, original: 'plan the migration to the new auth library', enhanced: 'Plan the move from next-auth…', style: 'plan', model: 'gpt-5', source: 'panel', project: 'billing-api' }
     ]
   ]
@@ -52,24 +52,15 @@ const settingsValues: Record<string, unknown> = {
   defaultStyle: 'balanced',
   // Deep: the level whose steps (git, relevant code) the sample run below goes through.
   contextLevel: 'deep',
-  autoEnhanceMode: 'off',
   fallbackEnabled: true,
   fallbackOn: 'any',
   sendPressEnter: false
 }
-const profile = (id: string, name: string, preset: string, provider: string, model: string, keySource: string) => ({
-  id, name, preset, provider, baseUrl: '', model, maxTokens: 8000, enabled: true, command: '', args: '',
-  keySource, effectiveModel: model, effectiveBaseUrl: provider === 'cli' ? '' : 'https://api.openai.com/v1'
+const profile = (id: string, name: string, model: string) => ({
+  id, name, preset: 'copilot' as const, provider: 'copilot' as const, model, enabled: true, effectiveModel: model
 })
 let models = {
-  profiles: [profile('claude', 'Claude Code', 'claude-code', 'cli', 'sonnet', 'subscription'), profile('gpt', 'OpenAI', 'openai', 'openai', 'gpt-5-mini', 'secret')],
-  presets: [
-    { id: 'openai', label: 'OpenAI', provider: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-5-mini' },
-    { id: 'anthropic', label: 'Anthropic', provider: 'anthropic', baseUrl: 'https://api.anthropic.com', model: 'claude-haiku-4-5' },
-    { id: 'claude-code', label: 'Claude Code (subscription)', provider: 'cli', baseUrl: '', model: '' }
-  ],
-  fromEnv: false,
-  hookProfileId: null,
+  profiles: [profile('claude', 'Claude Sonnet', 'claude-sonnet-4.5'), profile('gpt', 'GPT-5 mini', 'gpt-5-mini')],
   selectorProfileId: null
 }
 const wait = (ms: number, signal?: AbortSignal) =>
@@ -128,10 +119,6 @@ const SAMPLE_CONTEXT = [
 let fallbackDemo = false
 /** `?blocked=1`: the first agent is waiting for an answer, so Send asks before it types. */
 let blockedDemo = false
-/** `?hook=rewritten|appended|skipped`: what auto-enhance last did, for the line in the Settings section. */
-let hookDemo: string | null = null
-/** `?nokeys=1`: a machine without an OS key store. */
-let noKeyStore = false
 /** History entries removed a moment ago, for Undo. */
 const removed = new Map<string, unknown>()
 const setHistory = (list: unknown[]): void => {
@@ -184,15 +171,14 @@ let attachmentCount = 0
 /** Switches confirmed in the panel (the worker keeps them in storage). */
 const granted = new Set<string>()
 const handlers: Record<string, (input: Record<string, unknown>, signal?: AbortSignal) => unknown> = {
-  'models.get': () => ({ ...models, ...(noKeyStore ? { keysUnavailable: true } : {}) }),
-  'models.catalog': (input) => ({
-    models: input.preset === 'claude-code' ? [{ id: 'sonnet', label: 'sonnet: Sonnet, newest' }, { id: 'opus', label: 'opus: Opus, newest' }, { id: 'haiku', label: 'haiku: Haiku, newest' }] : [{ id: 'gpt-5-mini', label: 'GPT-5 mini' }, { id: 'gpt-5', label: 'GPT-5' }],
-    source: 'mock',
+  'models.get': () => models,
+  'models.catalog': () => ({
+    models: [{ id: 'claude-sonnet-4.5', label: 'Claude Sonnet 4.5' }, { id: 'gpt-5-mini', label: 'GPT-5 mini' }, { id: 'gpt-5', label: 'GPT-5' }],
+    source: 'copilot',
     fetchedAt: Date.now()
   }),
-  'models.detect': () => ({ found: [{ preset: 'codex', label: 'Codex (subscription)', path: 'C:/bin/codex.exe', added: false }] }),
   'models.save': (input) => {
-    const next = { ...profile(String(input.id ?? `p${Date.now()}`), String(input.name), String(input.preset), String(input.provider), String(input.model), 'secret'), ...input }
+    const next = { ...profile(String(input.id ?? `p${Date.now()}`), String(input.name), String(input.model)), ...input }
     const exists = models.profiles.some((entry) => entry.id === next.id)
     models = { ...models, profiles: exists ? models.profiles.map((entry) => (entry.id === next.id ? (next as never) : entry)) : [...models.profiles, next as never] }
     return models
@@ -230,7 +216,7 @@ const handlers: Record<string, (input: Record<string, unknown>, signal?: AbortSi
   },
   'prompt.send': (input) => {
     if (blockedDemo && input.terminalId === 't1' && input.force !== true) {
-      throw Object.assign(new Error('blocked'), { code: 'conflict', text: msg('error.agent_blocked', { name: 'Claude Code' }) })
+      throw Object.assign(new Error('blocked'), { code: 'conflict', text: msg('error.agent_blocked', { name: 'GitHub Copilot' }) })
     }
     return { accepted: true }
   },
@@ -249,23 +235,14 @@ const handlers: Record<string, (input: Record<string, unknown>, signal?: AbortSi
     return { restored: true }
   },
   'history.clear': () => setHistory([]),
-  'hook.last': () =>
-    hookDemo === 'rewritten'
-      ? { at: Date.now() - 4 * 60_000, outcome: 'rewritten', agent: 'claude', model: 'gpt-5-mini' }
-      : hookDemo === 'appended'
-        ? { at: Date.now() - 4 * 60_000, outcome: 'appended', agent: 'claude' }
-        : hookDemo === 'skipped'
-          ? { at: Date.now() - 4 * 60_000, outcome: 'skipped', agent: 'codex', reason: msg('hook.no_model') }
-          : null,
-  'data.summary': () => ({ history: (store.get('history') as unknown[]).length, profiles: models.profiles.length, keys: 1, catalogs: 2 }),
+  'data.summary': () => ({ history: (store.get('history') as unknown[]).length, profiles: models.profiles.length, catalogs: 2 }),
   'data.clear': () => null,
-  'consents.get': () => ({ granted: [...granted], needed: ['allowOtherAgents', 'allowAgentActivity', 'allowAgentLaunch'] }),
+  'consents.get': () => ({ granted: [...granted], needed: ['allowOtherAgents', 'allowAgentActivity'] }),
   'consent.set': (input) => {
     if (input.granted) granted.add(String(input.key))
     else granted.delete(String(input.key))
     return { granted: [...granted] }
   },
-  'agent.launch': () => ({ terminalId: 'mock-new' }),
   'editor.open': () => ({ opened: true }),
   'attachments.put': (input) => {
     attachmentCount += 1
@@ -274,13 +251,11 @@ const handlers: Record<string, (input: Record<string, unknown>, signal?: AbortSi
   }
 }
 
-/** Live: requests go to the real worker of local.enhance-prompt through the dev server (host-bridge.ts). */
-/** Settings live in the browser in both modes (the CLI cannot reach the plugin's settings). */
+/** Preview settings live in the browser. */
 const SETTINGS_KEY = 'enhance-prompt:dev-settings'
 
 export async function installMockHost(): Promise<void> {
-  const root = document.documentElement
-  const query = new URLSearchParams(location.search)
+    const query = new URLSearchParams(location.search)
   try {
     Object.assign(settingsValues, JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}'))
   } catch {
@@ -295,9 +270,7 @@ export async function installMockHost(): Promise<void> {
   for (const key of (query.get('consent') ?? '').split(',').filter(Boolean)) granted.add(key)
   fallbackDemo = query.get('fallback') === '1'
   blockedDemo = query.get('blocked') === '1'
-  hookDemo = query.get('hook')
-  noKeyStore = query.get('nokeys') === '1'
-  // ?nomodels=1: a first run, before any model is set (the Enhance tab then offers the CLI it found).
+  // ?nomodels=1: a first run, before a Copilot model is selected.
   if (query.get('nomodels') === '1') models = { ...models, profiles: [] }
   // ?width=360: a sidebar's width (headless browsers cannot make a window that narrow), with a
   // dashed line where the sidebar would end; ?edge=0 leaves the line out (pictures).
@@ -337,7 +310,6 @@ export async function installMockHost(): Promise<void> {
       },
       onDidChange: (listener: Handler) => listen('settings', listener)
     },
-    secrets: { get: async () => null, set: async () => undefined, delete: async () => undefined },
     // The preview opens nothing: it answers as if the person cancelled, so the panel shows the URL.
     shell: { openExternal: async () => ({ opened: false, reason: 'cancelled' }) },
     // The preview writes no file: it answers as if the person had saved it.

@@ -1,30 +1,27 @@
-import { formatText } from '../format.ts'
 // setup.ts: starts the panel. the host's and the worker's events reach the panel's state (state.ts) and
 // the first data is asked for. No UI here: the web panel (web/src/main.tsx) calls it once its frame
 // is ready, and the tests call it on the host's panel runtime (src/panel/testing.ts), so the wiring that
 // ships is the wiring that is tested.
-import { on, plugin, read, set, settings } from '#panel'
+import { on, plugin, read, settings } from '#panel'
 import {
   applyProgress,
   cancel,
-  detectClis,
   learnTerminals,
   refreshConsents,
   refreshDataSummary,
   refreshDefaults,
-  refreshHookLast,
   refreshModels,
   refreshRules,
   refreshTargets,
   stopTicking,
   workspaceRemoved
 } from './actions.ts'
-import { notice, restoreSaved, say, tab } from './state.ts'
+import { restoreSaved, tab } from './state.ts'
 import { watchContextPreview, cancelContextPreview } from './context-preview.ts'
 
 /**
  * Brings back what the last panel run saved, follows the events and loads the models, terminals,
- * rules, detected CLIs and confirmations. Returns a function that stops following the events.
+ * rules and confirmations. Returns a function that stops following the events.
  */
 export function wirePanel(): () => void {
   restoreSaved()
@@ -38,33 +35,16 @@ export function wirePanel(): () => void {
       if (terminalId && workspaceId) learnTerminals([terminalId], workspaceId)
       void refreshTargets()
     }),
-    plugin.on('enhance.progress', applyProgress),
-    plugin.on('hook.enhanced', ({ agent, mode, model }) => {
-      set(notice, {
-        tone: 'neutral',
-        text: formatText('Auto-enhanced ({mode}) a prompt for {agent}.', {
-          mode: model ? `${mode}, ${model}` : mode,
-          agent: agent ?? 'an agent'
-        })
-      })
-      void refreshHookLast()
-    }),
-    // Auto-enhance (AI) let a prompt through as it was: say why, it used to be in the log only.
-    plugin.on('hook.skipped', ({ agent, reason }) => {
-      set(notice, { tone: 'warning', text: formatText('Auto-enhance left a prompt for {agent} unchanged: {reason}', { agent: agent ?? 'an agent', reason: say(reason) }) })
-      void refreshHookLast()
-    })
+    plugin.on('enhance.progress', applyProgress)
   ]
   void refreshDefaults()
   void refreshModels()
   void refreshTargets()
   void refreshRules()
-  void detectClis()
   void refreshConsents()
   // The stored-data counts read every saved key; load them only for the section that shows them.
   if (read(tab) === 'privacy') {
     void refreshDataSummary()
-    void refreshHookLast()
   }
   return () => {
     stopPreview()

@@ -1,5 +1,7 @@
 # Quiet Desk Implementation Plan
 
+> Historical planning record. This captures the design and verification at that time; current behavior is documented in the [README](../../../README.md) and [Copilot-only plan](../plans/2026-11-15-copilot-only.md).
+
 > **For agentic workers:** Execute this approved design in the current isolated worktree. Use the verification-before-completion skill before publishing.
 
 **Goal:** Add the approved still Quiet Desk banner and a persistent single-button theme toggle.

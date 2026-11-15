@@ -6,9 +6,9 @@ const OPERATIONS = new Set([
   'worker.ready', 'canvas.connection', 'canvas.request', 'panel.start', 'panel.persistence', 'clipboard',
   'context.research', 'context.research.round', 'context.research.read', 'context.research.search',
   'prompt.enhance', 'prompt.send', 'prompt.copy', 'context.preview', 'attachments.put',
-  'models.get', 'models.save', 'models.delete', 'models.move', 'models.roles', 'models.test', 'models.catalog', 'models.detect',
-  'history.remove', 'history.clear', 'history.restore', 'consents.get', 'consent.set', 'agent.launch', 'editor.open',
-  'targets.list', 'hook.last', 'rules.get', 'rules.save', 'data.summary', 'data.clear',
+  'models.get', 'models.save', 'models.delete', 'models.move', 'models.roles', 'models.test', 'models.catalog',
+  'history.remove', 'history.clear', 'history.restore', 'consents.get', 'consent.set', 'editor.open',
+  'targets.list', 'rules.get', 'rules.save', 'data.summary', 'data.clear',
   'copilot.refresh', 'copilot.catalog', 'copilot.runtime', 'copilot.start', 'copilot.session', 'copilot.access', 'copilot.workspace',
   'copilot.tools', 'copilot.images', 'copilot.account', 'copilot.generate', 'copilot.usage', 'copilot.cleanup'
 ])

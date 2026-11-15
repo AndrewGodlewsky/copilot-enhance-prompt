@@ -27,15 +27,9 @@ async function bounded<T>(request: Promise<T>): Promise<T> {
     })])
   } finally { clearTimeout(timer) }
 }
-export function sessionAdapter(session: CopilotSession): EnhanceWorker['host'] & { state(): Promise<string>; project(): Promise<{ id: string; path: string; name: string } | null>; markSent(text: string): void; consumeSent(text: string): boolean } {
-  const sent = new Map<string, number>()
+export function sessionAdapter(session: CopilotSession): EnhanceWorker['host'] & { state(): Promise<string>; project(): Promise<{ id: string; path: string; name: string } | null> } {
   let sending = false
   let lastSent = 0
-  const markSent = (text: string) => { sent.set(text, Date.now() + 120_000) }
-  const consumeSent = (text: string) => {
-    for (const [key, until] of sent) if (until < Date.now()) sent.delete(key)
-    const found = sent.has(text); sent.delete(text); return found
-  }
   const project = async () => {
     const info = await bounded(session.rpc.metadata.snapshot())
     if (info.isRemote || !isAbsolute(info.workingDirectory)) return null
@@ -55,7 +49,7 @@ export function sessionAdapter(session: CopilotSession): EnhanceWorker['host'] &
   }
   const operations = new Set(['workspace.list', 'workspace.readContext', 'agents.list', 'session.send'])
   return {
-    has: name => operations.has(name), state, project, markSent, consumeSent,
+    has: name => operations.has(name), state, project,
     async call<K extends keyof PlatformOperations>(name: K, input: PlatformOperations[K]['input']): Promise<PlatformOperations[K]['output']> {
       let result: unknown
       if (name === 'workspace.list') {
@@ -76,12 +70,10 @@ export function sessionAdapter(session: CopilotSession): EnhanceWorker['host'] &
         try {
           const current = await state()
           if (current !== 'waiting') throw Object.assign(new Error(withMessage(msg('error.session_not_idle'))), { code: 'session_not_idle' })
-          markSent(text)
           // Never use immediate mode: a new message must not become a response to a pending question.
           await session.send({ prompt: text, mode: 'enqueue' })
           lastSent = Date.now()
-        } catch (error) { sent.delete(text); throw error }
-        finally { sending = false }
+        } finally { sending = false }
         result = { accepted: true }
       } else throw unavailable(`${name} is not available in the Copilot canvas.`)
       return result as PlatformOperations[K]['output']

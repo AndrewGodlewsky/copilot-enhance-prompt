@@ -2,16 +2,14 @@ import { test, assert, mockHost, mountWorker } from '#testing'
 import * as main from '../worker.ts'
 
 test('closing one canvas cancels its run without disturbing another canvas using the same run id', async () => {
-  const originalFetch = globalThis.fetch
   const waiting = new Map<string, { answer(): void; stopped: boolean }>()
-  globalThis.fetch = (async (_url, options) => new Promise((resolve, reject) => {
-    const body = JSON.parse(String(options?.body))
-    const prompt = body.messages.at(-1).content.includes('first canvas') ? 'first' : 'second'
-    const entry = { stopped: false, answer: () => resolve(new Response(JSON.stringify({ choices: [{ message: { content: 'Enhanced ' + prompt } }] }))) }
+  const rewrite = (input: { user: string }, options: { signal?: AbortSignal }) => new Promise((resolve, reject) => {
+    const prompt = input.user.includes('first canvas') ? 'first' : 'second'
+    const entry = { stopped: false, answer: () => resolve({ text: 'Enhanced ' + prompt }) }
     waiting.set(prompt, entry)
     options?.signal?.addEventListener('abort', () => { entry.stopped = true; reject(new DOMException('Cancelled', 'AbortError')) })
-  })) as typeof fetch
-  const host = mockHost({ storage: { models: { profiles: [{ id: 'test', name: 'Test', preset: 'ollama', provider: 'openai', model: 'fixture', baseUrl: 'http://127.0.0.1:11434/v1', enabled: true, maxTokens: 2000 }] } } })
+  })
+  const host = mockHost({ storage: { models: { profiles: [{ id: 'test', name: 'Test', preset: 'copilot', provider: 'copilot', model: 'fixture', enabled: true }] } }, results: { 'copilot.rewrite': rewrite } })
   const worker = await mountWorker(main, { host })
   try {
     const first = worker.request('prompt.enhance', { prompt: 'first canvas', level: 'off', runId: 'same' }, { panelId: 'one' }).then(() => 'finished', () => 'cancelled')
@@ -24,5 +22,5 @@ test('closing one canvas cancels its run without disturbing another canvas using
     assert.equal(waiting.get('second')!.stopped, false)
     waiting.get('second')!.answer()
     assert.equal((await second).enhanced, 'Enhanced second')
-  } finally { main.cancelPanelRuns(); await worker.deactivate(); globalThis.fetch = originalFetch }
+  } finally { main.cancelPanelRuns(); await worker.deactivate() }
 })

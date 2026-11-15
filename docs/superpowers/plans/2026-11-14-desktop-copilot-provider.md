@@ -1,5 +1,7 @@
 # Desktop-managed Copilot rewriting
 
+> Historical planning record. This captures the design and verification at that time; current behavior is documented in the [README](../../../README.md) and [Copilot-only plan](../plans/2026-11-15-copilot-only.md).
+
 The owner approved reusing the desktop SDK and runtime, without npm, downloads, or a visible chat. This plan implements that direction; the native workflow failed the context-isolation check recorded in `docs/research/copilot-model-access-validation.md`.
 
 ## Contract

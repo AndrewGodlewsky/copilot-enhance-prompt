@@ -23,6 +23,8 @@ const built = 'com.github.copilot/extensions/enhance-prompt'
 const extension = await readFile(`${built}/extension.mjs`, 'utf8')
 assert.match(extension, /@github\/copilot-sdk\/extension/)
 assert.match(extension, /Session connected/)
+assert.equal(await access('com.github.copilot/hooks').then(() => true, () => false), false, 'The retired chat hook must not remain in the package')
+assert.doesNotMatch(extension, /api\.openai\.com|api\.anthropic\.com|userPromptTransformed|runPromptHook|runCli\(|protectedSecrets\(/, 'Retired model providers and chat hooks must not remain executable')
 async function compare(folder, target) {
   assert.deepEqual((await readdir(target)).sort(), (await readdir(folder)).sort(), `Unexpected or missing packaged assets: ${target}`)
   for (const entry of await readdir(folder, { withFileTypes: true })) {

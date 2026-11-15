@@ -1,20 +1,14 @@
 // History: size limits, and edits from the panel going through the worker's queue.
 import { read, set } from '#panel'
-import { afterEach, assert, mockHost, mountWorker, test, type MockRequests } from '#testing'
+import { assert, mockHost, mountWorker, test, type MockRequests } from '#testing'
 import { capHistory, HISTORY_ENTRY_CHARS, HISTORY_TOTAL_CHARS, parseHistory, trimForHistory, type HistoryEntry } from './history.ts'
 import { clearData, clearHistory, removeEntry, reuse } from './panel/actions.ts'
 import { confirmClearHistory, confirmWipe, draft, filteredHistory, history, historyFilter, HISTORY_PAGE, historyShown, notice, put, result, tab } from './panel/state.ts'
 import { mountPanel } from './panel/testing.ts'
-import { PRESETS } from './presets.ts'
 import * as main from './worker.ts'
 
-const realFetch = globalThis.fetch
-afterEach(() => {
-  globalThis.fetch = realFetch
-})
-
 const entry = (id: string, size = 10): HistoryEntry => ({ id, at: 1, original: 'o'.repeat(size), enhanced: 'e'.repeat(size), style: 'balanced', model: 'm', source: 'panel' })
-const gpt = { id: 'gpt', name: 'gpt', preset: 'openai', provider: 'openai', baseUrl: '', model: '', maxTokens: 2000, enabled: true }
+const gpt = { id: 'gpt', name: 'gpt', preset: 'copilot', provider: 'copilot', model: 'gpt-5-mini', enabled: true }
 
 test('history keeps at most the limit (500) and stays under its total size; one huge entry is trimmed', () => {
   const many = Array.from({ length: 600 }, (_, index) => entry(`e${index}`))
@@ -32,9 +26,8 @@ test('history keeps at most the limit (500) and stays under its total size; one 
 })
 
 test('a very long prompt is saved trimmed, and older entries make room', async () => {
-  globalThis.fetch = (async () => new Response(JSON.stringify({ choices: [{ message: { content: 'r'.repeat(HISTORY_ENTRY_CHARS * 2) } }] }), { status: 200 })) as typeof fetch
   const old = Array.from({ length: 499 }, (_, index) => entry(`old${index}`, 1500))
-  const host = mockHost({ storage: { models: { profiles: [gpt] }, history: old }, secrets: { 'apiKey.gpt': 'k' }, settings: { historyLimit: 500 } })
+  const host = mockHost({ storage: { models: { profiles: [gpt] }, history: old }, results: { 'copilot.rewrite': { text: 'r'.repeat(HISTORY_ENTRY_CHARS * 2) } }, settings: { historyLimit: 500 } })
   const worker = await mountWorker(main, { host })
   await worker.request('prompt.enhance', { prompt: 'p'.repeat(HISTORY_ENTRY_CHARS * 2), level: 'off' })
   const saved = parseHistory(host.data().storage.history as never)
@@ -46,11 +39,7 @@ test('a very long prompt is saved trimmed, and older entries make room', async (
 })
 
 test('history.remove and history.clear run in order with a new entry being saved', async () => {
-  globalThis.fetch = (async () => {
-    await new Promise((resolve) => setTimeout(resolve, 5))
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }), { status: 200 })
-  }) as typeof fetch
-  const host = mockHost({ storage: { models: { profiles: [gpt] }, history: [entry('a'), entry('b')] }, secrets: { 'apiKey.gpt': 'k' } })
+  const host = mockHost({ storage: { models: { profiles: [gpt] }, history: [entry('a'), entry('b')] }, results: { 'copilot.rewrite': async () => { await new Promise(resolve => setTimeout(resolve, 5)); return { text: 'ok' } } } })
   const worker = await mountWorker(main, { host })
   await Promise.all([worker.request('prompt.enhance', { prompt: 'new one', level: 'off' }), worker.request('history.remove', { id: 'a' })])
   const afterRemove = parseHistory(host.data().storage.history as never)
@@ -72,9 +61,8 @@ test('the History tab: edits go through the worker, the search filters, and long
   const host = mockHost({
     storage: { history: Array.from({ length: 120 }, (_, index) => ({ ...entry(`h${index}`), original: `prompt ${index}` })) },
     requests: {
-      'models.get': { profiles: [], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS },
+      'models.get': { profiles: [], selectorProfileId: null },
       'targets.list': { targets: [] },
-      'models.detect': { found: [] },
       'history.remove': (input: unknown) => {
         requests.push(`remove:${(input as { id: string }).id}`)
         return { ok: true }
@@ -110,11 +98,10 @@ test('the History tab: edits go through the worker, the search filters, and long
 })
 
 const panelRequests: MockRequests = {
-  'models.get': { profiles: [], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS },
+  'models.get': { profiles: [], selectorProfileId: null },
   'targets.list': { targets: [] },
-  'models.detect': { found: [] },
   'data.clear': { ok: true as const },
-  'data.summary': { history: 0, profiles: 0, keys: 0, catalogs: 0 }
+  'data.summary': { history: 0, profiles: 0, catalogs: 0 }
 }
 const persistedRun = { draft: 'my secret draft', result: 'the rewritten secret', lastRun: { model: 'm', profileName: 'p', ms: 1, attempts: [] }, contextShown: [{ id: 'workspace', kind: 'workspace', label: 'Workspace', chars: 4 }], contextNotes: ['No focused workspace.'] }
 

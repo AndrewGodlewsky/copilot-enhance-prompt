@@ -1,12 +1,14 @@
-// Runs src/worker.ts's activate(host) over a mock host, with fetch stubbed (no network).
+// Runs the worker with fake Copilot rewrite calls (no network or paid traffic).
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { after } from 'node:test'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, assert, mockHost, mountWorker, test } from '#testing'
+import { afterEach, assert, mountWorker, test } from '#testing'
 import { findFocusedWorkspace } from './context/index.ts'
 import { forgetTerminals, terminalsSaved } from './context/terminals.ts'
 import * as main from './worker.ts'
+import { mockModelHost as mockHost, setRewrite, type RewriteInput } from './model-testing.ts'
+import { LlmError } from './llm.ts'
 
 // Every temporary folder a test makes is removed when the file's tests are done.
 const tempDirs: string[] = []
@@ -25,51 +27,19 @@ function tempDir(prefix: string): string {
   return folder
 }
 
-type Captured = { url: string; body: Record<string, unknown>; headers: Record<string, string> }
-const realFetch = globalThis.fetch
-
-/** `answer` may return a Response (for errors) or a JSON body. */
-function stubFetch(answer: (call: Captured, index: number) => unknown): Captured[] {
-  const calls: Captured[] = []
-  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const call = {
-      url: String(input),
-      body: JSON.parse(String(init?.body ?? '{}')),
-      headers: Object.fromEntries(Object.entries((init?.headers ?? {}) as Record<string, string>))
-    }
-    calls.push(call)
-    const out = answer(call, calls.length - 1)
-    return out instanceof Response ? out : new Response(JSON.stringify(out), { status: 200, headers: { 'content-type': 'application/json' } })
-  }) as typeof fetch
+function stubRewrite(answer: (call: RewriteInput, index: number) => string): RewriteInput[] {
+  const calls: RewriteInput[] = []
+  setRewrite(input => { calls.push(input); return answer(input, calls.length - 1) })
   return calls
 }
-const httpError = (status: number, message: string) =>
-  new Response(JSON.stringify({ error: { message } }), { status, headers: { 'content-type': 'application/json' } })
-const openaiAnswer = (text: string) => ({ choices: [{ message: { content: text } }] })
 
 afterEach(async () => {
-  globalThis.fetch = realFetch
   // What one test's worker learnt about terminals is not the next test's (one process runs them all).
   await forgetTerminals()
 })
 
-function profile(id: string, preset: string, extra: Record<string, unknown> = {}) {
-  const urls: Record<string, string> = {
-    openai: 'https://api.openai.com/v1',
-    anthropic: 'https://api.anthropic.com',
-    groq: 'https://api.groq.com/openai/v1'
-  }
-  return {
-    id,
-    name: id,
-    preset,
-    provider: preset === 'anthropic' ? 'anthropic' : 'openai',
-    baseUrl: urls[preset] ?? '',
-    model: '',
-    maxTokens: 2000,
-    enabled: true,
-    ...extra
-  }
+function profile(id: string, model = 'gpt-4.1-mini', extra: Record<string, unknown> = {}) {
+  return { id, name: id, preset: 'copilot', provider: 'copilot', model, enabled: true, ...extra }
 }
 
 function project(): string {
@@ -95,53 +65,47 @@ function hostFor(root: string | null, extra: Record<string, unknown> = {}) {
 
 test('standard level: rules, stack and tree, never .env; adapts to Claude', async () => {
   const root = project()
-  const calls = stubFetch(() => openaiAnswer('```\nFix validateSession in src/auth/session.ts.\n```'))
+  const calls = stubRewrite(() => '```\nFix validateSession in src/auth/session.ts.\n```')
   const host = mockHost({
-    storage: { models: { profiles: [profile('main', 'openai')] } },
-    secrets: { 'apiKey.main': 'sk-test' },
+    storage: { models: { profiles: [profile('main', 'gpt-4.1-mini')] } },
     results: hostFor(root)
   })
   const worker = await mountWorker(main, { host })
   const answer = await worker.request('prompt.enhance', { prompt: 'login broken', terminalId: 't1', level: 'standard' })
   assert.equal(answer.enhanced, 'Fix validateSession in src/auth/session.ts.')
   assert.equal(answer.model, 'gpt-4.1-mini')
-  assert.equal(calls[0].headers.authorization, 'Bearer sk-test')
   const ids = answer.context.map((item) => item.id)
   assert.ok(ids.includes('workspace') && ids.includes('agent') && ids.includes('rules:AGENTS.md') && ids.includes('stack') && ids.includes('tree'), ids.join(','))
-  const messages = calls[0].body.messages as { role: string; content: string }[]
-  assert.match(messages[0].content, /Claude Code/)
-  assert.match(messages[1].content, /Use pnpm/)
-  assert.match(messages[1].content, /test: vitest run/)
-  assert.ok(!/hunter2|\.env/.test(messages[1].content))
+  assert.match(calls[0].system, /Claude Code/)
+  assert.match(calls[0].user, /Use pnpm/)
+  assert.match(calls[0].user, /test: vitest run/)
+  assert.ok(!/hunter2|\.env/.test(calls[0].user))
   assert.equal((host.data().storage.history as unknown[]).length, 1)
   await worker.deactivate()
 })
 
 test('panel rewrite ignores stale language overrides and keeps Unicode input in the model request', async () => {
-  const calls = stubFetch(() => openaiAnswer('Fix the login flow in src/auth/session.ts; preserve "text: Too big".'))
+  const calls = stubRewrite(() => 'Fix the login flow in src/auth/session.ts; preserve "text: Too big".')
   const host = mockHost({
     settings: { outputLanguage: 'vi', uiLanguage: 'zh', customInstructions: 'Use pnpm. Write the final prompt in Vietnamese.' },
-    storage: { models: { profiles: [profile('main', 'openai')] } },
-    secrets: { 'apiKey.main': 'k' },
+    storage: { models: { profiles: [profile('main', 'gpt-4.1-mini')] } },
     results: hostFor(null)
   })
   const worker = await mountWorker(main, { host })
   const request = { prompt: 'Sửa lỗi đăng nhập ở src/auth/session.ts: "text: Too big"', level: 'off', language: 'zh' }
   const answer = await worker.request('prompt.enhance', request as { prompt: string; level: string })
   assert.match(answer.enhanced, /Fix the login flow/)
-  const messages = calls[0].body.messages as { content: string }[]
-  assert.match(messages[0].content, /Write the final prompt in Vietnamese/)
-  assert.match(messages[0].content, /Output policy: Write all final rewritten instructions and headings in English/)
-  assert.match(messages[1].content, /Sửa lỗi đăng nhập ở src\/auth\/session\.ts: "text: Too big"/)
+  assert.match(calls[0].system, /Write the final prompt in Vietnamese/)
+  assert.match(calls[0].system, /Output policy: Write all final rewritten instructions and headings in English/)
+  assert.match(calls[0].user, /Sửa lỗi đăng nhập ở src\/auth\/session\.ts: "text: Too big"/)
   await worker.deactivate()
 })
 
 test('deep level finds relevant code; exclusions are honoured', async () => {
   const root = project()
-  const calls = stubFetch(() => openaiAnswer('ok'))
+  const calls = stubRewrite(() => 'ok')
   const host = mockHost({
-    storage: { models: { profiles: [profile('main', 'openai')] } },
-    secrets: { 'apiKey.main': 'k' },
+    storage: { models: { profiles: [profile('main', 'gpt-4.1-mini')] } },
     results: hostFor(root)
   })
   const worker = await mountWorker(main, { host })
@@ -149,17 +113,17 @@ test('deep level finds relevant code; exclusions are honoured', async () => {
   const ids = answer.context.map((item) => item.id)
   assert.ok(ids.includes('file:src/auth/session.ts'), ids.join(','))
   assert.ok(!ids.includes('tree'))
-  assert.match((calls[0].body.messages as { content: string }[])[1].content, /1: export function validateSession/)
+  assert.match(calls[0].user, /1: export function validateSession/)
   await worker.deactivate()
 })
 
 test('max level adds terminal output and AI-picked files', async () => {
   const root = project()
-  const calls = stubFetch((call) => {
-    const system = (call.body.messages as { content: string }[])[0].content
-    return openaiAnswer(system.startsWith('You pick source files') ? '["src/index.ts"]' : 'done')
+  const calls = stubRewrite((call) => {
+    const system = call.system
+    return system.startsWith('You pick source files') ? '["src/index.ts"]' : 'done'
   })
-  const host = mockHost({ storage: { models: { profiles: [profile('main', 'openai')] } }, secrets: { 'apiKey.main': 'k' }, results: hostFor(root) })
+  const host = mockHost({ storage: { models: { profiles: [profile('main', 'gpt-4.1-mini')] } }, results: hostFor(root) })
   const worker = await mountWorker(main, { host })
   const answer = await worker.request('prompt.enhance', { prompt: 'make the tests pass', level: 'max', terminalId: 't1' })
   const ids = answer.context.map((item) => item.id)
@@ -169,10 +133,9 @@ test('max level adds terminal output and AI-picked files', async () => {
 })
 
 test('falls back to the next model and reports attempts', async () => {
-  const calls = stubFetch((call) => (call.url.includes('openai.com') ? httpError(429, 'Rate limit') : { content: [{ type: 'text', text: 'From Claude.' }] }))
+  const calls = stubRewrite((_call, index) => { if (index === 0) throw new LlmError('Rate limit', 'rate_limited'); return 'From Claude.' })
   const host = mockHost({
-    storage: { models: { profiles: [profile('first', 'openai'), profile('second', 'anthropic')] } },
-    secrets: { 'apiKey.first': 'a', 'apiKey.second': 'b' },
+    storage: { models: { profiles: [profile('first', 'gpt-4.1-mini'), profile('second', 'claude-sonnet')] } },
     results: hostFor(null)
   })
   const worker = await mountWorker(main, { host })
@@ -180,79 +143,43 @@ test('falls back to the next model and reports attempts', async () => {
   assert.equal(answer.enhanced, 'From Claude.')
   assert.equal(answer.profileName, 'second')
   assert.deepEqual(answer.attempts.map((a) => a.ok), [false, true])
-  assert.match(answer.attempts[0].error ?? '', /429/)
+  assert.match(answer.attempts[0].error ?? '', /Rate limit/)
   assert.equal(calls.length, 2)
-  assert.match((calls[0].body.messages as { content: string }[])[0].content, /Output policy: Write all final rewritten instructions and headings in English/)
-  assert.match((calls[1].body.system as string), /Output policy: Write all final rewritten instructions and headings in English/)
+  assert.match(calls[0].system, /Output policy: Write all final rewritten instructions and headings in English/)
+  assert.match(calls[1].system, /Output policy: Write all final rewritten instructions and headings in English/)
   await worker.deactivate()
 })
 
-test('fallback off, or transient-only on a 401, stops at the first model', async () => {
-  stubFetch(() => httpError(401, 'Invalid API key'))
-  const storage = { models: { profiles: [profile('first', 'openai'), profile('second', 'groq')] } }
-  const secrets = { 'apiKey.first': 'a', 'apiKey.second': 'b' }
+test('fallback off, or transient-only on an access denial, stops at the first model', async () => {
+  stubRewrite(() => { throw new LlmError('Copilot access denied', 'not_permitted') })
+  const storage = { models: { profiles: [profile('first', 'gpt-4.1-mini'), profile('second', 'gpt-5-mini')] } }
   const variants: Record<string, boolean | string>[] = [{ fallbackEnabled: false }, { fallbackOn: 'transient' }]
   for (const settings of variants) {
-    const worker = await mountWorker(main, { host: mockHost({ storage, secrets, settings, results: hostFor(null) }) })
-    await assert.rejects(worker.request('prompt.enhance', { prompt: 'x y z', level: 'off' }), /401: Invalid API key/)
+    const worker = await mountWorker(main, { host: mockHost({ storage, settings, results: hostFor(null) }) })
+    await assert.rejects(worker.request('prompt.enhance', { prompt: 'x y z', level: 'off' }), /Copilot access denied/)
     await worker.deactivate()
   }
 })
 
-test('skips a model without a key and uses a chosen profile first', async () => {
-  const calls = stubFetch(() => openaiAnswer('fine'))
-  const previous = process.env.OPENAI_API_KEY
-  delete process.env.OPENAI_API_KEY
-  try {
-    const host = mockHost({
-      storage: { models: { profiles: [profile('nokey', 'openai'), profile('groq', 'groq'), profile('other', 'openai')] } },
-      secrets: { 'apiKey.groq': 'g', 'apiKey.other': 'o' },
-      results: hostFor(null)
-    })
-    const worker = await mountWorker(main, { host })
-    const auto = await worker.request('prompt.enhance', { prompt: 'abc def', level: 'off' })
-    assert.equal(auto.profileName, 'groq')
-    assert.equal(auto.attempts[0].error, 'no API key')
-    const chosen = await worker.request('prompt.enhance', { prompt: 'abc def', level: 'off', profileId: 'other' })
-    assert.equal(chosen.profileName, 'other')
-    assert.ok(calls.at(-1)!.url.startsWith('https://api.openai.com'))
-    await worker.deactivate()
-  } finally {
-    if (previous !== undefined) process.env.OPENAI_API_KEY = previous
-  }
-})
-
-test('model profiles: add with key, reorder, roles, delete', async () => {
+test('model profiles: add, reorder, roles, delete', async () => {
   const host = mockHost({ results: hostFor(null) })
   const worker = await mountWorker(main, { host })
-  let view = await worker.request('models.save', { name: 'GPT', preset: 'openai', provider: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4.1', maxTokens: 4000, enabled: true, apiKey: ' sk-1 ' })
+  let view = await worker.request('models.save', { name: 'GPT', model: 'gpt-4.1', enabled: true })
   const gpt = view.profiles[0]
-  assert.equal(gpt.keySource, 'secret')
-  assert.equal(host.data().secrets[`apiKey.${gpt.id}`], 'sk-1')
-  view = await worker.request('models.save', { name: 'Local', preset: 'ollama', provider: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'qwen', maxTokens: 2000, enabled: true })
+  view = await worker.request('models.save', { name: 'Other', model: 'claude-sonnet', enabled: true })
   const local = view.profiles[1]
-  assert.equal(local.keySource, 'not-needed')
   view = await worker.request('models.move', { id: local.id, direction: 'up' })
-  assert.deepEqual(view.profiles.map((p) => p.name), ['Local', 'GPT'])
+  assert.deepEqual(view.profiles.map((p) => p.name), ['Other', 'GPT'])
   view = await worker.request('models.move', { id: local.id, to: 1 })
-  assert.deepEqual(view.profiles.map((p) => p.name), ['GPT', 'Local'])
+  assert.deepEqual(view.profiles.map((p) => p.name), ['GPT', 'Other'])
   view = await worker.request('models.move', { id: local.id, to: 0 })
-  assert.deepEqual(view.profiles.map((p) => p.name), ['Local', 'GPT'])
-  view = await worker.request('models.roles', { hookProfileId: local.id, selectorProfileId: 'nope' })
-  assert.equal(view.hookProfileId, local.id)
+  assert.deepEqual(view.profiles.map((p) => p.name), ['Other', 'GPT'])
+  view = await worker.request('models.roles', { selectorProfileId: local.id })
+  assert.equal(view.selectorProfileId, local.id)
+  view = await worker.request('models.roles', { selectorProfileId: null })
   assert.equal(view.selectorProfileId, null)
   view = await worker.request('models.delete', { id: gpt.id })
   assert.equal(view.profiles.length, 1)
-  assert.equal(host.data().secrets[`apiKey.${gpt.id}`], undefined)
-  await worker.deactivate()
-})
-
-test('refuses a non-https remote base URL', async () => {
-  stubFetch(() => ({}))
-  const worker = await mountWorker(main, {
-    host: mockHost({ storage: { models: { profiles: [profile('bad', 'custom', { baseUrl: 'http://example.com/v1' })] } }, secrets: { 'apiKey.bad': 'k' }, results: hostFor(null) })
-  })
-  await assert.rejects(worker.request('prompt.enhance', { prompt: 'something', level: 'off' }), /must use https/)
   await worker.deactivate()
 })
 
@@ -268,98 +195,15 @@ test('sends to a terminal with bracketed paste and lists targets', async () => {
   await worker.deactivate()
 })
 
-test('auto-enhance hook: off passes, rules appends, AI rewrites with the hook model', async () => {
-  const event = { agent: 'claude', terminalId: 't1', prompt: 'add a login page', inputKind: 'launch' as const }
-  const off = await mountWorker(main, { host: mockHost() })
-  assert.deepEqual(await off.hooks.fire('agent.prompt.before', event), { kind: 'continue', event })
-  await off.deactivate()
-
-  const rules = await mountWorker(main, { host: mockHost({ settings: { autoEnhanceMode: 'rules', autoEnhanceAppend: 'Run the tests.' } }) })
-  const appended = await rules.hooks.fire('agent.prompt.before', event)
-  assert.equal(appended.kind === 'continue' && appended.event.prompt, 'add a login page\n\nRun the tests.')
-  await rules.deactivate()
-
-  const calls = stubFetch(() => openaiAnswer('Build a login page with email + password.'))
-  const ai = await mountWorker(main, {
-    host: mockHost({
-      settings: { autoEnhanceMode: 'ai', outputLanguage: 'vi', customInstructions: 'Write in Vietnamese.' },
-      storage: { models: { profiles: [profile('slow', 'anthropic'), profile('fast', 'groq')], hookProfileId: 'fast' } },
-      secrets: { 'apiKey.slow': 'a', 'apiKey.fast': 'g' },
-      results: hostFor(null)
-    })
-  })
-  const rewritten = await ai.hooks.fire('agent.prompt.before', event)
-  assert.equal(rewritten.kind === 'continue' && rewritten.event.prompt, 'Build a login page with email + password.')
-  assert.ok(calls[0].url.startsWith('https://api.groq.com'))
-  const hookMessages = calls[0].body.messages as { content: string }[]
-  assert.match(hookMessages[0].content, /Write in Vietnamese\./)
-  assert.match(hookMessages[0].content, /Output policy: Write all final rewritten instructions and headings in English/)
-  await ai.deactivate()
-})
-
-test('the status bar says Enhance: On or Off under the plugin\'s lightbulb; which kind of auto-enhance is on is in the tooltip', async () => {
-  type Shown = { id: string; text: string; icon: string; tone: string; tooltip: string; visible: boolean }
-  const settled = () => new Promise((resolve) => setTimeout(resolve, 30))
-  const host = mockHost({ settings: { uiLanguage: 'vi' }, results: { 'statusBar.update': { ok: true } } })
-  const shown = () => host.callsOf('statusBar.update').at(-1) as Shown
-  const worker = await mountWorker(main, { host })
-  await settled()
-  // Auto-enhance is off: the lightbulb is dimmed (neutral).
-  assert.deepEqual([shown().id, shown().text, shown().icon, shown().tone, shown().visible], ['auto-enhance', 'Enhance: Off', 'lightbulb', 'neutral', true])
-  assert.match(shown().tooltip, /Auto-enhance is off\./)
-  // On, with rules or with AI: "On" either way, still the lightbulb (no lightning), now bright (accent).
-  await worker.command('auto-enhance.rules')
-  assert.deepEqual([shown().text, shown().icon, shown().tone], ['Enhance: On', 'lightbulb', 'accent'])
-  assert.match(shown().tooltip, /Auto-enhance is on \(rules\)\./)
-  await worker.command('auto-enhance.ai')
-  assert.deepEqual([shown().text, shown().icon, shown().tone], ['Enhance: On', 'lightbulb', 'accent'])
-  assert.match(shown().tooltip, /Auto-enhance is on \(AI\)\./)
-  await worker.command('auto-enhance.off')
-  assert.deepEqual([shown().text, shown().icon, shown().tone], ['Enhance: Off', 'lightbulb', 'neutral'])
-  // Hidden with the command, and back.
-  await worker.command('status-bar.toggle')
-  assert.equal(shown().visible, false)
-  await worker.command('status-bar.toggle')
-  assert.equal(shown().visible, true)
-  await worker.deactivate()
-
-  // Icon only: no text. An English panel: the same words, an English tooltip.
-  const iconOnly = mockHost({ settings: { statusBarItem: 'icon', autoEnhanceMode: 'ai' }, results: { 'statusBar.update': { ok: true } } })
-  const second = await mountWorker(main, { host: iconOnly })
-  await settled()
-  const last = iconOnly.callsOf('statusBar.update').at(-1) as Shown
-  assert.deepEqual([last.text, last.icon, last.tone], ['', 'lightbulb', 'accent'])
-  assert.match(last.tooltip, /Auto-enhance is on \(AI\)\. Change it under the panel's gear icon or in the command palette\./)
-  assert.equal(main.statusBarText('off'), 'Enhance: Off')
-  assert.equal(main.statusBarText('rules'), 'Enhance: On')
-  assert.equal(main.statusBarText('ai'), 'Enhance: On')
-  await second.deactivate()
-})
-
-test('cycle command switches auto-enhance mode', async () => {
-  const host = mockHost({ results: { 'statusBar.update': { ok: true } } })
-  const worker = await mountWorker(main, { host })
-  assert.equal(await worker.command('auto-enhance.cycle'), 'Auto-enhance is on (rules).')
-  assert.equal(host.data().settings.autoEnhanceMode, 'rules')
-  assert.equal(await worker.command('auto-enhance.off'), 'Auto-enhance is off.')
-  await worker.deactivate()
-  const legacy = await mountWorker(main, { host: mockHost({ settings: { uiLanguage: 'vi' }, results: { 'statusBar.update': { ok: true } } }) })
-  assert.equal(await legacy.command('auto-enhance.ai'), 'Auto-enhance is on (AI).')
-  assert.equal(await legacy.command('status-bar.toggle'), 'Status bar item hidden.')
-  assert.equal(await legacy.command('status-bar.toggle'), 'Status bar item shown.')
-  await legacy.deactivate()
-})
-
 test('legacy language settings and locale storage do not change English worker text', async () => {
   const host = mockHost({
     settings: { uiLanguage: 'vi', outputLanguage: 'zh' },
     storage: { uiLocale: 'zh-CN' },
-    results: { 'statusBar.update': { ok: true } }
+    results: {}
   })
   const worker = await mountWorker(main, { host })
   await new Promise((resolve) => setTimeout(resolve, 30))
-  assert.match((host.callsOf('statusBar.update').at(-1) as { tooltip: string }).tooltip, /Auto-enhance is off\./)
-  assert.equal(await worker.command('auto-enhance.rules'), 'Auto-enhance is on (rules).')
+  await assert.rejects(worker.request('prompt.enhance', { prompt: 'test', level: 'off' }), /Select a Copilot model/)
   await worker.deactivate()
 })
 test('a long send closes its bracketed paste when a later piece is refused or fails', async () => {
@@ -399,38 +243,15 @@ test('a long send that succeeds writes every piece once and no extra paste end',
   await worker.deactivate()
 })
 
-test('editing a profile from its card keeps "follow the preset" (no preset value written in)', async () => {
-  const stored = profile('gpt', 'openai', { baseUrl: '', model: '' })
-  const host = mockHost({ storage: { models: { profiles: [stored] } }, secrets: { 'apiKey.gpt': 'sk-test' } })
-  const worker = await mountWorker(main, { host })
-  const view = await worker.request('models.get')
-  const card = view.profiles[0]
-  assert.equal(card.baseUrl, '')
-  assert.equal(card.model, '')
-  assert.equal(card.effectiveBaseUrl, 'https://api.openai.com/v1')
-  assert.equal(card.effectiveModel, 'gpt-4.1-mini')
-  // What the panel's Disable button sends: the card as it is, with enabled flipped.
-  await worker.request('models.save', { ...card, enabled: false })
-  const saved = (host.data().storage.models as { profiles: Record<string, unknown>[] }).profiles[0]
-  assert.equal(saved.baseUrl, '')
-  assert.equal(saved.model, '')
-  assert.equal(saved.enabled, false)
-  // A model the person picks is stored as is, even when it equals the preset's.
-  await worker.request('models.save', { ...card, model: 'gpt-4.1-mini' })
-  assert.equal((host.data().storage.models as { profiles: Record<string, unknown>[] }).profiles[0].model, 'gpt-4.1-mini')
-  await worker.deactivate()
-})
-
 test('a panel run answers within its budget even when every model of the chain hangs', async () => {
   const saved = main.RUN_LIMITS.budgetMs
   main.RUN_LIMITS.budgetMs = 400
-  globalThis.fetch = ((_url: RequestInfo | URL, init?: RequestInit) =>
+  setRewrite((_input, init) =>
     new Promise((_resolve, reject) => {
       init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
-    })) as typeof fetch
+    }))
   const host = mockHost({
-    storage: { models: { profiles: [profile('one', 'openai'), profile('two', 'groq')] } },
-    secrets: { 'apiKey.one': 'k1', 'apiKey.two': 'k2' },
+    storage: { models: { profiles: [profile('one', 'gpt-4.1-mini'), profile('two', 'gpt-5-mini')] } },
     settings: { timeoutSeconds: 60, fallbackEnabled: true }
   })
   const worker = await mountWorker(main, { host })
@@ -446,11 +267,11 @@ test('a panel run answers within its budget even when every model of the chain h
 })
 
 test('when the panel stops waiting, a late answer is dropped and not saved to history', async () => {
-  globalThis.fetch = (async () => {
+  setRewrite(async () => {
     await new Promise((resolve) => setTimeout(resolve, 60))
-    return new Response(JSON.stringify(openaiAnswer('late answer')), { status: 200 })
-  }) as typeof fetch
-  const host = mockHost({ storage: { models: { profiles: [profile('one', 'openai')] } }, secrets: { 'apiKey.one': 'k1' } })
+    return 'late answer'
+  })
+  const host = mockHost({ storage: { models: { profiles: [profile('one', 'gpt-4.1-mini')] } }, })
   let capturedHost: Parameters<typeof main.default>[0] | null = null
   const worker = await mountWorker({ default: (api: Parameters<typeof main.default>[0]) => { capturedHost = api; main.default(api) } }, { host })
   const controller = new AbortController()
@@ -467,17 +288,17 @@ async function longRuns(delay: number, body: (ctx: { ask: (input: Record<string,
   Object.assign(main.RUN_LIMITS, { sliceMs: 150, totalMs: 1200, orphanMs: 200 })
   let calls = 0
   let stopped = 0
-  globalThis.fetch = ((_url: RequestInfo | URL, init?: RequestInit) =>
-    new Promise((resolve, reject) => {
+  setRewrite((_input, init) =>
+    new Promise<string>((resolve, reject) => {
       calls += 1
-      const timer = setTimeout(() => resolve(new Response(JSON.stringify(openaiAnswer('the enhanced prompt')), { status: 200 })), delay)
+      const timer = setTimeout(() => resolve('the enhanced prompt'), delay)
       init?.signal?.addEventListener('abort', () => {
         clearTimeout(timer)
         stopped += 1
         reject(new DOMException('aborted', 'AbortError'))
       })
-    })) as typeof fetch
-  const host = mockHost({ storage: { models: { profiles: [profile('one', 'openai')] } }, secrets: { 'apiKey.one': 'k1' }, results: { 'workspace.readContext': null } })
+    }))
+  const host = mockHost({ storage: { models: { profiles: [profile('one', 'gpt-4.1-mini')] } }, results: { 'workspace.readContext': null } })
   let capturedHost: Parameters<typeof main.default>[0] | null = null
   const worker = await mountWorker({ default: (api: Parameters<typeof main.default>[0]) => { capturedHost = api; main.default(api) } }, { host })
   try {
@@ -567,10 +388,9 @@ test('a run lives only while the panel waits for it: cancelled, or nobody asking
 
 test("a workspace on this machine is read even when Copilot names its host 'local' (Copilot 1.4.25x)", async () => {
   const root = project()
-  stubFetch(() => openaiAnswer('ok'))
+  stubRewrite(() => 'ok')
   const host = mockHost({
-    storage: { models: { profiles: [profile('one', 'openai')] } },
-    secrets: { 'apiKey.one': 'k' },
+    storage: { models: { profiles: [profile('one', 'gpt-4.1-mini')] } },
     results: {
       'workspace.readContext': { branch: 'feat/publish-unify-ui', displayName: 'feat/publish-unify-ui', terminals: [] },
       'workspace.list': {
@@ -603,10 +423,9 @@ test('several workspaces named "main" on branch main: the panel\'s hint or the p
   const one = project()
   const two = project()
   writeFileSync(join(two, 'AGENTS.md'), '# Rules\nThis is the second checkout.')
-  stubFetch(() => openaiAnswer('ok'))
+  stubRewrite(() => 'ok')
   const host = mockHost({
-    storage: { models: { profiles: [profile('one', 'openai')] } },
-    secrets: { 'apiKey.one': 'k' },
+    storage: { models: { profiles: [profile('one', 'gpt-4.1-mini')] } },
     results: {
       'workspace.readContext': { branch: 'main', displayName: 'main', terminals: [{ id: 'term-2', title: 'Claude' }] },
       'workspace.list': {
@@ -630,10 +449,10 @@ test('several workspaces named "main" on branch main: the panel\'s hint or the p
   assert.equal(known.choices, undefined)
   // A run in that workspace reads that folder.
   const bodies: string[] = []
-  globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
-    bodies.push(String(init?.body))
-    return new Response(JSON.stringify(openaiAnswer('ok')), { status: 200 })
-  }) as typeof fetch
+  setRewrite(input => {
+    bodies.push(JSON.stringify(input))
+    return 'ok'
+  })
   const answer = await worker.request('prompt.enhance', { prompt: 'fix it', level: 'standard', workspaceId: 'ws-2' })
   assert.ok(answer.context.some((item) => item.id === 'rules:AGENTS.md'))
   assert.match(bodies[0], /second checkout/)
@@ -650,8 +469,7 @@ test('several workspaces named "main" on branch main: the panel\'s hint or the p
 const listedPath = (path: string) => path.replace(/\\/g, '/')
 function twoMains(one: string, two: string, terminals: { id: string; title: string }[]) {
   return mockHost({
-    storage: { models: { profiles: [profile('one', 'openai')] } },
-    secrets: { 'apiKey.one': 'k' },
+    storage: { models: { profiles: [profile('one', 'gpt-4.1-mini')] } },
     results: {
       'workspace.readContext': { branch: 'main', displayName: 'main', terminals },
       'workspace.list': {
@@ -670,7 +488,7 @@ test('several projects named "main": Copilot\'s agent event tells which one is o
   const one = project()
   const two = project()
   writeFileSync(join(two, 'AGENTS.md'), '# Rules\nThis is the second checkout.')
-  const calls = stubFetch(() => openaiAnswer('ok'))
+  const calls = stubRewrite(() => 'ok')
   const host = twoMains(one, two, [
     { id: 'term_agent', title: 'Claude' },
     { id: 'term_shell', title: 'pwsh' }
@@ -694,8 +512,8 @@ test('several projects named "main": Copilot\'s agent event tells which one is o
   assert.equal(after.choices, undefined)
   // A run reads that project, and the rewriter is told its name: "main" alone names nothing.
   const answer = await worker.request('prompt.enhance', { prompt: 'fix it', level: 'standard' })
-  assert.match(JSON.stringify(calls.at(-1)?.body), /second checkout/)
-  assert.match(JSON.stringify(calls.at(-1)?.body), /Reup: main \(branch main\)/)
+  assert.match(JSON.stringify(calls.at(-1)), /second checkout/)
+  assert.match(JSON.stringify(calls.at(-1)), /Reup: main \(branch main\)/)
   assert.ok(!answer.notes.some((note) => note.code === 'note.workspace_unknown'))
   // The folder the person once picked by mistake does not win over what Copilot said.
   const mistaken = await worker.request('targets.list', { known: { term_agent: 'identity:wt2:local:1111', term_shell: 'identity:wt2:local:1111' } })
@@ -760,130 +578,10 @@ test('several projects named "main": a newer Copilot names the focused workspace
   await forgetTerminals(host)
 })
 
-test('auto-enhance takes the rules and the name of the project its prompt goes to, not of the one in focus', async () => {
-  const one = project()
-  const two = project()
-  const calls = stubFetch(() => openaiAnswer('Rewritten.'))
-  const host = mockHost({
-    settings: { autoEnhanceMode: 'ai' },
-    storage: {
-      models: { profiles: [profile('fast', 'groq')] },
-      rules: {
-        rules: [
-          { id: 'r1', text: 'Shop: use pnpm.', enabled: true, scope: 'project:Shop' },
-          { id: 'r2', text: 'Reup: use bun.', enabled: true, scope: 'project:Reup' }
-        ],
-        structures: []
-      }
-    },
-    secrets: { 'apiKey.fast': 'g' },
-    results: {
-      // The person is looking at Shop.
-      'workspace.readContext': { branch: 'main', displayName: 'main', terminals: [{ id: 'term_shop', title: 'Claude' }, { id: 'term_shop_new', title: 'Codex' }] },
-      'workspace.list': {
-        workspaces: [
-          { id: 'identity:wt2:local:1111', kind: 'worktree', name: 'main', project: 'Shop', path: listedPath(one), branch: 'main', hostId: 'local' },
-          { id: 'identity:wt2:local:2222', kind: 'worktree', name: 'main', project: 'Reup', path: listedPath(two), branch: 'main', hostId: 'local' }
-        ],
-        truncated: false
-      },
-      'agents.list': { agents: [] }
-    }
-  })
-  const worker = await mountWorker(main, { host })
-  await worker.emit('agent.status.changed', { workspaceId: `repo-one::${one}`, paneKey: 'p1', terminalId: 'term_shop', state: 'waiting', receivedAt: Date.now() })
-  await worker.emit('agent.status.changed', { workspaceId: `repo-two::${two}`, paneKey: 'p2', terminalId: 'term_reup', state: 'working', receivedAt: Date.now() })
-  const body = () => JSON.stringify(calls.at(-1)?.body)
-  // Copilot sends a task to the agent of Reup, which is not in focus.
-  const other = await worker.hooks.fire('agent.prompt.before', { agent: 'claude', terminalId: 'term_reup', prompt: 'add a health check endpoint', inputKind: 'orchestration' as const })
-  assert.equal(other.kind === 'continue' && other.event.prompt, 'Rewritten.')
-  assert.match(body(), /Reup: use bun\./)
-  assert.ok(!body().includes('Shop: use pnpm.'), 'a rule of the focused project went to another project')
-  assert.match(body(), /Reup: main \(branch main\)/)
-  // The focused project's own agent: its rule and name, as before.
-  await worker.hooks.fire('agent.prompt.before', { agent: 'claude', terminalId: 'term_shop', prompt: 'add a health check endpoint', inputKind: 'driving' as const })
-  assert.match(body(), /Shop: use pnpm\./)
-  assert.ok(!body().includes('Reup: use bun.'))
-  // A new agent Copilot has said nothing about yet, in a terminal of the focused workspace: that project.
-  await worker.hooks.fire('agent.prompt.before', { agent: 'codex', terminalId: 'term_shop_new', prompt: 'add a health check endpoint', inputKind: 'launch' as const })
-  assert.match(body(), /Shop: use pnpm\./)
-  assert.match(body(), /Shop: main \(branch main\)/)
-  // A terminal that is neither known nor one of the focused workspace's: its project is not known,
-  // so it gets no project's rule and no project's name. The prompt is still rewritten.
-  const stranger = await worker.hooks.fire('agent.prompt.before', { agent: 'claude', terminalId: 'term_elsewhere', prompt: 'add a health check endpoint', inputKind: 'launch' as const })
-  assert.equal(stranger.kind === 'continue' && stranger.event.prompt, 'Rewritten.')
-  assert.ok(!body().includes('Shop: use pnpm.') && !body().includes('Reup: use bun.'), 'a rule of some project went to a terminal whose project is not known')
-  assert.ok(!/(Shop|Reup): main \(branch main\)/.test(body()))
-  await worker.deactivate()
-  await forgetTerminals()
-})
-
-test('a kept pairing of a terminal is dropped when Copilot now lists that terminal in a workspace it does not fit', async () => {
-  const shop = project()
-  const docs = project()
-  const calls = stubFetch(() => openaiAnswer('Rewritten.'))
-  const host = mockHost({
-    settings: { autoEnhanceMode: 'ai' },
-    storage: {
-      models: { profiles: [profile('fast', 'groq')] },
-      rules: {
-        rules: [
-          { id: 'r1', text: 'Shop: use pnpm.', enabled: true, scope: 'project:Shop' },
-          { id: 'r2', text: 'Docs: use vale.', enabled: true, scope: 'project:Docs' }
-        ],
-        structures: []
-      },
-      // Kept by an earlier run of the worker: this id was a terminal of Docs then.
-      terminalWorkspaces: { term_1: `repo-docs::${docs}`, term_docs: `repo-docs::${docs}` }
-    },
-    secrets: { 'apiKey.fast': 'g' },
-    results: {
-      // Now Copilot lists a terminal of that id in the focused workspace, which is Shop.
-      'workspace.readContext': { branch: 'main', displayName: 'shop', terminals: [{ id: 'term_1', title: 'Claude' }] },
-      'workspace.list': {
-        workspaces: [
-          { id: 'identity:wt2:local:1111', kind: 'worktree', name: 'shop', project: 'Shop', path: listedPath(shop), branch: 'main', hostId: 'local' },
-          // On the same branch as the focus: the name alone tells them apart.
-          { id: 'identity:wt2:local:2222', kind: 'worktree', name: 'docs', project: 'Docs', path: listedPath(docs), branch: 'main', hostId: 'local' }
-        ],
-        truncated: false
-      },
-      'agents.list': { agents: [] }
-    }
-  })
-  const worker = await mountWorker(main, { host })
-  const body = () => JSON.stringify(calls.at(-1)?.body)
-  // A list that fails, or is cut short and lacks the workspace, proves nothing: the pairing stays.
-  host.respond('workspace.list', { workspaces: [], truncated: true })
-  await worker.hooks.fire('agent.prompt.before', { agent: 'claude', terminalId: 'term_1', prompt: 'add a health check endpoint', inputKind: 'launch' as const })
-  await terminalsSaved()
-  assert.equal((host.data().storage.terminalWorkspaces as Record<string, string>).term_1, `repo-docs::${docs}`)
-  host.respond('workspace.list', {
-    workspaces: [
-      { id: 'identity:wt2:local:1111', kind: 'worktree', name: 'shop', project: 'Shop', path: listedPath(shop), branch: 'main', hostId: 'local' },
-      { id: 'identity:wt2:local:2222', kind: 'worktree', name: 'docs', project: 'Docs', path: listedPath(docs), branch: 'main', hostId: 'local' }
-    ],
-    truncated: false
-  })
-  await worker.hooks.fire('agent.prompt.before', { agent: 'claude', terminalId: 'term_1', prompt: 'add a health check endpoint', inputKind: 'launch' as const })
-  assert.match(body(), /Shop: use pnpm\./)
-  assert.ok(!body().includes('Docs: use vale.'), 'a rule of the project the id used to belong to was followed')
-  // The old pairing is gone from storage too; one that nothing contradicts stays.
-  await terminalsSaved()
-  const kept = host.data().storage.terminalWorkspaces as Record<string, string>
-  assert.notEqual(kept.term_1, `repo-docs::${docs}`)
-  assert.equal(kept.term_docs, `repo-docs::${docs}`)
-  // A terminal that is not in the focused workspace cannot be checked: what was kept is used.
-  await worker.hooks.fire('agent.prompt.before', { agent: 'claude', terminalId: 'term_docs', prompt: 'add a health check endpoint', inputKind: 'orchestration' as const })
-  assert.match(body(), /Docs: use vale\./)
-  await worker.deactivate()
-  await forgetTerminals()
-})
-
 test('several projects named "main": a tool hook says it too, and the panel\'s own note of an event is understood', async () => {
   const one = project()
   const two = project()
-  stubFetch(() => openaiAnswer('ok'))
+  stubRewrite(() => 'ok')
   const host = twoMains(one, two, [{ id: 'term_agent', title: 'Claude' }])
   const worker = await mountWorker(main, { host })
   // The panel heard the event itself and kept the id as it came (not the list's id): understood.

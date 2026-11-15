@@ -1,5 +1,7 @@
 # Quiet Desk banner
 
+> Historical planning record. This captures the design and verification at that time; current behavior is documented in the [README](../../../README.md) and [Copilot-only plan](../plans/2026-11-15-copilot-only.md).
+
 Approved direction: concept B from [the prototypes](../../prototypes/banner-concepts.md), with the owner's requested changes: replace the top logo/version row with “GitHub Copilot,” and use one icon button to toggle light/dark mode.
 
 The banner keeps the Enhance Prompt title, a short tagline, and a visible workflow status on the left; the flat desk illustration sits on the right. No animation or gradients. Morning (05:00–11:59), afternoon (12:00–17:59), and night (18:00–04:59) change the window and lamp. Sample local time on open, focus, and return to a visible panel. Draft, running, ready, failed, and cancelled states change the paper, without pretending to measure progress or quality. Empty drafts show a blank sheet. A stale result must not mark a different draft ready.

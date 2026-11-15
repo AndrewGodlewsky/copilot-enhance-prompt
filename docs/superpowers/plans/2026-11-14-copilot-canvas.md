@@ -1,5 +1,7 @@
 # Copilot Canvas Implementation Plan
 
+> Historical planning record. This captures the design and verification at that time; current behavior is documented in the [README](../../../README.md) and [Copilot-only plan](../plans/2026-11-15-copilot-only.md).
+
 > **For agentic workers:** Use superpowers:executing-plans. Track completed steps here and decisions in `progress.md` alongside this plan.
 
 **Goal:** Ship Enhance Prompt as a native GitHub Copilot desktop canvas with the existing core workflow and no dependency on the original host.

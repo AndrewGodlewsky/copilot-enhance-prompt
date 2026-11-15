@@ -1,7 +1,6 @@
 // Images among the files attached to a prompt (src/attachments.ts): recognised by their bytes, shown
 // to the rewriting model when it can see images, and always listed by path in the enhanced prompt so
 // the agent in the terminal can open them itself.
-import type { ModelProfile } from './presets.ts'
 
 export type ImageType = 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp'
 /** An attached image: where its copy is, its name, size and type. */
@@ -20,19 +19,6 @@ export function sniffImage(head: Uint8Array): ImageType | null {
 }
 
 export const megabytes = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-
-/**
- * How a model gets the pictures. `data`: in the request (Anthropic, and the OpenAI, OpenRouter and
- * Gemini presets, whose models read images). `file`: by path on the command line (Codex `-i`).
- * `none`: only the paths in the text (other OpenAI-compatible endpoints, Claude Code and Gemini CLI
- * run with no tools, a custom CLI), since sending pictures to a model that cannot read them fails.
- */
-export function imageSupport(profile: Pick<ModelProfile, 'provider' | 'preset'>): 'data' | 'file' | 'none' {
-  if (profile.provider === 'copilot') return 'data'
-  if (profile.provider === 'anthropic') return 'data'
-  if (profile.provider === 'openai') return ['openai', 'openrouter', 'gemini'].includes(profile.preset) ? 'data' : 'none'
-  return profile.preset === 'codex' ? 'file' : 'none'
-}
 
 /** The block the user message gets: the attached images, so the rewriter keeps them in the prompt. */
 export function imagesBlock(images: readonly ImageInfo[]): string {

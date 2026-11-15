@@ -1,5 +1,7 @@
 # Reliable, understandable prompt context
 
+> Historical planning record. This captures the design and verification at that time; current behavior is documented in the [README](../../../README.md) and [Copilot-only plan](../plans/2026-11-15-copilot-only.md).
+
 The owner approved the context audit recommendations and four clearer menu choices.
 The goal is quick prompt creation with relevant project context and dependable controls.
 

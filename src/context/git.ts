@@ -1,6 +1,5 @@
 // Read-only git helpers. Fixed argument arrays, no shell; every call has a timeout and size cap.
-import { execFile } from 'node:child_process'
-import { killTree } from '../cli.ts'
+import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { isSensitive, filterAllowed, type FileFilter } from './files.ts'
 import { redactCode } from './secrets.ts'
 
@@ -12,7 +11,7 @@ export function git(
   const { signal } = options
   if (signal?.aborted) return Promise.resolve(null)
   return new Promise((resolve) => {
-    // Cancel: stop git (and anything it started) at once, the same way a CLI model is stopped.
+    // Cancel: stop git (and anything it started) at once, including child processes.
     const onAbort = () => {
       killTree(child)
       resolve(null)
@@ -211,4 +210,19 @@ export async function gitGrep(
     hits.set(match[1], list)
   }
   return hits
+}
+
+/** Stop a cancelled Git process and its child processes. */
+function killTree(child: ChildProcess): void {
+  const pid = child.pid
+  if (pid === undefined || child.exitCode !== null || child.signalCode !== null) {
+    child.kill()
+    return
+  }
+  if (process.platform === 'win32') {
+    const killer = spawn('taskkill', ['/pid', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' })
+    killer.on('error', () => child.kill())
+    return
+  }
+  try { process.kill(-pid, 'SIGTERM') } catch { child.kill() }
 }

@@ -250,7 +250,7 @@ package.json</pre>
     <details><summary>3. AI-assisted only: ask a model to choose from filenames</summary><div>
       <p>The selector receives <strong>your request plus up to 600 permitted candidate paths</strong>. Up to 150 top local matches lead that list, then the remaining eligible paths fill it. It receives no file bodies in this selection step and cannot browse the repository itself through this operation.</p>
       <p>It is asked for up to eight exact paths. Duplicate, invented or ineligible paths are discarded. Valid AI choices go first; local choices fill the remaining places, to a maximum of ten files total. Selection is not recursive: there is no second search triggered by reading a selected file.</p>
-      <p>The selector model role is used when compatible with the rewrite route; otherwise the rewrite route’s first model is selected. Copilot rewrites keep selection within Copilot profiles. Non-Copilot rewrites use non-Copilot profiles, which may include different providers. Fallback settings may cause more than one attempted model call, so “one selection stage” is not a guarantee of exactly one billed request.</p>
+      <p>The selector model role uses an enabled Copilot profile; otherwise the rewrite model is selected. All selection and rewriting requests use Copilot. Fallback settings may cause more than one attempted model call, so “one selection stage” is not a guarantee of exactly one billed request.</p>
       <p>The picker gets at most 25 seconds, shortened when the run has less time left. If selection fails or returns no valid paths, local choices remain. An empty candidate list skips selection. This extra step can add latency and usage; it does not guarantee better results.</p>
     </div></details>
     <details><summary>4. Read short snippets from the chosen files</summary><div>
@@ -310,16 +310,14 @@ package.json</pre>
       <p>The installed Copilot canvas integration does not provide terminal scrollback, other agents’ session output, editor-save notifications or recent agent-activity context. Those legacy capabilities contribute nothing here. AI-assisted does not unlock them and does not silently add the full Copilot conversation.</p>
       <p>The rewriter sees the assembled request/context, not the destination agent’s complete working environment. Sending the finished prompt is a separate action with attached-session activity, permission and queue checks. Automatic sending remains an explicit opt-in.</p>
     </div></details>
-    <details><summary>Chat auto-enhance follows a separate context switch</summary><div>
-      <p>This guide’s four levels control the panel’s Enhance workflow. AI chat auto-enhance uses its own <strong>Include context in auto-enhance</strong> setting. When enabled, it can include Workspace plus permitted instructions, extra files, README and stack information; it omits the tree, source selection, Git changes and the Target agent item described above.</p>
-      <p>The AI hook also has its own model route: it currently requires an enabled OpenAI-compatible or Anthropic API profile within a short time budget. It does not run the panel’s background Copilot model or Effort assignment. Without an eligible API model it leaves the prompt unchanged. Rules-only auto-enhance simply appends its configured text and does not gather this context.</p>
-      <p>The Copilot hook prepares fresh static context when enabled; reusable static context is keyed to file preferences and has a 90-second lifetime. The hook does not use the panel’s four total budgets or per-request checkbox list. Saved privacy, extra-file and excluded-path settings still apply. Disabled, ambiguous, failed or timed-out hooks leave the original prompt unchanged and preserve runtime-added context.</p>
+    <details><summary>These choices apply to the canvas</summary><div>
+      <p>Prompts typed directly into Copilot chat are unchanged by this plugin. Choose context when using Enhance or the opt-in Enhance and send action in the canvas.</p>
     </div></details>
   </section>
 
   <section id="evidence" class="section">
     <h2>Implementation references</h2>
-    <p class="muted">This guide describes plugin <strong>v0.5.2</strong>, source snapshot <code>7728506</code>. Links below open the exact source snapshot on GitHub. The guide itself works offline and does not load remote resources.</p>
+    <p class="muted">The stable context-level mechanics below were documented from <strong>v0.5.2</strong>, source snapshot <code>7728506</code>; model routing now reflects the Copilot-only plugin. AI Test is documented in the linked Markdown guide. Source links below open that historical snapshot on GitHub. The guide itself works offline and does not load remote resources.</p>
     <ul class="source-list">
       <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/context/index.ts">Collection stages, limits and final priority</a></li>
       <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/context/instructions.ts">Instruction paths and README digest</a></li>
@@ -332,7 +330,6 @@ package.json</pre>
       <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/prompts.ts">Model instructions and message wrapping</a></li>
       <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/copilot/session.ts">Attached project and agent identity</a></li>
       <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/panel/context-preview.ts">Preview refresh behavior</a></li>
-      <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/copilot/hook.ts">Separate chat auto-enhance path</a></li>
     </ul>
   </section>
   <footer>Standalone guide · No file access, model calls, analytics, network requests or saved preferences. The controls only change this explanation. Read-only GitHub source links are optional.</footer>

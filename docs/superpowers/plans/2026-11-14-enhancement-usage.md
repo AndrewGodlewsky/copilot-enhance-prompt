@@ -1,5 +1,7 @@
 # Enhancement usage retention implementation plan
 
+> Historical planning record. This captures the design and verification at that time; current behavior is documented in the [README](../../../README.md) and [Copilot-only plan](../plans/2026-11-15-copilot-only.md).
+
 > **For agentic workers:** Use superpowers:executing-plans for the Enhance Prompt work and superpowers:subagent-driven-development for the independent Usage Insights reader task. Track completed steps here.
 
 **Goal:** Retain background Copilot accounting and show all helpers as separate sessions under the user-requested project label **Enhanced Prompt** in Usage Insights.

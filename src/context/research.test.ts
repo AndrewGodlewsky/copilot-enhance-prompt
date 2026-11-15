@@ -11,8 +11,8 @@ import { planSteps } from '../progress.ts'
 
 type Call = { system: string; user: string; model: string }
 const research = (call: Call) => call.system.startsWith('You research project context')
-const cp = normalizeProfile({ id: 'cp', preset: 'copilot', model: 'saved-model' })!
-const external = normalizeProfile({ id: 'external', preset: 'ollama', model: 'external-model' })!
+const cp = normalizeProfile({ id: 'cp', preset: 'copilot', provider: 'copilot', model: 'saved-model' })!
+const external = { id: 'external', preset: 'ollama', provider: 'openai', model: 'external-model' }
 
 async function fixture(check: (f: {
   root: string; host: ReturnType<typeof mockHost>; worker: Awaited<ReturnType<typeof mountWorker>>;
@@ -216,20 +216,4 @@ test('AI Test skips unknown roots and has its own progress step without Max term
   assert.match(english(result.note), /no readable project files/)
   assert.deepEqual(planSteps('ai-test', true), ['workspace', 'project', 'git', 'search', 'research', 'model'])
   assert.deepEqual(planSteps('ai-test', false), ['workspace', 'model'])
-})
-
-test('AI Test saved as the default does not add research to AI auto-enhance', async () => {
-  await fixture(async ({ host, worker, calls }) => {
-    await host.settings.set('contextLevel', 'ai-test')
-    await host.settings.set('autoEnhanceMode', 'ai')
-    const realFetch = globalThis.fetch
-    let apiCalls = 0
-    globalThis.fetch = async () => { apiCalls++; return new Response(JSON.stringify({ choices: [{ message: { content: 'API rewritten prompt' } }] })) }
-    try {
-      const result = await worker.hooks.fire('agent.prompt.before', { prompt: 'Improve the login screen', agent: 'copilot', terminalId: 'one', inputKind: 'launch' })
-      assert.equal(result.kind === 'continue' && result.event.prompt, 'API rewritten prompt')
-      assert.equal(apiCalls, 1)
-      assert.equal(calls.length, 0)
-    } finally { globalThis.fetch = realFetch }
-  })
 })

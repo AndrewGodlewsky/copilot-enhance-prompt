@@ -1,5 +1,13 @@
 var e=`# Changes
 
+## [0.7.0] - 2026-11-15
+
+### Changed
+- Make GitHub Copilot the sole model connection for enhancement, AI-assisted context, AI Test and fallback. Keep Copilot-provided Claude, GPT and other available models, the installed desktop SDK/runtime, effort assignments and usage accounting.
+- Remove direct provider APIs, local model servers, separate model CLIs, API-key controls and separate-agent launching. Retire external profiles and their encrypted API keys without changing saved Copilot models, drafts, history, rules or usage records. Effort and AI-assisted picker assignments to removed profiles require a new selection instead of silently choosing a model.
+- Remove all chat auto-enhance modes and the packaged prompt hook. Manual Enhance, Send to Copilot and optional enhance-and-send remain. Preserve inactive old chat preferences and document recovery in \`docs/chat-auto-enhance-retirement.md\`.
+- Remove unavailable completion notifications and periodic feedback reminders. Keep GitHub issue links and Show Logs.
+
 ## [0.6.1] - 2026-11-15
 
 ### Fixed

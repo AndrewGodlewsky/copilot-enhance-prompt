@@ -30,11 +30,11 @@ Custom instructions are shared across styles, even though the Enhance panel show
 
 A selected structure changes headings, not the purpose of Bug fix, Refactor, Code review or Plan first. It can also replace Concise's default heading-free format. User rules can override formatting. The English-output policy still takes precedence over conflicting output-language requests while preserving supplied code, paths, quoted text and other data.
 
-The manual panel uses the selected style, or the default from Settings. Optional AI chat auto-enhance uses the Settings default and the same prompt builder, without the panel's selected structure. Rules-only auto-enhance does not use these styles; it appends its configured text.
+The canvas uses the selected style, or the default from Settings.
 
 General was called Balanced before version 0.3.2. The stored identifier remains `balanced`, so existing defaults, selections and history continue to work. Their display label is now General; saved prompt text is not rewritten. Other saved default styles are preserved.
 
-## Review and verification
+## Historical style review and current verification
 
 The 0.3.2 review traced the selector, saved defaults, prompt builder, structure overrides, manual model chain, Copilot rewriting and AI hook. It corrected these conflicts:
 
@@ -45,4 +45,4 @@ The 0.3.2 review traced the selector, saved defaults, prompt builder, structure 
 - Shared implementation boilerplate appeared in review, planning and custom prompts.
 - Custom only referred to instructions even when none were supplied.
 
-Automated coverage checks all nine styles, structure combinations, saved Balanced compatibility, custom data preservation, task boundaries and captured requests through Copilot, API rewriting and the AI hook. These checks verify the instructions and transport. They do not establish that every model obeys them on every request. Live prompt quality should be reviewed with representative tasks and the model you use; the optional CLI evaluation script uses a separate paid subscription and is not part of the test suite.
+Automated coverage checks all nine styles, structure combinations, saved Balanced compatibility, custom data preservation, task boundaries and captured requests through Copilot. These checks verify the instructions and transport. They do not establish that every model obeys them on every request. Live prompt quality should be reviewed separately with representative tasks and the Copilot model you use. These account-backed requests can incur usage.

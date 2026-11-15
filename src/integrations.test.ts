@@ -1,19 +1,18 @@
 // the host integrations, each behind its own Privacy switch (and a confirmation for the risky ones):
-// what agents do, files saved in the editor, starting a new agent, opening a file, notifications.
+// what agents do, files saved in the editor, opening a file and history.
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { after } from 'node:test'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, assert, mockHost, mountWorker, test } from '#testing'
+import { afterEach, assert, mountWorker, test } from '#testing'
 import { forgetActivity, recordTool, toolTarget, agentActivity } from './context/activity.ts'
 import { redactSecrets } from './context/agents.ts'
-import { forgetTerminals, terminalsSaved } from './context/terminals.ts'
+import { forgetTerminals } from './context/terminals.ts'
 import { relativeTo } from './context/index.ts'
 import * as main from './worker.ts'
+import { mockModelHost as mockHost, setRewrite } from './model-testing.ts'
 
-const realFetch = globalThis.fetch
 afterEach(async () => {
-  globalThis.fetch = realFetch
   forgetActivity()
   await forgetTerminals()
 })
@@ -22,24 +21,21 @@ writeFileSync(join(root, 'login.ts'), 'export function login() {}\n')
 after(() => rmSync(root, { recursive: true, force: true }))
 
 // The two names the host has for one workspace (workspaces.ts): the id workspace.list answers and takes
-// (agent.launch, editor.open), and the id its hooks and events carry, "<repository id>::<path>".
+// (editor.open), and the id its hooks and events carry, "<repository id>::<path>".
 const WS = 'identity:wt2:local:test'
 const EVENT_WS = `repo-demo::${root}`
 const LISTED = { id: WS, path: root.replace(/\\/g, '/') }
-const profile = { id: 'oa', name: 'OpenAI', preset: 'openai', provider: 'openai', baseUrl: 'https://api.openai.com/v1', model: 'gpt-4.1-mini', maxTokens: 2000, enabled: true, command: '', args: '' }
+const profile = { id: 'oa', name: 'Copilot', preset: 'copilot', provider: 'copilot', model: 'gpt-4.1-mini', enabled: true }
 
 function host(settings: Record<string, boolean | string>, consents: Record<string, boolean> = {}) {
   return mockHost({
     settings,
     storage: { models: { profiles: [profile] }, consents },
-    secrets: { 'apiKey.oa': 'k' },
     results: {
       'workspace.readContext': { branch: 'main', displayName: 'demo', terminals: [] },
       'workspace.list': { workspaces: [{ id: WS, kind: 'worktree', name: 'demo', project: 'demo', path: LISTED.path, branch: 'main', hostId: 'local' }], truncated: false },
       'agents.list': { agents: [] },
-      'agent.launch': { terminalId: 'new-1' },
       'editor.open': { opened: true },
-      'notifications.show': { delivered: true }
     }
   })
 }
@@ -95,10 +91,10 @@ test('agent activity: not kept while off or unconfirmed; kept and sent at Deep o
 
 test('the model sees the tool and its masked target, never its output', async () => {
   const bodies: string[] = []
-  globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
-    bodies.push(String(init?.body))
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }), { status: 200 })
-  }) as typeof fetch
+  setRewrite(async input => {
+    bodies.push(JSON.stringify(input))
+    return 'ok'
+  })
   const worker = await mountWorker(main, { host: host({ allowAgentActivity: true }, { allowAgentActivity: true }) })
   await settle()
   await worker.hooks.fire('agent.tool.after', tool)
@@ -128,22 +124,6 @@ test('editor saves: only the path, only while on; ranked into the context at Dee
   await on.deactivate()
 })
 
-test('starting a new agent needs the switch and its confirmation, and a valid agent kind', async () => {
-  const offHost = host({ allowAgentLaunch: true })
-  const off = await mountWorker(main, { host: offHost })
-  await assert.rejects(off.request('agent.launch', { agent: 'claude', prompt: 'do it' }), /not confirmed/)
-  assert.equal(offHost.callsOf('agent.launch').length, 0)
-  await off.deactivate()
-
-  const onHost = host({ allowAgentLaunch: true }, { allowAgentLaunch: true })
-  const on = await mountWorker(main, { host: onHost })
-  await assert.rejects(on.request('agent.launch', { agent: 'rm -rf /', prompt: 'do it' }), /Invalid request/)
-  const answer = await on.request('agent.launch', { agent: 'codex', prompt: 'fix\u001b[2J it' })
-  assert.equal(answer.terminalId, 'new-1')
-  assert.deepEqual(onHost.callsOf('agent.launch')[0], { workspaceId: WS, agent: 'codex', prompt: 'fix[2J it' })
-  await on.deactivate()
-})
-
 test('opening a file: relative paths inside the workspace only, and only while allowed', async () => {
   const onHost = host({})
   const on = await mountWorker(main, { host: onHost })
@@ -162,19 +142,10 @@ test('confirmations: only for switches that need one; Delete everything forgets 
   const testHost = host({})
   const worker = await mountWorker(main, { host: testHost })
   await assert.rejects(worker.request('consent.set', { key: 'saveHistory', granted: true }), /Invalid request/)
-  assert.deepEqual((await worker.request('consent.set', { key: 'allowAgentLaunch', granted: true })).granted, ['allowAgentLaunch'])
-  assert.deepEqual((await worker.request('consents.get')).granted, ['allowAgentLaunch'])
+  assert.deepEqual((await worker.request('consent.set', { key: 'allowAgentActivity', granted: true })).granted, ['allowAgentActivity'])
+  assert.deepEqual((await worker.request('consents.get')).granted, ['allowAgentActivity'])
   await worker.request('data.clear', { what: 'all' })
   assert.deepEqual((await worker.request('consents.get')).granted, [])
-  await worker.deactivate()
-})
-
-test('a quick run sends no notification, even with notifications on', async () => {
-  globalThis.fetch = (async () => new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }), { status: 200 })) as typeof fetch
-  const testHost = host({ notifyWhenDone: true })
-  const worker = await mountWorker(main, { host: testHost })
-  await worker.request('prompt.enhance', { prompt: 'do it', level: 'off' })
-  assert.equal(testHost.callsOf('notifications.show').length, 0)
   await worker.deactivate()
 })
 
@@ -224,63 +195,13 @@ test('an agent that is waiting for an answer is not typed into unasked, and neve
   await worker.deactivate()
 })
 
-test('a prompt the panel started an agent with goes through auto-enhance as it is, and its terminal is known at once', async () => {
-  const launchHost = mockHost({
-    settings: { allowAgentLaunch: true, autoEnhanceMode: 'rules', autoEnhanceAppend: 'Run the tests before you finish.' },
-    storage: { models: { profiles: [profile] }, consents: { allowAgentLaunch: true } },
-    results: {
-      'workspace.readContext': { branch: 'main', displayName: 'demo', terminals: [] },
-      'workspace.list': { workspaces: [{ id: WS, kind: 'worktree', name: 'demo', project: 'demo', path: LISTED.path, branch: 'main', hostId: 'local' }], truncated: false },
-      'agents.list': { agents: [] },
-      'agent.launch': { terminalId: 'new-1' },
-      'statusBar.update': { ok: true }
-    }
-  })
-  const worker = await mountWorker(main, { host: launchHost })
-  await worker.request('agent.launch', { agent: 'claude', prompt: 'Fix the login page layout on phones.' })
-  // Copilot runs the hook on a launch's prompt too: this one is enhanced already, so nothing is added.
-  const own = { agent: 'claude', terminalId: 'new-1', prompt: 'Fix the login page layout on phones.', inputKind: 'launch' as const }
-  assert.deepEqual(await worker.hooks.fire('agent.prompt.before', own), { kind: 'continue', event: own })
-  // Any other prompt gets the person's text, and the Settings section can say what happened.
-  const other = await worker.hooks.fire('agent.prompt.before', { agent: 'claude', terminalId: 'new-1', prompt: 'Now add a logout button to the header.', inputKind: 'driving' as const })
-  assert.equal(other.kind === 'continue' && other.event.prompt, 'Now add a logout button to the header.\n\nRun the tests before you finish.')
-  const last = await worker.request('hook.last')
-  assert.deepEqual([last?.outcome, last?.agent], ['appended', 'claude'])
-  // The new terminal's workspace is known without waiting for Copilot's first event about it.
-  await terminalsSaved()
-  assert.deepEqual(launchHost.data().storage.terminalWorkspaces, { 'new-1': WS })
-  await worker.deactivate()
-})
-
-test('auto-enhance (AI) that leaves a prompt as it was says why, to the panel and in "hook.last"', async () => {
-  // Only a subscription CLI is set: it starts too slowly for the hook's 2 seconds.
-  const cliOnly = mockHost({
-    settings: { autoEnhanceMode: 'ai' },
-    storage: { models: { profiles: [{ ...profile, id: 'cc', name: 'Claude Code', preset: 'claude-code', provider: 'cli', baseUrl: '', model: 'sonnet', command: 'claude' }] } },
-    results: { 'workspace.readContext': null, 'statusBar.update': { ok: true } }
-  })
-  const worker = await mountWorker(main, { host: cliOnly })
-  const event = { agent: 'codex', terminalId: 't9', prompt: 'add a health check endpoint to the api', inputKind: 'orchestration' as const }
-  assert.deepEqual(await worker.hooks.fire('agent.prompt.before', event), { kind: 'continue', event })
-  const last = await worker.request('hook.last')
-  assert.deepEqual([last?.outcome, last?.agent, last?.reason?.code], ['skipped', 'codex', 'hook.no_model'])
-  assert.deepEqual(
-    worker.posts.filter((post) => post.event === 'hook.skipped').map((post) => post.payload),
-    [{ agent: 'codex', reason: { code: 'hook.no_model' } }]
-  )
-  // Delete everything forgets it.
-  await worker.request('data.clear', { what: 'all' })
-  assert.equal(await worker.request('hook.last'), null)
-  await worker.deactivate()
-})
-
 test('a removed history entry comes back with Undo: by its id, to its place, only while history is kept', async () => {
   const stored: Record<string, string | number>[] = [
     { id: 'h3', at: 3000, original: 'three', enhanced: 'Three.', style: 'balanced', model: 'm', source: 'panel', project: 'demo' },
     { id: 'h2', at: 2000, original: 'two', enhanced: 'Two.', style: 'balanced', model: 'm', source: 'panel' },
     { id: 'h1', at: 1000, original: 'one', enhanced: 'One.', style: 'balanced', model: 'm', source: 'hook' }
   ]
-  const historyHost = mockHost({ storage: { history: stored }, results: { 'statusBar.update': { ok: true } } })
+  const historyHost = mockHost({ storage: { history: stored }, results: {} })
   const worker = await mountWorker(main, { host: historyHost })
   const ids = () => (historyHost.data().storage.history as { id: string }[]).map((item) => item.id)
   await worker.request('history.remove', { id: 'h2' })
@@ -300,7 +221,7 @@ test('a removed history entry comes back with Undo: by its id, to its place, onl
   await worker.deactivate()
 
   // With Save history off, nothing is written back.
-  const offHost = mockHost({ settings: { saveHistory: false }, storage: { history: stored }, results: { 'statusBar.update': { ok: true } } })
+  const offHost = mockHost({ settings: { saveHistory: false }, storage: { history: stored }, results: {} })
   const off = await mountWorker(main, { host: offHost })
   await off.request('history.remove', { id: 'h3' })
   assert.deepEqual(await off.request('history.restore', { id: 'h3' }), { restored: false })
@@ -309,7 +230,7 @@ test('a removed history entry comes back with Undo: by its id, to its place, onl
 })
 
 test('a run is kept in the history under its project, so the History tab can show one project', async () => {
-  globalThis.fetch = (async () => new Response(JSON.stringify({ choices: [{ message: { content: 'Better.' } }] }), { status: 200 })) as typeof fetch
+  setRewrite(() => 'Better.')
   const testHost = host({})
   const worker = await mountWorker(main, { host: testHost })
   await worker.request('prompt.enhance', { prompt: 'fix the login page', level: 'off' })
@@ -320,10 +241,10 @@ test('a run is kept in the history under its project, so the History tab can sho
 
 test('the project of a run is settled before its context is gathered: its rules and its history entry stay with it', async () => {
   const bodies: string[] = []
-  globalThis.fetch = (async (_url: unknown, init?: { body?: unknown }) => {
-    bodies.push(String(init?.body))
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'Better.' } }] }), { status: 200 })
-  }) as typeof fetch
+  setRewrite(async input => {
+    bodies.push(JSON.stringify(input))
+    return 'Better.'
+  })
   // The person looks at another project while the run goes: Copilot's focus is "demo" when the run
   // starts and "blog" every time it is asked after that.
   let asked = 0
@@ -333,7 +254,6 @@ test('the project of a run is settled before its context is gathered: its rules 
       models: { profiles: [profile] },
       rules: { rules: [{ id: 'r1', text: 'Use pnpm here.', enabled: true, scope: 'project:demo' }, { id: 'r2', text: 'Use yarn here.', enabled: true, scope: 'project:blog' }], structures: [] }
     },
-    secrets: { 'apiKey.oa': 'k' },
     results: {
       'workspace.readContext': () => (asked++ === 0 ? { branch: 'main', displayName: 'demo', terminals: [] } : { branch: 'dev', displayName: 'blog', terminals: [] }),
       'workspace.list': { workspaces: [{ id: WS, kind: 'worktree', name: 'demo', project: 'demo', path: LISTED.path, branch: 'main', hostId: 'local' }, blog], truncated: false },
@@ -356,35 +276,6 @@ test('the project of a run is settled before its context is gathered: its rules 
   await worker.deactivate()
 })
 
-test('an API key that cannot be stored is said so in words, and no model is saved without it', async () => {
-  const noStore = mockHost({
-    results: {
-      'secrets.protection': { status: 'unavailable' },
-      'secrets.set': () => {
-        throw new Error('secret store unavailable')
-      },
-      'statusBar.update': { ok: true }
-    }
-  })
-  const worker = await mountWorker(main, { host: noStore })
-  // The Models tab can warn before a key is typed.
-  assert.equal((await worker.request('models.get')).keysUnavailable, true)
-  await assert.rejects(
-    worker.request('models.save', { name: 'OpenAI', preset: 'openai', provider: 'openai', baseUrl: '', model: 'gpt-4.1-mini', maxTokens: 2000, enabled: true, apiKey: 'sk-test-1234567890' }),
-    /Copilot could not store the API key/
-  )
-  assert.deepEqual((await worker.request('models.get')).profiles, [])
-  // Without a key (an environment variable, a local model) the same model is saved as before.
-  const saved = await worker.request('models.save', { name: 'Ollama', preset: 'ollama', provider: 'openai', baseUrl: 'http://localhost:11434/v1', model: 'llama3', maxTokens: 2000, enabled: true })
-  assert.equal(saved.profiles.length, 1)
-  await worker.deactivate()
-
-  // A machine with a key store says nothing.
-  const usual = await mountWorker(main, { host: mockHost({ results: { 'secrets.protection': { status: 'os-keyring' }, 'statusBar.update': { ok: true } } }) })
-  assert.equal((await usual.request('models.get')).keysUnavailable, undefined)
-  await usual.deactivate()
-})
-
 test('masking leaves a count of tokens alone and still hides a token', () => {
   assert.equal(redactSecrets('max_tokens: 200000, input_tokens=1234567'), 'max_tokens: 200000, input_tokens=1234567')
   // In JSON the value takes the closing brace with it: the count and the brace both stay.
@@ -394,7 +285,7 @@ test('masking leaves a count of tokens alone and still hides a token', () => {
 })
 
 test('an entry that no longer fits the history is not said to be back', async () => {
-  globalThis.fetch = (async () => new Response(JSON.stringify({ choices: [{ message: { content: 'Better.' } }] }), { status: 200 })) as typeof fetch
+  setRewrite(() => 'Better.')
   const fullHost = mockHost({
     settings: { historyLimit: 2 },
     storage: {
@@ -404,7 +295,6 @@ test('an entry that no longer fits the history is not said to be back', async ()
         { id: 'h1', at: 1000, original: 'one', enhanced: 'One.', style: 'balanced', model: 'm', source: 'panel' }
       ]
     },
-    secrets: { 'apiKey.oa': 'k' },
     results: { 'workspace.readContext': null, 'statusBar.update': { ok: true } }
   })
   const worker = await mountWorker(main, { host: fullHost })

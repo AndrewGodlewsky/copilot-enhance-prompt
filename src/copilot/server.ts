@@ -11,7 +11,7 @@ type Worker = ReturnType<typeof createWorkerHost>
 type Canvas = { id: string; token: string; streams: Set<ServerResponse>; subscriptions: Disposable[] }
 const LIMIT = 2_500_000
 const MODEL_WRITES = new Set(['models.save', 'models.delete', 'models.move', 'models.roles', 'consent.set', 'rules.save'])
-const PANEL_KEYS = new Set(['tab', 'style', 'level', 'effort', 'structureChoice', 'terminalWorkspaces', 'optionsOpen', 'feedbackAsk', 'feedbackOff', 'draft', 'result', 'lastRun', 'contextShown', 'contextNotes', 'files', 'workspaceKey', 'parked', 'sendAfterEnhance', 'historyScope'])
+const PANEL_KEYS = new Set(['tab', 'style', 'level', 'effort', 'structureChoice', 'terminalWorkspaces', 'optionsOpen', 'draft', 'result', 'lastRun', 'contextShown', 'contextNotes', 'files', 'workspaceKey', 'parked', 'sendAfterEnhance', 'historyScope'])
 const readable = (key: string) => key === 'history' || key === 'colorTheme' || key.startsWith('panel:') && PANEL_KEYS.has(key.slice(6))
 const writable = (key: string) => key === 'colorTheme' || key.startsWith('panel:') && PANEL_KEYS.has(key.slice(6))
 const PRIVATE_PANEL_KEYS = new Set(['draft', 'result', 'lastRun', 'contextShown', 'contextNotes', 'files', 'workspaceKey', 'parked'])

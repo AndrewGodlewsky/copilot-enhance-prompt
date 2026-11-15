@@ -2,26 +2,23 @@
 
 Turn a rough request into a clear prompt using the project's files, rules and Git changes. Review the result in a native GitHub Copilot desktop canvas, then send it to that canvas's attached session.
 
-[![End-to-end flow: user text and allowed context become a rewrite request; the configured model returns a prompt for review and delivery to Copilot. A separate optional hook transforms chat prompts.](docs/assets/prompt-workflow.svg)](docs/assets/prompt-workflow.svg)
+[![End-to-end flow: user text and allowed context become a rewrite request; a Copilot model returns a prompt for review and delivery to the attached session.](docs/assets/prompt-workflow.svg)](docs/assets/prompt-workflow.svg)
 
-[Read the complete workflow and editable diagrams](docs/prompt-workflow.md). The diagram shows the stable workflow; the additional [AI Test research loop](docs/context-levels.md#ai-test-experimental-follow-up-research) is documented separately. The rewriting model produces the task prompt; Copilot receives that prompt and does the work. Optional chat auto-enhance changes the model-facing text while the visible chat keeps your original message.
+[Read the complete workflow and editable diagrams](docs/prompt-workflow.md). The diagram shows the stable workflow; the additional [AI Test research loop](docs/context-levels.md#ai-test-experimental-follow-up-research) is documented separately. The rewriting model produces the task prompt; Copilot receives that prompt and does the work.
 
-The English-language React panel retains model chains and fallback, prompt styles, reusable rules and structures, attachments, context preview, and history. Rewritten instructions and headings are in English; your original text, custom rules, code, paths and quotations remain intact. Choose **GitHub Copilot** in Models to rewrite through your Copilot account in the background. External APIs, local models and subscription CLIs remain available as explicit alternatives.
+The English-language React panel retains model chains and fallback, prompt styles, reusable rules and structures, attachments, context preview, and history. Rewritten instructions and headings are in English; your original text, custom rules, code, paths and quotations remain intact. Choose a model from the live Copilot catalog to rewrite through your Copilot account in the background. Claude, GPT and other available model families all use this Copilot route. Direct APIs, local servers and separate subscription CLIs are no longer supported.
 
 [User guide](docs/user-guide.md) · [Changes](CHANGELOG.md)
 
 ## Download and install
 
-**Development preview, version 0.6.1.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
+**Development preview, version 0.7.0.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
 
 ### Requirements
 
 - [GitHub Copilot desktop](https://github.com/features/copilot) with canvas extension support, signed in to your account. This port targets the experimental SDK bundled with the Windows app on November 14, 2026.
-- Node.js **22.18 or newer** on `PATH`; the packaged chat hook starts `node`.
 - Copilot CLI available as `copilot` for the command-line installation below. If the command is missing, follow [GitHub's CLI setup instructions](https://docs.github.com/en/copilot/how-tos/copilot-cli/cli-getting-started).
-- One rewrite model configured after installation. The **GitHub Copilot** preset reuses the desktop's SDK and running Copilot executable: no npm install, separate SDK/runtime download, or API key. The helper must resolve the same existing GitHub account as the attached session; desktop-only credentials that are not available to the helper will produce an unavailable message. External providers retain their own authentication and billing.
-
-Windows supports encrypted saved API keys through DPAPI. On other systems, use a key available in the extension's environment or a subscription CLI; saved keys are unavailable. Desktop environments may omit shell environment variables. Other platforms have not been verified.
+- One Copilot rewrite model configured after installation. The helper reuses the desktop's SDK and running Copilot executable: no npm install, separate SDK/runtime download, or API key. It must resolve the same existing GitHub account as the attached session; desktop-only credentials that are not available to the helper will produce an unavailable message. Windows is the verified platform.
 
 ### Install from GitHub (recommended)
 
@@ -72,7 +69,7 @@ copilot plugin marketplace add AndrewGodlewsky/copilot-enhance-prompt
 copilot plugin install enhance-prompt@copilot-enhance-prompt
 ```
 
-Run each command only after the preceding command succeeds. For a live local install, uninstall disables the plugin; it does not delete the source folder. The plugin stores preferences, models, encrypted keys, and history separately from its installation. Restart Copilot after switching and reopen the installed canvas so the desktop reloads its plugin inventory. Future updates come from GitHub through `copilot plugin update enhance-prompt@copilot-enhance-prompt`.
+Run each command only after the preceding command succeeds. For a live local install, uninstall disables the plugin; it does not delete the source folder. The plugin stores preferences, models, rules and history separately from its installation. Restart Copilot after switching and reopen the installed canvas so the desktop reloads its plugin inventory. Future updates come from GitHub through `copilot plugin update enhance-prompt@copilot-enhance-prompt`.
 
 ### Open the canvas
 
@@ -90,14 +87,14 @@ Choose **Relevant code** for most coding tasks: it adds local source matches wit
 
 The Quiet Desk banner changes its still scene with local time and the current enhancement state. Use the single button at its top right to toggle light/dark mode; your choice is remembered across sessions. The footer links to this repository, Settings, Show Logs and Feedback, with the version in plain gray text. Release notes appear once after an update. See the [user guide](docs/user-guide.md) for the scene's triggers and support logs.
 
-1. In **Models**, click **Add a model**, keep the **GitHub Copilot** preset, choose a model from the live list, and save. Existing profiles are preserved; select the new Copilot profile explicitly in Enhance if another profile was already first. Claude models in this preset use GitHub Copilot, not Claude Code. The separate Claude Code preset still uses Claude Code's authentication and billing.
+1. In **Models**, click **Add a model**, choose a model from the live Copilot list, and save. Existing Copilot profiles are preserved. Upgrade removes retired external profiles; choose a replacement explicitly if an effort assignment referred to one. Claude models in the catalog use GitHub Copilot authentication and billing.
 2. In **Enhance → Write a request**, describe the task and choose **Context Level**, **Style**, and **Effort**. Assign Low, Medium, and High to models in **Settings → Effort models**; all three initially use your current model. **Options** opens structures and the context preview. Uncheck items to exclude them; use **Attach files** for explicit attachments.
 3. Click **Enhance**. The request locks while a small blue stick-figure crew rearranges a decorative copy of its words. Progress reports the real context and model steps; model progress is estimated and Cancel stops the run. At 95%, the figures lower their words where they are standing, release them, then run offscreen. The words stay still until the prompt succeeds, then slide downward together before your original request becomes editable again. A fast result that skips 95% still plays the set-down and exit first. **Pause animation** pauses only the artwork; the crew still puts its words down and leaves at 95% or completion. Reduced-motion preferences skip the artwork.
 4. In **Review and send**, edit the enhanced prompt. **Send to Copilot** submits a new message to the attached session shown in **Send to**. **Copy** keeps the handoff manual. The download icon saves a file; the up-arrow uses the result as a new input for refinement.
 
 In the request box, **Enter** adds a line. Enter and modified Enter keys never start enhancement or send a prompt: use **Enhance**. In the result box, **Ctrl+Enter** (or **⌘+Enter**) sends your edited text. If you explicitly enable **Send right after enhancing**, the separate **Enhance and send** button can skip review; **Enhance** still stops at the result. Navigation has visible labels, controls have keyboard focus indicators, and segmented choices support arrow keys.
 
-**Effort** chooses the rewriting model, independently of context and style. It does not change a model's internal reasoning setting or the separate chat auto-enhance model. The assigned model appears beneath the controls, and results identify the model actually used, including fallback. [Effort assignments and migration](docs/settings.md#effort-models).
+**Effort** chooses the rewriting model, independently of context and style. It does not change a model's internal reasoning setting. The assigned model appears beneath the controls, and results identify the model actually used, including fallback. [Effort assignments and migration](docs/settings.md#effort-models).
 
 Send refuses busy, blocked, queued, disconnected or unknown sessions. It never answers a pending permission request. Copilot's SDK has no atomic “send only if still idle” operation: the plugin checks immediately before sending and uses the normal queue, never immediate steering. If work starts between those operations, the message waits in the queue.
 
@@ -109,9 +106,9 @@ Send refuses busy, blocked, queued, disconnected or unknown sessions. It never a
 
 Enhance starts a disposable, hidden helper using the SDK and executable supplied by the running desktop host. It sends only the prepared rewrite instructions, permitted context and explicit attachments. It does not open a chat window, copy the attached chat history, change its model, or send the result into that session until you use Send.
 
-Before inference, the plugin checks both sessions' GitHub identity and Copilot model availability. The helper has an empty working directory, no tools, denied permissions, and disabled plugins, hooks, skills, automatic instruction discovery, shared session storage and memory. Cancellation stops the helper; normal completion removes its temporary home. A crash or failed shutdown can leave temporary files for OS cleanup. Copilot profiles never fall back to an external provider, including at AI-assisted context's AI file-selection step.
+Before inference, the plugin checks both sessions' GitHub identity and Copilot model availability. The helper has an empty working directory, no tools, denied permissions, and disabled plugins, hooks, skills, automatic instruction discovery, shared session storage and memory. Cancellation stops the helper; normal completion removes its temporary home. A crash or failed shutdown can leave temporary files for OS cleanup. Rewriting, fallback, AI-assisted selection and AI Test research all use Copilot models.
 
-Copilot usage is billed under the account's Copilot plan; AI-assisted context can make an additional model request; AI Test can make up to two, using the selected effort model. The two-second chat auto-enhance hook still supports Rules or API models only. The desktop owns SDK/runtime updates. This experimental integration checks required APIs and runtime state and refuses incompatible setups; future desktop changes may still require a plugin update. See [security and compatibility details](docs/copilot-background-rewriting.md).
+Copilot usage is billed under the account's Copilot plan; AI-assisted context can make an additional model request; AI Test can make up to two, using the selected effort model. The desktop owns SDK/runtime updates. This experimental integration checks required APIs and runtime state and refuses incompatible setups; future desktop changes may still require a plugin update. See [security and compatibility details](docs/copilot-background-rewriting.md).
 
 **Usage Insights visibility:** Enhance Prompt 0.2.4 keeps local accounting records; [Usage Insights](https://github.com/AndrewGodlewsky/copilot-usage-insights) 0.1.64 discovers them automatically. Update **both plugins**, restart Copilot, run an enhancement with a GitHub Copilot model, then refresh Usage Insights. Look for the **Enhanced Prompt** project and its separate timestamped sessions. AI-assisted file selection, AI Test research rounds, model tests and fallback attempts can each create another session. This is a dashboard grouping; no desktop project or chat window is created.
 
@@ -124,21 +121,21 @@ Building another plugin that needs background Copilot models? Use the [agent han
 | Prompt editor, rewrite models, fallback, rules, history, attachments | Retained in the canvas |
 | Destination picker | The canvas's attached Copilot session |
 | Optional Enter after paste | Replaced by explicit Send as a new chat message |
-| Automatic prompt rewriting | Optional transformed-prompt hook; changes model-facing text while the chat shows the original; off by default |
+| Prompts typed directly in chat | Unchanged by the plugin; [chat auto-enhance was retired](docs/chat-auto-enhance-retirement.md) |
 | Terminal scrollback and other-agent context | Unavailable with the current adapter |
-| New external CLI agent, editor-save events, opening editor tabs | Unavailable with the current canvas SDK |
-| Desktop notifications | Unavailable; progress and completion appear in the panel |
+| Editor-save events and opening editor tabs | Unavailable with the current canvas SDK |
+| Progress and completion | Shown in the panel |
 | Save dialog | Browser download |
 
 Unavailable settings are disabled and explained. Switching the visible desktop tab does not retarget an existing canvas. Open the canvas in the intended session.
 
 ## Data and privacy
 
-The worker reads the project directory from Copilot session metadata, never from its session-artifact directory. Remote workspaces expose no local project files. Project reads obey privacy switches and reject sensitive filenames and escaping symlinks. Recognized secrets in automatically collected project instructions, README/extra context, stack information, source excerpts and Git metadata/diffs are masked before trimming. Explicit attachments, your request and custom instructions are not automatically secret-masked. Preview and exclude context before enhancing. External-provider fallback can send the payload to multiple configured providers. Copilot selection confines both fallback and AI-assisted context's file selector to Copilot profiles. [Exact data flow](docs/prompt-workflow.md).
+The worker reads the project directory from Copilot session metadata, never from its session-artifact directory. Remote workspaces expose no local project files. Project reads obey privacy switches and reject sensitive filenames and escaping symlinks. Recognized secrets in automatically collected project instructions, README/extra context, stack information, source excerpts and Git metadata/diffs are masked before trimming. Explicit attachments, your request and custom instructions are not automatically secret-masked. Preview and exclude context before enhancing. Fallback and AI-assisted file selection may make additional Copilot requests. AI Test can add up to two research requests. [Exact data flow](docs/prompt-workflow.md).
 
-Preferences, profiles, rules and history are local. Saved prompt history is not encrypted; drafts and results are scoped to the Copilot session. Windows API keys use DPAPI under the current Windows account; they are never saved as plain text. The default data directory is `%LOCALAPPDATA%/copilot-enhance-prompt` on Windows and `~/.local/share/copilot-enhance-prompt` elsewhere. `ENHANCE_PROMPT_DATA_DIR` overrides it for tests or a separate installation.
+Preferences, profiles, rules and history are local. Saved prompt history is not encrypted; drafts and results are scoped to the Copilot session. Upgrade removes legacy encrypted API-key entries while preserving unrelated local data. The default data directory is `%LOCALAPPDATA%/copilot-enhance-prompt` on Windows and `~/.local/share/copilot-enhance-prompt` elsewhere. `ENHANCE_PROMPT_DATA_DIR` overrides it for tests or a separate installation.
 
-The canvas uses an authenticated loopback server with origin and path checks. It exposes no agent-callable send, credential or consent action. There is no tracking or analytics. [Privacy details](docs/privacy.md).
+The canvas uses an authenticated loopback server with origin and path checks. It exposes no agent-callable send or consent action. There is no tracking or analytics. [Privacy details](docs/privacy.md).
 
 ## Development
 
@@ -148,21 +145,21 @@ Install dependencies and rebuild the packaged extension and panel after changing
 npm ci
 npm --prefix web ci
 npm run typecheck
-npm test
 npm run build
+npm test
 npm run check
 npm run web:dev
 ```
 
 The development panel runs at `http://localhost:5174` with sample data, without model calls or real sends. Use `?theme=dark&width=380`, `?tab=models`, or `?demo=fix+the+login+page` to preview states.
 
-`scripts/e2e.mjs` loads the built package in an isolated installed Copilot runtime and exercises canvas discovery, project metadata, context preview, enhancement, sending and the packaged prompt hook. Its disposable session uses a local model fixture; no external model is called. Set `COPILOT_SDK_DIR` and `COPILOT_CLI_PATH` to the desktop SDK directory and runtime executable. See [AGENTS.md](AGENTS.md) for the architecture and behavioral invariants.
+`scripts/e2e.mjs` loads the built package in an isolated installed Copilot runtime and exercises canvas discovery, project metadata, context preview, rejected legacy-provider requests and sending. Its disposable session uses a local fixture; no account-backed model is called. Set `COPILOT_SDK_DIR` and `COPILOT_CLI_PATH` to the desktop SDK directory and runtime executable. See [AGENTS.md](AGENTS.md) for the architecture and behavioral invariants.
 
 `node scripts/e2e-runtime-identity.mjs` uses those same paths to check both the desktop's embedded bootstrap and the SDK's absolute-path bootstrap. It verifies SDK loading and repeated model-list refreshes against a synthetic catalog, without accessing an account or existing session. It also checks that the embedded bootstrap ignores a same-named file in the working directory.
 
 `node scripts/e2e-model-access.mjs` compares the native workflow and headless SDK against a local fixture. `node scripts/e2e-copilot-provider.mjs` exercises the production helper's output, model selection, tool/context isolation, cancellation and temporary-state cleanup with the installed SDK. Both use the same environment variables. Account/catalog identity is synthetic in the production-helper fixture, and inference never reaches a paid provider. Read-only authentication discovery has also been checked in a disposable extension, but an actual account-backed rewrite and desktop behavior require user validation. See the [model-access validation findings](docs/research/copilot-model-access-validation.md).
 
-The current port has passed unit tests, type checks, package checks and that installed-runtime integration test. Desktop visual verification remains unfinished; the preview is not a published stable release.
+Run the checks above for each release. Installed-runtime fixture tests use synthetic account/catalog data; real account-backed rewriting and desktop appearance require separate owner validation. The preview is not a published stable release.
 
 ## License and attribution
 

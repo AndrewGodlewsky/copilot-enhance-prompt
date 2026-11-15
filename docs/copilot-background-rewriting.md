@@ -1,6 +1,6 @@
 # Background rewriting through GitHub Copilot
 
-Version 0.2.0 adds the GitHub Copilot preset. It imports the desktop-supplied `@github/copilot-sdk` and launches the same executable that is already running the extension. Users install the normal plugin package; they do not run npm, install an SDK, or download a second runtime. The SDK is external to our bundle and is loaded only when this provider is used.
+All model work uses GitHub Copilot. The integration imports the desktop-supplied `@github/copilot-sdk` and launches the same executable that is already running the extension. Users install the normal plugin package; they do not run npm, install an SDK, or download a second runtime. The SDK is external to our bundle and is loaded when model access is needed.
 
 ## Data and account flow
 
@@ -19,7 +19,7 @@ sequenceDiagram
     Worker->>Host: Read account and current Copilot catalog
     Worker->>Helper: Check same account, eligible model, empty tools, isolated directory
     alt Checks fail or user cancels
-        Worker->>Worker: Record failure; no external-provider fallback
+        Worker->>Worker: Record failure; no model request
     else Checks pass
         Worker->>Helper: Prepared prompt and explicit attachment bytes
         Helper->>API: Rewrite using existing Copilot authentication
@@ -37,7 +37,7 @@ sequenceDiagram
     end
 ```
 
-The background session does not inherit the chat history or discover the project. The plugin's existing context pipeline controls what it receives. With AI-assisted context, a separate helper request can select files from the allowed candidate list; this stays on the Copilot route even when an older external selector profile is saved. Fallback can try other saved Copilot profiles, but cannot cross to an external API or subscription CLI. External runs likewise do not automatically fall back into Copilot.
+The background session does not inherit the chat history or discover the project. The plugin's existing context pipeline controls what it receives. With AI-assisted context, a separate helper request can select files from the allowed candidate list. Fallback can try other saved Copilot profiles. Retired external profiles are removed from active configuration; all rewriting, selection and research use Copilot.
 
 Models come from the attached session's live catalog, filtered to entries explicitly attributed to Copilot and allowed by their published policy. Before sending, the plugin verifies the selected entry in both catalogs, matching authenticated GitHub login and host, and the helper's actual model, directory and empty tool list. Account identifiers remain in memory; credentials are not requested from desktop storage or copied into profile settings. The SDK resolves existing authentication through its own supported mechanisms.
 
@@ -47,7 +47,7 @@ Validation on this machine found the same account via an existing GitHub CLI log
 
 Enhance Prompt **0.2.4** retains each helper's reported usage in a durable local source. **Usage Insights 0.1.64** automatically discovers it and groups the sessions in the **Enhanced Prompt** project. This label is a Usage Insights grouping, not a new project or chat in the desktop application. Each helper gets a unique session with a timestamped name. AI-assisted context's file selector, each fallback attempt and the Models tab's Test action are separate helpers, so one enhancement can produce multiple sessions.
 
-Update both plugins in Copilot's **Customize → Installed → Update**, restart the desktop and reopen their canvases. Run an enhancement with a GitHub Copilot model, then refresh Usage Insights and choose a date range containing the run. If you disabled its source in Usage Insights settings, enable it again. External API and subscription CLI profiles are not included in this Copilot ledger.
+Update both plugins in Copilot's **Customize → Installed → Update**, restart the desktop and reopen their canvases. Run an enhancement with a GitHub Copilot model, then refresh Usage Insights and choose a date range containing the run. If you disabled its source in Usage Insights settings, enable it again.
 
 The source lives at `%LOCALAPPDATA%/copilot-enhance-prompt/usage` on Windows, or `~/.local/share/copilot-enhance-prompt/usage` when `LOCALAPPDATA` is absent. `ENHANCE_PROMPT_DATA_DIR` overrides the plugin data directory; the source is its `usage` child. Usage Insights honors the same override. If the two extensions receive different environment values, add that usage folder as an extra Copilot home in Usage Insights settings.
 
@@ -59,7 +59,7 @@ Usage Insights reads these local records, not account-wide billing records from 
 
 ## AI Test research
 
-AI Test uses the same background request and usage-recording route as rewriting. It adds at most two research requests on the selected effort model, without research fallback. The model receives project evidence and returns structured read/search requests; the plugin validates and performs permitted reads before the next request. The helper itself still has no file or command tools. Each Copilot research call can create a separate usage session under Enhanced Prompt. See [the limits and failure behavior](context-levels.md#ai-test-experimental-follow-up-research). Chat auto-enhance does not use this loop.
+AI Test uses the same background request and usage-recording route as rewriting. It adds at most two research requests on the selected effort model, without research fallback. The model receives project evidence and returns structured read/search requests; the plugin validates and performs permitted reads before the next request. The helper itself still has no file or command tools. Each Copilot research call can create a separate usage session under Enhanced Prompt. See [the limits and failure behavior](context-levels.md#ai-test-experimental-follow-up-research).
 
 ## Security and lifecycle
 
@@ -90,4 +90,4 @@ Version 0.2.3 fixes a reproduced `runtime_identity` failure where `bootstrapPres
 
 Keep **Settings → Fetch model lists online** enabled for Copilot rewriting: each rewrite needs current account/model access checks. Turning it off blocks the Copilot route before a helper starts.
 
-Chat auto-enhance remains separate: its two-second hook uses Rules or explicitly configured API models. Manual Enhance and optional Enhance and send support the new Copilot provider.
+Use manual **Enhance** or the opt-in **Enhance and send** action. Prompts typed directly into Copilot chat are unchanged by this plugin; see the [chat auto-enhance retirement note](chat-auto-enhance-retirement.md).

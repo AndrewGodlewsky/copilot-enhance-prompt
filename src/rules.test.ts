@@ -1,19 +1,17 @@
 // Your own rules and prompt structures: stored once, used by every run and by auto-enhance.
 import { read, set } from '#panel'
-import { afterEach, assert, mockHost, mountWorker, test, type MockRequests } from '#testing'
+import { afterEach, assert, mountWorker, test, type MockRequests } from '#testing'
 import { addRule, addStructure, saveRules } from './panel/actions.ts'
 import { ruleDraft, ruleScope, structureDraft } from './panel/state.ts'
 import { mountPanel } from './panel/testing.ts'
 import { newRuleLabel, rulesConfig, rulesHere, ruleScopeLabel, structureOptions } from './panel/view.ts'
-import { PRESETS } from './presets.ts'
 import { buildSystemPrompt } from './prompts.ts'
 import { forgetTerminals } from './context/terminals.ts'
 import { parseRulesConfig, projectScope, ruleApplies, rulesFor, scopeName, structureById, type RulesConfig } from './rules.ts'
 import * as main from './worker.ts'
+import { mockModelHost as mockHost, setRewrite } from './model-testing.ts'
 
-const realFetch = globalThis.fetch
 afterEach(async () => {
-  globalThis.fetch = realFetch
   await forgetTerminals()
 })
 
@@ -66,40 +64,36 @@ test('the system prompt: a structure replaces the style shape, user data stays v
 
 function workerHost(workspace: string) {
   return mockHost({
-    storage: { models: { profiles: [{ id: 'gpt', name: 'gpt', preset: 'openai', provider: 'openai', baseUrl: '', model: '', maxTokens: 2000, enabled: true }] }, rules: stored },
-    secrets: { 'apiKey.gpt': 'k' },
-    settings: { autoEnhanceMode: 'ai' },
+    storage: { models: { profiles: [{ id: 'gpt', name: 'gpt', preset: 'copilot', provider: 'copilot', model: '', enabled: true }] }, rules: stored },
     results: { 'workspace.readContext': { branch: 'main', displayName: workspace, terminals: [] }, 'agents.list': { agents: [] } }
   })
 }
 
-test('a run uses the rules of the focused workspace and the picked structure; auto-enhance uses the rules', async () => {
+test('a run uses the rules of the focused workspace and the picked structure', async () => {
   const systems: string[] = []
-  globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
-    systems.push(JSON.parse(String(init?.body)).messages[0].content)
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }), { status: 200 })
-  }) as typeof fetch
+  setRewrite(async input => {
+    systems.push(input.system)
+    return 'ok'
+  })
   const worker = await mountWorker(main, { host: workerHost('web-app') })
   await worker.request('prompt.enhance', { prompt: 'add a page', level: 'off', structureId: 'mine' })
   assert.match(systems[0], /Use the design tokens in src\/theme\./)
   assert.match(systems[0], /1\. Mục tiêu/)
   assert.ok(!systems[0].includes('Disabled rule.'))
-  await worker.hooks.fire('agent.prompt.before', { agent: 'claude', terminalId: 't1', prompt: 'add a login page please', inputKind: 'launch' })
-  assert.match(systems[1], /Always run pnpm test\./)
   await worker.deactivate()
 
   const other = await mountWorker(main, { host: workerHost('api') })
   await other.request('prompt.enhance', { prompt: 'add a page', level: 'off' })
-  assert.ok(!systems[2].includes('design tokens'))
+  assert.ok(!systems[1].includes('design tokens'))
   await other.deactivate()
 })
 
 test('two projects whose workspaces are both "main": a run follows the rules of its own project only', async () => {
   const systems: string[] = []
-  globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
-    systems.push(JSON.parse(String(init?.body)).messages[0].content)
-    return new Response(JSON.stringify({ choices: [{ message: { content: 'ok' } }] }), { status: 200 })
-  }) as typeof fetch
+  setRewrite(async input => {
+    systems.push(input.system)
+    return 'ok'
+  })
   const rules = {
     rules: [
       { id: 'all', text: 'Rule for every project.', enabled: true, scope: '' },
@@ -113,9 +107,7 @@ test('two projects whose workspaces are both "main": a run follows the rules of 
   // As the real the host answers: the focus has a name and a branch only; the list names each worktree
   // "identity:…" with its project; an agent event names its workspace "<repository id>::<path>".
   const host = mockHost({
-    storage: { models: { profiles: [{ id: 'gpt', name: 'gpt', preset: 'openai', provider: 'openai', baseUrl: '', model: '', maxTokens: 2000, enabled: true }] }, rules },
-    secrets: { 'apiKey.gpt': 'k' },
-    settings: { autoEnhanceMode: 'ai' },
+    storage: { models: { profiles: [{ id: 'gpt', name: 'gpt', preset: 'copilot', provider: 'copilot', model: '', enabled: true }] }, rules },
     results: {
       'workspace.readContext': { branch: 'main', displayName: 'main', terminals: [{ id: 'term_a', title: 'Claude' }] },
       'workspace.list': {
@@ -139,13 +131,11 @@ test('two projects whose workspaces are both "main": a run follows the rules of 
   // The panel knows it (the folder the person picked): that project's rule.
   await worker.request('prompt.enhance', { prompt: 'add a page', level: 'off', workspaceId: 'identity:wt2:local:1111' })
   assert.deepEqual(followed(systems[1]), [EVERY, 'Rule of Shop.', OLD])
-  // the host says the agent's terminal is in the other one: its rule, in a run and in auto-enhance.
+  // the host says the agent's terminal is in the other one: its rule, in a run.
   await worker.emit('agent.status.changed', { workspaceId: 'repo-reup::C:\\work\\reup', paneKey: 'p', terminalId: 'term_a', state: 'done', receivedAt: Date.now() })
   assert.equal((await worker.request('targets.list', {})).project, 'Reup')
   await worker.request('prompt.enhance', { prompt: 'add a page', level: 'off' })
   assert.deepEqual(followed(systems[2]), [EVERY, 'Rule of Reup.', OLD])
-  await worker.hooks.fire('agent.prompt.before', { agent: 'claude', terminalId: 'term_a', prompt: 'add a login page please', inputKind: 'launch' })
-  assert.deepEqual(followed(systems[3]), [EVERY, 'Rule of Reup.', OLD])
   await worker.deactivate()
 })
 
@@ -153,9 +143,8 @@ let savedConfig: RulesConfig = { rules: [], structures: [] }
 /** What the worker says about the focused workspace: its name, and its project's (null: not known which project). */
 let focus: { workspace: string; project: string | null } = { workspace: 'main', project: 'Web' }
 const requests: MockRequests = {
-  'models.get': { profiles: [], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS },
+  'models.get': { profiles: [], selectorProfileId: null,  },
   'targets.list': () => ({ targets: [], workspace: focus.workspace, project: focus.project }),
-  'models.detect': { found: [] },
   'rules.get': () => savedConfig,
   // Slow on purpose: quick edits in a row must still all land.
   'rules.save': async ({ config }: { config: RulesConfig }) => {

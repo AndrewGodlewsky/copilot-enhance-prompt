@@ -1,5 +1,7 @@
 # English-only Enhance Prompt
 
+> Historical planning record. This captures the design and verification at that time; current behavior is documented in the [README](../../../README.md) and [Copilot-only plan](../plans/2026-11-15-copilot-only.md).
+
 Goal: remove localization and output-language selection throughout the plugin while preserving user data, Unicode input, structured errors, and all existing safety boundaries.
 
 Architecture: literal English UI text; a pure `formatText(template, params)` helper only for placeholders; structured messages rendered in English; one English output policy shared by every model rewrite. Retired stored keys are cleaned through existing transactions and stale request overrides are ignored.

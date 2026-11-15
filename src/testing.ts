@@ -10,8 +10,8 @@ export { test, afterEach, beforeEach, after, before } from 'node:test'
 export { default as assert } from 'node:assert/strict'
 // Fixtures deliberately accept incomplete and invalid values for trust-boundary tests.
 export type MockRequests = { [K in keyof PluginRequests]?: PluginRequests[K]['output'] | ((input: RequestInput<K>, options?: RequestOptions) => PluginRequests[K]['output'] | Promise<PluginRequests[K]['output']>) }
-export function mockHost(options: { settings?: Record<string, any>; storage?: Record<string, any>; secrets?: Record<string, string>; results?: Record<string, any>; requests?: MockRequests } = {}) {
-  const data = { settings: { ...DEFAULTS, ...options.settings }, storage: structuredClone(options.storage ?? {}), secrets: { ...options.secrets } }
+export function mockHost(options: { settings?: Record<string, any>; storage?: Record<string, any>; results?: Record<string, any>; requests?: MockRequests } = {}) {
+  const data = { settings: { ...DEFAULTS, ...options.settings }, storage: structuredClone(options.storage ?? {}) }
   const results = { ...options.results }
   const calls: { name: string; params: any }[] = []
   const notifications = new EventEmitter()
@@ -37,11 +37,6 @@ export function mockHost(options: { settings?: Record<string, any>; storage?: Re
   }
   const services = {
     settings, storage,
-    secrets: {
-      get: async (key: string) => data.secrets[key] ?? null,
-      set: async (key: string, value: string) => { if ('secrets.set' in results) await invoke('secrets.set', { key, value }); data.secrets[key] = value },
-      delete: async (key: string) => { delete data.secrets[key] }
-    },
     host: { has: (name: string) => name in results, call: invoke }
   }
   return { ...services, data: () => data, callsOf: (name: string) => calls.filter(call => call.name === name).map(call => call.params), respond: (name: string, value: any) => { results[name] = value }, invoke, track, requests: options.requests ?? {} }

@@ -23,11 +23,11 @@ export function Preferences() {
   const save = (key: string) => { void setSetting(key, values[key]) }
   return <>
   <Group title="Effort models" action={<Button size="sm" variant="ghost" onClick={() => set(tab, 'models')}>Manage models</Button>}>
-    <Row description="Effort chooses the model that rewrites your request. It does not change context, chat auto-enhance, or the model's internal reasoning setting. All three start with your current model; assign different models when you are ready." />
+    <Row description="Effort chooses the model that rewrites your request. It does not change context or the model's internal reasoning setting. All three start with your current model; assign different models when you are ready." />
     {EFFORTS.map(effort => <Row key={effort} title={`${EFFORT_LABELS[effort]} effort`}>
       <Pick label={`${EFFORT_LABELS[effort]} effort model`} value={read(effortModels)[effort]} options={effortModelOptions(effort)} onChange={value => void setSetting(EFFORT_SETTINGS[effort], value)} />
     </Row>)}
-    <Row description="Lists come from enabled profiles in Models. Auto follows their order. Your fallback settings still apply, within the same Copilot or external-provider route. Each result shows the model actually used." />
+    <Row description="Lists come from enabled profiles in Models. Auto follows their order. Your fallback settings still apply, across your Copilot models. Each result shows the model actually used." />
   </Group>
   <Group title={'Prompt preferences'}>
     <Row title={'Default style'}><Pick label={'Default style'} value={String(values.defaultStyle ?? 'balanced')} options={styleOptions()} onChange={value => void setSetting('defaultStyle', value)} /></Row>
@@ -38,9 +38,6 @@ export function Preferences() {
     <Row title={'Timeout per model (seconds)'}><Input type="number" min={5} max={300} aria-label={'Timeout per model (seconds)'} value={Number(values.timeoutSeconds ?? 60)} onChange={event => edit('timeoutSeconds', Number(event.target.value))} onBlur={() => save('timeoutSeconds')} /></Row>
     <Row title={'History limit'}><Input type="number" min={0} max={500} aria-label={'History limit'} value={Number(values.historyLimit ?? 50)} onChange={event => edit('historyLimit', Number(event.target.value))} onBlur={() => save('historyLimit')} /></Row>
     <Row title={'Adapt instructions to Copilot'} control={<Switch aria-label={'Adapt instructions to Copilot'} checked={values.adaptToAgent !== false} onCheckedChange={value => void setSetting('adaptToAgent', value)} />} />
-    <Row title={'Auto-enhance appended text'}><Textarea aria-label={'Auto-enhance appended text'} value={String(values.autoEnhanceAppend ?? '')} onChange={event => edit('autoEnhanceAppend', event.target.value)} onBlur={() => save('autoEnhanceAppend')} /></Row>
-    <Row title={'Auto-enhance minimum characters'}><Input type="number" min={1} max={10000} aria-label={'Auto-enhance minimum characters'} value={Number(values.autoEnhanceMinLength ?? 8)} onChange={event => edit('autoEnhanceMinLength', Number(event.target.value))} onBlur={() => save('autoEnhanceMinLength')} /></Row>
-    <Row title={'Include context in auto-enhance'} control={<Switch aria-label={'Include context in auto-enhance'} checked={values.autoEnhanceContext !== false} onCheckedChange={value => void setSetting('autoEnhanceContext', value)} />} />
   </Group>
   </>
 }

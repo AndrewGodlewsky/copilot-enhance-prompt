@@ -11,10 +11,8 @@ export const PRIVACY_KEYS = [
   'allowAgentActivity',
   'allowEditorSaves',
   'allowTerminalSend',
-  'allowAgentLaunch',
   'allowOpenFiles',
   'saveHistory',
-  'allowEnvKeys',
   'allowOnlineModelLists'
 ] as const
 export type PrivacyKey = (typeof PRIVACY_KEYS)[number]
@@ -24,14 +22,14 @@ export type Privacy = Record<PrivacyKey, boolean>
  * Switches that start off: they came after 2.4.5, and turning them on by themselves would read or do
  * more than people agreed to.
  */
-export const OFF_BY_DEFAULT: ReadonlySet<PrivacyKey> = new Set<PrivacyKey>(['allowOtherAgents', 'allowAgentActivity', 'allowEditorSaves', 'allowAgentLaunch'])
+export const OFF_BY_DEFAULT: ReadonlySet<PrivacyKey> = new Set<PrivacyKey>(['allowOtherAgents', 'allowAgentActivity', 'allowEditorSaves'])
 
 /**
  * Switches that also need the person's confirmation in the panel, after reading what they allow:
- * they send other sessions' output or every agent action to the model, or start programs. Turned on
+ * they send other sessions' output or every agent action to the model. Turned on
  * in the host's Settings alone, they stay off until confirmed.
  */
-export const NEEDS_CONSENT: ReadonlySet<PrivacyKey> = new Set<PrivacyKey>(['allowOtherAgents', 'allowAgentActivity', 'allowAgentLaunch'])
+export const NEEDS_CONSENT: ReadonlySet<PrivacyKey> = new Set<PrivacyKey>(['allowOtherAgents', 'allowAgentActivity'])
 
 /** Where the worker keeps the confirmations: `{ [key]: true }`. */
 export const CONSENTS_KEY = 'consents'

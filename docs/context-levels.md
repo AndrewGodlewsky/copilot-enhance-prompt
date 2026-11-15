@@ -73,9 +73,9 @@ AI-assisted and all saved defaults keep their existing behavior. The experiment 
 
 Research uses the effort's model, not the AI-assisted file-picker setting. There is no
 research-model fallback, and at most two additional model requests. Final rewriting retains
-its existing fallback setting and provider boundary. Copilot requests use the existing
+its existing fallback setting within Copilot. Requests use the existing
 background helper and usage recording; research sessions are grouped under **Enhanced Prompt**
-in Usage Insights, just like rewriting. No chat window opens. Paid-provider research adds usage.
+in Usage Insights, just like rewriting. No chat window opens. Research adds Copilot usage.
 
 | Limit | Behavior |
 | --- | --- |
@@ -110,13 +110,11 @@ attachments. Attachments are supplied to the final rewrite, not to the research 
 Compare the resulting prompt with Relevant code or AI-assisted before deciding whether the
 additional context justifies the extra time and usage.
 
-## Copilot availability and chat auto-enhance
+## Copilot availability
 
 Terminal output, other agents' sessions, editor-save events and agent activity are
 unavailable in the installed canvas SDK and contribute no context. Remote sessions
 provide no local project files; the extension never substitutes its own directory.
 
-Chat auto-enhance uses its separate **Include context in auto-enhance** switch, not this
-menu. It can include project identity, instructions, README/extra files and stack details,
-subject to privacy and exclusions. It does not perform source selection or include the
-file tree or Git changes. Its cached context must match the current file preferences.
+Prompts typed directly into Copilot chat are unchanged by this plugin. These context
+choices apply to canvas enhancement.

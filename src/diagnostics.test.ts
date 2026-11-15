@@ -45,7 +45,7 @@ test('worker report captures real failures, returned errors and durations withou
   try {
     await assert.rejects(worker.request('prompt.send', { terminalId: secret, text: secret }))
     await worker.request('models.test', { id: secret })
-    await worker.request('models.catalog', { preset: 'custom', apiKey: secret })
+    await worker.request('models.catalog', { preset: 'copilot', profileId: secret })
     await worker.request('prompt.copy', { text: secret })
     await worker.request('history.restore', { id: secret })
     await worker.request('targets.list', {})

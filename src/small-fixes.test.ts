@@ -1,20 +1,13 @@
-// Small fixes: non-JSON answers, `claude --help` memo, unticked context not read, git hardening, presets.
+// Privacy, Git hardening and supported preset regressions.
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { after } from 'node:test'
-import { afterEach, assert, mockHost, mountWorker, test } from '#testing'
-import { claudeCatalog } from './catalog.ts'
+import { assert, mockHost, mountWorker, test } from '#testing'
 import { gitStatus } from './context/git.ts'
-import { complete, LlmError } from './llm.ts'
-import { presetById } from './presets.ts'
 import * as main from './worker.ts'
 
-const realFetch = globalThis.fetch
-afterEach(() => {
-  globalThis.fetch = realFetch
-})
 const dirs: string[] = []
 const tempDir = (name: string) => {
   const dir = mkdtempSync(join(tmpdir(), name))
@@ -31,61 +24,6 @@ after(() => {
   }
 })
 
-const config = { provider: 'openai' as const, baseUrl: 'https://api.example.com/v1', model: 'm', apiKey: 'k', maxTokens: 100 }
-
-test('a 200 answer that is an HTML page or empty is a clear, transient error', async () => {
-  globalThis.fetch = (async () => new Response('<html><body><h1>Sign in to the Wi-Fi</h1></body></html>', { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } })) as typeof fetch
-  const html = await complete(config, 's', 'u').catch((error: unknown) => error)
-  assert.ok(html instanceof LlmError)
-  assert.equal(html.code, 'unavailable')
-  assert.match(html.message, /did not answer with JSON \(text\/html: "Sign in to the Wi-Fi"\)/)
-  assert.ok(!/Unexpected token/.test(html.message))
-
-  globalThis.fetch = (async () => new Response('', { status: 200 })) as typeof fetch
-  const empty = await complete(config, 's', 'u').catch((error: unknown) => error)
-  assert.ok(empty instanceof LlmError)
-  assert.match(empty.message, /an empty answer/)
-})
-
-test('with fallback on transient errors only, an HTML answer moves on to the next model', async () => {
-  globalThis.fetch = (async (url: RequestInfo | URL) =>
-    String(url).includes('groq')
-      ? new Response(JSON.stringify({ choices: [{ message: { content: 'from groq' } }] }), { status: 200 })
-      : new Response('<html>portal</html>', { status: 200, headers: { 'content-type': 'text/html' } })) as typeof fetch
-  const profile = (id: string, baseUrl: string) => ({ id, name: id, preset: 'openai', provider: 'openai', baseUrl, model: 'm', maxTokens: 100, enabled: true })
-  const worker = await mountWorker(main, {
-    host: mockHost({
-      storage: { models: { profiles: [profile('portal', 'https://api.openai.com/v1'), profile('groq', 'https://api.groq.com/openai/v1')] } },
-      secrets: { 'apiKey.portal': 'k', 'apiKey.groq': 'k' },
-      settings: { fallbackOn: 'transient' }
-    })
-  })
-  const answer = await worker.request('prompt.enhance', { prompt: 'fix it', level: 'off' })
-  assert.equal(answer.enhanced, 'from groq')
-  assert.match(answer.attempts[0].error ?? '', /did not answer with JSON/)
-  await worker.deactivate()
-})
-
-test('`claude --help` that fails once is asked again next time', async () => {
-  const dir = tempDir('fake-claude-')
-  const script = join(dir, 'help.mjs').replace(/\\/g, '/')
-  const flag = join(dir, 'ran-once').replace(/\\/g, '/')
-  writeFileSync(
-    script,
-    `import { existsSync, writeFileSync } from 'node:fs'
-if (!existsSync(${JSON.stringify(flag)})) { writeFileSync(${JSON.stringify(flag)}, '1'); process.exit(1) }
-process.stdout.write("Options:\\n  --model <model>  Model for the session. Provide an alias such as 'zetamodel' or 'sonnet'.\\n")
-`
-  )
-  const command = join(dir, process.platform === 'win32' ? 'claude.cmd' : 'claude')
-  writeFileSync(command, process.platform === 'win32' ? `@"${process.execPath}" "${script}" %*\r\n` : `#!/bin/sh\n"${process.execPath}" "${script}" "$@"\n`, { mode: 0o755 })
-  const first = await claudeCatalog(command, false)
-  assert.ok(!first.models.some((model) => model.id === 'zetamodel'))
-  assert.ok(!first.source.includes('claude --help'))
-  const second = await claudeCatalog(command, false)
-  assert.ok(second.models.some((model) => model.id === 'zetamodel'), second.models.map((model) => model.id).join(','))
-  assert.match(second.source, /claude --help/)
-})
 
 test('an unticked terminal output is not read at all', async () => {
   const host = mockHost({
@@ -117,21 +55,4 @@ test("git reads never run a repository's fsmonitor program", async () => {
   const status = await gitStatus(root)
   assert.ok(status)
   assert.ok(!existsSync(marker), 'the fsmonitor program ran')
-})
-
-test('an unknown preset id falls back to Custom', () => {
-  assert.equal(presetById('no-such-preset').id, 'custom')
-  assert.equal(presetById('openai').id, 'openai')
-})
-
-test('a refusal from a Claude model is a clear error naming the model and the category', async () => {
-  const { complete } = await import('./llm.ts')
-  const realFetch = globalThis.fetch
-  globalThis.fetch = (async () => new Response(JSON.stringify({ content: [], stop_reason: 'refusal', stop_details: { category: 'cyber' } }), { status: 200, headers: { 'content-type': 'application/json' } })) as typeof fetch
-  try {
-    const config = { provider: 'anthropic' as const, baseUrl: 'https://api.anthropic.com', apiKey: 'k', model: 'claude-fable-5-2', maxTokens: 100 }
-    await assert.rejects(complete(config, 'system', 'user'), /claude-fable-5-2 declined this request \(cyber\)/)
-  } finally {
-    globalThis.fetch = realFetch
-  }
 })

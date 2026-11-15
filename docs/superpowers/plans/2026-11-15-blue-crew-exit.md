@@ -1,5 +1,7 @@
 # Blue crew and 95% exit implementation plan
 
+> Historical planning record. This captures the design and verification at that time; current behavior is documented in the [README](../../../README.md) and [Copilot-only plan](../plans/2026-11-15-copilot-only.md).
+
 > Execute inline with superpowers:executing-plans. The owner approved the preview and requested implementation; no further design approval is needed.
 
 **Goal:** Ship the approved 2.2px blue figures and lower/release/exit at 95%, with the sweep gated on a successful result.

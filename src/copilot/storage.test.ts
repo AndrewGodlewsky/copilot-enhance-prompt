@@ -55,7 +55,7 @@ test('legacy language cleanup preserves unrelated preferences, credentials and u
     const kept: Record<string, JsonValue> = {
       history: [{ original: '你好', enhanced: '旧内容', id: 'h1' }],
       rules: { rules: [{ id: 'r1', text: 'Write in Vietnamese.', enabled: true }], structures: [{ id: 'custom', name: '我的结构', sections: ['目标'] }] },
-      models: { profiles: [{ id: 'saved', model: 'my-model' }] },
+      models: { profiles: [{ id: 'saved', name: 'Saved', preset: 'copilot', provider: 'copilot', model: 'my-model', enabled: true }], selectorProfileId: null },
       colorTheme: 'light',
       'usage-ledger': { credits: 2 },
       [`${scope('first')}draft`]: '旧草稿 🧪',

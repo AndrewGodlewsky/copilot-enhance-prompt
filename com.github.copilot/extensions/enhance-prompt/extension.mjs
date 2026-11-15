@@ -523,8 +523,8 @@ var require_graceful_fs = __commonJS({
       fs2.createReadStream = createReadStream2;
       fs2.createWriteStream = createWriteStream;
       var fs$readFile = fs2.readFile;
-      fs2.readFile = readFile7;
-      function readFile7(path, options, cb) {
+      fs2.readFile = readFile5;
+      function readFile5(path, options, cb) {
         if (typeof options === "function")
           cb = options, options = null;
         return go$readFile(path, options, cb);
@@ -700,7 +700,7 @@ var require_graceful_fs = __commonJS({
       }
       function ReadStream$open() {
         var that = this;
-        open2(that.path, that.flags, that.mode, function(err, fd) {
+        open(that.path, that.flags, that.mode, function(err, fd) {
           if (err) {
             if (that.autoClose)
               that.destroy();
@@ -720,7 +720,7 @@ var require_graceful_fs = __commonJS({
       }
       function WriteStream$open() {
         var that = this;
-        open2(that.path, that.flags, that.mode, function(err, fd) {
+        open(that.path, that.flags, that.mode, function(err, fd) {
           if (err) {
             that.destroy();
             that.emit("error", err);
@@ -737,8 +737,8 @@ var require_graceful_fs = __commonJS({
         return new fs2.WriteStream(path, options);
       }
       var fs$open = fs2.open;
-      fs2.open = open2;
-      function open2(path, flags, mode, cb) {
+      fs2.open = open;
+      function open(path, flags, mode, cb) {
         if (typeof mode === "function")
           cb = mode, mode = null;
         return go$open(path, flags, mode, cb);
@@ -1236,11 +1236,11 @@ var require_mtime_precision = __commonJS({
     function probe(file, fs, callback) {
       const cachedPrecision = fs[cacheSymbol];
       if (cachedPrecision) {
-        return fs.stat(file, (err, stat4) => {
+        return fs.stat(file, (err, stat3) => {
           if (err) {
             return callback(err);
           }
-          callback(null, stat4.mtime, cachedPrecision);
+          callback(null, stat3.mtime, cachedPrecision);
         });
       }
       const mtime = new Date(Math.ceil(Date.now() / 1e3) * 1e3 + 5);
@@ -1248,13 +1248,13 @@ var require_mtime_precision = __commonJS({
         if (err) {
           return callback(err);
         }
-        fs.stat(file, (err2, stat4) => {
+        fs.stat(file, (err2, stat3) => {
           if (err2) {
             return callback(err2);
           }
-          const precision = stat4.mtime.getTime() % 1e3 === 0 ? "s" : "ms";
+          const precision = stat3.mtime.getTime() % 1e3 === 0 ? "s" : "ms";
           Object.defineProperty(fs, cacheSymbol, { value: precision });
-          callback(null, stat4.mtime, precision);
+          callback(null, stat3.mtime, precision);
         });
       });
     }
@@ -1308,14 +1308,14 @@ var require_lockfile = __commonJS({
         if (options.stale <= 0) {
           return callback(Object.assign(new Error("Lock file is already being held"), { code: "ELOCKED", file }));
         }
-        options.fs.stat(lockfilePath, (err2, stat4) => {
+        options.fs.stat(lockfilePath, (err2, stat3) => {
           if (err2) {
             if (err2.code === "ENOENT") {
               return acquireLock(file, { ...options, stale: 0 }, callback);
             }
             return callback(err2);
           }
-          if (!isLockStale(stat4, options)) {
+          if (!isLockStale(stat3, options)) {
             return callback(Object.assign(new Error("Lock file is already being held"), { code: "ELOCKED", file }));
           }
           removeLock(file, options, (err3) => {
@@ -1327,8 +1327,8 @@ var require_lockfile = __commonJS({
         });
       });
     }
-    function isLockStale(stat4, options) {
-      return stat4.mtime.getTime() < Date.now() - options.stale;
+    function isLockStale(stat3, options) {
+      return stat3.mtime.getTime() < Date.now() - options.stale;
     }
     function removeLock(file, options, callback) {
       options.fs.rmdir(getLockFile(file, options), (err) => {
@@ -1346,7 +1346,7 @@ var require_lockfile = __commonJS({
       lock2.updateDelay = lock2.updateDelay || options.update;
       lock2.updateTimeout = setTimeout(() => {
         lock2.updateTimeout = null;
-        options.fs.stat(lock2.lockfilePath, (err, stat4) => {
+        options.fs.stat(lock2.lockfilePath, (err, stat3) => {
           const isOverThreshold = lock2.lastUpdate + options.stale < Date.now();
           if (err) {
             if (err.code === "ENOENT" || isOverThreshold) {
@@ -1355,7 +1355,7 @@ var require_lockfile = __commonJS({
             lock2.updateDelay = 1e3;
             return updateLock(file, options);
           }
-          const isMtimeOurs = lock2.mtime.getTime() === stat4.mtime.getTime();
+          const isMtimeOurs = lock2.mtime.getTime() === stat3.mtime.getTime();
           if (!isMtimeOurs) {
             return setLockAsCompromised(
               file,
@@ -1480,11 +1480,11 @@ var require_lockfile = __commonJS({
         if (err) {
           return callback(err);
         }
-        options.fs.stat(getLockFile(file2, options), (err2, stat4) => {
+        options.fs.stat(getLockFile(file2, options), (err2, stat3) => {
           if (err2) {
             return err2.code === "ENOENT" ? callback(null, false) : callback(err2);
           }
-          return callback(null, !isLockStale(stat4, options));
+          return callback(null, !isLockStale(stat3, options));
         });
       });
     }
@@ -1611,861 +1611,8 @@ var require_proper_lockfile = __commonJS({
 // src/copilot/extension.ts
 import { fileURLToPath } from "node:url";
 
-// src/catalog.ts
-import { open, readFile as readFile2, stat } from "node:fs/promises";
-import { homedir as homedir2 } from "node:os";
-import { join as join2 } from "node:path";
-
-// src/cli.ts
-import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { homedir, tmpdir } from "node:os";
-import { delimiter, join } from "node:path";
-
-// src/format.ts
-function formatText(template, params = {}) {
-  return template.replace(/\{(\w+)\}/g, (match, key) => Object.hasOwn(params, key) ? String(params[key]) : match);
-}
-
-// src/messages.ts
-var MESSAGES = {
-  // Text from outside the plugin (a provider's error, a file name) stays verbatim.
-  raw: "{text}",
-  // Context notes: why something was left out.
-  "note.no_workspace": "No focused workspace.",
-  "note.workspace_unknown": "Could not tell which folder the workspace is in; project files skipped.",
-  "note.remote": "Remote (SSH/WSL) workspace: project files are not readable from the plugin.",
-  "note.terminal_off": "Terminal output is off in Settings.",
-  "note.not_git": "Git context is unavailable for this project. Local file search still works.",
-  "note.git_off": "Git access is off. Local file search still works.",
-  "note.no_files": "No files matched the prompt; the agent will be told to locate them.",
-  "note.search_limited": "Local content search reached its file, size, or time limit. Name relevant files in your request to prioritize them.",
-  "note.project_files_off": "Project files are off in Settings: workspace and agent only.",
-  "note.preview_no_research": "Preview shows initial local context. AI Test research runs only when you click Enhance.",
-  "note.research_summary": "AI Test: {rounds} research rounds, {searches} search terms, {excerpts} added excerpts; {reason}. The rewrite uses the available evidence, which may be incomplete.",
-  "error.research_privacy_changed": "Privacy or file exclusions changed during AI Test. Enhance again to use the updated settings.",
-  "why.research": "read during AI Test research (excerpt)",
-  "note.preview_no_picker": "Preview skips the AI file picker.",
-  "note.picker_skipped": "AI file picker skipped: {reason}",
-  // Context item titles and why an item is there.
-  "label.workspace": "Workspace",
-  "label.agent": "Target agent",
-  "label.stack": "Stack & commands",
-  "label.log": "Recent commits",
-  "label.diff": "Uncommitted changes",
-  "label.tree": "Repository tree ({count} files)",
-  "label.status": "Git status ({count} changed)",
-  "label.terminal": "Recent output: {name}",
-  "label.agents": "Other agents in this workspace",
-  "label.session": "Other agent session: {name}",
-  "label.activity": "Recent agent activity",
-  "label.saved": "Files you saved lately",
-  "why.keyword": "keyword match",
-  "why.ai": "picked by AI",
-  "why.trimmed": "trimmed",
-  // Errors and results.
-  "error.no_prompt": "Write a prompt first.",
-  "error.effort": "Choose Low, Medium, or High effort.",
-  "error.effort_model": "The model assigned to {effort} effort is unavailable. Choose an enabled model in Settings \u2192 Effort models.",
-  "error.attachment_bad": "That attachment could not be received; try attaching it again.",
-  "error.attachment_missing": "The attached file {name} is no longer there (attachments are kept for a day). Attach it again.",
-  "error.file_too_large": "{name} is {size}; an attachment can be at most {max}.",
-  "note.images_paths_only": "This model cannot see images: it got their paths only, and the prompt lists them for the agent.",
-  "error.cancelled": "Cancelled.",
-  "error.copilot_unavailable": "Copilot background rewriting is unavailable. Restart or update GitHub Copilot and reopen this plugin. No separate SDK or runtime is installed.",
-  "error.copilot_runtime": "The plugin could not verify the desktop runtime. Open Show Logs and share the Copilot model discovery section.",
-  "error.copilot_sdk": "The required desktop SDK could not be loaded. Open Show Logs and share the Copilot model discovery section.",
-  "error.copilot_catalog": "Copilot could not return its model list. Try Refresh, then open Show Logs and share the Copilot model discovery section if it still fails.",
-  "error.copilot_no_models": "No eligible Copilot models were returned for this session. Check your Copilot sign-in and model access, then refresh. Show Logs includes the model discovery results.",
-  "error.copilot_account": "The background runtime could not verify the same GitHub account as this Copilot session. Check your existing Copilot sign-in. No prompt was sent.",
-  "error.copilot_model": "This model is not available through GitHub Copilot in both sessions. Refresh the model list and choose a Copilot model.",
-  "error.copilot_images": "This Copilot model does not report image support. Choose a model with image support or remove the images.",
-  "error.copilot_usage": "Copilot usage could not be saved. Check free disk space and plugin data-folder permissions, then open Show Logs. Any remaining helper files have been kept for recovery.",
-  "error.send_off": "Sending to Copilot is off in Settings.",
-  "error.session_not_idle": "Copilot is busy, waiting for your answer, or disconnected. Wait until the session is idle before sending.",
-  "error.send_pending": "A prompt was just sent. Wait for Copilot before sending again.",
-  "error.launch_off": "Starting new agents is off in Settings, or not confirmed yet.",
-  "error.open_off": "Opening files in Copilot is off in Settings.",
-  // Shown inside "Could not load the list (…)": no capital, no full stop.
-  "error.lists_off": "online model lists are off in Settings",
-  "error.key_not_saved": "Copilot could not store the API key: this machine has no key store for it. Use a key from an environment variable, or a subscription CLI.",
-  "error.agent_blocked": "{name} is waiting for an answer from you, and what is typed now could be taken as that answer.",
-  // Why auto-enhance let a prompt through unchanged (the Settings section shows the last one).
-  "hook.no_model": "No enabled API model: Copilot helpers and subscription CLIs are excluded from the two-second chat hook.",
-  "hook.empty": "The model returned no prompt.",
-  "error.unsupported": "This version of Copilot cannot do that yet.",
-  "error.invalid_request": "Invalid request.",
-  "error.nothing_to_send": "Nothing to send.",
-  "error.invalid_profile": "Invalid model profile.",
-  "error.unknown_profile": "Unknown profile.",
-  "result.test_ok": "{name} \xB7 {model} answered (key: {key}).",
-  "error.bad_url": "Invalid API base URL: {url}",
-  "error.https_only": "The API base URL must use https (http is allowed only for localhost).",
-  "error.key_in_url": "Put the API key in the Models tab, not in the URL.",
-  "error.timeout": "The request was cancelled or timed out.",
-  "error.model_timeout": "{model} did not answer within {seconds} s.",
-  "error.too_slow": "{reason} A lower context level or a faster model answers sooner.",
-  "error.run_gone": "That run is no longer going (the plugin was restarted). Try again.",
-  "error.stopped": "{url} stopped answering: {detail}",
-  "error.not_json": "{url} did not answer with JSON ({what}). A proxy or sign-in page may be in the way.",
-  "error.empty_body": "an empty answer",
-  "error.no_key": "No API key. Add one in the Enhance Prompt panel (Models tab).",
-  "error.no_key_env": "No API key. Add one in the Enhance Prompt panel (Models tab) or set {env}.",
-  "error.unreachable": "Could not reach {url}: {detail}",
-  "error.http": "{status}: {detail}",
-  "error.empty_answer": "The model returned an empty answer.",
-  "error.cut_off": "{model} reached its limit of {max} tokens before it finished. Raise Max tokens for this model in the Models tab.",
-  "error.refused": "{model} declined this request ({category}). Use another model, or rephrase the request.",
-  "error.unsafe_argument": "Unsafe argument for a .cmd launcher.",
-  "error.cli_missing": "{name} was not found. Install it and sign in, or set its full path in the model.",
-  "error.cli_start": "Could not start {binary}: {detail}",
-  "error.cli_exit": "{kind} exited with {code}",
-  "error.cli_exit_detail": "{kind} exited with {code}: {detail}",
-  "error.cli_sign_in": "{text} (run it once in a terminal to sign in)",
-  "error.cli_empty": "{kind} returned an empty answer.",
-  "error.no_model": "No model configured. Add one in the Models tab.",
-  "error.profile_no_key": "{name}: no API key",
-  "error.all_failed": "All models failed. {list}",
-  "error.attempt": "{name}: {reason}",
-  "error.out_of_time": "Out of time."
-};
-var WIRE_OPEN = " [[message:";
-var WIRE_CLOSE = "]]";
-function withMessage(message) {
-  return `${english(message)}${WIRE_OPEN}${encodeURIComponent(JSON.stringify(message))}${WIRE_CLOSE}`;
-}
-function messageIn(text) {
-  const at = text.lastIndexOf(WIRE_OPEN);
-  if (at < 0 || !text.endsWith(WIRE_CLOSE)) return null;
-  try {
-    const parsed = JSON.parse(decodeURIComponent(text.slice(at + WIRE_OPEN.length, text.length - WIRE_CLOSE.length)));
-    return isMessage(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-function msg(code, params) {
-  return params ? { code, params } : { code };
-}
-var raw = (text) => ({ code: "raw", params: { text } });
-function isMessage(value) {
-  return Boolean(value) && typeof value === "object" && typeof value.code === "string" && value.code in MESSAGES;
-}
-function render(message) {
-  const param = (value) => {
-    if (Array.isArray(value)) return value.map(param).join(" \xB7 ");
-    if (isMessage(value)) return render(value);
-    return String(value);
-  };
-  const params = /* @__PURE__ */ Object.create(null);
-  for (const [key, value] of Object.entries(message.params ?? {})) params[key] = param(value);
-  return formatText(MESSAGES[message.code], params);
-}
-function english(message) {
-  return render(message);
-}
-
-// src/llm.ts
-function tokenLimitField(baseUrl) {
-  try {
-    return new URL(baseUrl).hostname === "api.openai.com" ? "max_completion_tokens" : "max_tokens";
-  } catch {
-    return "max_tokens";
-  }
-}
-var LlmError = class extends Error {
-  code;
-  /** HTTP status when the endpoint answered with an error. */
-  status;
-  /** The message as a code and parameters, for structured error handling. */
-  text;
-  constructor(message, code = "action_failed", status) {
-    const text = typeof message === "string" ? raw(message) : message;
-    super(english(text));
-    this.text = text;
-    this.code = code;
-    this.status = status;
-  }
-};
-function messageOf(error) {
-  if (error && typeof error === "object" && "text" in error && error.text) {
-    const text = error.text;
-    if (typeof text === "object" && typeof text.code === "string") return text;
-  }
-  return raw(error instanceof Error ? error.message : String(error));
-}
-function isTransient(error) {
-  if (!(error instanceof LlmError)) {
-    return false;
-  }
-  if (error.code === "timeout" || error.code === "unavailable" || error.code === "rate_limited") {
-    return true;
-  }
-  return error.status !== void 0 && (error.status >= 500 || error.status === 408);
-}
-function isLocalUrl(url) {
-  try {
-    const host = new URL(url).hostname;
-    return host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]";
-  } catch {
-    return false;
-  }
-}
-function endpointUrl(base, path) {
-  let url;
-  try {
-    url = new URL(base);
-  } catch {
-    throw new LlmError(msg("error.bad_url", { url: base }), "invalid_params");
-  }
-  const local = isLocalUrl(base);
-  if (url.protocol !== "https:" && !(url.protocol === "http:" && local)) {
-    throw new LlmError(msg("error.https_only"), "invalid_params");
-  }
-  if (url.username || url.password) {
-    throw new LlmError(msg("error.key_in_url"), "invalid_params");
-  }
-  url.search = "";
-  url.hash = "";
-  url.pathname = `${url.pathname.replace(/\/+$/, "")}${path}`;
-  return url;
-}
-async function readError(response) {
-  const body2 = await response.text().catch(() => "");
-  try {
-    const parsed = JSON.parse(body2);
-    const message = typeof parsed.error === "string" ? parsed.error : parsed.error?.message ?? parsed.message;
-    if (message) {
-      return message;
-    }
-  } catch {
-  }
-  return body2.slice(0, 300) || response.statusText;
-}
-async function readJson(response, baseUrl, signal) {
-  let body2;
-  try {
-    body2 = await response.text();
-  } catch (error) {
-    if (signal?.aborted) throw new LlmError(msg("error.timeout"), "timeout");
-    throw new LlmError(msg("error.stopped", { url: baseUrl, detail: error.message }), "unavailable");
-  }
-  try {
-    return JSON.parse(body2);
-  } catch {
-    const type = response.headers.get("content-type")?.split(";")[0] || "no content type";
-    const text = body2.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
-    const what = body2.trim() ? raw(`${type}: "${text}"`) : msg("error.empty_body");
-    throw new LlmError(msg("error.not_json", { url: baseUrl, what }), "unavailable");
-  }
-}
-async function complete(config, system, user, signal, images = []) {
-  if (!config.apiKey && !(config.provider === "openai" && isLocalUrl(config.baseUrl))) {
-    throw new LlmError(
-      config.envName ? msg("error.no_key_env", { env: config.envName }) : msg("error.no_key"),
-      "invalid_params"
-    );
-  }
-  let response;
-  try {
-    response = config.provider === "anthropic" ? await fetch(endpointUrl(config.baseUrl, "/v1/messages"), {
-      method: "POST",
-      signal,
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": config.apiKey ?? "",
-        "anthropic-version": "2023-06-01"
-      },
-      // No sampling parameters (temperature, top_p): current Claude models refuse a request
-      // that sets them, and the prompt says how to write.
-      body: JSON.stringify({
-        model: config.model,
-        max_tokens: config.maxTokens,
-        system,
-        messages: [
-          {
-            role: "user",
-            content: images.length === 0 ? user : [
-              ...images.map((image) => ({ type: "image", source: { type: "base64", media_type: image.type, data: image.base64 } })),
-              { type: "text", text: user }
-            ]
-          }
-        ]
-      })
-    }) : await fetch(endpointUrl(config.baseUrl, "/chat/completions"), {
-      method: "POST",
-      signal,
-      headers: {
-        "content-type": "application/json",
-        ...config.apiKey ? { authorization: `Bearer ${config.apiKey}` } : {}
-      },
-      body: JSON.stringify({
-        model: config.model,
-        [tokenLimitField(config.baseUrl)]: config.maxTokens,
-        messages: [
-          { role: "system", content: system },
-          {
-            role: "user",
-            content: images.length === 0 ? user : [
-              { type: "text", text: user },
-              ...images.map((image) => ({ type: "image_url", image_url: { url: `data:${image.type};base64,${image.base64}` } }))
-            ]
-          }
-        ]
-      })
-    });
-  } catch (error) {
-    if (error instanceof LlmError) {
-      throw error;
-    }
-    if (signal?.aborted) {
-      throw new LlmError(msg("error.timeout"), "timeout");
-    }
-    throw new LlmError(msg("error.unreachable", { url: config.baseUrl, detail: error.message }), "unavailable");
-  }
-  if (!response.ok) {
-    const code = response.status === 429 ? "rate_limited" : "action_failed";
-    throw new LlmError(msg("error.http", { status: response.status, detail: await readError(response) }), code, response.status);
-  }
-  const data = await readJson(response, config.baseUrl, signal);
-  if (config.provider === "anthropic" && data.stop_reason === "refusal") {
-    const category = typeof data.stop_details?.category === "string" ? data.stop_details.category.slice(0, 40) : "refusal";
-    throw new LlmError(msg("error.refused", { model: config.model, category }));
-  }
-  const cutOff = config.provider === "anthropic" ? data.stop_reason === "max_tokens" : data.choices?.[0]?.finish_reason === "length";
-  if (cutOff) {
-    throw new LlmError(msg("error.cut_off", { model: config.model, max: config.maxTokens }));
-  }
-  let text = "";
-  if (config.provider === "anthropic") {
-    text = (data.content ?? []).map((part) => part.type === "text" ? part.text ?? "" : "").join("");
-  } else {
-    const content = data.choices?.[0]?.message?.content;
-    text = Array.isArray(content) ? content.map((part) => part.text ?? "").join("") : content ?? "";
-  }
-  text = text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-  if (!text) {
-    throw new LlmError(msg("error.empty_answer"));
-  }
-  return text;
-}
-
-// src/cli.ts
-var CLI_BINARIES = {
-  "claude-code": "claude",
-  codex: "codex",
-  "gemini-cli": "gemini"
-};
-var SAFE_TOKEN = /^[\w.:/=@+,-]{1,200}$/;
-function extraDirs() {
-  const home = homedir();
-  const dirs = [
-    join(home, ".local", "bin"),
-    join(home, ".claude", "local"),
-    join(home, ".npm-global", "bin"),
-    join(home, ".bun", "bin"),
-    join(home, ".volta", "bin"),
-    "/opt/homebrew/bin",
-    "/usr/local/bin"
-  ];
-  if (process.platform === "win32") {
-    const local = process.env.LOCALAPPDATA ?? join(home, "AppData", "Local");
-    const roaming = process.env.APPDATA ?? join(home, "AppData", "Roaming");
-    dirs.push(join(roaming, "npm"), join(local, "Programs", "OpenAI", "Codex", "bin"), join(local, "pnpm"));
-  }
-  return dirs;
-}
-function resolveBinary(nameOrPath) {
-  if (/[/\\]/.test(nameOrPath)) {
-    return existsSync(nameOrPath) ? nameOrPath : null;
-  }
-  const exts = process.platform === "win32" ? [".exe", ".cmd", ".bat", ""] : [""];
-  const dirs = [...(process.env.PATH ?? "").split(delimiter).filter(Boolean), ...extraDirs()];
-  for (const dir of dirs) {
-    for (const ext of exts) {
-      const full = join(dir, nameOrPath + ext);
-      if (existsSync(full)) return full;
-    }
-  }
-  return null;
-}
-function detectClis() {
-  const out = [];
-  for (const [kind, name] of Object.entries(CLI_BINARIES)) {
-    const path = resolveBinary(name);
-    if (path) out.push({ kind, path });
-  }
-  return out;
-}
-var INSTRUCTION = "Follow the instructions in the input exactly and output only the final prompt.";
-var NOT_THE_PROJECT = "You are running in an empty temporary folder that is not the user's project. What you know about your own working directory, whether it is a git repository, your platform, your shell or your tools says nothing about that project: never mention it and never rely on it. The agent that receives your prompt works inside the user's project and can read all of it.";
-function cliArgs(kind, model, outFile, customArgs, images = []) {
-  const m = model && SAFE_TOKEN.test(model) ? model : "";
-  switch (kind) {
-    case "claude-code":
-      return [
-        "-p",
-        "--output-format",
-        "text",
-        "--tools",
-        "",
-        "--no-session-persistence",
-        "--setting-sources",
-        "",
-        "--system-prompt",
-        INSTRUCTION,
-        ...m ? ["--model", m] : []
-      ];
-    case "codex":
-      return [
-        "exec",
-        "--skip-git-repo-check",
-        "--ephemeral",
-        "--sandbox",
-        "read-only",
-        "--ignore-rules",
-        "--color",
-        "never",
-        "-o",
-        outFile,
-        ...m ? ["-m", m] : [],
-        // Pictures attached to the prompt (checked image files on this machine).
-        ...images.flatMap((path) => ["-i", path]),
-        "-"
-      ];
-    case "gemini-cli":
-      return ["-p", INSTRUCTION, ...m ? ["-m", m] : []];
-    case "custom-cli":
-      return customArgs.split(/\s+/).filter(Boolean).filter((token) => SAFE_TOKEN.test(token));
-  }
-}
-function cmdQuote(arg) {
-  if (/["%^&|<>!\r\n]/.test(arg)) throw new LlmError(msg("error.unsafe_argument"), "invalid_params");
-  return arg === "" || /\s/.test(arg) ? `"${arg}"` : arg;
-}
-function killTree(child) {
-  const pid = child.pid;
-  if (pid === void 0 || child.exitCode !== null || child.signalCode !== null) {
-    child.kill();
-    return;
-  }
-  if (process.platform === "win32") {
-    const killer = spawn("taskkill", ["/pid", String(pid), "/T", "/F"], { windowsHide: true, stdio: "ignore" });
-    killer.on("error", () => child.kill());
-    return;
-  }
-  try {
-    process.kill(-pid, "SIGTERM");
-  } catch {
-    child.kill();
-  }
-}
-var GROUP = process.platform === "win32" ? {} : { detached: true };
-function readCommand(binary, args, timeoutMs = 2e4) {
-  const isCmd = process.platform === "win32" && /\.(cmd|bat)$/i.test(binary);
-  return new Promise((resolve4) => {
-    let child;
-    try {
-      child = isCmd ? spawn(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", `"${[cmdQuote(binary), ...args.map(cmdQuote)].join(" ")}"`], {
-        windowsHide: true,
-        windowsVerbatimArguments: true,
-        stdio: ["ignore", "pipe", "ignore"]
-      }) : spawn(binary, args, { ...GROUP, windowsHide: true, stdio: ["ignore", "pipe", "ignore"] });
-    } catch {
-      resolve4(null);
-      return;
-    }
-    let out = "";
-    const timer = setTimeout(() => {
-      killTree(child);
-      resolve4(null);
-    }, timeoutMs);
-    child.stdout.setEncoding("utf8").on("data", (chunk) => {
-      if (out.length < 8e6) out += chunk;
-    });
-    child.on("error", () => {
-      clearTimeout(timer);
-      resolve4(null);
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      resolve4(code === 0 ? out : null);
-    });
-  });
-}
-async function runCli(options, system, user, signal) {
-  const binary = resolveBinary(options.command || (options.kind === "custom-cli" ? "" : CLI_BINARIES[options.kind]));
-  if (!binary) {
-    throw new LlmError(msg("error.cli_missing", { name: options.command || options.kind }), "unavailable");
-  }
-  const cwd = await mkdtemp(join(tmpdir(), "enhance-prompt-"));
-  const outFile = join(cwd, "last-message.txt");
-  const args = cliArgs(options.kind, options.model, outFile, options.customArgs, options.images ?? []);
-  const input = `<instructions>
-${system}
-
-${NOT_THE_PROJECT}
-</instructions>
-
-${user}`;
-  const isCmd = process.platform === "win32" && /\.(cmd|bat)$/i.test(binary);
-  const cancelled2 = () => new LlmError(msg("error.timeout"), "timeout");
-  try {
-    const stdout = await new Promise((resolve4, reject) => {
-      if (signal?.aborted) {
-        reject(cancelled2());
-        return;
-      }
-      const child = isCmd ? spawn(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", `"${[cmdQuote(binary), ...args.map(cmdQuote)].join(" ")}"`], {
-        cwd,
-        windowsHide: true,
-        windowsVerbatimArguments: true,
-        stdio: ["pipe", "pipe", "pipe"]
-      }) : spawn(binary, args, { ...GROUP, cwd, windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
-      let out = "";
-      let err = "";
-      child.stdout.setEncoding("utf8").on("data", (chunk) => {
-        if (out.length < 2e6) out += chunk;
-      });
-      child.stderr.setEncoding("utf8").on("data", (chunk) => {
-        if (err.length < 2e4) err += chunk;
-      });
-      const onAbort = () => {
-        killTree(child);
-        reject(cancelled2());
-      };
-      signal?.addEventListener("abort", onAbort, { once: true });
-      child.on("error", (error) => {
-        signal?.removeEventListener("abort", onAbort);
-        reject(new LlmError(msg("error.cli_start", { binary, detail: error.message }), "unavailable"));
-      });
-      child.on("close", (code) => {
-        signal?.removeEventListener("abort", onAbort);
-        if (signal?.aborted) {
-          reject(cancelled2());
-        } else if (code === 0) {
-          resolve4(out);
-        } else {
-          const detail = (err || out).trim().split("\n").slice(-3).join(" ").slice(0, 300);
-          const auth = /log ?in|auth|sign in|credential|unauthori[sz]ed|401/i.test(detail);
-          const exited = detail ? msg("error.cli_exit_detail", { kind: options.kind, code: String(code), detail: raw(detail) }) : msg("error.cli_exit", { kind: options.kind, code: String(code) });
-          reject(
-            new LlmError(
-              auth ? msg("error.cli_sign_in", { text: exited }) : exited,
-              /limit|quota|429|rate/i.test(detail) ? "rate_limited" : "action_failed"
-            )
-          );
-        }
-      });
-      child.stdin.on("error", () => void 0);
-      child.stdin.end(input);
-    });
-    const text = options.kind === "codex" ? await readFile(outFile, "utf8").catch(() => stdout) : stdout;
-    const clean = text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-    if (!clean) throw new LlmError(msg("error.cli_empty", { kind: options.kind }));
-    return clean;
-  } finally {
-    const removal = rm(cwd, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }).catch(() => void 0);
-    if (!signal?.aborted) await removal;
-  }
-}
-
-// src/catalog.ts
-function parseCatalog(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const raw2 = value;
-  if (typeof raw2.fetchedAt !== "number" || !Array.isArray(raw2.models)) return null;
-  const models = [];
-  for (const item2 of raw2.models) {
-    if (!item2 || typeof item2 !== "object") continue;
-    const model = item2;
-    if (typeof model.id !== "string") continue;
-    models.push({
-      id: model.id,
-      label: typeof model.label === "string" ? model.label : model.id,
-      ...typeof model.description === "string" ? { description: model.description } : {},
-      ...model.isDefault === true ? { isDefault: true } : {}
-    });
-  }
-  return { models, source: typeof raw2.source === "string" ? raw2.source : "cache", fetchedAt: raw2.fetchedAt };
-}
-var CLAUDE_SCHEMA_URL = "https://www.schemastore.org/claude-code-settings.json";
-var CLAUDE_ALIAS_INFO = {
-  default: "Account default",
-  opus: "Opus, newest",
-  sonnet: "Sonnet, newest",
-  haiku: "Haiku, newest (fastest)",
-  fable: "Fable, newest",
-  opusplan: "Opus plans, Sonnet writes"
-};
-var NOT_ALIASES = /* @__PURE__ */ new Set(["model", "models", "alias", "none", "null", "true", "false", "auto", "string"]);
-async function readJson2(path) {
-  try {
-    return JSON.parse(await readFile2(path, "utf8"));
-  } catch {
-    return null;
-  }
-}
-function aliasesFromText(text) {
-  const found = /* @__PURE__ */ new Set();
-  for (const hit of text.matchAll(/alias/gi)) {
-    const window = text.slice(hit.index, hit.index + 160);
-    for (const match of window.matchAll(/["'\u2018\u201c]([a-z][a-z0-9-]{2,20})["'\u2019\u201d]/g)) {
-      if (!NOT_ALIASES.has(match[1])) found.add(match[1]);
-    }
-  }
-  return [...found];
-}
-async function fetchJson(url, init, timeoutMs = 8e3) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(url, { ...init, signal: controller.signal });
-    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-    return await response.json();
-  } finally {
-    clearTimeout(timer);
-  }
-}
-function parseClaudeModelTable(text) {
-  const found = /* @__PURE__ */ new Map();
-  const pattern = /\{id:"(claude-[a-z0-9-]{3,60})",name:"([^"]{2,40})",short_name:"[^"]{1,30}"(?:,description:"([^"]{0,120})")?,section:"(main|overflow)"/g;
-  for (const match of text.matchAll(pattern)) {
-    const [, id2, name, description, section] = match;
-    const entry = { id: id2, name, main: section === "main" };
-    if (description) entry.description = description;
-    mergeModel(found, entry);
-  }
-  return [...found.values()].sort((a, b) => Number(b.main) - Number(a.main));
-}
-var PROVIDER_ID = /anthropic\.(claude-(opus|sonnet|haiku|fable)-(\d+)(?:-(\d))?)(?![a-z0-9@-]|-v\d)/g;
-function parseProviderIds(text) {
-  const found = /* @__PURE__ */ new Map();
-  for (const match of text.matchAll(PROVIDER_ID)) {
-    const [, id2, family, major, minor] = match;
-    if (Number(major) > 20) continue;
-    const version = Number(major) + (minor ? Number(minor) / 10 : 0);
-    found.set(id2, { id: id2, family, version, name: `${family[0].toUpperCase()}${family.slice(1)} ${major}${minor ? `.${minor}` : ""}` });
-  }
-  return [...found.values()];
-}
-var menuVersion = (id2) => {
-  const match = /^claude-(opus|sonnet|haiku|fable)-(\d+)(?:-(\d))?$/.exec(id2);
-  return match ? { family: match[1], version: Number(match[2]) + (match[3] ? Number(match[3]) / 10 : 0) } : null;
-};
-function newerThanMenu(menu, provider) {
-  const best = /* @__PURE__ */ new Map();
-  for (const model of menu) {
-    const parsed = menuVersion(model.id);
-    if (parsed) best.set(parsed.family, Math.max(best.get(parsed.family) ?? 0, parsed.version));
-  }
-  return provider.filter((entry) => best.has(entry.family) && entry.version > (best.get(entry.family) ?? 0)).sort((a, b) => b.version - a.version).map((entry) => ({ id: entry.id, name: entry.name, description: "Newest", main: true }));
-}
-function mergeModel(entries, entry) {
-  const previous = entries.get(entry.id);
-  if (!previous) {
-    entries.set(entry.id, { ...entry });
-    return;
-  }
-  if (entry.description && !previous.description) previous.description = entry.description;
-  previous.main = previous.main || entry.main;
-}
-var TABLE_MARKER = Buffer.from('short_name:"', "latin1");
-var PROVIDER_MARKER = Buffer.from("anthropic.claude-", "latin1");
-var BEFORE = 160;
-var AFTER = 320;
-var tableMemo = null;
-async function claudeModelTable(binary) {
-  try {
-    const info = await stat(binary);
-    if (!info.isFile() || info.size > 800 * 1024 * 1024) return [];
-    const signature = `${binary}:${info.size}:${info.mtimeMs}`;
-    if (tableMemo?.signature === signature) return tableMemo.models.map((model) => ({ ...model }));
-    const models = await scanModelTable(binary, info.size);
-    tableMemo = { signature, models };
-    return models.map((model) => ({ ...model }));
-  } catch {
-    return [];
-  }
-}
-async function scanModelTable(binary, fileSize) {
-  const handle = await open(binary, "r");
-  try {
-    const size = 8 * 1024 * 1024;
-    const overlap = BEFORE + AFTER;
-    const buffer = Buffer.alloc(size);
-    const entries = /* @__PURE__ */ new Map();
-    const provider = /* @__PURE__ */ new Map();
-    for (let position = 0; position < fileSize; position += size - overlap) {
-      const { bytesRead } = await handle.read(buffer, 0, size, position);
-      if (bytesRead === 0) break;
-      const view2 = buffer.subarray(0, bytesRead);
-      for (let hit = view2.indexOf(TABLE_MARKER); hit !== -1; hit = view2.indexOf(TABLE_MARKER, hit + TABLE_MARKER.length)) {
-        const window = view2.toString("latin1", Math.max(0, hit - BEFORE), Math.min(bytesRead, hit + AFTER));
-        for (const entry of parseClaudeModelTable(window)) mergeModel(entries, entry);
-      }
-      for (let hit = view2.indexOf(PROVIDER_MARKER); hit !== -1; hit = view2.indexOf(PROVIDER_MARKER, hit + PROVIDER_MARKER.length)) {
-        for (const entry of parseProviderIds(view2.toString("latin1", hit, Math.min(bytesRead, hit + 48)))) provider.set(entry.id, entry);
-      }
-      if (position + bytesRead >= fileSize) break;
-    }
-    const menu = [...entries.values()].sort((a, b) => Number(b.main) - Number(a.main));
-    return [...newerThanMenu(menu, [...provider.values()]), ...menu];
-  } finally {
-    await handle.close();
-  }
-}
-var helpMemo = null;
-async function claudeHelpAliases(binary) {
-  const info = await stat(binary).catch(() => null);
-  const signature = info ? `${binary}:${info.size}:${info.mtimeMs}` : binary;
-  if (helpMemo?.signature === signature) return helpMemo.aliases;
-  const help = await readCommand(binary, ["--help"], 1e4);
-  if (help === null) return null;
-  const at = help.indexOf("--model");
-  const aliases = at >= 0 ? aliasesFromText(help.slice(at, at + 400).replace(/\s+/g, " ")) : null;
-  helpMemo = { signature, aliases };
-  return aliases;
-}
-async function claudeProgramSignature(command) {
-  const binary = resolveBinary(command || CLI_BINARIES["claude-code"]);
-  const info = binary ? await stat(binary).catch(() => null) : null;
-  return info ? `${info.size}-${Math.round(info.mtimeMs)}` : "none";
-}
-async function claudeCatalog(command, online = true) {
-  const aliases = /* @__PURE__ */ new Set(["default", "opus", "sonnet", "haiku"]);
-  const sources = ["built-in"];
-  const binary = resolveBinary(command || CLI_BINARIES["claude-code"]);
-  const exact = binary ? await claudeModelTable(binary) : [];
-  if (exact.length > 0) sources.push("Claude Code model table");
-  if (binary) {
-    const helpAliases = await claudeHelpAliases(binary);
-    if (helpAliases) {
-      helpAliases.forEach((alias) => aliases.add(alias));
-      sources.push("claude --help");
-    }
-  }
-  if (online) try {
-    const schema = await fetchJson(CLAUDE_SCHEMA_URL, {});
-    for (const [key, property] of Object.entries(schema.properties ?? {})) {
-      if (/model/i.test(key) && property.description) aliasesFromText(property.description).forEach((alias) => aliases.add(alias));
-    }
-    sources.push("schemastore");
-  } catch {
-  }
-  const settings = await readJson2(join2(homedir2(), ".claude", "settings.json"));
-  const current = typeof settings?.model === "string" ? settings.model : null;
-  if (current) aliases.add(current);
-  const env = settings?.env ?? {};
-  for (const key of ["ANTHROPIC_MODEL", "ANTHROPIC_DEFAULT_OPUS_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL", "ANTHROPIC_DEFAULT_HAIKU_MODEL"]) {
-    if (typeof env[key] === "string") aliases.add(env[key]);
-  }
-  let list = [...aliases];
-  const allowed = Array.isArray(settings?.availableModels) ? settings.availableModels.filter((m) => typeof m === "string") : [];
-  if (allowed.length > 0) list = list.filter((alias) => alias === "default" || allowed.includes(alias));
-  const order = ["haiku", "sonnet", "opus", "fable", "opusplan", "default"];
-  list.sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99) || a.localeCompare(b));
-  const exactAllowed = allowed.length > 0 ? exact.filter((model) => allowed.includes(model.id)) : exact;
-  return {
-    models: [
-      ...exactAllowed.map((model) => ({
-        id: model.id,
-        label: model.name,
-        ...model.description ? { description: model.description } : {},
-        ...model.id === current ? { isDefault: true } : {}
-      })),
-      ...list.map((id2) => ({
-        id: id2,
-        label: CLAUDE_ALIAS_INFO[id2] ? `${id2}: ${CLAUDE_ALIAS_INFO[id2]}` : id2,
-        ...id2 === current ? { isDefault: true, description: "Your Claude Code default" } : {}
-      }))
-    ],
-    source: sources.join(" + "),
-    fetchedAt: Date.now()
-  };
-}
-async function codexCatalog(command) {
-  const binary = resolveBinary(command || CLI_BINARIES.codex);
-  if (!binary) return { models: [], source: "codex", fetchedAt: Date.now(), error: "codex not found" };
-  const out = await readCommand(binary, ["debug", "models"], 2e4);
-  const config = await readFile2(join2(homedir2(), ".codex", "config.toml"), "utf8").catch(() => "");
-  const current = /^\s*model\s*=\s*"([^"]+)"/m.exec(config)?.[1] ?? null;
-  let models = [];
-  try {
-    const parsed = JSON.parse(out ?? "");
-    models = (parsed.models ?? []).filter((model) => model.visibility === "list").sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99)).flatMap((model) => {
-      if (!model.slug) return [];
-      const entry = { id: model.slug, label: model.display_name ?? model.slug };
-      if (model.description) entry.description = model.description;
-      if (model.slug === current) entry.isDefault = true;
-      return [entry];
-    });
-  } catch {
-    return { models: [], source: "codex debug models", fetchedAt: Date.now(), error: "could not read the Codex model catalog" };
-  }
-  if (current && !models.some((model) => model.id === current)) models.unshift({ id: current, label: current, isDefault: true });
-  return { models, source: "codex debug models", fetchedAt: Date.now() };
-}
-function parseGeminiModels(out) {
-  if (!out) return null;
-  const start = out.indexOf("[");
-  if (start < 0) return null;
-  try {
-    const list = JSON.parse(out.slice(start));
-    if (!Array.isArray(list)) return null;
-    const models = [];
-    for (const entry of list) {
-      const id2 = entry.modelId ?? entry.id;
-      if (typeof id2 !== "string" || !id2) continue;
-      const name = entry.displayName ?? entry.name;
-      const model = { id: id2, label: name && name !== id2 ? `${name} (${id2})` : id2 };
-      if (entry.description) model.description = entry.description;
-      models.push(model);
-    }
-    return models.length > 0 ? models : null;
-  } catch {
-    return null;
-  }
-}
-var GEMINI_KNOWN = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite"];
-async function geminiCatalog(command = "", online = true) {
-  const settings = await readJson2(join2(homedir2(), ".gemini", "settings.json"));
-  const configured = settings?.model?.name;
-  const binary = online ? resolveBinary(command || CLI_BINARIES["gemini-cli"]) : null;
-  const listed = binary ? parseGeminiModels(await readCommand(binary, ["models", "list", "--output-format", "json"], 2e4)) : null;
-  const models = listed ?? GEMINI_KNOWN.map((id2) => ({ id: id2, label: id2 }));
-  if (configured && !models.some((model) => model.id === configured)) models.unshift({ id: configured, label: configured });
-  for (const model of models) if (model.id === configured) model.isDefault = true;
-  return {
-    models,
-    source: listed ? "gemini models list + ~/.gemini/settings.json" : "built-in + ~/.gemini/settings.json",
-    fetchedAt: Date.now()
-  };
-}
-async function apiCatalog(provider, baseUrl, apiKey) {
-  try {
-    if (provider === "anthropic") {
-      const data2 = await fetchJson(endpointUrl(baseUrl, "/v1/messages").href.replace(/\/v1\/messages$/, "/v1/models?limit=100"), {
-        headers: { "x-api-key": apiKey ?? "", "anthropic-version": "2023-06-01" }
-      });
-      return {
-        models: (data2.data ?? []).map((model) => ({ id: model.id, label: model.display_name ? `${model.display_name} (${model.id})` : model.id })),
-        source: "GET /v1/models",
-        fetchedAt: Date.now()
-      };
-    }
-    const url = endpointUrl(baseUrl, "/chat/completions").href.replace(/\/chat\/completions$/, "/models");
-    const data = await fetchJson(url, { headers: apiKey ? { authorization: `Bearer ${apiKey}` } : {} });
-    const models = (data.data ?? []).filter((model) => typeof model.id === "string").sort((a, b) => (b.created ?? 0) - (a.created ?? 0) || a.id.localeCompare(b.id)).slice(0, 400).map((model) => ({ id: model.id, label: model.name && model.name !== model.id ? `${model.name} (${model.id})` : model.id }));
-    return { models, source: "GET /models", fetchedAt: Date.now() };
-  } catch (error) {
-    return { models: [], source: "GET /models", fetchedAt: Date.now(), error: error.message };
-  }
-}
-
 // src/clipboard.ts
-import { spawn as spawn2 } from "node:child_process";
+import { spawn } from "node:child_process";
 var utf8 = (text) => Buffer.from(text, "utf8");
 var utf16 = (text) => Buffer.concat([Buffer.from([255, 254]), Buffer.from(text, "utf16le")]);
 function clipboardTools(platform) {
@@ -2483,7 +1630,7 @@ function clipboardTools(platform) {
 }
 function run(tool, text) {
   return new Promise((resolve4, reject) => {
-    const child = spawn2(tool.command, tool.args, {
+    const child = spawn(tool.command, tool.args, {
       stdio: ["pipe", "ignore", "ignore"],
       windowsHide: true,
       env: { ...process.env, LANG: process.env.LANG || "en_US.UTF-8" }
@@ -2671,9 +1818,160 @@ function savedFiles(workspace, now = Date.now()) {
   return [...new Set(list.reverse().map((item2) => item2.path))].slice(0, 20);
 }
 
+// src/format.ts
+function formatText(template, params = {}) {
+  return template.replace(/\{(\w+)\}/g, (match, key) => Object.hasOwn(params, key) ? String(params[key]) : match);
+}
+
+// src/messages.ts
+var MESSAGES = {
+  // Text from outside the plugin (a provider's error, a file name) stays verbatim.
+  raw: "{text}",
+  // Context notes: why something was left out.
+  "note.no_workspace": "No focused workspace.",
+  "note.workspace_unknown": "Could not tell which folder the workspace is in; project files skipped.",
+  "note.remote": "Remote (SSH/WSL) workspace: project files are not readable from the plugin.",
+  "note.terminal_off": "Terminal output is off in Settings.",
+  "note.not_git": "Git context is unavailable for this project. Local file search still works.",
+  "note.git_off": "Git access is off. Local file search still works.",
+  "note.no_files": "No files matched the prompt; the agent will be told to locate them.",
+  "note.search_limited": "Local content search reached its file, size, or time limit. Name relevant files in your request to prioritize them.",
+  "note.project_files_off": "Project files are off in Settings: workspace and agent only.",
+  "note.preview_no_research": "Preview shows initial local context. AI Test research runs only when you click Enhance.",
+  "note.research_summary": "AI Test: {rounds} research rounds, {searches} search terms, {excerpts} added excerpts; {reason}. The rewrite uses the available evidence, which may be incomplete.",
+  "error.research_privacy_changed": "Privacy or file exclusions changed during AI Test. Enhance again to use the updated settings.",
+  "why.research": "read during AI Test research (excerpt)",
+  "note.preview_no_picker": "Preview skips the AI file picker.",
+  "note.picker_skipped": "AI file picker skipped: {reason}",
+  // Context item titles and why an item is there.
+  "label.workspace": "Workspace",
+  "label.agent": "Target agent",
+  "label.stack": "Stack & commands",
+  "label.log": "Recent commits",
+  "label.diff": "Uncommitted changes",
+  "label.tree": "Repository tree ({count} files)",
+  "label.status": "Git status ({count} changed)",
+  "label.terminal": "Recent output: {name}",
+  "label.agents": "Other agents in this workspace",
+  "label.session": "Other agent session: {name}",
+  "label.activity": "Recent agent activity",
+  "label.saved": "Files you saved lately",
+  "why.keyword": "keyword match",
+  "why.ai": "picked by AI",
+  "why.trimmed": "trimmed",
+  // Errors and results.
+  "error.no_prompt": "Write a prompt first.",
+  "error.effort": "Choose Low, Medium, or High effort.",
+  "error.selector_model": "The saved AI-assisted model is unavailable. Select an enabled Copilot model for AI-assisted context in Models.",
+  "error.effort_model": "The model assigned to {effort} effort is unavailable. Choose an enabled Copilot model in Settings \u2192 Effort models.",
+  "error.attachment_bad": "That attachment could not be received; try attaching it again.",
+  "error.attachment_missing": "The attached file {name} is no longer there (attachments are kept for a day). Attach it again.",
+  "error.file_too_large": "{name} is {size}; an attachment can be at most {max}.",
+  "error.cancelled": "Cancelled.",
+  "error.copilot_unavailable": "Copilot background rewriting is unavailable. Restart or update GitHub Copilot and reopen this plugin. No separate SDK or runtime is installed.",
+  "error.copilot_runtime": "The plugin could not verify the desktop runtime. Open Show Logs and share the Copilot model discovery section.",
+  "error.copilot_sdk": "The required desktop SDK could not be loaded. Open Show Logs and share the Copilot model discovery section.",
+  "error.copilot_catalog": "Copilot could not return its model list. Try Refresh, then open Show Logs and share the Copilot model discovery section if it still fails.",
+  "error.copilot_no_models": "No eligible Copilot models were returned for this session. Check your Copilot sign-in and model access, then refresh. Show Logs includes the model discovery results.",
+  "error.copilot_account": "The background runtime could not verify the same GitHub account as this Copilot session. Check your existing Copilot sign-in. No prompt was sent.",
+  "error.copilot_model": "This model is not available through GitHub Copilot in both sessions. Refresh the model list and choose a Copilot model.",
+  "error.copilot_images": "This Copilot model does not report image support. Choose a model with image support or remove the images.",
+  "error.copilot_usage": "Copilot usage could not be saved. Check free disk space and plugin data-folder permissions, then open Show Logs. Any remaining helper files have been kept for recovery.",
+  "error.send_off": "Sending to Copilot is off in Settings.",
+  "error.session_not_idle": "Copilot is busy, waiting for your answer, or disconnected. Wait until the session is idle before sending.",
+  "error.send_pending": "A prompt was just sent. Wait for Copilot before sending again.",
+  "error.open_off": "Opening files in Copilot is off in Settings.",
+  // Shown inside "Could not load the list (…)": no capital, no full stop.
+  "error.lists_off": "online model lists are off in Settings",
+  "error.agent_blocked": "{name} is waiting for an answer from you, and what is typed now could be taken as that answer.",
+  "error.unsupported": "This version of Copilot cannot do that yet.",
+  "error.invalid_request": "Invalid request.",
+  "error.nothing_to_send": "Nothing to send.",
+  "error.invalid_profile": "Invalid model profile.",
+  "error.unknown_profile": "Unknown profile.",
+  "result.test_ok": "{name} \xB7 {model} answered (key: {key}).",
+  "error.timeout": "The request was cancelled or timed out.",
+  "error.model_timeout": "{model} did not answer within {seconds} s.",
+  "error.too_slow": "{reason} A lower context level or a faster model answers sooner.",
+  "error.run_gone": "That run is no longer going (the plugin was restarted). Try again.",
+  "error.http": "{status}: {detail}",
+  "error.empty_answer": "The model returned an empty answer.",
+  "error.no_model": "Select a Copilot model in Settings to enhance prompts.",
+  "error.all_failed": "All models failed. {list}",
+  "error.attempt": "{name}: {reason}",
+  "error.out_of_time": "Out of time."
+};
+var WIRE_OPEN = " [[message:";
+var WIRE_CLOSE = "]]";
+function withMessage(message) {
+  return `${english(message)}${WIRE_OPEN}${encodeURIComponent(JSON.stringify(message))}${WIRE_CLOSE}`;
+}
+function messageIn(text) {
+  const at = text.lastIndexOf(WIRE_OPEN);
+  if (at < 0 || !text.endsWith(WIRE_CLOSE)) return null;
+  try {
+    const parsed = JSON.parse(decodeURIComponent(text.slice(at + WIRE_OPEN.length, text.length - WIRE_CLOSE.length)));
+    return isMessage(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+function msg(code, params) {
+  return params ? { code, params } : { code };
+}
+var raw = (text) => ({ code: "raw", params: { text } });
+function isMessage(value) {
+  return Boolean(value) && typeof value === "object" && typeof value.code === "string" && value.code in MESSAGES;
+}
+function render(message) {
+  const param = (value) => {
+    if (Array.isArray(value)) return value.map(param).join(" \xB7 ");
+    if (isMessage(value)) return render(value);
+    return String(value);
+  };
+  const params = /* @__PURE__ */ Object.create(null);
+  for (const [key, value] of Object.entries(message.params ?? {})) params[key] = param(value);
+  return formatText(MESSAGES[message.code], params);
+}
+function english(message) {
+  return render(message);
+}
+
+// src/llm.ts
+var LlmError = class extends Error {
+  code;
+  /** HTTP status when the endpoint answered with an error. */
+  status;
+  /** The message as a code and parameters, for structured error handling. */
+  text;
+  constructor(message, code = "action_failed", status) {
+    const text = typeof message === "string" ? raw(message) : message;
+    super(english(text));
+    this.text = text;
+    this.code = code;
+    this.status = status;
+  }
+};
+function messageOf(error) {
+  if (error && typeof error === "object" && "text" in error && error.text) {
+    const text = error.text;
+    if (typeof text === "object" && typeof text.code === "string") return text;
+  }
+  return raw(error instanceof Error ? error.message : String(error));
+}
+function isTransient(error) {
+  if (!(error instanceof LlmError)) {
+    return false;
+  }
+  if (error.code === "timeout" || error.code === "unavailable" || error.code === "rate_limited") {
+    return true;
+  }
+  return error.status !== void 0 && (error.status >= 500 || error.status === 408);
+}
+
 // src/context/files.ts
-import { readdir, readFile as readFile3, realpath, stat as stat2 } from "node:fs/promises";
-import { basename, dirname, isAbsolute, join as join3, relative, sep } from "node:path";
+import { readdir, readFile, realpath, stat } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 var WALK_SKIP = /* @__PURE__ */ new Set([
   ".git",
   "node_modules",
@@ -2738,7 +2036,7 @@ async function projectFileAllowed(root, policy = {}) {
       value = realpath(full).catch(async (error) => {
         if (error.code !== "ENOENT" || full === base || dirname(full) === full) return null;
         const parent = await realpath(dirname(full)).catch(() => null);
-        return parent ? join3(parent, basename(full)) : null;
+        return parent ? join(parent, basename(full)) : null;
       });
       resolved.set(full, value);
     }
@@ -2746,7 +2044,7 @@ async function projectFileAllowed(root, policy = {}) {
   };
   const localPath = async (path) => {
     if (isAbsolute(path) || path.split(/[\\/]/).includes("..")) return null;
-    const actual = await canonical(join3(base, path));
+    const actual = await canonical(join(base, path));
     if (!actual) return null;
     const local = relative(base, actual).split(sep).join("/");
     return local.startsWith("..") || isAbsolute(local) ? null : local;
@@ -2789,10 +2087,10 @@ async function walkFiles(root, maxFiles = 8e3, maxDepth = 6, signal, allow = () 
       if (out.length >= maxFiles) {
         return;
       }
-      const path = relative(root, join3(dir, entry.name)).split(sep).join("/");
+      const path = relative(root, join(dir, entry.name)).split(sep).join("/");
       if (entry.isDirectory()) {
         if (await allow(`${path}/`) && !WALK_SKIP.has(entry.name) && (!entry.name.startsWith(".") || path === ".github" || path === ".cursor")) {
-          await visit(join3(dir, entry.name), depth + 1);
+          await visit(join(dir, entry.name), depth + 1);
         }
       } else if (entry.isFile() && await allow(path)) {
         out.push(path);
@@ -2827,8 +2125,8 @@ async function readText(root, path, maxBytes = 2e5, allow = () => true) {
     return null;
   }
   try {
-    const full = join3(root, path);
-    const info = await stat2(full);
+    const full = join(root, path);
+    const info = await stat(full);
     if (!info.isFile() || info.size > maxBytes) {
       return null;
     }
@@ -2836,7 +2134,7 @@ async function readText(root, path, maxBytes = 2e5, allow = () => true) {
     if (actual.startsWith("..") || isAbsolute(actual) || isSensitive(actual) || !await allow(actual)) {
       return null;
     }
-    const text = await readFile3(full, "utf8");
+    const text = await readFile(full, "utf8");
     return text.includes("\0") ? null : text;
   } catch {
     return null;
@@ -2872,7 +2170,7 @@ function snippet(text, hits, maxChars) {
 }
 
 // src/context/git.ts
-import { execFile } from "node:child_process";
+import { execFile, spawn as spawn2 } from "node:child_process";
 function git(cwd, args, options = {}) {
   const { signal } = options;
   if (signal?.aborted) return Promise.resolve(null);
@@ -2960,12 +2258,12 @@ async function gitDiff(root, maxChars, allow = () => true, signal) {
   }
   if (refused.size > MAX_DIFF_EXCLUSIONS) return null;
   const pathspecs = [...SAFE_PATHSPECS, ...[...refused].map((path) => `:(exclude,literal)${path}`)];
-  const stat4 = await git(root, ["diff", "HEAD", "-M", "--stat=100", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { signal });
-  if (stat4 === null || !stat4.trim()) {
+  const stat3 = await git(root, ["diff", "HEAD", "-M", "--stat=100", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { signal });
+  if (stat3 === null || !stat3.trim()) {
     return null;
   }
   const diff = await git(root, ["diff", "HEAD", "-M", "-U2", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { maxBytes: 4e6, signal }) ?? "";
-  return { stat: stat4.trim(), diff: diff.length > maxChars ? `${maskedStart(diff, maxChars)}
+  return { stat: stat3.trim(), diff: diff.length > maxChars ? `${maskedStart(diff, maxChars)}
 \u2026(diff truncated)` : redactCode(diff) };
 }
 function maskedStart(text, maxChars) {
@@ -3021,6 +2319,23 @@ async function gitGrep(root, keywords, paths, maxLines = 600, signal) {
     hits.set(match[1], list);
   }
   return hits;
+}
+function killTree(child) {
+  const pid = child.pid;
+  if (pid === void 0 || child.exitCode !== null || child.signalCode !== null) {
+    child.kill();
+    return;
+  }
+  if (process.platform === "win32") {
+    const killer = spawn2("taskkill", ["/pid", String(pid), "/T", "/F"], { windowsHide: true, stdio: "ignore" });
+    killer.on("error", () => child.kill());
+    return;
+  }
+  try {
+    process.kill(-pid, "SIGTERM");
+  } catch {
+    child.kill();
+  }
 }
 
 // src/context/instructions.ts
@@ -3327,9 +2642,6 @@ function learnTerminal(host, terminalId, workspaceId) {
   prune();
   save(host);
 }
-function forgetTerminal(host, terminalId) {
-  if (known.delete(terminalId)) save(host);
-}
 function workspacesOfTerminals(terminalIds) {
   const count2 = /* @__PURE__ */ new Map();
   for (const id2 of terminalIds) {
@@ -3413,30 +2725,6 @@ async function findFocusedWorkspace(host, focused, hint) {
     return null;
   }
 }
-async function workspaceOfTerminal(host, terminalId, focused) {
-  if (!terminalId || !host.host.has("workspace.list")) return null;
-  await loadTerminals(host);
-  const ids = workspacesOfTerminals([terminalId]);
-  if (ids.length === 0) return null;
-  const list = await host.host.call("workspace.list", {}).catch(() => null);
-  const workspaces = list?.workspaces ?? [];
-  const inFocus = focused?.terminals?.some((terminal) => terminal.id === terminalId) ?? false;
-  for (const id2 of ids) {
-    if (focused && inFocus) {
-      const fits = inFocusedWorkspace(workspaces, id2, focused);
-      if (!fits && list && !list.truncated) forgetTerminal(host, terminalId);
-      return fits;
-    }
-    const named = workspaces.filter((ws) => namesWorkspace(id2, ws));
-    if (named.length === 1) return named[0];
-  }
-  return null;
-}
-function inFocusedWorkspace(workspaces, id2, focused) {
-  const named = workspaces.filter((ws) => namesWorkspace(id2, ws));
-  const fits = typeof focused.workspaceId === "string" && focused.workspaceId ? named.filter((ws) => namesWorkspace(focused.workspaceId, ws)) : named.filter((ws) => ws.name === focused.displayName && (ws.branch ?? "") === focused.branch);
-  return fits.length === 1 ? fits[0] : null;
-}
 async function projectNameOf(host, focused, workspace) {
   if (workspace) return workspace.project?.trim() || workspace.name;
   if (!host.host.has("workspace.list")) return focused.displayName;
@@ -3452,11 +2740,6 @@ async function focusedProject(host, hint) {
 var staticCache = /* @__PURE__ */ new Map();
 var STATIC_TTL_MS = 9e4;
 var staticKey = (extraFiles, allowGit, policy) => JSON.stringify([extraFiles, allowGit, policy.excludePatterns ?? "", [...policy.exclude ?? []].sort()]);
-function cachedStatic(root, settings) {
-  const hit = staticCache.get(root);
-  const key = settings && staticKey(settings.extraContextFiles, settings.privacy.allowGit, settings);
-  return hit && (!key || hit.key === key) && Date.now() - hit.at < STATIC_TTL_MS ? hit : null;
-}
 async function staticParts(root, extraFiles, fresh = false, allowGit = true, signal, onProgress = () => void 0, policy = {}) {
   const key = staticKey(extraFiles, allowGit, policy);
   const hit = staticCache.get(root);
@@ -3659,6 +2942,7 @@ ${diff.diff}`));
       step("pick", "done", String(picked.length));
     } catch (error) {
       stopIfCancelled(signal);
+      if (messageOf(error).code === "error.copilot_usage") throw error;
       notes.push(msg("note.picker_skipped", { reason: messageOf(error) }));
       step("pick", "skipped");
     }
@@ -3973,12 +3257,6 @@ function sniffImage(head) {
   return null;
 }
 var megabytes = (bytes) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-function imageSupport(profile) {
-  if (profile.provider === "copilot") return "data";
-  if (profile.provider === "anthropic") return "data";
-  if (profile.provider === "openai") return ["openai", "openrouter", "gemini"].includes(profile.preset) ? "data" : "none";
-  return profile.preset === "codex" ? "file" : "none";
-}
 function imagesBlock(images) {
   if (images.length === 0) return "";
   return `<attached_images>
@@ -3995,9 +3273,9 @@ ${missing.map((image) => `- ${image.path}`).join("\n")}`;
 }
 
 // src/attachments.ts
-import { appendFile, mkdir, readdir as readdir2, readFile as readFile4, rm as rm2, stat as stat3 } from "node:fs/promises";
-import { tmpdir as tmpdir2 } from "node:os";
-import { basename as basename2, isAbsolute as isAbsolute2, join as join4, relative as relative2, resolve } from "node:path";
+import { appendFile, mkdir, readdir as readdir2, readFile as readFile2, rm, stat as stat2 } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename as basename2, isAbsolute as isAbsolute2, join as join2, relative as relative2, resolve } from "node:path";
 
 // src/image-limits.ts
 var MAX_IMAGES = 4;
@@ -4014,7 +3292,7 @@ function sizeOver(size, max) {
 }
 
 // src/attachments.ts
-var ATTACHMENTS_DIR = join4(tmpdir2(), `enhance-prompt-attachments${process.env.NODE_TEST_CONTEXT ? `-test-${process.pid}` : ""}`);
+var ATTACHMENTS_DIR = join2(tmpdir(), `enhance-prompt-attachments${process.env.NODE_TEST_CONTEXT ? `-test-${process.pid}` : ""}`);
 var TEXT_MAX = 2e4;
 var DAY_MS = 24 * 36e5;
 function safeName(name) {
@@ -4030,18 +3308,18 @@ async function putChunk(input) {
   if (!Number.isInteger(input.index) || !Number.isInteger(input.total) || input.index < 0 || input.index >= input.total) {
     throw new LlmError(msg("error.attachment_bad"), "invalid_params");
   }
-  const dir = join4(ATTACHMENTS_DIR, input.id);
-  const path = join4(dir, safeName(input.name));
+  const dir = join2(ATTACHMENTS_DIR, input.id);
+  const path = join2(dir, safeName(input.name));
   if (input.index === 0) {
-    await rm2(dir, { recursive: true, force: true });
+    await rm(dir, { recursive: true, force: true });
     await mkdir(dir, { recursive: true });
   }
   const bytes = Buffer.from(input.data, "base64");
-  const written = await stat3(path).then((info) => info.size).catch(() => null);
+  const written = await stat2(path).then((info) => info.size).catch(() => null);
   if (input.index > 0 && written === null) throw new LlmError(msg("error.attachment_bad"), "invalid_params");
   const before = written ?? 0;
   if (before + bytes.length > MAX_ATTACHMENT_BYTES) {
-    await rm2(dir, { recursive: true, force: true });
+    await rm(dir, { recursive: true, force: true });
     throw new LlmError(msg("error.file_too_large", { name: safeName(input.name), size: sizeOver(before + bytes.length, MAX_ATTACHMENT_BYTES), max: megabytes(MAX_ATTACHMENT_BYTES) }), "too_large");
   }
   await appendFile(path, bytes);
@@ -4051,12 +3329,12 @@ async function putChunk(input) {
 async function cleanAttachments(now = Date.now()) {
   const entries = await readdir2(ATTACHMENTS_DIR).catch(() => []);
   for (const entry of entries) {
-    const info = await stat3(join4(ATTACHMENTS_DIR, entry)).catch(() => null);
-    if (info && now - info.mtimeMs > DAY_MS) await rm2(join4(ATTACHMENTS_DIR, entry), { recursive: true, force: true }).catch(() => void 0);
+    const info = await stat2(join2(ATTACHMENTS_DIR, entry)).catch(() => null);
+    if (info && now - info.mtimeMs > DAY_MS) await rm(join2(ATTACHMENTS_DIR, entry), { recursive: true, force: true }).catch(() => void 0);
   }
 }
 async function clearAttachments() {
-  await rm2(ATTACHMENTS_DIR, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+  await rm(ATTACHMENTS_DIR, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
 }
 function isAttachment(path) {
   const inside = relative2(ATTACHMENTS_DIR, resolve(path));
@@ -4082,12 +3360,12 @@ async function loadFiles(paths) {
   const out = { images: [], texts: [], paths: [] };
   for (const path of paths) {
     if (!isAttachment(path)) throw new LlmError(msg("error.attachment_bad"), "invalid_params");
-    const info = await stat3(path).catch(() => null);
+    const info = await stat2(path).catch(() => null);
     if (!info || !info.isFile()) throw new LlmError(msg("error.attachment_missing", { name: basename2(path) }), "invalid_params");
     if (info.size > MAX_ATTACHMENT_BYTES) {
       throw new LlmError(msg("error.file_too_large", { name: basename2(path), size: sizeOver(info.size, MAX_ATTACHMENT_BYTES), max: megabytes(MAX_ATTACHMENT_BYTES) }), "too_large");
     }
-    const bytes = await readFile4(path);
+    const bytes = await readFile2(path);
     out.paths.push(path);
     const type = sniffImage(bytes.subarray(0, 16));
     if (type && info.size <= MAX_IMAGE_BYTES && out.images.length < MAX_IMAGES) {
@@ -4207,82 +3485,34 @@ function parseHistory(value) {
 }
 
 // src/presets.ts
-var PRESETS = [
-  { id: "copilot", label: "GitHub Copilot", provider: "copilot", baseUrl: "", model: "", env: "" },
-  { id: "openai", label: "OpenAI", provider: "openai", baseUrl: "https://api.openai.com/v1", model: "gpt-4.1-mini", env: "OPENAI_API_KEY" },
-  { id: "anthropic", label: "Anthropic", provider: "anthropic", baseUrl: "https://api.anthropic.com", model: "claude-haiku-4-5", env: "ANTHROPIC_API_KEY" },
-  { id: "openrouter", label: "OpenRouter", provider: "openai", baseUrl: "https://openrouter.ai/api/v1", model: "openai/gpt-4.1-mini", env: "OPENROUTER_API_KEY" },
-  { id: "gemini", label: "Google Gemini", provider: "openai", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.5-flash", env: "GEMINI_API_KEY" },
-  { id: "groq", label: "Groq", provider: "openai", baseUrl: "https://api.groq.com/openai/v1", model: "llama-3.3-70b-versatile", env: "GROQ_API_KEY" },
-  { id: "deepseek", label: "DeepSeek", provider: "openai", baseUrl: "https://api.deepseek.com/v1", model: "deepseek-chat", env: "DEEPSEEK_API_KEY" },
-  { id: "mistral", label: "Mistral", provider: "openai", baseUrl: "https://api.mistral.ai/v1", model: "mistral-small-latest", env: "MISTRAL_API_KEY" },
-  { id: "ollama", label: "Ollama (local)", provider: "openai", baseUrl: "http://localhost:11434/v1", model: "qwen2.5-coder", env: "" },
-  { id: "lmstudio", label: "LM Studio (local)", provider: "openai", baseUrl: "http://localhost:1234/v1", model: "local-model", env: "" },
-  { id: "custom", label: "Custom (OpenAI-compatible)", provider: "openai", baseUrl: "", model: "", env: "" },
-  // Subscription CLIs: `baseUrl` is unused, `model` is optional (the CLI's default otherwise).
-  { id: "claude-code", label: "Claude Code (subscription)", provider: "cli", baseUrl: "", model: "haiku", env: "" },
-  { id: "codex", label: "Codex CLI (ChatGPT subscription)", provider: "cli", baseUrl: "", model: "", env: "" },
-  { id: "gemini-cli", label: "Gemini CLI (Google account)", provider: "cli", baseUrl: "", model: "", env: "" },
-  { id: "custom-cli", label: "Custom CLI (prompt on stdin)", provider: "cli", baseUrl: "", model: "", env: "" }
-];
-var CUSTOM_PRESET = PRESETS.find((preset) => preset.id === "custom") ?? {
-  id: "custom",
-  label: "Custom (OpenAI-compatible)",
-  provider: "openai",
-  baseUrl: "",
-  model: "",
-  env: ""
-};
-function presetById(id2) {
-  return PRESETS.find((preset) => preset.id === id2) ?? CUSTOM_PRESET;
-}
 var MODELS_KEY = "models";
-var DEFAULT_MAX_TOKENS = 8e3;
 var str2 = (value, fallback = "") => typeof value === "string" ? value : fallback;
-var num = (value, fallback) => typeof value === "number" && Number.isFinite(value) ? value : fallback;
 function normalizeProfile(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return null;
-  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const raw2 = value;
   const id2 = str2(raw2.id);
-  if (!/^[a-z0-9-]{1,40}$/.test(id2)) {
-    return null;
-  }
-  const preset = presetById(str2(raw2.preset, "custom"));
+  if (!/^[a-z0-9-]{1,40}$/.test(id2) || raw2.preset !== "copilot" || raw2.provider !== "copilot") return null;
   return {
     id: id2,
-    name: str2(raw2.name).trim().slice(0, 60) || preset.label,
-    preset: preset.id,
-    provider: preset.provider === "copilot" ? "copilot" : preset.provider === "cli" ? "cli" : raw2.provider === "anthropic" ? "anthropic" : "openai",
-    baseUrl: preset.provider === "copilot" ? "" : str2(raw2.baseUrl).trim().slice(0, 500),
+    name: str2(raw2.name).trim().slice(0, 60) || "GitHub Copilot",
+    preset: "copilot",
+    provider: "copilot",
     model: str2(raw2.model).trim().slice(0, 200),
-    // A profile saved before 2.5.4 also carries `temperature`: it is dropped here, and never sent.
-    maxTokens: Math.round(Math.min(32e3, Math.max(128, num(raw2.maxTokens, DEFAULT_MAX_TOKENS)))),
-    enabled: raw2.enabled !== false,
-    command: preset.provider === "copilot" ? "" : str2(raw2.command).trim().slice(0, 500),
-    args: preset.provider === "copilot" ? "" : str2(raw2.args).trim().slice(0, 500)
+    enabled: raw2.enabled !== false
   };
 }
 function parseModelsConfig(value) {
   const raw2 = value && typeof value === "object" && !Array.isArray(value) ? value : {};
-  const list = Array.isArray(raw2.profiles) ? raw2.profiles : [];
   const profiles = [];
-  for (const item2 of list) {
+  for (const item2 of Array.isArray(raw2.profiles) ? raw2.profiles : []) {
     const profile = normalizeProfile(item2);
-    if (profile && !profiles.some((existing) => existing.id === profile.id)) {
-      profiles.push(profile);
-    }
+    if (profile && !profiles.some((existing) => existing.id === profile.id)) profiles.push(profile);
   }
-  const ref = (id2) => typeof id2 === "string" && profiles.some((p) => p.id === id2) ? id2 : null;
-  return { profiles, hookProfileId: ref(raw2.hookProfileId), selectorProfileId: ref(raw2.selectorProfileId) };
+  const id2 = raw2.selectorProfileId;
+  return { profiles, selectorProfileId: typeof id2 === "string" && /^[a-z0-9-]{1,40}$/.test(id2) ? id2 : null };
 }
 function modelsToJson(config) {
-  return {
-    profiles: config.profiles.map((profile) => ({ ...profile })),
-    hookProfileId: config.hookProfileId,
-    selectorProfileId: config.selectorProfileId
-  };
+  return { profiles: config.profiles.map((profile) => ({ ...profile })), selectorProfileId: config.selectorProfileId };
 }
 function newProfileId(name) {
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 24) || "model";
@@ -4294,80 +3524,17 @@ function isContextLevel(value) {
 }
 
 // src/models.ts
-var secretName = (profileId) => `apiKey.${profileId}`;
-function envProfiles() {
-  const out = [];
-  for (const preset of PRESETS) {
-    if (preset.env && process.env[preset.env]) {
-      out.push({
-        id: `env-${preset.id}`,
-        name: `${preset.label} (env)`,
-        preset: preset.id,
-        provider: preset.provider,
-        baseUrl: preset.baseUrl,
-        model: preset.model,
-        maxTokens: DEFAULT_MAX_TOKENS,
-        enabled: true,
-        command: "",
-        args: ""
-      });
-    }
-  }
-  return out;
-}
-async function envKeysAllowed(host) {
-  return await host.settings.get("allowEnvKeys").catch(() => true) !== false;
-}
 async function loadModels(host) {
-  const config = parseModelsConfig(await host.storage.get(MODELS_KEY));
-  if (config.profiles.length > 0 || !await envKeysAllowed(host)) {
-    return { ...config, fromEnv: false };
-  }
-  return { profiles: envProfiles(), hookProfileId: null, selectorProfileId: null, fromEnv: true };
+  return parseModelsConfig(await host.storage.get(MODELS_KEY));
 }
 async function saveModels(host, config) {
   await host.storage.set(MODELS_KEY, modelsToJson(config));
 }
-function needsKey(profile) {
-  if (profile.provider === "cli" || profile.provider === "copilot") return false;
-  return !(profile.provider === "openai" && isLocalUrl(effectiveBaseUrl(profile)));
-}
-function effectiveBaseUrl(profile) {
-  return profile.baseUrl || presetById(profile.preset).baseUrl;
-}
 function effectiveModel(profile) {
-  if (profile.provider === "cli") return profile.model;
-  return profile.model || presetById(profile.preset).model;
+  return profile.model;
 }
-async function resolveKey(host, profile) {
-  if (profile.provider === "copilot") return { key: null, source: "copilot" };
-  if (profile.provider === "cli") {
-    return { key: null, source: "subscription" };
-  }
-  if (!needsKey(profile)) {
-    const stored2 = await host.secrets.get(secretName(profile.id)).catch(() => null);
-    return { key: stored2, source: stored2 ? "secret" : "not-needed" };
-  }
-  const stored = await host.secrets.get(secretName(profile.id)).catch(() => null);
-  if (stored) {
-    return { key: stored, source: "secret" };
-  }
-  const env = presetById(profile.preset).env;
-  if (env && process.env[env] && await envKeysAllowed(host)) {
-    return { key: process.env[env] ?? null, source: "env" };
-  }
-  return { key: null, source: "none" };
-}
-async function viewProfiles(host, profiles) {
-  return Promise.all(
-    profiles.map(async (profile) => ({
-      ...profile,
-      effectiveBaseUrl: effectiveBaseUrl(profile),
-      effectiveModel: effectiveModel(profile),
-      keySource: (await resolveKey(host, profile)).source,
-      envName: presetById(profile.preset).env
-    }))
-  );
+function viewProfiles(profiles) {
+  return profiles.map((profile) => ({ ...profile, effectiveModel: effectiveModel(profile) }));
 }
 var ChainError = class extends Error {
   code;
@@ -4382,12 +3549,12 @@ var ChainError = class extends Error {
   }
 };
 function candidates(profiles, preferredId, fallback) {
-  const enabled = profiles.filter((profile) => profile.enabled);
+  const supported = profiles.filter((profile) => profile.provider === "copilot" && profile.preset === "copilot");
+  const enabled = supported.filter((profile) => profile.enabled);
   const preferred = preferredId ? profiles.find((profile) => profile.id === preferredId) : void 0;
-  if (preferredId && !preferred) return [];
+  if (preferredId && (!preferred || preferred.provider !== "copilot" || preferred.preset !== "copilot")) return [];
   const ordered = preferred ? [preferred, ...enabled.filter((p) => p.id !== preferred.id)] : enabled;
-  const sameRoute = ordered.filter((profile) => profile.provider === "copilot" === (ordered[0]?.provider === "copilot"));
-  return fallback ? sameRoute : sameRoute.slice(0, 1);
+  return fallback ? ordered : ordered.slice(0, 1);
 }
 async function runChain(host, list, system, user, options) {
   const attempts = [];
@@ -4395,7 +3562,9 @@ async function runChain(host, list, system, user, options) {
     throw new ChainError(msg("error.no_model"), "invalid_params", attempts);
   }
   const started = Date.now();
-  list = list.filter((profile) => profile.provider === "copilot" === (list[0]?.provider === "copilot"));
+  if (list.some((profile) => profile.provider !== "copilot" || profile.preset !== "copilot")) {
+    throw new ChainError(msg("error.invalid_profile"), "invalid_params", attempts);
+  }
   let lastError = null;
   for (const profile of list) {
     if (options.signal?.aborted) {
@@ -4408,12 +3577,6 @@ async function runChain(host, list, system, user, options) {
     const attemptStart = Date.now();
     const model = effectiveModel(profile);
     options.onAttempt?.(profile, model, attempts.length + 1, list.length);
-    const { key } = await resolveKey(host, profile);
-    if (!key && needsKey(profile)) {
-      attempts.push({ profileId: profile.id, name: profile.name, model, ok: false, error: "no API key", errorText: msg("error.no_key"), ms: 0 });
-      lastError = new LlmError(msg("error.profile_no_key", { name: profile.name }), "invalid_params");
-      continue;
-    }
     const controller = new AbortController();
     const last = profile === list[list.length - 1];
     const limit = last && options.totalMs !== void 0 ? remaining : Math.min(options.timeoutMs, remaining);
@@ -4425,34 +3588,10 @@ async function runChain(host, list, system, user, options) {
     const onAbort = () => controller.abort();
     options.signal?.addEventListener("abort", onAbort);
     try {
-      if (profile.provider === "copilot" && await host.settings.get("allowOnlineModelLists") === false) {
+      if (await host.settings.get("allowOnlineModelLists") === false) {
         throw new LlmError(msg("error.lists_off"), "unavailable");
       }
-      const text2 = profile.provider === "copilot" ? (await host.host.call("copilot.rewrite", { model, system, user, images: (options.images ?? []).map((image) => ({ type: image.type, base64: image.base64 })) }, { signal: controller.signal })).text : profile.provider === "cli" ? await runCli(
-        {
-          kind: profile.preset,
-          command: profile.command,
-          model,
-          customArgs: profile.args,
-          images: imageSupport(profile) === "file" ? (options.images ?? []).map((image) => image.path) : []
-        },
-        system,
-        user,
-        controller.signal
-      ) : await complete(
-        {
-          provider: profile.provider,
-          baseUrl: effectiveBaseUrl(profile),
-          model,
-          apiKey: key,
-          envName: presetById(profile.preset).env,
-          maxTokens: profile.maxTokens
-        },
-        system,
-        user,
-        controller.signal,
-        imageSupport(profile) === "data" ? (options.images ?? []).map((image) => ({ type: image.type, base64: image.base64 })) : []
-      );
+      const { text: text2 } = await host.host.call("copilot.rewrite", { model, system, user, images: (options.images ?? []).map((image) => ({ type: image.type, base64: image.base64 })) }, { signal: controller.signal });
       attempts.push({ profileId: profile.id, name: profile.name, model, ok: true, ms: Date.now() - attemptStart });
       return { text: text2, profile, attempts };
     } catch (caught) {
@@ -4734,14 +3873,12 @@ var PRIVACY_KEYS = [
   "allowAgentActivity",
   "allowEditorSaves",
   "allowTerminalSend",
-  "allowAgentLaunch",
   "allowOpenFiles",
   "saveHistory",
-  "allowEnvKeys",
   "allowOnlineModelLists"
 ];
-var OFF_BY_DEFAULT = /* @__PURE__ */ new Set(["allowOtherAgents", "allowAgentActivity", "allowEditorSaves", "allowAgentLaunch"]);
-var NEEDS_CONSENT = /* @__PURE__ */ new Set(["allowOtherAgents", "allowAgentActivity", "allowAgentLaunch"]);
+var OFF_BY_DEFAULT = /* @__PURE__ */ new Set(["allowOtherAgents", "allowAgentActivity", "allowEditorSaves"]);
+var NEEDS_CONSENT = /* @__PURE__ */ new Set(["allowOtherAgents", "allowAgentActivity"]);
 var CONSENTS_KEY = "consents";
 function parseConsents(value) {
   const out = {};
@@ -4810,42 +3947,29 @@ function createProgress(runId, keys, send, clock = Date.now) {
   };
 }
 
-// src/brand.ts
-var BRAND = "Enhance Prompt";
-var BRAND_SHORT = "Enhance";
-
 // src/worker.ts
-var AUTO_MODES = ["off", "rules", "ai"];
-var HOOK_BUDGET_MS = 1700;
 var RUN_LIMITS = { budgetMs: PANEL_REQUEST_LIMIT_MS - 5e3, pickerMs: 25e3, sliceMs: 9e4, totalMs: 3e5, orphanMs: 1e4 };
-var CATALOG_TTL_MS = 24 * 36e5;
 var str3 = (value, fallback = "") => typeof value === "string" ? value : fallback;
-var num2 = (value, fallback) => typeof value === "number" && Number.isFinite(value) ? value : fallback;
+var num = (value, fallback) => typeof value === "number" && Number.isFinite(value) ? value : fallback;
 var bool = (value, fallback) => typeof value === "boolean" ? value : fallback;
 async function readSettings(host) {
   const [all, consents] = await Promise.all([host.settings.get(), host.storage.get(CONSENTS_KEY).catch(() => null)]);
-  const mode = str3(all.autoEnhanceMode, "off");
   const style = str3(all.defaultStyle, "balanced");
   const level = str3(all.contextLevel, "standard");
   return {
     defaultStyle: isStyle(style) ? style : "balanced",
     customInstructions: str3(all.customInstructions),
     contextLevel: isContextLevel(level) ? level : "standard",
-    terminalLines: num2(all.terminalLines, 100),
+    terminalLines: num(all.terminalLines, 100),
     extraContextFiles: str3(all.extraContextFiles).split("\n").map((line) => line.trim().replace(/\\/g, "/").replace(/^\.\//, "")).filter((line) => line && !line.startsWith("/") && !line.includes("..")).slice(0, 10),
     excludePatterns: str3(all.excludePatterns),
     adaptToAgent: bool(all.adaptToAgent, true),
     fallbackEnabled: bool(all.fallbackEnabled, true),
     fallbackOn: str3(all.fallbackOn) === "transient" ? "transient" : "any",
-    timeoutSeconds: num2(all.timeoutSeconds, 60),
+    timeoutSeconds: num(all.timeoutSeconds, 60),
     sendMode: str3(all.sendMode, "paste"),
     sendPressEnter: bool(all.sendPressEnter, false),
-    historyLimit: num2(all.historyLimit, 50),
-    autoEnhanceMode: AUTO_MODES.includes(mode) ? mode : "off",
-    autoEnhanceAppend: str3(all.autoEnhanceAppend),
-    autoEnhanceMinLength: num2(all.autoEnhanceMinLength, 8),
-    autoEnhanceContext: bool(all.autoEnhanceContext, true),
-    notifyWhenDone: bool(all.notifyWhenDone, false),
+    historyLimit: num(all.historyLimit, 50),
     otherAgentsLimits: parseOtherAgentsLimits(all),
     privacy: parsePrivacy(all, parseConsents(consents))
   };
@@ -4965,15 +4089,18 @@ async function enhance(host, input, signal, progress, budgetMs) {
     (profile) => chosenModel && profile.id === profileId ? { ...profile, model: chosenModel } : profile
   );
   if (list.length === 0) throw hostError(msg("error.no_model"), "invalid_params");
-  const pickerProfiles = config.profiles.filter((profile) => profile.provider === "copilot" === (list[0]?.provider === "copilot"));
+  const pickerProfiles = config.profiles;
   const pickerConfig = {
     ...config,
     profiles: pickerProfiles.map((profile) => profile.id === config.selectorProfileId ? profile : list.find((candidate) => candidate.id === profile.id) ?? profile),
-    selectorProfileId: pickerProfiles.some((profile) => profile.id === config.selectorProfileId) ? config.selectorProfileId : list[0]?.id ?? null
+    selectorProfileId: config.selectorProfileId ?? list[0]?.id ?? null
   };
   const style = isStyle(input.style) ? input.style : settings.defaultStyle;
   const requested = isContextLevel(input.level) ? input.level : settings.contextLevel;
   const level = allowedLevel(requested, settings);
+  if (level === "max" && config.selectorProfileId && !config.profiles.some((profile) => profile.id === config.selectorProfileId && profile.enabled)) {
+    throw hostError(msg("error.selector_model"), "invalid_params");
+  }
   const privacy = gatherPrivacy(settings);
   const step = progress?.(level, settings.privacy.allowProjectFiles, privacy.allowOtherAgents) ?? (() => void 0);
   const own = await ownRules(host, typeof input.workspaceId === "string" ? input.workspaceId : null);
@@ -5062,7 +4189,6 @@ ${otherFiles.map((path, index) => `${index + 1}. ${path}`).join("\n")}
       })
     );
     step("model", "done", `${result.profile.name} \xB7 ${result.attempts.find((attempt) => attempt.ok)?.model ?? ""}`);
-    if (images.length > 0 && imageSupport(result.profile) === "none") gathered.notes.push(msg("note.images_paths_only"));
     return {
       enhanced: withAttachedPaths(withImagePaths(cleanOutput(result.text), images), otherFiles),
       profile: result.profile,
@@ -5085,78 +4211,7 @@ ${otherFiles.map((path, index) => `${index + 1}. ${path}`).join("\n")}
 var view = (items) => items.map(({ content: _content, ...rest }) => rest);
 async function modelsView(host) {
   const config = await loadModels(host);
-  const keys = host.host.has("secrets.protection") ? await host.host.call("secrets.protection", {}).catch(() => null) : null;
-  return {
-    profiles: await viewProfiles(host, config.profiles),
-    hookProfileId: config.hookProfileId,
-    selectorProfileId: config.selectorProfileId,
-    fromEnv: config.fromEnv,
-    presets: PRESETS,
-    ...keys?.status === "unavailable" ? { keysUnavailable: true } : {}
-  };
-}
-async function editableModels(host) {
-  const { fromEnv: _fromEnv, ...config } = await loadModels(host);
-  return config;
-}
-async function hookPlace(host, terminalId) {
-  const focused = await host.host.call("workspace.readContext", {}).catch(() => null);
-  const own = await workspaceOfTerminal(host, terminalId, focused);
-  if (own) {
-    return {
-      workspace: own,
-      label: `${workspaceTitle(own.name, own.project)}${own.branch ? ` (branch ${own.branch})` : ""}`,
-      where: { workspace: own.name, project: own.project?.trim() || own.name }
-    };
-  }
-  if (!focused || !focused.terminals.some((terminal) => terminal.id === terminalId)) return null;
-  const workspace = await findFocusedWorkspace(host, focused);
-  return {
-    workspace,
-    label: `${workspaceTitle(focused.displayName, workspace?.project)}${focused.branch ? ` (branch ${focused.branch})` : ""}`,
-    where: { workspace: focused.displayName, project: await projectNameOf(host, focused, workspace) }
-  };
-}
-function hookContext(place, settings) {
-  if (!place) return [];
-  const items = [{ id: "workspace", kind: "workspace", label: "Workspace", content: place.label, chars: place.label.length }];
-  if (!settings.privacy.allowProjectFiles) return items;
-  const cached = place.workspace && isLocalWorkspace(place.workspace) ? cachedStatic(place.workspace.path, settings) : null;
-  if (cached) items.push(...cached.items.filter((entry) => entry.kind !== "tree"));
-  return items;
-}
-var SIDEBAR_KEY = process.platform === "darwin" ? "\u2318L" : "Ctrl+L";
-var statusBarText = (mode) => `${BRAND_SHORT}: ${mode === "off" ? "Off" : "On"}`;
-var WORKER_WORDS = {
-  modes: { off: "off", rules: "on (rules)", ai: "on (AI)" },
-  tooltip: (mode) => `Click: open the right sidebar (${SIDEBAR_KEY}), then the lightbulb tab "${BRAND}".
-Auto-enhance is ${mode}. Change it under the panel's gear icon or in the command palette.
-Settings and updates: Settings \u2192 Plugins \u2192 Enhance Prompt.`,
-  answer: (mode) => `Auto-enhance is ${mode}.`,
-  bar: { hidden: "Status bar item hidden.", shown: "Status bar item shown." }
-};
-function modeAnswer(mode) {
-  return WORKER_WORDS.answer(WORKER_WORDS.modes[mode]);
-}
-async function refreshStatusBar(host) {
-  if (!host.host.has("statusBar.update")) return;
-  const all = await host.settings.get();
-  const { autoEnhanceMode } = await readSettings(host);
-  const display = typeof all.statusBarItem === "string" ? all.statusBarItem : "full";
-  const words = WORKER_WORDS;
-  await host.host.call("statusBar.update", {
-    id: "auto-enhance",
-    visible: display !== "hidden",
-    text: display === "icon" ? "" : statusBarText(autoEnhanceMode),
-    icon: "lightbulb",
-    tone: autoEnhanceMode === "off" ? "neutral" : "accent",
-    tooltip: words.tooltip(words.modes[autoEnhanceMode])
-  }).catch(() => void 0);
-}
-async function setMode(host, mode) {
-  await host.settings.set("autoEnhanceMode", mode);
-  await refreshStatusBar(host);
-  return modeAnswer(mode);
+  return { profiles: viewProfiles(config.profiles), selectorProfileId: config.selectorProfileId };
 }
 async function sendPieces(host, terminalId, pieces) {
   const pasting = pieces.length > 1 && pieces[0].startsWith(PASTE_START) && pieces[pieces.length - 1].endsWith(PASTE_END);
@@ -5173,18 +4228,6 @@ async function sendPieces(host, terminalId, pieces) {
     }
   }
   return { accepted: sent === pieces.length };
-}
-async function fetchCatalog(host, source) {
-  const { privacy } = await readSettings(host);
-  const online = privacy.allowOnlineModelLists;
-  if (source.presetId === "claude-code") return claudeCatalog(source.command, online);
-  if (source.presetId === "codex") return codexCatalog(source.command);
-  if (source.presetId === "gemini-cli") return geminiCatalog(source.command, online);
-  if (source.provider === "cli") return { models: [], source: "custom CLI", fetchedAt: Date.now() };
-  if (!online) return { models: [], source: "GET /models", fetchedAt: Date.now(), error: english(msg("error.lists_off")), errorText: msg("error.lists_off") };
-  const envKey = privacy.allowEnvKeys && source.env ? process.env[source.env] ?? null : null;
-  const savedKey = source.profile ? (await resolveKey(host, source.profile)).key : null;
-  return apiCatalog(source.provider === "anthropic" ? "anthropic" : "openai", source.baseUrl, source.typedKey || savedKey || envKey);
 }
 var latestProgress = /* @__PURE__ */ new Map();
 var MAX_TRACKED_RUNS = 20;
@@ -5256,7 +4299,6 @@ async function waitForRun(host, run2, signal, sliceMs) {
     if (!first.ok) throw first.error;
     const { result } = first;
     const model = result.attempts.find((attempt) => attempt.ok)?.model ?? result.profile.model;
-    void notifyDone(host, result.settings, model, Date.now() - run2.started);
     await addHistory(host, result.settings, {
       original: run2.input.prompt.trim(),
       enhanced: result.enhanced,
@@ -5391,40 +4433,35 @@ function registerRunHandlers(host) {
   });
 }
 function registerModelHandlers(host) {
-  const catalogsInFlight = /* @__PURE__ */ new Map();
+  const rejectExternalOptions = (input) => {
+    const raw2 = input;
+    if (["baseUrl", "command", "args", "apiKey"].some((key) => raw2[key] !== void 0 && raw2[key] !== "")) {
+      throw hostError(msg("error.invalid_profile"), "invalid_params");
+    }
+  };
   host.panels.handle("models.get", async () => modelsView(host));
   host.panels.handle("models.save", async (input) => {
-    const config = await editableModels(host);
+    rejectExternalOptions(input);
+    const config = await loadModels(host);
     const existing = input.id ? config.profiles.findIndex((profile2) => profile2.id === input.id) : -1;
-    const id2 = existing >= 0 ? config.profiles[existing].id : newProfileId(input.name || input.preset);
-    const profile = normalizeProfile({ ...input, id: id2 });
+    if (input.id !== void 0 && existing < 0) throw hostError(msg("error.invalid_profile"), "invalid_params");
+    const id2 = existing >= 0 ? config.profiles[existing].id : newProfileId(input.name || "copilot");
+    const profile = normalizeProfile({ preset: "copilot", provider: "copilot", ...input, id: id2 });
     if (!profile) throw hostError(msg("error.invalid_profile"), "invalid_params");
-    if (profile.provider === "copilot" && input.apiKey?.trim()) throw hostError(msg("error.invalid_profile"), "invalid_params");
-    if (input.apiKey?.trim()) {
-      try {
-        await host.secrets.set(secretName(id2), input.apiKey.trim());
-      } catch (error) {
-        host.log(`models.save: the key was not stored: ${error.message}`);
-        throw hostError(msg("error.key_not_saved"), "action_failed");
-      }
-    }
     if (existing >= 0) config.profiles[existing] = profile;
     else config.profiles.push(profile);
     await saveModels(host, config);
-    if (input.apiKey !== void 0 && !input.apiKey.trim()) await host.secrets.delete(secretName(id2)).catch(() => void 0);
     return modelsView(host);
   });
   host.panels.handle("models.delete", async ({ id: id2 }) => {
-    const config = await editableModels(host);
+    const config = await loadModels(host);
     config.profiles = config.profiles.filter((profile) => profile.id !== id2);
-    if (config.hookProfileId === id2) config.hookProfileId = null;
     if (config.selectorProfileId === id2) config.selectorProfileId = null;
     await saveModels(host, config);
-    await host.secrets.delete(secretName(id2)).catch(() => void 0);
     return modelsView(host);
   });
   host.panels.handle("models.move", async ({ id: id2, direction, to }) => {
-    const config = await editableModels(host);
+    const config = await loadModels(host);
     const index = config.profiles.findIndex((profile) => profile.id === id2);
     const step = direction === "up" ? -1 : 1;
     const target = typeof to === "number" ? Math.round(to) : index + step;
@@ -5435,12 +4472,12 @@ function registerModelHandlers(host) {
     }
     return modelsView(host);
   });
-  host.panels.handle("models.roles", async ({ hookProfileId, selectorProfileId }) => {
-    const config = await editableModels(host);
-    const valid = (id2) => id2 && config.profiles.some((profile) => profile.id === id2) ? id2 : null;
-    const hook = valid(hookProfileId);
-    config.hookProfileId = hook && ["openai", "anthropic"].includes(config.profiles.find((profile) => profile.id === hook)?.provider ?? "") ? hook : null;
-    config.selectorProfileId = valid(selectorProfileId);
+  host.panels.handle("models.roles", async ({ selectorProfileId }) => {
+    const config = await loadModels(host);
+    if (selectorProfileId !== null && !config.profiles.some((profile) => profile.id === selectorProfileId && profile.enabled)) {
+      throw hostError(msg("error.selector_model"), "invalid_params");
+    }
+    config.selectorProfileId = selectorProfileId;
     await saveModels(host, config);
     return modelsView(host);
   });
@@ -5458,8 +4495,7 @@ function registerModelHandlers(host) {
         "ping",
         chainOptions(settings, signal, { timeoutMs: 3e4, fallback: false })
       );
-      const keySource = (await resolveKey(host, profile)).source;
-      const text = msg("result.test_ok", { name: profile.name, model: attempts[0]?.model || "default", key: keySource });
+      const text = msg("result.test_ok", { name: profile.name, model: attempts[0]?.model || "default" });
       return { ok: true, message: english(text), text, ms: Date.now() - started };
     } catch (error) {
       const text = messageOf(error);
@@ -5467,62 +4503,21 @@ function registerModelHandlers(host) {
     }
   });
   host.panels.handle("models.catalog", async (input) => {
-    const preset = presetById(input.preset);
+    rejectExternalOptions(input);
+    const raw2 = input;
+    if (raw2.preset !== void 0 && raw2.preset !== "copilot" || raw2.provider !== void 0 && raw2.provider !== "copilot") {
+      throw hostError(msg("error.invalid_profile"), "invalid_params");
+    }
     const config = await loadModels(host);
-    const profile = input.profileId ? config.profiles.find((entry) => entry.id === input.profileId) : void 0;
-    const provider = preset.id === "custom" ? (input.provider ?? profile?.provider) === "anthropic" ? "anthropic" : "openai" : preset.provider;
-    if (provider === "copilot") {
-      if (!(await readSettings(host)).privacy.allowOnlineModelLists) return { models: [], source: "GitHub Copilot", fetchedAt: Date.now(), error: english(msg("error.lists_off")), errorText: msg("error.lists_off") };
-      try {
-        return await host.host.call("copilot.catalog", {});
-      } catch (error) {
-        return { models: [], source: "GitHub Copilot", fetchedAt: Date.now(), error: english(messageOf(error)), errorText: messageOf(error) };
-      }
+    if (input.profileId !== void 0 && !config.profiles.some((profile) => profile.id === input.profileId)) {
+      throw hostError(msg("error.invalid_profile"), "invalid_params");
     }
-    const baseUrl = (input.baseUrl ?? profile?.baseUrl ?? "").trim() || preset.baseUrl;
-    const command = (input.command ?? profile?.command ?? "").trim();
-    const cliKey = `catalog:v3:${preset.id}`;
-    let cacheKey = provider === "cli" ? cliKey : `catalog:v3:${provider}:${baseUrl}`;
-    if (preset.id === "claude-code") cacheKey = `${cliKey}:${await claudeProgramSignature(command)}`;
-    if (!input.refresh) {
-      const cached = parseCatalog(await host.storage.get(cacheKey));
-      if (cached && cached.models.length > 0 && Date.now() - cached.fetchedAt < CATALOG_TTL_MS) {
-        return cached;
-      }
-    }
-    const flightKey = `${cacheKey}${input.apiKey?.trim() ? ":typed" : ""}`;
-    const running = catalogsInFlight.get(flightKey);
-    if (running) return running;
-    const fetching = (async () => {
-      const catalog = await fetchCatalog(host, { presetId: preset.id, env: preset.env, provider, baseUrl, command, profile, typedKey: input.apiKey?.trim() });
-      if (catalog.models.length > 0) {
-        await host.storage.set(cacheKey, { ...catalog, models: catalog.models.map((model) => ({ ...model })) });
-        if (preset.id === "claude-code") {
-          for (const key of await host.storage.keys()) {
-            if ((key === cliKey || key.startsWith(`${cliKey}:`)) && key !== cacheKey) await host.storage.delete(key);
-          }
-        }
-      }
-      return catalog;
-    })();
-    catalogsInFlight.set(flightKey, fetching);
+    if (!(await readSettings(host)).privacy.allowOnlineModelLists) return { models: [], source: "GitHub Copilot", fetchedAt: Date.now(), error: english(msg("error.lists_off")), errorText: msg("error.lists_off") };
     try {
-      return await fetching;
-    } finally {
-      catalogsInFlight.delete(flightKey);
+      return await host.host.call("copilot.catalog", {});
+    } catch (error) {
+      return { models: [], source: "GitHub Copilot", fetchedAt: Date.now(), error: english(messageOf(error)), errorText: messageOf(error) };
     }
-  });
-  host.panels.handle("models.detect", async () => {
-    const config = await loadModels(host);
-    const found = detectClis().map(({ kind, path }) => ({
-      preset: kind,
-      label: presetById(kind).label,
-      path,
-      added: config.profiles.some(
-        (profile) => profile.preset === kind && (!profile.command || profile.command === path || profile.command === CLI_BINARIES[kind])
-      )
-    }));
-    return { found };
   });
 }
 function registerDataHandlers(host) {
@@ -5573,12 +4568,9 @@ function registerDataHandlers(host) {
     const keys = await host.storage.keys();
     const config = await loadModels(host);
     const history = parseHistory(await host.storage.get(HISTORY_KEY));
-    let secretsStored = 0;
-    for (const profile of config.profiles) if (await host.secrets.get(secretName(profile.id)).catch(() => null)) secretsStored++;
     return {
       history: history.length,
-      profiles: config.fromEnv ? 0 : config.profiles.length,
-      keys: secretsStored,
+      profiles: config.profiles.length,
       catalogs: keys.filter((key) => key.startsWith("catalog:")).length
     };
   });
@@ -5592,151 +4584,17 @@ function registerDataHandlers(host) {
       for (const key of keys.filter((entry) => entry.startsWith("catalog:"))) await host.storage.delete(key);
     }
     if (what === "all") {
-      const config = await loadModels(host);
-      for (const profile of config.profiles) await host.secrets.delete(secretName(profile.id)).catch(() => void 0);
       await host.storage.delete(MODELS_KEY);
       for (const key of Object.values(EFFORT_SETTINGS)) await host.settings.set(key, "auto");
       await host.storage.delete(RULES_KEY);
       await host.storage.delete(CONSENTS_KEY);
       await host.storage.delete("colorTheme");
       forgetActivity();
-      launchedPrompts.clear();
-      lastHook = null;
       await forgetTerminals(host);
       await clearAttachments().catch((error) => host.log(`attachments: ${error.message}`));
     }
     return { ok: true };
   });
-}
-var LAUNCH_MEMORY_MS = 12e4;
-var launchedPrompts = /* @__PURE__ */ new Map();
-function wasLaunchedHere(prompt) {
-  const now = Date.now();
-  for (const [text, until] of launchedPrompts) if (until < now) launchedPrompts.delete(text);
-  return launchedPrompts.has(terminalSafe(prompt).trim());
-}
-var warming = /* @__PURE__ */ new Set();
-var lastHook = null;
-function noteHook(host, record) {
-  lastHook = { at: Date.now(), ...record };
-  if (record.outcome === "skipped" && record.reason) host.panels.post("hook.skipped", { agent: record.agent, reason: record.reason });
-}
-function registerAutoEnhance(host) {
-  host.panels.handle("hook.last", async () => lastHook ?? await host.storage.get("panel:hookLast"));
-  host.hooks.on("agent.prompt.before", async (event, next) => {
-    const started = Date.now();
-    const settings = await readSettings(host);
-    const prompt = event.prompt;
-    if (settings.autoEnhanceMode === "off" || prompt.trim().length < settings.autoEnhanceMinLength) return;
-    if (wasLaunchedHere(prompt)) return;
-    if (settings.autoEnhanceMode === "rules") {
-      const append = settings.autoEnhanceAppend.trim();
-      if (!append || prompt.includes(append)) return;
-      host.panels.post("hook.enhanced", { agent: event.agent, mode: "rules" });
-      noteHook(host, { outcome: "appended", agent: event.agent });
-      return next({ ...event, prompt: `${prompt.trimEnd()}
-
-${append}` });
-    }
-    try {
-      const config = await loadModels(host);
-      const place = await hookPlace(host, event.terminalId);
-      const items = settings.autoEnhanceContext ? hookContext(place, settings) : [];
-      if (settings.autoEnhanceContext && settings.privacy.allowProjectFiles && place?.workspace && isLocalWorkspace(place.workspace) && !cachedStatic(place.workspace.path, settings)) {
-        const root = place.workspace.path;
-        if (!warming.has(root)) {
-          warming.add(root);
-          void staticParts(root, settings.extraContextFiles, true, settings.privacy.allowGit, void 0, void 0, settings).catch(() => void 0).finally(() => warming.delete(root));
-        }
-      }
-      const rules = rulesFor(parseRulesConfig(await host.storage.get(RULES_KEY).catch(() => null)), place?.where ?? { workspace: null, project: null });
-      const system = buildSystemPrompt({
-        style: settings.defaultStyle,
-        customInstructions: settings.customInstructions,
-        agent: settings.adaptToAgent ? event.agent : null,
-        rules
-      });
-      const apiProfiles = config.profiles.filter((profile) => profile.enabled && ["openai", "anthropic"].includes(profile.provider));
-      const hookProfileId = apiProfiles.some((profile) => profile.id === config.hookProfileId) ? config.hookProfileId : null;
-      const list = candidates(apiProfiles, hookProfileId, settings.fallbackEnabled);
-      if (list.length === 0) {
-        host.log("auto-enhance skipped: no enabled API model (subscription CLIs are too slow for the hook)");
-        noteHook(host, { outcome: "skipped", agent: event.agent, reason: msg("hook.no_model") });
-        return;
-      }
-      const result = await runChain(
-        host,
-        list,
-        system,
-        buildUserMessage(prompt, items),
-        chainOptions(settings, void 0, { totalMs: HOOK_BUDGET_MS - (Date.now() - started) })
-      );
-      const enhanced = terminalSafe(cleanOutput(result.text)).trim();
-      if (!enhanced) {
-        host.log("auto-enhance skipped: the model returned no prompt");
-        noteHook(host, { outcome: "skipped", agent: event.agent, reason: msg("hook.empty") });
-        return;
-      }
-      const model = result.attempts.find((attempt) => attempt.ok)?.model ?? result.profile.model;
-      void addHistory(host, settings, {
-        original: prompt,
-        enhanced,
-        style: settings.defaultStyle,
-        model,
-        source: "hook",
-        ...place?.where.project ? { project: place.where.project } : {}
-      }).catch(() => void 0);
-      host.panels.post("hook.enhanced", { agent: event.agent, mode: "ai", model });
-      noteHook(host, { outcome: "rewritten", agent: event.agent, model });
-      return next({ ...event, prompt: enhanced });
-    } catch (error) {
-      host.log(`auto-enhance skipped: ${error.message}`);
-      const reason = error instanceof ChainError || error instanceof LlmError ? error.text : raw(error.message);
-      noteHook(host, { outcome: "skipped", agent: event.agent, reason });
-      return;
-    }
-  });
-  let warmTimer = null;
-  host.events.on("workspace.changed", ({ context }) => {
-    if (!context) return;
-    if (warmTimer) clearTimeout(warmTimer);
-    warmTimer = setTimeout(async () => {
-      try {
-        const settings = await readSettings(host);
-        const wantsHook = settings.autoEnhanceMode === "ai" && settings.autoEnhanceContext;
-        if (!wantsHook && !atLeast(settings.contextLevel, "standard")) return;
-        const workspace = await findFocusedWorkspace(host, context);
-        if (workspace && isLocalWorkspace(workspace) && settings.privacy.allowProjectFiles) {
-          await staticParts(workspace.path, settings.extraContextFiles, true, settings.privacy.allowGit, void 0, void 0, settings);
-        }
-      } catch (error) {
-        host.log(`context warm-up: ${error.message}`);
-      }
-    }, 1500);
-  });
-}
-function registerCommands(host) {
-  host.commands.register("auto-enhance.cycle", async () => {
-    const { autoEnhanceMode } = await readSettings(host);
-    const next = AUTO_MODES[(AUTO_MODES.indexOf(autoEnhanceMode) + 1) % AUTO_MODES.length];
-    await host.settings.set("autoEnhanceMode", next);
-    await refreshStatusBar(host);
-    return modeAnswer(next);
-  });
-  host.commands.register("auto-enhance.off", async () => setMode(host, "off"));
-  host.commands.register("auto-enhance.rules", async () => setMode(host, "rules"));
-  host.commands.register("auto-enhance.ai", async () => setMode(host, "ai"));
-  host.commands.register("status-bar.toggle", async () => {
-    const all = await host.settings.get();
-    const next = all.statusBarItem === "hidden" ? "full" : "hidden";
-    await host.settings.set("statusBarItem", next);
-    await refreshStatusBar(host);
-    return WORKER_WORDS.bar[next === "hidden" ? "hidden" : "shown"];
-  });
-  host.settings.onDidChange(({ key }) => {
-    if (key === "autoEnhanceMode" || key === "statusBarItem") void refreshStatusBar(host);
-  });
-  void refreshStatusBar(host);
 }
 var live = parsePrivacy({}, {});
 async function refreshLive(host) {
@@ -5756,7 +4614,6 @@ async function focusedWorkspaceId(host, hint) {
   if (!focused) return null;
   return (await findFocusedWorkspace(host, focused, typeof hint === "string" ? hint : null))?.id ?? null;
 }
-var AGENT_KIND = /^[a-z][a-z0-9_-]{0,31}$/;
 function registerIntegrations(host) {
   void refreshLive(host);
   host.settings.onDidChange(() => void refreshLive(host));
@@ -5788,20 +4645,6 @@ function registerIntegrations(host) {
     await refreshLive(host);
     return { granted: [...NEEDS_CONSENT].filter((entry) => consents[entry] === true) };
   });
-  host.panels.handle("agent.launch", async ({ agent, prompt, workspaceId }) => {
-    const settings = await readSettings(host);
-    if (!settings.privacy.allowAgentLaunch) throw hostError(msg("error.launch_off"), "not_permitted");
-    if (!host.host.has("agent.launch")) throw hostError(msg("error.unsupported"), "unavailable");
-    if (typeof agent !== "string" || !AGENT_KIND.test(agent)) throw hostError(msg("error.invalid_request"), "invalid_params");
-    const text = terminalSafe(String(prompt ?? "")).trim().slice(0, 2e4);
-    if (!text) throw hostError(msg("error.nothing_to_send"), "invalid_params");
-    const id2 = await focusedWorkspaceId(host, workspaceId);
-    if (!id2) throw hostError(msg("note.no_workspace"), "invalid_params");
-    launchedPrompts.set(text, Date.now() + LAUNCH_MEMORY_MS);
-    const started = await host.host.call("agent.launch", { workspaceId: id2, agent, prompt: text });
-    learnTerminal(host, started.terminalId, id2);
-    return started;
-  });
   host.panels.handle("editor.open", async ({ path, workspaceId }) => {
     const settings = await readSettings(host);
     if (!settings.privacy.allowOpenFiles) throw hostError(msg("error.open_off"), "not_permitted");
@@ -5813,26 +4656,18 @@ function registerIntegrations(host) {
     return host.host.call("editor.open", { workspaceId: id2, path: clean });
   });
 }
-async function notifyDone(host, settings, model, ms) {
-  if (!settings.notifyWhenDone || ms < NOTIFY_AFTER_MS || !host.host.has("notifications.show")) return;
-  const body2 = formatText("Enhanced prompt ready ({model}, {seconds} s)", { model, seconds: (ms / 1e3).toFixed(0) });
-  await host.host.call("notifications.show", { title: BRAND, body: body2 }).catch(() => void 0);
-}
-var NOTIFY_AFTER_MS = 8e3;
 function activate(host) {
   registerIntegrations(host);
   registerRunHandlers(host);
   registerModelHandlers(host);
   registerDataHandlers(host);
-  registerAutoEnhance(host);
-  registerCommands(host);
 }
 
 // src/worker-host.ts
 import { EventEmitter } from "node:events";
 
 // src/version.ts
-var VERSION = "0.6.1";
+var VERSION = "0.7.0";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([
@@ -5858,16 +4693,13 @@ var OPERATIONS = /* @__PURE__ */ new Set([
   "models.roles",
   "models.test",
   "models.catalog",
-  "models.detect",
   "history.remove",
   "history.clear",
   "history.restore",
   "consents.get",
   "consent.set",
-  "agent.launch",
   "editor.open",
   "targets.list",
-  "hook.last",
   "rules.get",
   "rules.save",
   "data.summary",
@@ -6032,7 +4864,7 @@ function createWorkerHost(services2, log = (_message) => {
     let onAbort = () => {
     };
     const started = Date.now();
-    const quiet = ["logs.get", "targets.list", "hook.last", "data.summary", "consents.get", "enhance.progress.get"].includes(name);
+    const quiet = ["logs.get", "targets.list", "data.summary", "consents.get", "enhance.progress.get"].includes(name);
     if (!quiet) diagnostics2.record(name, "started");
     try {
       const stopped = new Promise((_resolve, reject) => {
@@ -6112,13 +4944,12 @@ function createWorkerHost(services2, log = (_message) => {
 }
 
 // src/copilot/services.ts
-import { homedir as homedir3 } from "node:os";
-import { join as join6 } from "node:path";
-import { createHash as createHash2 } from "node:crypto";
+import { homedir } from "node:os";
+import { join as join4 } from "node:path";
+import { createHash } from "node:crypto";
 
 // src/defaults.ts
 var DEFAULTS = {
-  "statusBarItem": "full",
   "defaultStyle": "balanced",
   "customInstructions": "",
   "contextLevel": "standard",
@@ -6135,11 +4966,6 @@ var DEFAULTS = {
   "sendMode": "paste",
   "sendPressEnter": false,
   "historyLimit": 50,
-  "notifyWhenDone": false,
-  "autoEnhanceMode": "off",
-  "autoEnhanceAppend": "Before you finish: keep changes minimal and focused, follow the existing code style, run the relevant tests or type checks, and summarize what you changed.",
-  "autoEnhanceMinLength": 8,
-  "autoEnhanceContext": true,
   "allowProjectFiles": true,
   "allowGit": true,
   "allowTerminalRead": true,
@@ -6149,10 +4975,8 @@ var DEFAULTS = {
   "allowAgentActivity": false,
   "allowEditorSaves": false,
   "allowTerminalSend": true,
-  "allowAgentLaunch": false,
   "allowOpenFiles": true,
   "saveHistory": true,
-  "allowEnvKeys": true,
   "allowOnlineModelLists": true
 };
 
@@ -6160,21 +4984,21 @@ var DEFAULTS = {
 var import_proper_lockfile = __toESM(require_proper_lockfile(), 1);
 import { AsyncLocalStorage } from "node:async_hooks";
 import { EventEmitter as EventEmitter2 } from "node:events";
-import { mkdir as mkdir2, readFile as readFile5, rename, writeFile } from "node:fs/promises";
+import { mkdir as mkdir2, readFile as readFile3, rename, writeFile } from "node:fs/promises";
 import { watchFile, unwatchFile } from "node:fs";
-import { join as join5, resolve as resolve2 } from "node:path";
+import { join as join3, resolve as resolve2 } from "node:path";
 import { randomUUID } from "node:crypto";
 var held = new AsyncLocalStorage();
 var buses = /* @__PURE__ */ new Map();
 function persistentStore(directory) {
   const root = resolve2(directory);
-  const file = join5(root, "state.json");
+  const file = join3(root, "state.json");
   const bus = buses.get(root) ?? new EventEmitter2();
   bus.setMaxListeners(100);
   buses.set(root, bus);
   const read = async () => {
     try {
-      const value = JSON.parse(await readFile5(file, "utf8"));
+      const value = JSON.parse(await readFile3(file, "utf8"));
       if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid Enhance Prompt storage.");
       return value;
     } catch (error) {
@@ -6236,65 +5060,6 @@ function persistentStore(directory) {
   };
 }
 
-// src/copilot/secrets.ts
-import { spawn as spawn3 } from "node:child_process";
-var SCRIPT = `Add-Type -AssemblyName System.Security
-$r = [Console]::In.ReadToEnd() | ConvertFrom-Json
-$scope = [System.Security.Cryptography.DataProtectionScope]::CurrentUser
-if ($r.action -eq 'protect') {
-  $bytes = [Text.Encoding]::UTF8.GetBytes($r.value)
-  $out = [Security.Cryptography.ProtectedData]::Protect($bytes, $null, $scope)
-  [Console]::Out.Write([Convert]::ToBase64String($out))
-} else {
-  $bytes = [Convert]::FromBase64String($r.value)
-  $out = [Security.Cryptography.ProtectedData]::Unprotect($bytes, $null, $scope)
-  [Console]::Out.Write([Text.Encoding]::UTF8.GetString($out))
-}`;
-function protectedSecrets(store) {
-  const available = process.platform === "win32";
-  async function crypt(action, value) {
-    if (!available) throw new Error("OS-protected key storage is unavailable on this platform.");
-    if (value.length > 16384) throw new Error("API key is too long.");
-    return new Promise((resolve4, reject) => {
-      const child = spawn3("powershell.exe", ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", SCRIPT], { windowsHide: true, stdio: ["pipe", "pipe", "ignore"] });
-      let output = "";
-      const timer = setTimeout(() => {
-        child.kill();
-        reject(new Error("The protected key store timed out."));
-      }, 1e4);
-      child.stdout.setEncoding("utf8");
-      child.stdout.on("data", (chunk) => {
-        output += chunk;
-        if (output.length > 65536) child.kill();
-      });
-      child.on("error", () => {
-        clearTimeout(timer);
-        reject(new Error("The protected key store is unavailable."));
-      });
-      child.on("close", (code) => {
-        clearTimeout(timer);
-        if (code !== 0 || !output) reject(new Error("The protected key store could not read or write this key."));
-        else resolve4(output);
-      });
-      child.stdin.on("error", () => {
-      });
-      child.stdin.end(JSON.stringify({ action, value }));
-    });
-  }
-  return {
-    available,
-    get: async (key) => {
-      const value = await store.get(key);
-      return typeof value === "string" ? crypt("unprotect", value) : null;
-    },
-    set: async (key, value) => {
-      const encrypted = await crypt("protect", value);
-      await store.set(key, encrypted);
-    },
-    delete: (key) => store.delete(key)
-  };
-}
-
 // src/copilot/session.ts
 import { basename as basename3, isAbsolute as isAbsolute3 } from "node:path";
 import { realpath as realpath2 } from "node:fs/promises";
@@ -6310,18 +5075,8 @@ async function bounded(request) {
   }
 }
 function sessionAdapter(session2) {
-  const sent = /* @__PURE__ */ new Map();
   let sending = false;
   let lastSent = 0;
-  const markSent = (text) => {
-    sent.set(text, Date.now() + 12e4);
-  };
-  const consumeSent = (text) => {
-    for (const [key, until] of sent) if (until < Date.now()) sent.delete(key);
-    const found = sent.has(text);
-    sent.delete(text);
-    return found;
-  };
   const project2 = async () => {
     const info = await bounded(session2.rpc.metadata.snapshot());
     if (info.isRemote || !isAbsolute3(info.workingDirectory)) return null;
@@ -6349,8 +5104,6 @@ function sessionAdapter(session2) {
     has: (name) => operations.has(name),
     state,
     project: project2,
-    markSent,
-    consumeSent,
     async call(name, input) {
       let result;
       if (name === "workspace.list") {
@@ -6371,12 +5124,8 @@ function sessionAdapter(session2) {
         try {
           const current = await state();
           if (current !== "waiting") throw Object.assign(new Error(withMessage(msg("error.session_not_idle"))), { code: "session_not_idle" });
-          markSent(text);
           await session2.send({ prompt: text, mode: "enqueue" });
           lastSent = Date.now();
-        } catch (error) {
-          sent.delete(text);
-          throw error;
         } finally {
           sending = false;
         }
@@ -6388,27 +5137,31 @@ function sessionAdapter(session2) {
 }
 
 // src/capabilities.ts
-var UNSUPPORTED_SETTINGS = /* @__PURE__ */ new Set(["allowTerminalRead", "allowOtherAgents", "allowAgentActivity", "allowEditorSaves", "allowAgentLaunch", "allowOpenFiles", "notifyWhenDone"]);
-
-// src/copilot/sent.ts
-import { createHash } from "node:crypto";
-var sentKey = (sessionId, text) => `sent:${createHash("sha256").update(sessionId).update("\0").update(text).digest("hex")}`;
+var UNSUPPORTED_SETTINGS = /* @__PURE__ */ new Set(["allowTerminalRead", "allowOtherAgents", "allowAgentActivity", "allowEditorSaves", "allowOpenFiles"]);
 
 // src/copilot/services.ts
-function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DIR || join6(process.env.LOCALAPPDATA || join6(homedir3(), ".local", "share"), "copilot-enhance-prompt"), copilot2, options = {}) {
-  const data = persistentStore(join6(directory, "data"));
-  const prefs = persistentStore(join6(directory, "preferences"));
-  const secrets = protectedSecrets(persistentStore(join6(directory, "credentials")));
-  const scope = createHash2("sha256").update(session2.sessionId).digest("hex").slice(0, 24);
+function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DIR || join4(process.env.LOCALAPPDATA || join4(homedir(), ".local", "share"), "copilot-enhance-prompt"), copilot2) {
+  const data = persistentStore(join4(directory, "data"));
+  const prefs = persistentStore(join4(directory, "preferences"));
+  const retiredCredentials = persistentStore(join4(directory, "credentials"));
+  const scope = createHash("sha256").update(session2.sessionId).digest("hex").slice(0, 24);
   let migration;
   const prepare = () => migration ??= (async () => {
     await prefs.transaction(async () => {
-      for (const key of ["uiLanguage", "outputLanguage"]) if (await prefs.get(key) !== null) await prefs.delete(key);
+      for (const key of ["uiLanguage", "outputLanguage", "notifyWhenDone", "allowEnvKeys", "statusBarItem", "allowAgentLaunch"]) if (await prefs.get(key) !== null) await prefs.delete(key);
     });
     await data.transaction(async () => {
       for (const key of await data.keys()) {
-        if (key === "uiLocale" || /^(?:session:[a-f0-9]{24}:)?panel:(?:uiLanguage|outputChoice)$/.test(key)) await data.delete(key);
+        if (key === "uiLocale" || key.startsWith("catalog:") || key.startsWith("sent:") || /^(?:session:[a-f0-9]{24}:)?panel:(?:uiLanguage|outputChoice|feedbackAsk|feedbackOff|hookLast)$/.test(key)) await data.delete(key);
       }
+      const saved = await data.get(MODELS_KEY);
+      if (saved !== null) {
+        const cleaned = modelsToJson(parseModelsConfig(saved));
+        if (JSON.stringify(saved) !== JSON.stringify(cleaned)) await data.set(MODELS_KEY, cleaned);
+      }
+    });
+    await retiredCredentials.transaction(async () => {
+      for (const key of await retiredCredentials.keys()) if (key.startsWith("apiKey.")) await retiredCredentials.delete(key);
     });
   })().catch((error) => {
     migration = void 0;
@@ -6420,37 +5173,24 @@ function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DI
     for (const key of Object.values(EFFORT_SETTINGS)) if (await prefs.get(key) === null) missing.push(key);
     if (!missing.length) return;
     const saved = parseModelsConfig(await data.get(MODELS_KEY)).profiles;
-    const profiles = (saved.length || await prefs.get("allowEnvKeys") === false ? saved : envProfiles()).filter((profile) => profile.enabled);
+    const profiles = saved.filter((profile) => profile.enabled);
     const legacy = async (key) => await data.get(`session:${scope}:panel:${key}`) ?? await data.get(`panel:${key}`);
     const choice = await legacy("profileChoice");
-    const selected = profiles.find((profile) => profile.id === choice);
+    const explicit = typeof choice === "string" && choice !== "auto" && /^[a-z0-9-]{1,40}$/.test(choice) ? choice : null;
+    const selected = profiles.find((profile) => profile.id === explicit);
     const current = selected ?? profiles[0];
-    const override = selected ? await legacy("modelChoice") : null;
-    const assignment = current ? modelAssignment(current.id, typeof override === "string" && override ? override : effectiveModel(current)) : "auto";
+    const override = explicit ? await legacy("modelChoice") : null;
+    const assignment = explicit ? modelAssignment(explicit, typeof override === "string" && override ? override : selected ? effectiveModel(selected) : "") : current ? modelAssignment(current.id, effectiveModel(current)) : "auto";
     for (const key of missing) await prefs.set(key, parseModelAssignment(assignment) ? assignment : "auto");
   }).catch((error) => {
     effortMigration = void 0;
     throw error;
   });
-  const adapter = sessionAdapter({ sessionId: session2.sessionId, rpc: session2.rpc, send: async (options2) => {
-    const key = sentKey(session2.sessionId, options2.prompt);
-    await data.transaction(async () => {
-      for (const old of (await data.keys()).filter((key2) => key2.startsWith("sent:"))) {
-        if (Number(await data.get(old)) < Date.now()) await data.delete(old);
-      }
-      await data.set(key, Date.now() + 12e4);
-    });
-    try {
-      return await session2.send(options2);
-    } catch (error) {
-      await data.delete(key);
-      throw error;
-    }
-  } });
+  const adapter = sessionAdapter(session2);
   const settings = {
     get: (async (key) => {
       await prepare();
-      if (!options.promptHook) await prepareEfforts();
+      await prepareEfforts();
       const values = { ...DEFAULTS };
       for (const name of await prefs.keys()) if (Object.hasOwn(DEFAULTS, name)) values[name] = await prefs.get(name);
       for (const name of UNSUPPORTED_SETTINGS) values[name] = false;
@@ -6492,20 +5232,20 @@ function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DI
     }
   };
   const host = {
-    has: (name) => Boolean(copilot2) && ["copilot.catalog", "copilot.rewrite"].includes(name) || name === "secrets.protection" || adapter.has(name),
-    call: async (name, input, options2) => name === "copilot.catalog" && copilot2 ? await copilot2.catalog() : name === "copilot.rewrite" && copilot2 ? { text: await copilot2.rewrite(input, options2?.signal) } : name === "secrets.protection" ? { status: secrets.available ? "os-keyring" : "unavailable", backend: "DPAPI" } : adapter.call(name, input, options2)
+    has: (name) => Boolean(copilot2) && ["copilot.catalog", "copilot.rewrite"].includes(name) || adapter.has(name),
+    call: async (name, input, options) => name === "copilot.catalog" && copilot2 ? await copilot2.catalog() : name === "copilot.rewrite" && copilot2 ? { text: await copilot2.rewrite(input, options?.signal) } : adapter.call(name, input, options)
   };
-  return { storage, settings, secrets, host, adapter, directory, data };
+  return { storage, settings, host, adapter, directory, data };
 }
 
 // src/copilot/server.ts
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
-import { readFile as readFile6, realpath as realpath3 } from "node:fs/promises";
+import { readFile as readFile4, realpath as realpath3 } from "node:fs/promises";
 import { extname, resolve as resolve3, sep as sep2 } from "node:path";
 var LIMIT = 25e5;
 var MODEL_WRITES = /* @__PURE__ */ new Set(["models.save", "models.delete", "models.move", "models.roles", "consent.set", "rules.save"]);
-var PANEL_KEYS = /* @__PURE__ */ new Set(["tab", "style", "level", "effort", "structureChoice", "terminalWorkspaces", "optionsOpen", "feedbackAsk", "feedbackOff", "draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked", "sendAfterEnhance", "historyScope"]);
+var PANEL_KEYS = /* @__PURE__ */ new Set(["tab", "style", "level", "effort", "structureChoice", "terminalWorkspaces", "optionsOpen", "draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked", "sendAfterEnhance", "historyScope"]);
 var readable = (key) => key === "history" || key === "colorTheme" || key.startsWith("panel:") && PANEL_KEYS.has(key.slice(6));
 var writable = (key) => key === "colorTheme" || key.startsWith("panel:") && PANEL_KEYS.has(key.slice(6));
 var PRIVATE_PANEL_KEYS = /* @__PURE__ */ new Set(["draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked"]);
@@ -6645,7 +5385,7 @@ async function createCanvasServer(options) {
         return;
       }
       res.writeHead(200, { "content-type": mime[extname(file)] });
-      res.end(await readFile6(file));
+      res.end(await readFile4(file));
     } catch (error) {
       if (!res.destroyed && !res.headersSent) json(res, error.status ?? 400, { error: { message: error instanceof Error ? error.message : "Canvas request failed.", code: error?.code ?? "request_failed" } });
     }
@@ -6684,17 +5424,17 @@ async function createCanvasServer(options) {
 }
 
 // src/copilot/models.ts
-import { mkdtemp as mkdtemp2, mkdir as mkdir4, realpath as realpath4, rm as rm3 } from "node:fs/promises";
-import { basename as basename4, isAbsolute as isAbsolute4, join as join8, relative as relative3 } from "node:path";
-import { tmpdir as tmpdir3 } from "node:os";
+import { mkdtemp, mkdir as mkdir4, realpath as realpath4, rm as rm2 } from "node:fs/promises";
+import { basename as basename4, isAbsolute as isAbsolute4, join as join6, relative as relative3 } from "node:path";
+import { tmpdir as tmpdir2 } from "node:os";
 import { randomUUID as randomUUID3 } from "node:crypto";
 
 // src/copilot/usage.ts
 import { randomUUID as randomUUID2 } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { homedir as homedir4 } from "node:os";
+import { homedir as homedir2 } from "node:os";
 import { mkdir as mkdir3, rename as rename2, writeFile as writeFile2 } from "node:fs/promises";
-import { join as join7 } from "node:path";
+import { join as join5 } from "node:path";
 import { StringDecoder } from "node:string_decoder";
 var uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 var identifier = /^[a-z0-9][a-z0-9._:+\/-]*$/i;
@@ -6798,16 +5538,16 @@ async function replace(file, content) {
   await rename2(temporary, file);
 }
 function usageHome() {
-  return join7(process.env.ENHANCE_PROMPT_DATA_DIR || join7(process.env.LOCALAPPDATA || join7(homedir4(), ".local", "share"), "copilot-enhance-prompt"), "usage");
+  return join5(process.env.ENHANCE_PROMPT_DATA_DIR || join5(process.env.LOCALAPPDATA || join5(homedir2(), ".local", "share"), "copilot-enhance-prompt"), "usage");
 }
 async function createUsageRecorder(sessionId, root = usageHome()) {
   if (!uuid.test(sessionId)) throw new Error("Invalid usage session ID.");
-  const directory = join7(root, "session-state", sessionId);
-  const file = join7(directory, "events.jsonl");
+  const directory = join5(root, "session-state", sessionId);
+  const file = join5(directory, "events.jsonl");
   const started = (/* @__PURE__ */ new Date()).toISOString();
-  await mkdir3(join7(root, "session-state"), { recursive: true, mode: 448 });
+  await mkdir3(join5(root, "session-state"), { recursive: true, mode: 448 });
   await mkdir3(directory, { mode: 448 });
-  await replace(join7(directory, "workspace.yaml"), JSON.stringify({ id: sessionId, name: `Enhanced Prompt \xB7 ${started}` }) + "\n");
+  await replace(join5(directory, "workspace.yaml"), JSON.stringify({ id: sessionId, name: `Enhanced Prompt \xB7 ${started}` }) + "\n");
   let lines = JSON.stringify({ type: "session.start", id: randomUUID2(), timestamp: started, data: { sessionId, context: { repository: "Enhanced Prompt" } } }) + "\n";
   await replace(file, lines);
   const seen = /* @__PURE__ */ new Set();
@@ -6971,14 +5711,14 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
     try {
       const { sdk, path } = await runtime();
       check();
-      directory = await mkdtemp2(join8(tmpdir3(), "enhance-copilot-"));
-      const workspace = join8(directory, "workspace");
+      directory = await mkdtemp(join6(tmpdir2(), "enhance-copilot-"));
+      const workspace = join6(directory, "workspace");
       await mkdir4(workspace);
       check();
       client = new sdk.CopilotClient({
         mode: "empty",
         workingDirectory: workspace,
-        baseDirectory: join8(directory, "home"),
+        baseDirectory: join6(directory, "home"),
         connection: sdk.RuntimeConnection.forStdio({ path, args: ["--no-auto-update"] }),
         env: runtimeEnvironment(),
         useLoggedInUser: true,
@@ -7000,7 +5740,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
         sessionId,
         onEvent: (event) => usage.record(event),
         workingDirectory: workspace,
-        configDirectory: join8(directory, "home"),
+        configDirectory: join6(directory, "home"),
         model: input.model,
         systemMessage: { mode: "replace", content: input.system },
         availableTools: [],
@@ -7074,7 +5814,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       if (usage) {
         stage("copilot.usage");
         try {
-          if (stopped !== false && directory) await reconcileUsageJournal(join8(directory, "home", "session-state", sessionId, "events.jsonl"), usage);
+          if (stopped !== false && directory) await reconcileUsageJournal(join6(directory, "home", "session-state", sessionId, "events.jsonl"), usage);
           await usage.flush();
         } catch {
           diagnostics2?.record(phase, "failed", diagnosticError(usageFailed()));
@@ -7088,9 +5828,9 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
         throw unavailable2();
       }
       if (directory) {
-        const inside = relative3(tmpdir3(), directory);
+        const inside = relative3(tmpdir2(), directory);
         if (inside && !isAbsolute4(inside) && !inside.startsWith("..") && basename4(directory).startsWith("enhance-copilot-")) {
-          await rm3(directory, { recursive: true, force: true, maxRetries: 3 }).catch(() => {
+          await rm2(directory, { recursive: true, force: true, maxRetries: 3 }).catch(() => {
             diagnostics2?.record(phase, "failed");
             throw unavailable2();
           });

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { assert, test } from '#testing'
 
 test('the plugin uses the Agent Plugins manifest and a stable canvas identity', () => {
@@ -8,4 +8,5 @@ test('the plugin uses the Agent Plugins manifest and a stable canvas identity', 
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/)
   assert.equal(manifest.execution, undefined)
   assert.equal(manifest.capabilities, undefined)
+  assert.equal(existsSync(new URL('../com.github.copilot/hooks', import.meta.url)), false, 'The installed package must not register retired chat hooks')
 })

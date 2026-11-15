@@ -4,12 +4,13 @@ import { join, resolve, sep } from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { test, assert } from '#testing'
 import { createServices } from '../copilot/services.ts'
-import { runPromptHook } from '../copilot/hook.ts'
 import { createWorkerHost } from '../worker-host.ts'
 import { enhance } from '../worker.ts'
 import { cachedStatic, gatherContext, staticParts } from './index.ts'
 import { searchFiles } from './search.ts'
 import { fileAllowed } from './files.ts'
+import { LlmError } from '../llm.ts'
+import { msg } from '../messages.ts'
 
 const token = ['ghp', 'abcdefghijklmnopqrstuvwxyz0123456789'].join('_')
 const options = { level: 'deep' as const, prompt: 'Fix validateSession', terminalId: 'fixture', terminalLines: 0, extraFiles: [], excludePatterns: '', exclude: new Set<string>(), allowTerminal: false }
@@ -35,7 +36,7 @@ async function fixture(files: Record<string, string>, check: (f: {
     }, send: async () => { throw new Error('Tests never send') } }, join(directory, 'data'), {
       rewrite: async input => { calls.push(input); return input.system.startsWith('You pick source files') ? JSON.stringify(Array.from({ length: 8 }, (_, i) => `src/feature${i + 10}.ts`)) : 'Enhanced fixture prompt' }
     } as Parameters<typeof createServices>[2])
-    await services.storage.set('models', { profiles: [{ id: 'cp', name: 'Fixture', preset: 'copilot', provider: 'copilot', baseUrl: '', model: 'fixture', enabled: true, maxTokens: 2000, command: '', args: '' }] })
+    await services.storage.set('models', { profiles: [{ id: 'cp', name: 'Fixture', preset: 'copilot', provider: 'copilot', model: 'fixture', enabled: true }] })
     await check({ root, services, host: createWorkerHost(services).api, calls, git })
   } finally {
     assert.ok(resolve(directory).startsWith(resolve(tmpdir()) + sep) && directory.includes('enhance-context-test-'))
@@ -57,7 +58,7 @@ test('excluded paths and unchecked files stay out of every model context route',
 
 test('effort overrides only rewriting when an AI file selector is explicitly configured', async () => {
   await fixture({ 'src/auth.ts': 'export function validateSession() { return true }' }, async ({ services, host }) => {
-    await services.storage.set('models', { profiles: [{ id: 'cp', name: 'Fixture', preset: 'copilot', provider: 'copilot', baseUrl: '', model: 'picker-model', enabled: true, maxTokens: 2000, command: '', args: '' }], selectorProfileId: 'cp' })
+    await services.storage.set('models', { profiles: [{ id: 'cp', name: 'Fixture', preset: 'copilot', provider: 'copilot', model: 'picker-model', enabled: true }], selectorProfileId: 'cp' })
     await services.settings.set('effortHighModel', 'cp|rewrite-model')
     const calls: { model: string; picker: boolean }[] = []
     const call = host.host.call
@@ -71,6 +72,40 @@ test('effort overrides only rewriting when an AI file selector is explicitly con
     }) as typeof host.host.call
     await enhance(host, { prompt: 'Fix validateSession', effort: 'high', level: 'max' })
     assert.deepEqual(calls, [{ model: 'picker-model', picker: true }, { model: 'rewrite-model', picker: false }])
+  })
+})
+
+test('an unavailable AI selector never silently moves selection to the rewriting model', async () => {
+  await fixture({ 'src/auth.ts': 'export function validateSession() { return true }' }, async ({ services, host, calls }) => {
+    const profile = { id: 'cp', name: 'Fixture', preset: 'copilot', provider: 'copilot', model: 'fixture', enabled: true }
+    for (const selectorProfileId of ['external', 'disabled']) {
+      await services.storage.set('models', { profiles: [profile, { ...profile, id: 'disabled', enabled: false }, { ...profile, id: 'external', preset: 'openai', provider: 'openai' }], selectorProfileId })
+      await assert.rejects(enhance(host, { prompt: 'Fix validateSession', level: 'max' }), /Select an enabled Copilot model for AI-assisted context/)
+      assert.equal(calls.length, 0)
+    }
+    await services.settings.set('allowProjectFiles', false)
+    await enhance(host, { prompt: 'Fix validateSession', level: 'max' })
+    assert.equal(calls.length, 1)
+    await services.settings.set('allowProjectFiles', true)
+    await enhance(host, { prompt: 'Fix validateSession', level: 'deep' })
+    assert.equal(calls.length, 2)
+  })
+})
+
+test('a charged AI picker accounting failure stops the run before rewriting', async () => {
+  await fixture({ 'src/auth.ts': 'export function validateSession() { return true }' }, async ({ host }) => {
+    const models: string[] = []
+    const call = host.host.call
+    host.host.call = (async (name: string, input: { system: string }) => {
+      if (name === 'copilot.rewrite') {
+        models.push(input.system)
+        throw new LlmError(msg('error.copilot_usage'), 'action_failed')
+      }
+      return call(name as never, input as never)
+    }) as typeof host.host.call
+    await assert.rejects(enhance(host, { prompt: 'Fix validateSession', level: 'max' }), /Copilot usage could not be saved/)
+    assert.equal(models.length, 1)
+    assert.ok(models[0].startsWith('You pick source files'))
   })
 })
 
@@ -127,7 +162,7 @@ test('unchecked aliases exclude the underlying file in both directions', async (
   })
 })
 
-test('hook cache matches extra files, exclusions and Git permission before reuse', async () => {
+test('context cache matches extra files, exclusions and Git permission before reuse', async () => {
   await fixture({ 'AGENTS.md': 'RULE', 'guide.txt': 'EXTRA' }, async ({ root }) => {
     const settings = { extraContextFiles: ['guide.txt'], privacy: { allowGit: false }, excludePatterns: '' }
     await staticParts(root, settings.extraContextFiles, true, false, undefined, undefined, settings)
@@ -135,35 +170,6 @@ test('hook cache matches extra files, exclusions and Git permission before reuse
     assert.equal(cachedStatic(root, { ...settings, extraContextFiles: [] }), null)
     assert.equal(cachedStatic(root, { ...settings, excludePatterns: 'guide.txt' }), null)
     assert.equal(cachedStatic(root, { ...settings, privacy: { allowGit: true } }), null)
-  })
-})
-
-test('AI hook context honors current exclusions, extra files and masking through the production adapter', async () => {
-  await fixture({ 'AGENTS.md': 'OMIT_HOOK_RULE', 'guide.txt': `HOOK_GUIDE ${token}`, 'other.txt': 'NEXT_HOOK_GUIDE' }, async ({ root, services }) => {
-    await services.settings.set('autoEnhanceMode', 'ai')
-    await services.settings.set('autoEnhanceContext', true)
-    await services.settings.set('extraContextFiles', 'guide.txt')
-    await services.settings.set('excludePatterns', 'AGENTS.md')
-    await services.storage.set('models', { profiles: [{ id: 'local', name: 'Local fixture', preset: 'ollama', provider: 'openai', baseUrl: 'http://127.0.0.1:1/v1', model: 'fixture', enabled: true, maxTokens: 2000 }] })
-    const originalFetch = globalThis.fetch
-    let captured = ''
-    globalThis.fetch = async (_url, init) => {
-      captured = String(init?.body)
-      return new Response(JSON.stringify({ choices: [{ message: { content: 'Rewritten fixture request' } }] }), { headers: { 'content-type': 'application/json' } })
-    }
-    try {
-      const input = { sessionId: 'hook-fixture', cwd: root, prompt: 'Improve this request', transformedPrompt: 'Host context\nImprove this request' }
-      assert.deepEqual(await runPromptHook(input, join(root, '..', 'data')), { modifiedTransformedPrompt: 'Host context\nRewritten fixture request' })
-      assert.match(captured, /HOOK_GUIDE/)
-      assert.doesNotMatch(captured, new RegExp(`OMIT_HOOK_RULE|${token}`))
-      await services.settings.set('extraContextFiles', 'other.txt')
-      await runPromptHook(input, join(root, '..', 'data'))
-      assert.match(captured, /NEXT_HOOK_GUIDE/)
-      assert.doesNotMatch(captured, /guide\.txt|OMIT_HOOK_RULE/)
-      await services.settings.set('allowProjectFiles', false)
-      await runPromptHook(input, join(root, '..', 'data'))
-      assert.doesNotMatch(captured, /NEXT_HOOK_GUIDE|HOOK_GUIDE|OMIT_HOOK_RULE/)
-    } finally { globalThis.fetch = originalFetch }
   })
 })
 

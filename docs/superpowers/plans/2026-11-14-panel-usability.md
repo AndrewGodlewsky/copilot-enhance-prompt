@@ -1,5 +1,7 @@
 # Panel usability implementation plan
 
+> Historical planning record. This captures the design and verification at that time; current behavior is documented in the [README](../../../README.md) and [Copilot-only plan](../plans/2026-11-15-copilot-only.md).
+
 > **For agentic workers:** Use superpowers:executing-plans to implement this approved plan in the existing worktree.
 
 **Goal:** Make Enhance Prompt easier to read and operate without changing its features or safety boundaries.

@@ -12,7 +12,7 @@ Use the single theme button at the banner's top right to switch the entire panel
 
 If something fails, reproduce it and select **Show Logs → Copy logs** before restarting. Paste the report into your issue along with what you expected and what happened. Reopen the dialog to capture newer events. If clipboard access is blocked, the text is selected so you can copy it manually. Logs are also accessible from the connection-error screen.
 
-For an empty Copilot model picker, press its **Refresh model list** button and wait for the result, then open **Show Logs → Copilot model discovery**. This section is included by **Copy logs**. It records the last attempt, runtime verification, SDK import/API checks, model-list response, eligible/excluded counts and any recognized failure code. It does not collect model names or IDs. The Copilot preset is a built-in choice, not confirmation that the session's integration is working. Refresh retries the live list; it cannot repair an incompatible SDK/runtime, grant account access, or override the model-list privacy switch. It downloads nothing and makes no generation request.
+For an empty Copilot model picker, press its **Refresh model list** button and wait for the result, then open **Show Logs → Copilot model discovery**. This section is included by **Copy logs**. It records the last attempt, runtime verification, SDK import/API checks, model-list response, eligible/excluded counts and any recognized failure code. It does not collect model names or IDs. A saved Copilot profile is not confirmation that the session's integration is working. Refresh retries the live list; it cannot repair an incompatible SDK/runtime, grant account access, or override the model-list privacy switch. It downloads nothing and makes no generation request.
 
 Reports include the plugin version, runtime version, OS/architecture, timestamps, operation results, durations and recognized error codes. Copilot events identify the failing stage, such as account checks, model generation or helper cleanup. Raw error messages, prompts, rewritten text, file contents, paths, account names, API keys and connection tokens are excluded. Each component retains at most 200 events in memory; restarting clears them. Reports are never uploaded automatically. If the worker is unavailable, the report contains panel events only. These are plugin diagnostics, not the desktop application's full logs.
 
@@ -26,14 +26,14 @@ Send creates a new message in the attached Copilot session. It checks the sessio
 
 ## Models and rules
 
-Models supports GitHub Copilot, API providers, local endpoints, subscription CLIs, custom commands, model catalogs, testing and ordered fallback. To use your Copilot account, add a model with the **GitHub Copilot** preset and choose from its live list. Assign that profile and model to an effort in **Settings → Effort models**, then select the effort in Enhance. The helper reuses the desktop SDK/runtime without npm or another download. Claude models in this preset use Copilot; the separate Claude Code preset uses Claude Code. **Test** makes a small, billable model request.
+Models offers the live GitHub Copilot catalog, saved profiles, testing and ordered fallback. Add a model from that list, assign it to an effort in **Settings > Effort models**, then select the effort in Enhance. The helper reuses the desktop SDK/runtime without npm or another download. Claude, GPT and other listed model families use your Copilot account. **Test** makes a small model request that counts toward Copilot usage.
 
-The selected rewriting provider receives the prompt and permitted context. The attached chat receives the result only when sent. Copilot runs remain within Copilot for fallback, the AI-assisted file picker and AI Test research. Account mismatches, unavailable models, or missing runtime controls stop the request. [Background rewriting and troubleshooting](copilot-background-rewriting.md).
+The selected Copilot model receives the prompt and permitted context. The attached chat receives the result only when sent. Copilot runs remain within Copilot for fallback, the AI-assisted file picker and AI Test research. Account mismatches, unavailable models, or missing runtime controls stop the request. [Background rewriting and troubleshooting](copilot-background-rewriting.md).
 
 Rules contains reusable instructions and structures. Global rules apply everywhere; project rules use the canonical project path so same-named folders remain separate. The original prompting and model features are described in [Models](models.md) and [Context levels](context-levels.md).
 
 ## History and settings
 
-History supports searching, reusing, removing with Undo and exporting visible entries. Settings controls saved drafts/history, project and Git reads, model catalogs, environment keys, automatic sending and the prompt hook. [Privacy](privacy.md) explains storage and reads.
+History supports searching, reusing, removing with Undo and exporting visible entries. Settings controls saved drafts/history, project and Git reads, model catalogs and optional sending after enhancement. [Privacy](privacy.md) explains storage and reads.
 
-Unavailable terminal, editor and desktop-notification settings are disabled. They do not silently read chat transcripts or start another application.
+Unavailable terminal and editor settings are disabled. They do not silently read chat transcripts or start another application.

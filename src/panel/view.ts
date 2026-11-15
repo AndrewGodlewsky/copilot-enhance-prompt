@@ -3,29 +3,22 @@ import { formatText } from '../format.ts'
 // about what to offer). The web panel (web/src) draws it; the tests check it.
 import { read } from '#panel'
 import { MODEL_SEP, PROFILE_DEFAULT, parseModelAssignment, type Effort } from '../effort.ts'
-import { CONTEXT_LEVEL_LABELS, CONTEXT_LEVELS, isContextLevel, type ContextItemView, type ProfileView } from '../presets.ts'
+import { CONTEXT_LEVEL_LABELS, CONTEXT_LEVELS, isContextLevel, type ContextItemView } from '../presets.ts'
 import { isStyle, STYLE_LABELS, STYLES } from '../prompts.ts'
 import { BRAND } from '../brand.ts'
 import type { HistoryEntry } from '../history.ts'
 import { allStructures, ruleApplies, scopeName, structureById, type Rule, type RulesConfig } from '../rules.ts'
 import { ESTIMATED_STEPS, stepPercent, type Step } from '../progress.ts'
 import type { PrivacyKey } from '../privacy.ts'
-import { type Catalog, type FeedbackAsk, type Run, type Target, catalogs, defaults, enabledProfiles, effectiveLevel, effectiveStyle, effortModels, models, projectName, rulesState, structureChoice, say, workspaceName } from './state.ts'
+import { type Catalog, type Run, type Target, catalogs, defaults, enabledProfiles, effectiveLevel, effectiveStyle, effortModels, models, projectName, rulesState, structureChoice, say, workspaceName } from './state.ts'
 
 /**
  * The names of the panel's sections, on its header icons (the Enhance section shows the brand instead).
  * The gear's section is still `privacy` inside (people's panels remember the open section by that id),
- * but it is named Settings: besides the access switches it holds auto-enhance, stored data and
+ * but it is named Settings: besides the access switches it holds prompt preferences, stored data and
  * feedback. A message that sends the person there says "in Settings" (src/messages.ts).
  */
 export const SECTION_LABELS: Record<string, string> = { history: 'History', models: 'Models', rules: 'Rules', privacy: 'Settings' }
-
-/** What each auto-enhance mode does, said under its switch. */
-export const AUTO_MODE_HINTS: Record<string, string> = {
-  off: 'Copilot prompts are left unchanged.',
-  rules: 'Appends the text from Prompt preferences when Copilot invokes the prompt hook. No model call.',
-  ai: 'A fast API model rewrites hooked prompts with a two-second budget. Failures preserve the original. Prompts sent from this panel are skipped.'
-}
 
 export function modelOptions(catalog: Catalog | undefined, current: string) {
   const options = (catalog?.models ?? []).map((model) => ({
@@ -38,18 +31,6 @@ export function modelOptions(catalog: Catalog | undefined, current: string) {
 
 export const styleOptions = () => STYLES.map((value) => ({ value, label: STYLE_LABELS[value] }))
 export const levelOptions = (current?: string) => CONTEXT_LEVELS.filter(value => value !== 'basic' || current === 'basic').map((value) => ({ value, label: CONTEXT_LEVEL_LABELS[value] }))
-export const KEY_LABEL: Record<ProfileView['keySource'], string> = {
-  secret: 'key saved',
-  env: 'key from env',
-  none: 'no key',
-  'not-needed': 'local',
-  subscription: 'subscription',
-  copilot: 'GitHub Copilot'
-}
-
-/** The Max tokens offered for a model; one saved with another value (an older version, a hand-edited profile) is offered too. */
-export const maxTokenChoices = (current: number): number[] => [...new Set([1000, 2000, 4000, 8000, 16000, current])].sort((a, b) => a - b)
-
 export const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`
 
 /**
@@ -61,26 +42,11 @@ export function runSeconds(current: Pick<Run, 'status' | 'startedAt' | 'finished
   return seconds(Math.max(0, end - current.startedAt))
 }
 
-/** Why Enhance cannot answer yet, for the warning under the composer: no enabled model, or none with a key. */
-export function modelWarning(): 'no-model' | 'no-key' | null {
-  // Not loaded yet is not "none".
+/** No enabled Copilot model has been configured yet. */
+export function modelWarning(): 'no-model' | null {
   if (read(models) === null) return null
-  const profiles = read(enabledProfiles)
-  if (profiles.length === 0) return 'no-model'
-  return profiles.every((profile) => profile.keySource === 'none') ? 'no-key' : null
+  return read(enabledProfiles).length === 0 ? 'no-model' : null
 }
-
-/** The models the auto-enhance hook can use: it has 2 s, so enabled API models only (a subscription CLI starts too slowly). */
-export function hookModels(): ProfileView[] {
-  return (read(models)?.profiles ?? []).filter((profile) => profile.enabled && ['openai', 'anthropic'].includes(profile.provider))
-}
-
-/** The hook's model as its menu shows it: the saved one while it can still answer in time, else "Same as the chain". */
-export function hookChoice(): string {
-  const saved = read(models)?.hookProfileId
-  return saved && hookModels().some((profile) => profile.id === saved) ? saved : 'chain'
-}
-
 
 /** "sonnet: Sonnet, newest" -> "Sonnet, newest"; display names stay as they are. */
 export const modelDisplay = (label: string) => (label.includes(': ') ? label.slice(label.indexOf(': ') + 2) : label)
@@ -270,8 +236,7 @@ export function modelMenu() {
         label: `${profile.name} · ${label}${saved ? ` · ${'default'}` : ''}`
       })
     }
-    if (profile.provider === 'cli' && !profile.effectiveModel) add('', 'CLI default')
-    else if (profile.effectiveModel && !listed.some((model) => model.id === profile.effectiveModel)) add(profile.effectiveModel, profile.effectiveModel)
+    if (profile.effectiveModel && !listed.some((model) => model.id === profile.effectiveModel)) add(profile.effectiveModel, profile.effectiveModel)
     for (const model of listed) add(model.id, shortModelName(model.id, model.label))
   }
   return options
@@ -296,7 +261,7 @@ export function effortModelLabel(effort: Effort): string {
   const option = effortModelOptions(effort).find(option => option.value === value)!
   if (value !== 'auto') return option.label
   const first = read(enabledProfiles)[0]
-  return first ? `${first.name} · ${first.effectiveModel || 'CLI default'} (${option.label})` : 'No model configured'
+  return first ? `${first.name} · ${first.effectiveModel} (${option.label})` : 'Select a Copilot model in Models'
 }
 
 /** The switches in three groups, as the Settings section shows them: what is read, what is done, what is kept or fetched. */
@@ -320,7 +285,7 @@ export const PRIVACY_ROWS: SwitchRow<PrivacyKey>[] = [
     label: 'Read project files',
     hint: 'Agent rules, README, manifest files and the file list of the focused workspace (Standard level and above). Off: only workspace and agent names are used.',
     risk: 'File and folder names, your agent rules, the README and manifest files go to the model you run. Files that look like secrets (.env, keys, certificates) are never read.',
-    when: 'Keep it on for prompts that name real files and commands. Turn it off in a project whose contents must not reach a model provider.'
+    when: 'Keep it on for prompts that name real files and commands. Turn it off in a project whose contents must not reach Copilot.'
   },
   {
     key: 'allowGit',
@@ -371,14 +336,6 @@ export const PRIVACY_ROWS: SwitchRow<PrivacyKey>[] = [
     when: 'On for the normal flow. Off to be sure nothing is ever typed for you: Copy still works.'
   },
   {
-    key: 'allowAgentLaunch',
-    group: 'acts',
-    label: 'Start new agents',
-    hint: 'A button that starts a new agent (Claude Code, Codex…) in this workspace with the enhanced prompt, only when you press it.',
-    risk: 'A new agent runs with your user account and its own permission settings: it can change files and run commands.',
-    when: 'On when you often start a fresh agent for each task. It only happens when you press Start.'
-  },
-  {
     key: 'allowOpenFiles',
     group: 'acts',
     label: 'Open files in Copilot',
@@ -395,19 +352,11 @@ export const PRIVACY_ROWS: SwitchRow<PrivacyKey>[] = [
     when: 'On to reuse earlier prompts and to find your draft again after a restart. Off on a shared machine, or when prompts hold things that must not be kept.'
   },
   {
-    key: 'allowEnvKeys',
-    group: 'keeps',
-    label: 'Use API keys from environment variables',
-    hint: 'OPENAI_API_KEY, ANTHROPIC_API_KEY and the others, when a model has no saved key.',
-    risk: 'A key from your environment is sent to that provider like a saved one, and its account pays for the calls.',
-    when: 'On when your keys already live in the environment and you do not want to store them twice. Off to use only the keys you saved in Models.'
-  },
-  {
     key: 'allowOnlineModelLists',
     group: 'keeps',
     label: 'Fetch model lists online',
-    hint: 'Refresh API and Copilot model lists and the public Claude Code schema. Copilot rewriting needs this enabled to verify model access.',
-    risk: 'Model-list requests use the provider account. List refreshes send no prompt or project context.',
+    hint: 'Refresh the Copilot model list and verify model access before rewriting.',
+    risk: 'Model-list requests use your Copilot account. List refreshes send no prompt or project context.',
     when: 'On to see new models without updating the plugin. Off for no network traffic besides the model calls.'
   }
 ]
@@ -442,7 +391,7 @@ export const DISCLOSURES: Partial<Record<PrivacyKey | 'sendAfterEnhance', string
   ],
   allowOtherAgents: [
     'Reads which other agents run in this workspace (kind, title, state) and the last lines of each one\'s terminal, every time you enhance at the Max level: as many agents and lines as you set below the switch (4 agents and 80 lines by default, at most 8 and 300).',
-    'That text is sent with your prompt to the model you run (your API provider, or the subscription CLI and its provider). It can contain code, file contents, command output and anything the agents printed.',
+    'That text is sent with your prompt to the Copilot model you run. It can contain code, file contents, command output and anything the agents printed.',
     'Values that look like keys, tokens or passwords are masked first, but masking cannot catch everything.',
     'Nothing of it is saved by the plugin. You can untick it in the context list for one run, or turn this switch off at any time.'
   ],
@@ -451,31 +400,9 @@ export const DISCLOSURES: Partial<Record<PrivacyKey | 'sendAfterEnhance', string
     'This is kept in the plugin\'s memory only, for 45 minutes and 60 entries per workspace, and forgotten when you turn this off, delete everything, or Copilot restarts.',
     'At the Deep and Max levels, the recent entries of the focused workspace are sent with your prompt to the model you run. Command lines are masked for obvious keys and passwords.',
     'The plugin only watches: it never changes or blocks what an agent does.'
-  ],
-  allowAgentLaunch: [
-    'Adds a button that starts a new agent (Claude Code, Codex, Gemini…) in a new terminal of this workspace, and types the enhanced prompt into it once it is ready.',
-    'The agent runs with your user account, exactly as if you had opened it yourself: it can read and change files and run commands, within that agent\'s own permission settings.',
-    'It only happens when you press the button. The plugin never starts an agent by itself.'
   ]
 }
 
 /** The plugin's issue page, in the browser (the host asks before opening a site the first time). */
 export const REPOSITORY_URL = 'https://github.com/AndrewGodlewsky/copilot-enhance-prompt'
 export const ISSUES_URL = `${REPOSITORY_URL}/issues/new`
-
-/**
- * The note that asks for ideas and feedback: first once someone has enhanced this many prompts (they
- * know the plugin by then), afterwards at most once in this many days. Often enough to be there when
- * an idea comes, which is why it can be turned off (in the note, and under Feedback in the settings).
- */
-export const FEEDBACK_FIRST_RUNS = 5
-export const FEEDBACK_EVERY_DAYS = 3
-
-/**
- * Whether the note is due now that a prompt was enhanced. A clock set back does not silence it for
- * good: a last time further than the interval away counts, before or after now.
- */
-export function feedbackDue(ask: FeedbackAsk, now: number): boolean {
-  if (ask.shownAt === 0) return ask.runs >= FEEDBACK_FIRST_RUNS
-  return Math.abs(now - ask.shownAt) >= FEEDBACK_EVERY_DAYS * 24 * 3600_000
-}
