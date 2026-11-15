@@ -4,6 +4,16 @@ import { makeCrew, sampleCrew, finishFrame, finishPose, body, type Word } from '
 
 const words: Word[] = Array.from({ length: 31 }, (_, i) => ({ text: ['café', '路径', 'getUser()', '🧑‍💻'][i % 4], width: 60, x: 12 + (i % 7) * 72, y: 20 + Math.floor(i / 7) * 20 }))
 
+test('a dense viewport keeps every visible word with a bounded number of figures', () => {
+  const visible = Array.from({ length: 240 }, (_, i) => ({ text: `word${i}`, width: 40, x: (i % 30) * 50, y: 30 + Math.floor(i / 30) * 24 }))
+  const original = structuredClone(visible)
+  const crew = makeCrew(visible, 1500, 123)
+  assert.equal(crew.actors.length, 16)
+  assert.equal(sampleCrew(crew, 0).tokens.length, visible.length)
+  assert.equal(sampleCrew(crew, 20).tokens.length, visible.length)
+  assert.deepEqual(visible, original)
+})
+
 test('retirement deposits and releases words before exit, then waits for the actual result', () => {
   const crew = makeCrew(words, 540, 123)
   const pose = sampleCrew(crew, 1).poses.find(p => p.phase === 'Carry')!

@@ -94,6 +94,76 @@ test('SVG crew finishes only on success, translates text together, pauses, and d
   }
 })
 
+test('long scrolled requests animate visible words without measuring every offscreen word', () => {
+  const saved = [globalThis.document, globalThis.getComputedStyle]
+  const source = Array.from({ length: 6000 }, (_, i) => i.toString(36).padStart(4, '0') + ' ').join('')
+  const input = { value: source, clientWidth: 320, clientHeight: 112, scrollTop: 0, scrollLeft: 0 }
+  let reads = 0, removed = 0
+  const columns = () => input.clientWidth / 8
+  const rect = (start, end) => ({ top: 20 + Math.floor(start / columns()) * 20, bottom: 36 + Math.floor(start / columns()) * 20, left: (start % columns()) * 8, right: ((start % columns()) + end - start) * 8, height: 16, width: (end - start) * 8 })
+  globalThis.getComputedStyle = () => ({ padding: '20px 0 8px', fontStyle: 'normal', fontWeight: '400', fontSize: '14px', fontFamily: 'sans-serif', lineHeight: '20px' })
+  globalThis.document = {
+    body: { append() {} },
+    createElement: tag => tag === 'canvas'
+      ? { getContext: () => ({ measureText: () => ({ fontBoundingBoxAscent: 13, fontBoundingBoxDescent: 3 }) }) }
+      : { style: {}, append() {}, getBoundingClientRect: () => ({ top: 0, left: 0 }), remove() { removed++ } },
+    createTextNode: data => ({ data }),
+    createRange() {
+      let start = 0, end = 0
+      return {
+        setStart(node, index) { start = index }, setEnd(node, index) { end = index },
+        getClientRects() {
+          reads++
+          const result = []
+          for (let offset = start; offset < end;) {
+            const next = Math.min(end, (Math.floor(offset / columns()) + 1) * columns())
+            result.push(rect(offset, next)); offset = next
+          }
+          return result
+        }
+      }
+    }
+  }
+  try {
+    for (const scrollTop of [0, 7500, 14900]) {
+      reads = 0
+      input.scrollTop = scrollTop
+      const words = measureWords(input)
+      assert.ok(words?.length, `visible words should animate at scrollTop ${scrollTop}`)
+      const firstRow = Math.max(0, Math.ceil((scrollTop - 20) / 20))
+      assert.equal(words[0].text, source.slice(firstRow * 40, firstRow * 40 + 4), 'the scene uses this scroll position, not the start of the request')
+      assert.ok(words.every(word => word.y >= 13 && word.y <= input.clientHeight))
+      assert.ok(words.length <= 48, 'offscreen rows never enter the animation')
+      assert.ok(reads < 100, 'layout reads depend on the viewport, not thousands of offscreen words')
+      assert.equal(input.scrollTop, scrollTop)
+      assert.equal(input.value, source)
+    }
+    assert.equal(removed, 3)
+    input.scrollTop = 0
+    input.clientWidth = 1600
+    input.clientHeight = 132
+    const wide = measureWords(input)
+    assert.ok(wide.length > 160, 'a wide viewport keeps all its visible words instead of disabling the animation')
+    input.clientWidth = 320
+    input.clientHeight = 112
+    input.value = source + 'x'.repeat(1000)
+    assert.ok(measureWords(input)?.length, 'wrapped tokens below the viewport cannot disable visible animation')
+    input.value = 'x'.repeat(1000) + ' ' + source
+    input.scrollTop = 7500
+    assert.ok(measureWords(input)?.length, 'wrapped tokens above the viewport cannot disable visible animation')
+    input.value = 'x'.repeat(55) + ' word '.repeat(50)
+    input.scrollTop = 0
+    const wrapped = measureWords(input)
+    assert.deepEqual(wrapped.slice(0, 2), [
+      { text: 'x'.repeat(40), x: 0, y: 33, width: 320 },
+      { text: 'x'.repeat(15), x: 0, y: 53, width: 120 }
+    ], 'visible wrapped tokens preserve their native line fragments')
+    assert.equal(input.value, 'x'.repeat(55) + ' word '.repeat(50))
+  } finally {
+    [globalThis.document, globalThis.getComputedStyle] = saved
+  }
+})
+
 test('native layout measurement preserves text and scroll position, with safe bounded fallbacks', () => {
   const previous = [globalThis.document, globalThis.getComputedStyle]
   const source = '  café\n路径  '
@@ -132,8 +202,6 @@ test('native layout measurement preserves text and scroll position, with safe bo
     fail = true
     assert.throws(() => measureWords(input), /layout unavailable/)
     assert.equal(removed, 3, 'temporary copy is removed even when layout fails')
-    assert.equal(measureWords({ ...input, value: 'x'.repeat(20_001) }), null)
-    assert.equal(removed, 3, 'large requests skip decorative measurement')
     assert.equal(input.value, source)
   } finally {
     [globalThis.document, globalThis.getComputedStyle] = previous

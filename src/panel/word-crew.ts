@@ -64,7 +64,8 @@ export function makeCrew(words: Word[], width: number, seed: number): Crew {
 slots: words.map(w => ({ x: w.x, y: w.y, capacity: w.width, word: { text: w.text, width: w.width } })),
     vocabulary: words.map(w => ({ text: w.text, width: w.width })), actors: [], bag: [], random: seededRandom(seed), width, completed: 0
 }
-  for (let i = 0;i < Math.ceil(words.length / 10);i++) {
+  // Keep the previous maximum crew size without hiding text in a wide viewport.
+  for (let i = 0;i < Math.min(16, Math.ceil(words.length / 10));i++) {
     const actor: Actor = { job: null, position: null, recent: [], lastTarget: -1 }; crew.actors.push(actor); assignJob(crew, actor, i * .08)
   }
   return crew

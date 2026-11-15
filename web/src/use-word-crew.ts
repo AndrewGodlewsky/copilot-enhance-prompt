@@ -35,6 +35,10 @@ export function useWordCrew(current: Run | null, text: string, workspace: string
     }
     let resize: ResizeObserver | undefined
     const hide = () => { if (document.hidden) stop() }
+    const scrollTop = textarea.scrollTop, scrollLeft = textarea.scrollLeft
+    const scrolled = () => {
+      if (textarea.scrollTop !== scrollTop || textarea.scrollLeft !== scrollLeft) stop()
+    }
     try {
       const words = measureWords(textarea)
       if (!words || document.hidden) return
@@ -52,7 +56,7 @@ export function useWordCrew(current: Run | null, text: string, workspace: string
         if (textarea.clientWidth !== width || textarea.clientHeight !== height) stop()
       })
       resize.observe(textarea)
-      textarea.addEventListener('scroll', stop)
+      textarea.addEventListener('scroll', scrolled)
       document.addEventListener('visibilitychange', hide)
     } catch {
       stop()
@@ -61,7 +65,7 @@ export function useWordCrew(current: Run | null, text: string, workspace: string
       stop()
       disposed = true
       resize?.disconnect()
-      textarea.removeEventListener('scroll', stop)
+      textarea.removeEventListener('scroll', scrolled)
       document.removeEventListener('visibilitychange', hide)
     }
     // Status changes finish/abort the existing scene below; they must not create another crew.

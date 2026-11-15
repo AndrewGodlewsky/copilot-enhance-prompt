@@ -1,5 +1,12 @@
 # Changes
 
+## [0.5.3] - 2026-11-15
+
+### Fixed
+- Keep the word-carrying animation available for long, scrolled requests. Measure only the visible text range, preserve wrapped word fragments, and ignore offscreen words when building the scene.
+- Keep all visible words in wide request boxes while limiting the crew to sixteen figures. Ignore queued scroll events when the viewport has not moved.
+- Preserve the original request and scroll position, reduced-motion behavior, and the 95% word-placement and exit sequence.
+
 ## [0.5.2] - 2026-11-15
 
 ### Changed

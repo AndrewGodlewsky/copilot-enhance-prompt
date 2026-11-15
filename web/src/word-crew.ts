@@ -2,8 +2,7 @@ import { body, finishFrame, finishPose, makeCrew, sampleCrew, type Point, type T
 
 /** Measure the textarea's native wrapping, including its padding and scroll position. */
 export function measureWords(input: HTMLTextAreaElement): Word[] | null {
-  // Bound decorative work only; large requests remain fully supported by the editor and model.
-  if (!input.clientWidth || input.value.length > 20_000) return null
+  if (!input.clientWidth || !input.clientHeight || !input.value) return null
   const style = getComputedStyle(input)
   const mirror = document.createElement('div')
   const font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`
@@ -27,20 +26,51 @@ export function measureWords(input: HTMLTextAreaElement): Word[] | null {
     const origin = mirror.getBoundingClientRect()
     const words: Word[] = []
     const range = document.createRange()
-    for (const match of input.value.matchAll(/\S+/gu)) {
-      range.setStart(node, match.index)
-      range.setEnd(node, match.index + match[0].length)
-      const rects = [...range.getClientRects()]
-      // A token broken across lines or bidi runs needs multiple glyph positions. Keep the native
-      // text visible for those layouts rather than approximate it and make the paragraph jump.
-      if (rects.length !== 1) return null
-      const rect = rects[0]
-      const y = rect.top - origin.top + (rect.height - ascent - descent) / 2 + ascent - input.scrollTop
-      if (y >= ascent && y <= input.clientHeight) {
-        words.push({ text: match[0], x: rect.left - origin.left - input.scrollLeft, y, width: rect.width })
+    const baseline = (rect: DOMRect) => rect.top - origin.top + (rect.height - ascent - descent) / 2 + ascent - input.scrollTop
+    // Native wrapping stays exact; binary search skips offscreen text without measuring each word.
+    const findOffset = (low: number, high: number, reached: (rect: DOMRect) => boolean): number | null => {
+      while (low < high) {
+        const middle = Math.floor((low + high) / 2)
+        range.setStart(node, middle)
+        range.setEnd(node, middle + 1)
+        const rect = range.getClientRects()[0]
+        if (!rect) return null
+        if (reached(rect)) high = middle
+        else low = middle + 1
+      }
+      return low
+    }
+    const start = findOffset(0, input.value.length, rect => baseline(rect) >= ascent)
+    if (start === null) return null
+    const end = findOffset(start, input.value.length, rect => baseline(rect) > input.clientHeight)
+    if (end === null) return null
+    for (const match of input.value.slice(start, end).matchAll(/\S+/gu)) {
+      let from = start + match.index
+      const to = from + match[0].length
+      while (from < to) {
+        range.setStart(node, from)
+        range.setEnd(node, to)
+        let rects = [...range.getClientRects()]
+        if (!rects.length) return null
+        let until = to
+        if (rects.length > 1) {
+          const nextLine = findOffset(from, to, rect => rect.top > rects[0].top)
+          // Same-line bidi fragments cannot be redrawn as one SVG text run safely.
+          if (nextLine === null || nextLine === from || nextLine === to) return null
+          until = nextLine
+          range.setStart(node, from)
+          range.setEnd(node, until)
+          rects = [...range.getClientRects()]
+        }
+        if (rects.length !== 1) return null
+        const rect = rects[0], y = baseline(rect)
+        if (y >= ascent && y <= input.clientHeight) {
+          words.push({ text: input.value.slice(from, until), x: rect.left - origin.left - input.scrollLeft, y, width: rect.width })
+        }
+        from = until
       }
     }
-    return words.length && words.length <= 160 ? words : null
+    return words.length ? words : null
   } finally {
     mirror.remove()
   }

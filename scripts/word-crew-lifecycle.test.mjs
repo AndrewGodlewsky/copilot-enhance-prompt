@@ -65,13 +65,15 @@ test('real run status governs success, cancellation, original content, reduced m
   globalThis.ResizeObserver = class { constructor(fn) { observer = this; this.fn = fn } observe() {} disconnect() { this.disconnected = true } }
   globalThis.getComputedStyle = () => ({ fontSize: '14px', fontFamily: 'sans-serif', fontWeight: '400', fontStyle: 'normal' })
   const source = '  Original café\n路径 <script> "quoted"  '
-  const input = { value: source, clientWidth: 400, clientHeight: 112, clientLeft: 1, clientTop: 1, addEventListener: (key, fn) => listeners.set(key, fn), removeEventListener: key => listeners.delete(key) }
+  const input = { value: source, clientWidth: 400, clientHeight: 112, clientLeft: 1, clientTop: 1, scrollTop: 200, scrollLeft: 0, addEventListener: (key, fn) => listeners.set(key, fn), removeEventListener: key => listeners.delete(key) }
   const base = { runId: 'one', prompt: source.trim(), workspace: { key: 'project' }, status: 'running' }
   try {
     api.refs.push(input, { style: {} })
     let state = api.render(base, source, 'project')
     assert.equal(state.visible, true)
     assert.equal(state.finishing, false)
+    listeners.get('scroll')()
+    assert.equal(api.render(base, source, 'project').visible, true, 'a queued scroll event at the measured position does not hide the crew')
     state.togglePause()
     assert.equal(api.mounts[0].paused, true)
     state = api.render({ ...base, status: 'done' }, source, 'project')
@@ -121,6 +123,11 @@ test('real run status governs success, cancellation, original content, reduced m
     state = api.render({ ...base, runId: 'reduced' }, source, 'project')
     assert.equal(state.visible, false)
     media.matches = false; listeners.get('motion')()
+    const scrolling = { ...base, runId: 'scrolling' }
+    api.render(scrolling, source, 'project')
+    input.scrollTop += 20; listeners.get('scroll')()
+    assert.equal(api.render(scrolling, source, 'project').visible, false, 'a changed viewport reveals native text instead of misaligned artwork')
+    assert.equal(input.value, source)
     api.render({ ...base, runId: 'resizing' }, source, 'project')
     input.clientWidth = 300; observer.fn()
     assert.equal(api.render({ ...base, runId: 'resizing' }, source, 'project').visible, false)
