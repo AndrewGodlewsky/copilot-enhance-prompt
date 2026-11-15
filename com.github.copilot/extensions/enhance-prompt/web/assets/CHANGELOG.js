@@ -1,5 +1,12 @@
 var e=`# Changes
 
+## [0.2.2] - 2026-11-14
+
+### Changed
+- Distinguish Copilot runtime verification, SDK loading, model-list failures and an empty eligible catalog in the model picker. Refresh retries live discovery; it does not download components or run a model.
+- Add a **Copilot model discovery** section to Show Logs and copied reports: runtime/API checks, failure stage, safe error codes, model counts and filtering totals. No paths, model IDs, account identifiers or raw errors are included.
+- Log explicit refresh attempts and privacy-blocked discovery. Disable the Copilot model picker and Save while its list is unavailable or loading.
+
 ## [0.2.1] - 2026-11-14
 
 ### Added

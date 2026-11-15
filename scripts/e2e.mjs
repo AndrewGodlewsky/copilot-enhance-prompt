@@ -89,6 +89,19 @@ try {
   assert.equal(targets.targets[0].terminalId, session.sessionId)
   assert.equal(targets.workspacePath.toLowerCase(), project.toLowerCase())
   assert.equal((await request('models.get')).profiles.length, 0)
+  const beforeRefresh = captured.length
+  const copilotList = await request('models.catalog', { preset: 'copilot', refresh: true })
+  assert.equal(copilotList.errorText?.code, 'error.copilot_no_models', 'the isolated external fixture has no eligible Copilot models')
+  const discovery = (await request('logs.get')).copilotModelDiscovery
+  assert.equal(discovery.outcome, 'empty')
+  for (const check of ['executableAllowed', 'bootstrapPresent', 'sdkPathPresent', 'parentMatches', 'runtimePathResolved', 'sdkImported', 'clientAvailable', 'stdioAvailable', 'modelListAvailable', 'responseIsList']) {
+    assert.equal(discovery.checks[check], true, check)
+  }
+  assert.equal(discovery.counts.eligible, 0)
+  await request('models.catalog', { preset: 'copilot', refresh: true })
+  assert.equal((await request('logs.get')).copilotModelDiscovery.attempt, discovery.attempt + 1)
+  assert.equal(captured.length, beforeRefresh, 'refresh performs no model inference')
+  console.log('Copilot refresh exercises desktop runtime/SDK checks and reports the empty fixture catalog without inference.')
   const preview = await request('context.preview', { prompt: 'Read the project README', level: 'standard' })
   assert.ok(Array.isArray(preview.context))
   const setting = async (key, value) => {

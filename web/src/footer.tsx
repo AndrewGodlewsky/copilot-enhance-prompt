@@ -13,7 +13,7 @@ const linkStyle = 'inline-flex min-h-8 items-center rounded px-1 text-xs text-bl
 
 export function LogsButton() {
   const [open, setOpen] = useState(false)
-  const [report, setReport] = useState<{ text: string; connected: boolean } | null>(null)
+  const [report, setReport] = useState<Awaited<ReturnType<typeof collectDiagnostics>> | null>(null)
   const [copyStatus, setCopyStatus] = useState('')
   const area = useRef<HTMLTextAreaElement>(null)
   useEffect(() => {
@@ -39,13 +39,18 @@ export function LogsButton() {
   return <>
     <button type="button" className={linkStyle} onClick={() => setOpen(true)}>{t('Show Logs')}</button>
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-2xl">
+      <DialogContent className="flex max-h-[85vh] flex-col overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t('Diagnostic logs')}</DialogTitle>
           <DialogDescription>{t('Reproduce the problem, then open these logs and copy them into your issue. They contain recent operation results and error codes, without prompts, file contents, paths, account names, or API keys. Nothing is uploaded automatically.')}</DialogDescription>
         </DialogHeader>
         <p className="text-xs text-muted-foreground">{t('Up to 200 events per component are kept in memory. Restarting clears them. Reopen this dialog to capture newer events.')}</p>
         {report && !report.connected ? <p role="alert" className="text-sm text-destructive-foreground">{t('The worker could not be reached. These logs include panel diagnostics only.')}</p> : null}
+        {report ? <details className="rounded border p-2 text-xs">
+          <summary className="cursor-pointer font-medium">{t('Copilot model discovery')}</summary>
+          <p className="mt-2 text-muted-foreground">{t('Refresh the Copilot model list first, then reopen these logs. This section is included when you copy the logs.')}</p>
+          <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all font-mono">{report.discovery}</pre>
+        </details> : null}
         <Textarea ref={area} aria-label={t('Diagnostic logs')} readOnly value={report?.text ?? ''} placeholder={t('Collecting logs…')} className="h-64 min-h-24 resize-none font-mono text-xs" spellCheck={false} />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p role="status" className="flex-1 text-xs text-muted-foreground">{copyStatus}</p>

@@ -35,7 +35,7 @@ function fixture() {
     }
   }
   const diagnostics = createDiagnostics()
-  return { state, diagnostics, provider: createCopilotModels(parent, async () => ({ sdk, path: process.execPath }), diagnostics) }
+  return { state, diagnostics, parent, provider: createCopilotModels(parent, async () => ({ sdk, path: process.execPath }), diagnostics) }
 }
 
 test('runtime discovery accepts only the running Copilot bootstrap, never PATH or an override', () => {
@@ -97,4 +97,34 @@ test('Copilot diagnostics identify the failed check and cleanup without account 
   assert.ok(report.entries.some(entry => entry.operation === 'copilot.access' && entry.code === 'error.copilot_account' && entry.outcome === 'failed'))
   assert.ok(report.entries.some(entry => entry.operation === 'copilot.cleanup' && entry.outcome === 'ok'))
   assert.doesNotMatch(JSON.stringify(report), /PRIVATE-|person|github.com|enhance-copilot-/)
+})
+
+test('model refresh identifies unavailable session APIs in a dedicated diagnostic section without raw errors', async () => {
+  const { parent, provider, diagnostics } = fixture()
+  parent.rpc.model.list = async () => { throw Object.assign(new Error('PRIVATE token and path'), { code: -32601 }) }
+  await assert.rejects(provider.catalog())
+  const report = diagnostics.snapshot().copilotModelDiscovery
+  assert.equal(report?.stage, 'model_list')
+  assert.equal(report?.outcome, 'failed')
+  assert.equal(report?.failure?.rpcCode, -32601)
+  assert.doesNotMatch(JSON.stringify(report), /PRIVATE|token|path/)
+})
+
+test('model discovery distinguishes an invalid response from an empty or filtered catalog and retries live', async () => {
+  const { parent, provider, diagnostics } = fixture()
+  parent.rpc.model.list = async () => ({ list: null as any })
+  await assert.rejects(provider.catalog())
+  assert.equal(diagnostics.snapshot().copilotModelDiscovery?.checks.responseIsList, false)
+  parent.rpc.model.list = async () => ({ list: [null, { id: 'private-a' }, { id: 'private-b', provider: { kind: 'external' } }, { id: 'private-c', provider: { kind: 'copilot' }, policy: { state: 'disabled' } }] })
+  await assert.rejects(provider.catalog(), /No eligible Copilot models/)
+  const empty = diagnostics.snapshot().copilotModelDiscovery
+  assert.equal(empty?.outcome, 'empty')
+  assert.deepEqual(empty?.counts, { received: 4, eligible: 0, invalid: 1, unattributed: 1, otherProvider: 1, policyBlocked: 1 })
+  parent.rpc.model.list = async input => { assert.equal(input?.refresh, true); return { list: [{ id: 'available', provider: { kind: 'copilot' } }] } }
+  assert.equal((await provider.catalog()).models[0].id, 'available')
+  const recovered = diagnostics.snapshot().copilotModelDiscovery
+  assert.equal(recovered?.attempt, 3)
+  assert.equal(recovered?.outcome, 'ok')
+  assert.equal(recovered?.counts.eligible, 1)
+  assert.doesNotMatch(JSON.stringify(recovered), /private-|available/)
 })

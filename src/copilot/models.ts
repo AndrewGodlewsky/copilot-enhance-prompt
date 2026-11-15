@@ -6,7 +6,7 @@ import type { Catalog } from '../catalog.ts'
 import type { ImageType } from '../images.ts'
 import { LlmError } from '../llm.ts'
 import { msg } from '../messages.ts'
-import { diagnosticError, type Diagnostics } from '../diagnostics.ts'
+import { diagnosticError, type Diagnostics, type DiscoveryProbe } from '../diagnostics.ts'
 
 type Auth = { isAuthenticated: boolean; login?: string; host?: string }
 type Model = { id: string; name?: string; provider?: { kind?: string }; policy?: { state?: string }; capabilities?: { supports?: { vision?: boolean } } }
@@ -26,10 +26,16 @@ export type CopilotRewrite = { model: string; system: string; user: string; imag
 const unavailable = () => new LlmError(msg('error.copilot_unavailable'), 'unavailable')
 const cancelled = () => new LlmError(msg('error.cancelled'), 'cancelled')
 
-export function hostRuntime(executable = process.execPath, argv = process.argv, parentPid = process.ppid, environment = process.env): string {
-  if (!isAbsolute(executable) || !['copilot.exe', 'copilot', 'copilot-runtime.exe', 'copilot-runtime'].includes(basename(executable).toLowerCase()) ||
-      !argv.some(arg => isAbsolute(arg) && basename(arg) === 'extension_bootstrap.mjs') ||
-      !environment.COPILOT_SDK_PATH || String(parentPid) !== environment.COPILOT_EXTENSION_PARENT_PID) throw unavailable()
+export function hostRuntime(executable = process.execPath, argv = process.argv, parentPid = process.ppid, environment = process.env, probe?: DiscoveryProbe): string {
+  const checks = {
+    executableAllowed: isAbsolute(executable) && ['copilot.exe', 'copilot', 'copilot-runtime.exe', 'copilot-runtime'].includes(basename(executable).toLowerCase()),
+    bootstrapPresent: argv.some(arg => isAbsolute(arg) && basename(arg) === 'extension_bootstrap.mjs'),
+    sdkPathPresent: Boolean(environment.COPILOT_SDK_PATH),
+    parentMatches: Number.isSafeInteger(parentPid) && parentPid > 0 && String(parentPid) === environment.COPILOT_EXTENSION_PARENT_PID
+  }
+  for (const key of Object.keys(checks) as (keyof typeof checks)[]) probe?.check(key, checks[key])
+  probe?.check('extensionSandboxed', environment.COPILOT_EXTENSION_SANDBOXED === '1')
+  if (!Object.values(checks).every(Boolean)) throw new LlmError(msg('error.copilot_runtime'), 'unavailable')
   return executable
 }
 
@@ -39,12 +45,28 @@ export function runtimeEnvironment(source = process.env): Record<string, string>
   return Object.fromEntries(Object.entries(source).filter((entry): entry is [string, string] => allowed.test(entry[0]) && typeof entry[1] === 'string'))
 }
 
-async function desktopRuntime(): Promise<{ sdk: DesktopSdk; path: string }> {
-  const path = await realpath(hostRuntime())
-  const name = '@github/copilot-sdk'
-  const sdk: DesktopSdk = await import(name)
-  if (typeof sdk.CopilotClient !== 'function' || typeof sdk.RuntimeConnection?.forStdio !== 'function') throw unavailable()
-  return { sdk, path }
+async function desktopRuntime(probe?: DiscoveryProbe): Promise<{ sdk: DesktopSdk; path: string }> {
+  let loadingSdk = false
+  try {
+    probe?.stage('runtime_identity')
+    const executable = hostRuntime(undefined, undefined, undefined, undefined, probe)
+    probe?.stage('runtime_path')
+    const path = await realpath(executable)
+    probe?.check('runtimePathResolved', true)
+    loadingSdk = true
+    probe?.stage('sdk_import')
+    const name = '@github/copilot-sdk'
+    const sdk: DesktopSdk = await import(name)
+    probe?.check('sdkImported', true)
+    probe?.stage('sdk_api')
+    probe?.check('clientAvailable', typeof sdk.CopilotClient === 'function')
+    probe?.check('stdioAvailable', typeof sdk.RuntimeConnection?.forStdio === 'function')
+    if (typeof sdk.CopilotClient !== 'function' || typeof sdk.RuntimeConnection?.forStdio !== 'function') throw unavailable()
+    return { sdk, path }
+  } catch (error) {
+    probe?.finish('failed', error)
+    throw new LlmError(msg(loadingSdk ? 'error.copilot_sdk' : 'error.copilot_runtime'), 'unavailable')
+  }
 }
 
 function eligible(value: unknown): value is Model {
@@ -63,12 +85,39 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
   const active = new Set<AbortController>()
   async function catalog(): Promise<Catalog> {
     const started = Date.now()
+    const probe = diagnostics?.beginModelDiscovery()
     try {
-      await runtime()
-      const result = await withDeadline(parent.rpc.model.list({ refresh: true }), 15_000)
+      const timedOut = () => new LlmError(msg('error.copilot_catalog'), 'timeout')
+      await withDeadline(runtime(probe), 15_000, timedOut)
+      probe?.stage('session_api')
+      probe?.check('modelListAvailable', typeof parent.rpc?.model?.list === 'function')
+      if (typeof parent.rpc?.model?.list !== 'function') throw new LlmError(msg('error.copilot_catalog'), 'unavailable')
+      probe?.stage('model_list')
+      const result = await withDeadline(parent.rpc.model.list({ refresh: true }), 15_000, timedOut)
+      probe?.check('responseIsList', Array.isArray(result?.list))
+      if (!Array.isArray(result?.list)) throw new LlmError(msg('error.copilot_catalog'), 'unavailable')
+      probe?.stage('filter')
+      const counts = { received: result.list.length, eligible: 0, invalid: 0, unattributed: 0, otherProvider: 0, policyBlocked: 0 }
+      for (const item of result.list) {
+        const model = item as Model | null
+        if (!model || typeof model !== 'object' || typeof model.id !== 'string' || !model.id) counts.invalid++
+        else if (!model.provider?.kind) counts.unattributed++
+        else if (model.provider.kind !== 'copilot') counts.otherProvider++
+        else if (model.policy && model.policy.state !== 'enabled') counts.policyBlocked++
+        else counts.eligible++
+      }
+      for (const key of Object.keys(counts) as (keyof typeof counts)[]) probe?.count(key, counts[key])
+      if (counts.eligible === 0) { probe?.finish('empty'); throw new LlmError(msg('error.copilot_no_models'), 'unavailable') }
+      probe?.stage('complete')
+      probe?.finish('ok')
       diagnostics?.record('copilot.catalog', 'ok', { ms: Date.now() - started })
       return { models: result.list.filter(eligible).map(model => ({ id: model.id, label: model.name || model.id })), source: 'GitHub Copilot', fetchedAt: Date.now() }
-    } catch (error) { diagnostics?.record('copilot.catalog', 'failed', { ms: Date.now() - started, ...diagnosticError(error) }); throw unavailable() }
+    } catch (error) {
+      probe?.finish('failed', error)
+      diagnostics?.record('copilot.catalog', 'failed', { ms: Date.now() - started, ...diagnosticError(error) })
+      if (error instanceof LlmError && ['error.copilot_runtime', 'error.copilot_sdk', 'error.copilot_catalog', 'error.copilot_no_models'].includes(error.text.code)) throw error
+      throw new LlmError(msg('error.copilot_catalog'), 'unavailable')
+    }
   }
   async function rewrite(input: CopilotRewrite, signal?: AbortSignal): Promise<string> {
     if (signal?.aborted) throw cancelled()
@@ -166,8 +215,8 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
   return { catalog, rewrite, close() { for (const controller of active) controller.abort() } }
 }
 
-async function withDeadline<T>(promise: Promise<T>, ms: number): Promise<T> {
+async function withDeadline<T>(promise: Promise<T>, ms: number, timeout = unavailable): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined
-  try { return await Promise.race([promise, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(unavailable()), ms) })]) }
+  try { return await Promise.race([promise, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(timeout()), ms) })]) }
   finally { clearTimeout(timer) }
 }

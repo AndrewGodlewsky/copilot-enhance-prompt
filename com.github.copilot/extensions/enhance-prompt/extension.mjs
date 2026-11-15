@@ -1661,6 +1661,10 @@ var MESSAGES = {
   "note.images_paths_only": "This model cannot see images: it got their paths only, and the prompt lists them for the agent.",
   "error.cancelled": "Cancelled.",
   "error.copilot_unavailable": "Copilot background rewriting is unavailable. Restart or update GitHub Copilot and reopen this plugin. No separate SDK or runtime is installed.",
+  "error.copilot_runtime": "The plugin could not verify the desktop runtime. Open Show Logs and share the Copilot model discovery section.",
+  "error.copilot_sdk": "The required desktop SDK could not be loaded. Open Show Logs and share the Copilot model discovery section.",
+  "error.copilot_catalog": "Copilot could not return its model list. Try Refresh, then open Show Logs and share the Copilot model discovery section if it still fails.",
+  "error.copilot_no_models": "No eligible Copilot models were returned for this session. Check your Copilot sign-in and model access, then refresh. Show Logs includes the model discovery results.",
   "error.copilot_account": "The background runtime could not verify the same GitHub account as this Copilot session. Check your existing Copilot sign-in. No prompt was sent.",
   "error.copilot_model": "This model is not available through GitHub Copilot in both sessions. Refresh the model list and choose a Copilot model.",
   "error.copilot_images": "This Copilot model does not report image support. Choose a model with image support or remove the images.",
@@ -2813,6 +2817,12 @@ function translate(lang, text, params) {
   return template.replace(/\{(\w+)\}/g, (match, key) => key in params ? String(params[key]) : match);
 }
 var VI = {
+  "Copilot model discovery": "Kh\xE1m ph\xE1 m\xF4 h\xECnh Copilot",
+  "Refresh the Copilot model list first, then reopen these logs. This section is included when you copy the logs.": "L\xE0m m\u1EDBi danh s\xE1ch m\xF4 h\xECnh Copilot tr\u01B0\u1EDBc, r\u1ED3i m\u1EDF l\u1EA1i nh\u1EADt k\xFD. Ph\u1EA7n n\xE0y \u0111\u01B0\u1EE3c bao g\u1ED3m khi b\u1EA1n sao ch\xE9p nh\u1EADt k\xFD.",
+  "The plugin could not verify the desktop runtime. Open Show Logs and share the Copilot model discovery section.": "Plugin kh\xF4ng th\u1EC3 x\xE1c minh m\xF4i tr\u01B0\u1EDDng ch\u1EA1y c\u1EE7a \u1EE9ng d\u1EE5ng. M\u1EDF Xem nh\u1EADt k\xFD v\xE0 chia s\u1EBB ph\u1EA7n Kh\xE1m ph\xE1 m\xF4 h\xECnh Copilot.",
+  "The required desktop SDK could not be loaded. Open Show Logs and share the Copilot model discovery section.": "Kh\xF4ng th\u1EC3 t\u1EA3i SDK c\u1EA7n thi\u1EBFt c\u1EE7a \u1EE9ng d\u1EE5ng. M\u1EDF Xem nh\u1EADt k\xFD v\xE0 chia s\u1EBB ph\u1EA7n Kh\xE1m ph\xE1 m\xF4 h\xECnh Copilot.",
+  "Copilot could not return its model list. Try Refresh, then open Show Logs and share the Copilot model discovery section if it still fails.": "Copilot kh\xF4ng th\u1EC3 tr\u1EA3 v\u1EC1 danh s\xE1ch m\xF4 h\xECnh. Th\u1EED L\xE0m m\u1EDBi, r\u1ED3i m\u1EDF Xem nh\u1EADt k\xFD v\xE0 chia s\u1EBB ph\u1EA7n Kh\xE1m ph\xE1 m\xF4 h\xECnh Copilot n\u1EBFu v\u1EABn l\u1ED7i.",
+  "No eligible Copilot models were returned for this session. Check your Copilot sign-in and model access, then refresh. Show Logs includes the model discovery results.": "Phi\xEAn n\xE0y kh\xF4ng tr\u1EA3 v\u1EC1 m\xF4 h\xECnh Copilot \u0111\u1EE7 \u0111i\u1EC1u ki\u1EC7n. Ki\u1EC3m tra \u0111\u0103ng nh\u1EADp Copilot v\xE0 quy\u1EC1n truy c\u1EADp m\xF4 h\xECnh, r\u1ED3i l\xE0m m\u1EDBi. Xem nh\u1EADt k\xFD ch\u1EE9a k\u1EBFt qu\u1EA3 kh\xE1m ph\xE1 m\xF4 h\xECnh.",
   "Show Logs": "Xem nh\u1EADt k\xFD",
   "Diagnostic logs": "Nh\u1EADt k\xFD ch\u1EA9n \u0111o\xE1n",
   "Copy logs": "Sao ch\xE9p nh\u1EADt k\xFD",
@@ -3324,6 +3334,12 @@ var VI = {
   "Changes the text Copilot receives; the chat still shows your original message. Off by default. Ambiguous prompts are left unchanged.": "Thay \u0111\u1ED5i v\u0103n b\u1EA3n Copilot nh\u1EADn \u0111\u01B0\u1EE3c; cu\u1ED9c tr\xF2 chuy\u1EC7n v\u1EABn hi\u1EC3n th\u1ECB tin nh\u1EAFn g\u1ED1c. M\u1EB7c \u0111\u1ECBnh t\u1EAFt. Gi\u1EEF nguy\xEAn n\u1EBFu kh\xF4ng x\xE1c \u0111\u1ECBnh \u0111\u01B0\u1EE3c ph\u1EA7n c\u1EA7n thay."
 };
 var ZH = {
+  "Copilot model discovery": "Copilot \u6A21\u578B\u53D1\u73B0",
+  "Refresh the Copilot model list first, then reopen these logs. This section is included when you copy the logs.": "\u8BF7\u5148\u5237\u65B0 Copilot \u6A21\u578B\u5217\u8868\uFF0C\u518D\u91CD\u65B0\u6253\u5F00\u65E5\u5FD7\u3002\u590D\u5236\u65E5\u5FD7\u65F6\u4F1A\u5305\u542B\u6B64\u90E8\u5206\u3002",
+  "The plugin could not verify the desktop runtime. Open Show Logs and share the Copilot model discovery section.": "\u63D2\u4EF6\u65E0\u6CD5\u9A8C\u8BC1\u684C\u9762\u8FD0\u884C\u65F6\u3002\u8BF7\u6253\u5F00\u201C\u663E\u793A\u65E5\u5FD7\u201D\u5E76\u5206\u4EAB\u201CCopilot \u6A21\u578B\u53D1\u73B0\u201D\u90E8\u5206\u3002",
+  "The required desktop SDK could not be loaded. Open Show Logs and share the Copilot model discovery section.": "\u65E0\u6CD5\u52A0\u8F7D\u6240\u9700\u7684\u684C\u9762 SDK\u3002\u8BF7\u6253\u5F00\u201C\u663E\u793A\u65E5\u5FD7\u201D\u5E76\u5206\u4EAB\u201CCopilot \u6A21\u578B\u53D1\u73B0\u201D\u90E8\u5206\u3002",
+  "Copilot could not return its model list. Try Refresh, then open Show Logs and share the Copilot model discovery section if it still fails.": "Copilot \u65E0\u6CD5\u8FD4\u56DE\u6A21\u578B\u5217\u8868\u3002\u8BF7\u5C1D\u8BD5\u5237\u65B0\uFF1B\u5982\u679C\u4ECD\u7136\u5931\u8D25\uFF0C\u8BF7\u6253\u5F00\u201C\u663E\u793A\u65E5\u5FD7\u201D\u5E76\u5206\u4EAB\u201CCopilot \u6A21\u578B\u53D1\u73B0\u201D\u90E8\u5206\u3002",
+  "No eligible Copilot models were returned for this session. Check your Copilot sign-in and model access, then refresh. Show Logs includes the model discovery results.": "\u6B64\u4F1A\u8BDD\u672A\u8FD4\u56DE\u7B26\u5408\u6761\u4EF6\u7684 Copilot \u6A21\u578B\u3002\u8BF7\u68C0\u67E5 Copilot \u767B\u5F55\u72B6\u6001\u548C\u6A21\u578B\u8BBF\u95EE\u6743\u9650\uFF0C\u7136\u540E\u5237\u65B0\u3002\u201C\u663E\u793A\u65E5\u5FD7\u201D\u4E2D\u5305\u542B\u6A21\u578B\u53D1\u73B0\u7ED3\u679C\u3002",
   "Show Logs": "\u663E\u793A\u65E5\u5FD7",
   "Diagnostic logs": "\u8BCA\u65AD\u65E5\u5FD7",
   "Copy logs": "\u590D\u5236\u65E5\u5FD7",
@@ -6496,7 +6512,7 @@ function activate(host) {
 import { EventEmitter } from "node:events";
 
 // src/version.ts
-var VERSION = "0.2.1";
+var VERSION = "0.2.2";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([
@@ -6533,6 +6549,7 @@ var OPERATIONS = /* @__PURE__ */ new Set([
   "rules.save",
   "data.summary",
   "data.clear",
+  "copilot.refresh",
   "copilot.catalog",
   "copilot.runtime",
   "copilot.start",
@@ -6561,8 +6578,17 @@ var CODES = /* @__PURE__ */ new Set([
   "AbortError",
   "TimeoutError",
   "NotAllowedError",
+  "ERR_MODULE_NOT_FOUND",
+  "ERR_PACKAGE_PATH_NOT_EXPORTED",
+  "ERR_REQUIRE_ESM",
+  "ENOENT",
+  "EACCES",
+  "EPERM",
   ...Object.keys(MESSAGES).filter((code) => code.startsWith("error."))
 ]);
+var DISCOVERY_STAGES = ["runtime_identity", "runtime_path", "sdk_import", "sdk_api", "session_api", "model_list", "filter", "complete", "privacy"];
+var DISCOVERY_CHECKS = ["executableAllowed", "bootstrapPresent", "sdkPathPresent", "parentMatches", "extensionSandboxed", "runtimePathResolved", "sdkImported", "clientAvailable", "stdioAvailable", "modelListAvailable", "responseIsList"];
+var DISCOVERY_COUNTS = ["received", "eligible", "invalid", "otherProvider", "unattributed", "policyBlocked"];
 function diagnosticError(error) {
   const value = error;
   const message = value?.text ?? (typeof value?.message === "string" ? messageIn(value.message) : void 0);
@@ -6572,9 +6598,35 @@ function diagnosticError(error) {
 }
 function createDiagnostics() {
   const entries = [];
+  let discovery = null;
+  let attempts = 0;
   const startedAt = (/* @__PURE__ */ new Date()).toISOString();
   const limit = 200;
   return {
+    beginModelDiscovery() {
+      const current = { attempt: ++attempts, startedAt: (/* @__PURE__ */ new Date()).toISOString(), stage: "runtime_identity", outcome: "running", checks: {}, counts: {} };
+      discovery = current;
+      return {
+        stage(value) {
+          if (current.outcome === "running" && DISCOVERY_STAGES.includes(value)) current.stage = value;
+        },
+        check(key, value) {
+          if (current.outcome === "running" && DISCOVERY_CHECKS.includes(key) && typeof value === "boolean") current.checks[key] = value;
+        },
+        count(key, value) {
+          if (current.outcome === "running" && DISCOVERY_COUNTS.includes(key) && Number.isSafeInteger(value) && value >= 0) current.counts[key] = value;
+        },
+        finish(outcome, error) {
+          if (current.outcome !== "running" || !["ok", "empty", "failed"].includes(outcome)) return;
+          current.outcome = outcome;
+          current.completedAt = (/* @__PURE__ */ new Date()).toISOString();
+          if (error) {
+            const code = error.code;
+            current.failure = { ...diagnosticError(error), ...[-32700, -32600, -32601, -32602, -32603, -32e3].includes(code) ? { rpcCode: code } : {} };
+          }
+        }
+      };
+    },
     record(operation, outcome, details = {}) {
       if (!OPERATIONS.has(operation) || !["started", "ok", "failed", "cancelled", "pending"].includes(outcome)) return;
       const { ms, code, status } = details;
@@ -6589,7 +6641,7 @@ function createDiagnostics() {
       if (entries.length > limit) entries.splice(0, entries.length - limit);
     },
     snapshot() {
-      return { version: VERSION, capturedAt: (/* @__PURE__ */ new Date()).toISOString(), startedAt, limit, entries: entries.map((entry) => ({ ...entry })) };
+      return { version: VERSION, capturedAt: (/* @__PURE__ */ new Date()).toISOString(), startedAt, limit, entries: entries.map((entry) => ({ ...entry })), copilotModelDiscovery: discovery ? structuredClone(discovery) : null };
     }
   };
 }
@@ -6666,6 +6718,11 @@ function createWorkerHost(services2, log = (_message) => {
       const answer = await Promise.race([Promise.resolve().then(() => handler(input ?? {}, { signal: controller.signal, panel: { id: panelId } })), stopped]);
       const result = answer;
       const failed = result?.ok === false || result?.copied === false || result?.accepted === false || result?.restored === false || !!result?.error;
+      if (name === "models.catalog" && input?.preset === "copilot" && diagnosticError({ text: result?.errorText }).code === "error.lists_off") {
+        const probe = diagnostics2.beginModelDiscovery();
+        probe.stage("privacy");
+        probe.finish("failed", { text: result?.errorText });
+      }
       if (!quiet || failed) diagnostics2.record(name, failed ? "failed" : result?.pending ? "pending" : "ok", {
         ms: Date.now() - started,
         ...failed ? diagnosticError({ text: result?.errorText ?? result?.text }) : {}
@@ -7255,20 +7312,44 @@ import { basename as basename3, isAbsolute as isAbsolute4, join as join7, relati
 import { tmpdir as tmpdir3 } from "node:os";
 var unavailable2 = () => new LlmError(msg("error.copilot_unavailable"), "unavailable");
 var cancelled = () => new LlmError(msg("error.cancelled"), "cancelled");
-function hostRuntime(executable = process.execPath, argv = process.argv, parentPid = process.ppid, environment = process.env) {
-  if (!isAbsolute4(executable) || !["copilot.exe", "copilot", "copilot-runtime.exe", "copilot-runtime"].includes(basename3(executable).toLowerCase()) || !argv.some((arg) => isAbsolute4(arg) && basename3(arg) === "extension_bootstrap.mjs") || !environment.COPILOT_SDK_PATH || String(parentPid) !== environment.COPILOT_EXTENSION_PARENT_PID) throw unavailable2();
+function hostRuntime(executable = process.execPath, argv = process.argv, parentPid = process.ppid, environment = process.env, probe) {
+  const checks = {
+    executableAllowed: isAbsolute4(executable) && ["copilot.exe", "copilot", "copilot-runtime.exe", "copilot-runtime"].includes(basename3(executable).toLowerCase()),
+    bootstrapPresent: argv.some((arg) => isAbsolute4(arg) && basename3(arg) === "extension_bootstrap.mjs"),
+    sdkPathPresent: Boolean(environment.COPILOT_SDK_PATH),
+    parentMatches: Number.isSafeInteger(parentPid) && parentPid > 0 && String(parentPid) === environment.COPILOT_EXTENSION_PARENT_PID
+  };
+  for (const key of Object.keys(checks)) probe?.check(key, checks[key]);
+  probe?.check("extensionSandboxed", environment.COPILOT_EXTENSION_SANDBOXED === "1");
+  if (!Object.values(checks).every(Boolean)) throw new LlmError(msg("error.copilot_runtime"), "unavailable");
   return executable;
 }
 function runtimeEnvironment(source = process.env) {
   const allowed = /^(PATH|PATHEXT|SYSTEMROOT|WINDIR|COMSPEC|TEMP|TMP|HOME|USERPROFILE|LOCALAPPDATA|APPDATA|XDG_CONFIG_HOME|XDG_CACHE_HOME|LANG|LC_ALL|GH_TOKEN|GITHUB_TOKEN|GH_HOST|GITHUB_HOST|GH_CONFIG_DIR|HTTPS_PROXY|HTTP_PROXY|ALL_PROXY|NO_PROXY|NODE_EXTRA_CA_CERTS|SSL_CERT_FILE|SSL_CERT_DIR)$/i;
   return Object.fromEntries(Object.entries(source).filter((entry) => allowed.test(entry[0]) && typeof entry[1] === "string"));
 }
-async function desktopRuntime() {
-  const path = await realpath4(hostRuntime());
-  const name = "@github/copilot-sdk";
-  const sdk = await import(name);
-  if (typeof sdk.CopilotClient !== "function" || typeof sdk.RuntimeConnection?.forStdio !== "function") throw unavailable2();
-  return { sdk, path };
+async function desktopRuntime(probe) {
+  let loadingSdk = false;
+  try {
+    probe?.stage("runtime_identity");
+    const executable = hostRuntime(void 0, void 0, void 0, void 0, probe);
+    probe?.stage("runtime_path");
+    const path = await realpath4(executable);
+    probe?.check("runtimePathResolved", true);
+    loadingSdk = true;
+    probe?.stage("sdk_import");
+    const name = "@github/copilot-sdk";
+    const sdk = await import(name);
+    probe?.check("sdkImported", true);
+    probe?.stage("sdk_api");
+    probe?.check("clientAvailable", typeof sdk.CopilotClient === "function");
+    probe?.check("stdioAvailable", typeof sdk.RuntimeConnection?.forStdio === "function");
+    if (typeof sdk.CopilotClient !== "function" || typeof sdk.RuntimeConnection?.forStdio !== "function") throw unavailable2();
+    return { sdk, path };
+  } catch (error) {
+    probe?.finish("failed", error);
+    throw new LlmError(msg(loadingSdk ? "error.copilot_sdk" : "error.copilot_runtime"), "unavailable");
+  }
 }
 function eligible(value) {
   if (!value || typeof value !== "object") return false;
@@ -7282,14 +7363,41 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2) {
   const active = /* @__PURE__ */ new Set();
   async function catalog() {
     const started = Date.now();
+    const probe = diagnostics2?.beginModelDiscovery();
     try {
-      await runtime();
-      const result = await withDeadline(parent.rpc.model.list({ refresh: true }), 15e3);
+      const timedOut = () => new LlmError(msg("error.copilot_catalog"), "timeout");
+      await withDeadline(runtime(probe), 15e3, timedOut);
+      probe?.stage("session_api");
+      probe?.check("modelListAvailable", typeof parent.rpc?.model?.list === "function");
+      if (typeof parent.rpc?.model?.list !== "function") throw new LlmError(msg("error.copilot_catalog"), "unavailable");
+      probe?.stage("model_list");
+      const result = await withDeadline(parent.rpc.model.list({ refresh: true }), 15e3, timedOut);
+      probe?.check("responseIsList", Array.isArray(result?.list));
+      if (!Array.isArray(result?.list)) throw new LlmError(msg("error.copilot_catalog"), "unavailable");
+      probe?.stage("filter");
+      const counts = { received: result.list.length, eligible: 0, invalid: 0, unattributed: 0, otherProvider: 0, policyBlocked: 0 };
+      for (const item2 of result.list) {
+        const model = item2;
+        if (!model || typeof model !== "object" || typeof model.id !== "string" || !model.id) counts.invalid++;
+        else if (!model.provider?.kind) counts.unattributed++;
+        else if (model.provider.kind !== "copilot") counts.otherProvider++;
+        else if (model.policy && model.policy.state !== "enabled") counts.policyBlocked++;
+        else counts.eligible++;
+      }
+      for (const key of Object.keys(counts)) probe?.count(key, counts[key]);
+      if (counts.eligible === 0) {
+        probe?.finish("empty");
+        throw new LlmError(msg("error.copilot_no_models"), "unavailable");
+      }
+      probe?.stage("complete");
+      probe?.finish("ok");
       diagnostics2?.record("copilot.catalog", "ok", { ms: Date.now() - started });
       return { models: result.list.filter(eligible).map((model) => ({ id: model.id, label: model.name || model.id })), source: "GitHub Copilot", fetchedAt: Date.now() };
     } catch (error) {
+      probe?.finish("failed", error);
       diagnostics2?.record("copilot.catalog", "failed", { ms: Date.now() - started, ...diagnosticError(error) });
-      throw unavailable2();
+      if (error instanceof LlmError && ["error.copilot_runtime", "error.copilot_sdk", "error.copilot_catalog", "error.copilot_no_models"].includes(error.text.code)) throw error;
+      throw new LlmError(msg("error.copilot_catalog"), "unavailable");
     }
   }
   async function rewrite(input, signal) {
@@ -7433,11 +7541,11 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2) {
     for (const controller of active) controller.abort();
   } };
 }
-async function withDeadline(promise, ms) {
+async function withDeadline(promise, ms, timeout = unavailable2) {
   let timer;
   try {
     return await Promise.race([promise, new Promise((_, reject) => {
-      timer = setTimeout(() => reject(unavailable2()), ms);
+      timer = setTimeout(() => reject(timeout()), ms);
     })]);
   } finally {
     clearTimeout(timer);

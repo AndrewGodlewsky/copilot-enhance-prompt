@@ -60,6 +60,8 @@ Verified with the desktop SDK and runtime `1.0.106-8.unstable.r43566476370.g869e
 
 Restart or update GitHub Copilot, open the installed canvas in a session, and refresh the model list. Confirm that the Copilot profile is selected. For an account error, check the existing sign-in; the plugin cannot bridge a desktop-only credential into the helper. If it still fails, report the plugin version and the displayed error. Do not share tokens or private prompts.
 
+Since v0.2.2, **Show Logs → Copilot model discovery** distinguishes failed runtime checks, SDK import or API availability, model-list RPC errors, invalid responses and empty/filtered catalogs. Press Refresh first, then reopen logs and use Copy logs. Reports contain booleans, counts and recognized codes, not paths, model IDs or account data. A disposable installed-runtime test reaches this API, but a reported failure in the desktop-hosted session has not yet been reproduced; the added diagnostics are intended to identify that difference without relaxing runtime or provider checks.
+
 Keep **Settings → Fetch model lists online** enabled for Copilot rewriting: each rewrite needs current account/model access checks. Turning it off blocks the Copilot route before a helper starts.
 
 Chat auto-enhance remains separate: its two-second hook uses Rules or explicitly configured API models. Manual Enhance and optional Enhance and send support the new Copilot provider.

@@ -8,15 +8,26 @@ const OPERATIONS = new Set([
   'models.get', 'models.save', 'models.delete', 'models.move', 'models.roles', 'models.test', 'models.catalog', 'models.detect',
   'history.remove', 'history.clear', 'history.restore', 'consents.get', 'consent.set', 'agent.launch', 'editor.open',
   'targets.list', 'ui.locale', 'hook.last', 'rules.get', 'rules.save', 'data.summary', 'data.clear',
-  'copilot.catalog', 'copilot.runtime', 'copilot.start', 'copilot.session', 'copilot.access', 'copilot.workspace',
+  'copilot.refresh', 'copilot.catalog', 'copilot.runtime', 'copilot.start', 'copilot.session', 'copilot.access', 'copilot.workspace',
   'copilot.tools', 'copilot.images', 'copilot.account', 'copilot.generate', 'copilot.cleanup'
 ])
 const CODES = new Set(['aborted', 'cancelled', 'timeout', 'unavailable', 'invalid_params', 'action_failed', 'rate_limited',
   'disconnected', 'request_failed', 'unauthorized', 'forbidden', 'network', 'AbortError', 'TimeoutError', 'NotAllowedError',
+  'ERR_MODULE_NOT_FOUND', 'ERR_PACKAGE_PATH_NOT_EXPORTED', 'ERR_REQUIRE_ESM', 'ENOENT', 'EACCES', 'EPERM',
   ...Object.keys(MESSAGES).filter(code => code.startsWith('error.'))])
 export type DiagnosticOutcome = 'started' | 'ok' | 'failed' | 'cancelled' | 'pending'
 export type DiagnosticEntry = { at: string; operation: string; outcome: DiagnosticOutcome; ms?: number; code?: string; status?: number }
-export type DiagnosticReport = { version: string; capturedAt: string; startedAt: string; limit: number; entries: DiagnosticEntry[] }
+const DISCOVERY_STAGES = ['runtime_identity', 'runtime_path', 'sdk_import', 'sdk_api', 'session_api', 'model_list', 'filter', 'complete', 'privacy'] as const
+const DISCOVERY_CHECKS = ['executableAllowed', 'bootstrapPresent', 'sdkPathPresent', 'parentMatches', 'extensionSandboxed', 'runtimePathResolved', 'sdkImported', 'clientAvailable', 'stdioAvailable', 'modelListAvailable', 'responseIsList'] as const
+const DISCOVERY_COUNTS = ['received', 'eligible', 'invalid', 'otherProvider', 'unattributed', 'policyBlocked'] as const
+export type ModelDiscovery = {
+  attempt: number; startedAt: string; completedAt?: string; stage: typeof DISCOVERY_STAGES[number]
+  outcome: 'running' | 'ok' | 'empty' | 'failed'
+  checks: Partial<Record<typeof DISCOVERY_CHECKS[number], boolean>>
+  counts: Partial<Record<typeof DISCOVERY_COUNTS[number], number>>
+  failure?: { code: string; status?: number; rpcCode?: number }
+}
+export type DiagnosticReport = { version: string; capturedAt: string; startedAt: string; limit: number; entries: DiagnosticEntry[]; copilotModelDiscovery: ModelDiscovery | null }
 export type WorkerDiagnostics = DiagnosticReport & { platform: string; architecture: string; runtime: string }
 
 export function diagnosticError(error: unknown): { code: string; status?: number } {
@@ -29,9 +40,29 @@ export function diagnosticError(error: unknown): { code: string; status?: number
 
 export function createDiagnostics() {
   const entries: DiagnosticEntry[] = []
+  let discovery: ModelDiscovery | null = null
+  let attempts = 0
   const startedAt = new Date().toISOString()
   const limit = 200
   return {
+    beginModelDiscovery() {
+      const current: ModelDiscovery = { attempt: ++attempts, startedAt: new Date().toISOString(), stage: 'runtime_identity', outcome: 'running', checks: {}, counts: {} }
+      discovery = current
+      return {
+        stage(value: ModelDiscovery['stage']) { if (current.outcome === 'running' && DISCOVERY_STAGES.includes(value)) current.stage = value },
+        check(key: typeof DISCOVERY_CHECKS[number], value: boolean) { if (current.outcome === 'running' && DISCOVERY_CHECKS.includes(key) && typeof value === 'boolean') current.checks[key] = value },
+        count(key: typeof DISCOVERY_COUNTS[number], value: number) { if (current.outcome === 'running' && DISCOVERY_COUNTS.includes(key) && Number.isSafeInteger(value) && value >= 0) current.counts[key] = value },
+        finish(outcome: 'ok' | 'empty' | 'failed', error?: unknown) {
+          if (current.outcome !== 'running' || !['ok', 'empty', 'failed'].includes(outcome)) return
+          current.outcome = outcome
+          current.completedAt = new Date().toISOString()
+          if (error) {
+            const code = (error as { code?: unknown }).code
+            current.failure = { ...diagnosticError(error), ...([-32700, -32600, -32601, -32602, -32603, -32000].includes(code as number) ? { rpcCode: code as number } : {}) }
+          }
+        }
+      }
+    },
     record(operation: string, outcome: DiagnosticOutcome, details: { ms?: number; code?: string; status?: number } = {}) {
       if (!OPERATIONS.has(operation) || !['started', 'ok', 'failed', 'cancelled', 'pending'].includes(outcome)) return
       const { ms, code, status } = details
@@ -41,8 +72,9 @@ export function createDiagnostics() {
         ...(typeof status === 'number' && Number.isInteger(status) && status >= 100 && status <= 599 ? { status } : {}) })
       if (entries.length > limit) entries.splice(0, entries.length - limit)
     },
-    snapshot(): DiagnosticReport { return { version: VERSION, capturedAt: new Date().toISOString(), startedAt, limit, entries: entries.map(entry => ({ ...entry })) } }
+    snapshot(): DiagnosticReport { return { version: VERSION, capturedAt: new Date().toISOString(), startedAt, limit, entries: entries.map(entry => ({ ...entry })), copilotModelDiscovery: discovery ? structuredClone(discovery) : null } }
   }
 }
 
 export type Diagnostics = ReturnType<typeof createDiagnostics>
+export type DiscoveryProbe = ReturnType<Diagnostics['beginModelDiscovery']>

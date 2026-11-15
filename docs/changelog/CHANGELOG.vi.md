@@ -1,5 +1,12 @@
 # Thay đổi
 
+## [0.2.2] - 2026-11-14
+
+### Thay đổi
+- Phân biệt lỗi xác minh môi trường Copilot, tải SDK, lấy danh sách và danh sách không có mô hình phù hợp. Làm mới thử lại danh sách trực tiếp, không tải thành phần hay gọi mô hình.
+- Thêm phần **Khám phá mô hình Copilot** vào Xem nhật ký và báo cáo sao chép: kiểm tra môi trường/API, bước lỗi, mã lỗi an toàn và số lượng mô hình qua bộ lọc. Không chứa đường dẫn, ID mô hình, thông tin tài khoản hay lỗi nguyên văn.
+- Ghi nhận thao tác làm mới và việc bị chặn bởi quyền riêng tư. Vô hiệu hóa chọn mô hình Copilot và Lưu khi danh sách chưa có hoặc đang tải.
+
 ## [0.2.1] - 2026-11-14
 
 ### Thêm

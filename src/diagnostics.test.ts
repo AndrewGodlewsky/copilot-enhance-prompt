@@ -3,6 +3,10 @@ import { createDiagnostics, diagnosticError } from './diagnostics.ts'
 import { createWorkerHost } from './worker-host.ts'
 import { msg, withMessage } from './messages.ts'
 import { collectDiagnostics } from './panel/diagnostics.ts'
+import { hostRuntime } from './copilot/models.ts'
+import { loadCatalog } from './panel/actions.ts'
+import { catalogs, catalogLoading, form } from './panel/state.ts'
+import { read, set } from '#panel'
 
 test('support logs accept only known fields and codes, cap memory and return independent snapshots', () => {
   const logs = createDiagnostics()
@@ -68,4 +72,59 @@ test('Show Logs still produces a copyable panel report when the worker is unavai
     assert.equal(parsed.plugin, 'Enhance Prompt')
     assert.ok(parsed.entries.some((entry: any) => entry.operation === 'canvas.request' && entry.outcome === 'failed'))
   } finally { await panel.unmount() }
+})
+
+test('model discovery records runtime checks, rejects arbitrary fields and ignores late attempts', () => {
+  const logs = createDiagnostics()
+  const first = logs.beginModelDiscovery()
+  assert.throws(() => hostRuntime('/private/node.exe', ['/private/extension_bootstrap.mjs'], 17, { COPILOT_EXTENSION_PARENT_PID: '18', COPILOT_SDK_PATH: '/private/sdk' }, first))
+  first.stage('sdk_import')
+  first.check('SECRET_PATH' as any, true)
+  first.count('received', NaN)
+  first.finish('failed', Object.assign(new Error('SECRET_PATH'), { code: 'ERR_MODULE_NOT_FOUND' }))
+  const snapshot = logs.snapshot().copilotModelDiscovery!
+  assert.equal(snapshot.checks.executableAllowed, false)
+  assert.equal(snapshot.checks.parentMatches, false)
+  assert.equal(snapshot.checks.bootstrapPresent, true)
+  assert.equal(snapshot.failure?.code, 'ERR_MODULE_NOT_FOUND')
+  snapshot.checks.sdkPathPresent = false
+  assert.equal(logs.snapshot().copilotModelDiscovery?.checks.sdkPathPresent, true)
+  const second = logs.beginModelDiscovery()
+  second.stage('model_list')
+  first.stage('complete')
+  first.finish('ok')
+  assert.equal(logs.snapshot().copilotModelDiscovery?.stage, 'model_list')
+  assert.equal(logs.snapshot().copilotModelDiscovery?.attempt, 2)
+  assert.doesNotMatch(JSON.stringify(logs.snapshot()), /SECRET_PATH|\/private/)
+})
+
+test('refresh retries the Copilot request and includes failure/recovery in copied model-discovery logs', async () => {
+  let attempts = 0
+  const worker = createDiagnostics()
+  const host = mockHost({ requests: {
+    'logs.get': () => ({ ...worker.snapshot(), platform: 'fixture', architecture: 'fixture', runtime: 'fixture' }),
+    'models.catalog': input => {
+      assert.equal(input.refresh, true)
+      attempts++
+      return attempts === 1
+        ? { models: [], source: 'GitHub Copilot', fetchedAt: 0, error: 'PRIVATE provider error', errorText: msg('error.copilot_catalog') }
+        : { models: [{ id: 'PRIVATE model id', label: 'PRIVATE label' }], source: 'GitHub Copilot', fetchedAt: 1 }
+    }
+  } })
+  const panel = await mount({ setup() {} }, { host })
+  set(form, { provider: 'copilot', model: 'PRIVATE model id' } as any)
+  try {
+    await loadCatalog('form', { preset: 'copilot' }, true)
+    assert.equal(read(catalogLoading).form, false)
+    assert.equal(read(catalogs).form?.models.length, 0)
+    const failed = await collectDiagnostics()
+    assert.match(failed.discovery, /error.copilot_catalog/)
+    assert.doesNotMatch(failed.text, /PRIVATE/)
+    await loadCatalog('form', { preset: 'copilot' }, true)
+    assert.equal(read(catalogs).form?.models.length, 1)
+    const recovered = JSON.parse((await collectDiagnostics()).text)
+    assert.equal(recovered.copilotModelDiscovery.panel.modelCount, 1)
+    assert.equal(recovered.copilotModelDiscovery.panel.failure, undefined)
+    assert.ok(recovered.entries.some((entry: any) => entry.operation === 'copilot.refresh' && entry.outcome === 'ok'))
+  } finally { set(form, null); await panel.unmount() }
 })

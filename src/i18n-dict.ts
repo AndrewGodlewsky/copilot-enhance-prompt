@@ -20,6 +20,12 @@ export function translate(lang: UiLanguage, text: string, params?: Record<string
 }
 
 export const VI: Record<string, string> = {
+  'Copilot model discovery': 'Khám phá mô hình Copilot',
+  'Refresh the Copilot model list first, then reopen these logs. This section is included when you copy the logs.': 'Làm mới danh sách mô hình Copilot trước, rồi mở lại nhật ký. Phần này được bao gồm khi bạn sao chép nhật ký.',
+  'The plugin could not verify the desktop runtime. Open Show Logs and share the Copilot model discovery section.': 'Plugin không thể xác minh môi trường chạy của ứng dụng. Mở Xem nhật ký và chia sẻ phần Khám phá mô hình Copilot.',
+  'The required desktop SDK could not be loaded. Open Show Logs and share the Copilot model discovery section.': 'Không thể tải SDK cần thiết của ứng dụng. Mở Xem nhật ký và chia sẻ phần Khám phá mô hình Copilot.',
+  'Copilot could not return its model list. Try Refresh, then open Show Logs and share the Copilot model discovery section if it still fails.': 'Copilot không thể trả về danh sách mô hình. Thử Làm mới, rồi mở Xem nhật ký và chia sẻ phần Khám phá mô hình Copilot nếu vẫn lỗi.',
+  'No eligible Copilot models were returned for this session. Check your Copilot sign-in and model access, then refresh. Show Logs includes the model discovery results.': 'Phiên này không trả về mô hình Copilot đủ điều kiện. Kiểm tra đăng nhập Copilot và quyền truy cập mô hình, rồi làm mới. Xem nhật ký chứa kết quả khám phá mô hình.',
   'Show Logs': 'Xem nhật ký',
   'Diagnostic logs': 'Nhật ký chẩn đoán',
   'Copy logs': 'Sao chép nhật ký',
@@ -532,6 +538,12 @@ export const VI: Record<string, string> = {
 }
 
 export const ZH: Record<string, string> = {
+  'Copilot model discovery': 'Copilot 模型发现',
+  'Refresh the Copilot model list first, then reopen these logs. This section is included when you copy the logs.': '请先刷新 Copilot 模型列表，再重新打开日志。复制日志时会包含此部分。',
+  'The plugin could not verify the desktop runtime. Open Show Logs and share the Copilot model discovery section.': '插件无法验证桌面运行时。请打开“显示日志”并分享“Copilot 模型发现”部分。',
+  'The required desktop SDK could not be loaded. Open Show Logs and share the Copilot model discovery section.': '无法加载所需的桌面 SDK。请打开“显示日志”并分享“Copilot 模型发现”部分。',
+  'Copilot could not return its model list. Try Refresh, then open Show Logs and share the Copilot model discovery section if it still fails.': 'Copilot 无法返回模型列表。请尝试刷新；如果仍然失败，请打开“显示日志”并分享“Copilot 模型发现”部分。',
+  'No eligible Copilot models were returned for this session. Check your Copilot sign-in and model access, then refresh. Show Logs includes the model discovery results.': '此会话未返回符合条件的 Copilot 模型。请检查 Copilot 登录状态和模型访问权限，然后刷新。“显示日志”中包含模型发现结果。',
   'Show Logs': '显示日志',
   'Diagnostic logs': '诊断日志',
   'Copy logs': '复制日志',

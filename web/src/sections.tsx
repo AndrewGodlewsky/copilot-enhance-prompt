@@ -218,6 +218,7 @@ function FormModelPicker({ current }: { current: Form }) {
         {options.length > 0 ? (
           <Pick
             label={label}
+            disabled={copilot && (loading || !!catalog?.error || !catalog?.models.length)}
             placeholder={cli ? t('CLI default') : presetById(current.preset).model || t('Choose a model')}
             value={typing ? CUSTOM_MODEL : current.model || (cli ? CLI_DEFAULT : undefined)}
             options={[...(cli ? [{ value: CLI_DEFAULT, label: t('CLI default') }] : []), ...options, ...(!copilot ? [{ value: CUSTOM_MODEL, label: t('Other (type the id)…') }] : [])]}
@@ -227,7 +228,7 @@ function FormModelPicker({ current }: { current: Form }) {
             }}
           />
         ) : copilot ? (
-          <Pick label={label} placeholder={t('Choose a model')} value={undefined} options={[]} onChange={() => {}} />
+          <Pick label={label} placeholder={loading ? t('Loading the model list…') : t('Choose a model')} disabled value={undefined} options={[]} onChange={() => {}} />
         ) : (
           <Input className="h-8" placeholder={presetById(current.preset).model || (cli ? t('CLI default') : 'model-id')} value={current.model} onChange={(event) => patchForm({ model: event.target.value })} />
         )}
@@ -260,7 +261,7 @@ function ProfileForm() {
   const editing = Boolean(current.id)
   const preset = presetById(current.preset)
   const keyHint = editing ? t('Leave empty to keep the saved key') : preset.env ? t('Or set {env}', { env: preset.env }) : t('Not needed for local servers')
-  const invalid = !current.name.trim() || (copilot ? !read(catalogs).form?.models.some(model => model.id === current.model) : cli ? current.preset === 'custom-cli' && !current.command?.trim() : !(current.baseUrl.trim() || preset.baseUrl))
+  const invalid = !current.name.trim() || (copilot ? read(catalogLoading).form === true || !!read(catalogs).form?.error || !read(catalogs).form?.models.some(model => model.id === current.model) : cli ? current.preset === 'custom-cli' && !current.command?.trim() : !(current.baseUrl.trim() || preset.baseUrl))
   return (
     <div className="border-primary/40 flex flex-col gap-2 rounded-lg border p-3">
       <p className="text-sm font-semibold">{editing ? t('Edit {name}', { name: current.name }) : t('Add a model')}</p>

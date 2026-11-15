@@ -12,6 +12,8 @@ Use the single theme button at the banner's top right to switch the entire panel
 
 If something fails, reproduce it and select **Show Logs → Copy logs** before restarting. Paste the report into your issue along with what you expected and what happened. Reopen the dialog to capture newer events. If clipboard access is blocked, the text is selected so you can copy it manually. Logs are also accessible from the connection-error screen.
 
+For an empty Copilot model picker, press its **Refresh model list** button and wait for the result, then open **Show Logs → Copilot model discovery**. This section is included by **Copy logs**. It records the last attempt, runtime verification, SDK import/API checks, model-list response, eligible/excluded counts and any recognized failure code. It does not collect model names or IDs. The Copilot preset is a built-in choice, not confirmation that the session's integration is working. Refresh retries the live list; it cannot repair an incompatible SDK/runtime, grant account access, or override the model-list privacy switch. It downloads nothing and makes no generation request.
+
 Reports include the plugin version, runtime version, OS/architecture, timestamps, operation results, durations and recognized error codes. Copilot events identify the failing stage, such as account checks, model generation or helper cleanup. Raw error messages, prompts, rewritten text, file contents, paths, account names, API keys and connection tokens are excluded. Each component retains at most 200 events in memory; restarting clears them. Reports are never uploaded automatically. If the worker is unavailable, the report contains panel events only. These are plugin diagnostics, not the desktop application's full logs.
 
 ## Enhance

@@ -14,6 +14,8 @@ import { stepPercent, totalPercent, type Step } from '../progress.ts'
 import { PANEL_REQUEST_LIMIT_MS, type ProfileInput } from '../protocol.ts'
 import { pathInWorkspaceId, pathKey } from '../workspaces.ts'
 import { consents, feedbackAsk, feedbackOff, feedbackShown, files, ruleDraft, ruleScope, structureDraft, type Form, terminalWorkspaces, workspaceChoices, tick, workspaceKey, projectName, parked, MAX_PARKED, type Slot, rulesState, structureChoice, workspaceName, tab, draft, result, style, profileChoice, modelChoice, outputChoice, excluded, target, historyRaw, confirmClearHistory, form, detected, catalogs, catalogLoading, customModel, type Run, run, dataSummary, privacy, confirmWipe, busy, notice, lastRun, contextShown, contextNotes, KEPT, mayKeep, put, forgetSaved, targets, models, defaults, effectiveStyle, effectiveLevel, effectiveEnter, say, message, errorMessage, historyOpen, hookLast, resultFor, sendAfterEnhance, filteredHistory, type NoticeAction } from './state.ts'
+import { panelDiagnostics } from './diagnostics.ts'
+import { diagnosticError } from '../diagnostics.ts'
 
 let inFlight: AbortController | null = null
 /** The enhance-and-send in flight (enhanceAndSend), so that Cancel and a closing panel stop its send too. */
@@ -196,12 +198,17 @@ export async function loadCatalog(
   refresh = false
 ): Promise<void> {
   update(catalogLoading, (map) => ({ ...map, [key]: true }))
+  const operation = refresh ? 'copilot.refresh' : 'copilot.catalog'
+  const started = Date.now()
+  if (input.preset === 'copilot') panelDiagnostics.record(operation, 'started')
   try {
     const clean = Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined && value !== ''))
     const catalog = await plugin.request('models.catalog', { preset: input.preset, ...clean, refresh }, { timeoutMs: 40_000 })
+    if (input.preset === 'copilot') panelDiagnostics.record(operation, catalog.error ? 'failed' : 'ok', { ms: Date.now() - started, ...(catalog.error ? diagnosticError({ text: catalog.errorText }) : {}) })
     update(catalogs, (map) => ({ ...map, [key]: catalog }))
   } catch (error) {
     update(catalogs, (map) => ({ ...map, [key]: { models: [], source: '', fetchedAt: Date.now(), error: message(error) } }))
+    if (input.preset === 'copilot') panelDiagnostics.record(operation, 'failed', { ms: Date.now() - started, ...diagnosticError(error) })
   } finally {
     update(catalogLoading, (map) => ({ ...map, [key]: false }))
   }

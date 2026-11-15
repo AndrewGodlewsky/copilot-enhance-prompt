@@ -54,6 +54,11 @@ export function createWorkerHost(services: Pick<EnhanceWorker, 'storage' | 'sett
       const answer = await Promise.race([Promise.resolve().then(() => handler(input ?? {}, { signal: controller.signal, panel: { id: panelId } })), stopped])
       const result = answer as { ok?: boolean; copied?: boolean; accepted?: boolean; restored?: boolean; pending?: boolean; error?: unknown; errorText?: unknown; text?: unknown } | null
       const failed = result?.ok === false || result?.copied === false || result?.accepted === false || result?.restored === false || !!result?.error
+      if (name === 'models.catalog' && (input as { preset?: string })?.preset === 'copilot' && diagnosticError({ text: result?.errorText }).code === 'error.lists_off') {
+        const probe = diagnostics.beginModelDiscovery()
+        probe.stage('privacy')
+        probe.finish('failed', { text: result?.errorText })
+      }
       if (!quiet || failed) diagnostics.record(name, failed ? 'failed' : result?.pending ? 'pending' : 'ok', {
         ms: Date.now() - started, ...(failed ? diagnosticError({ text: result?.errorText ?? result?.text }) : {})
       })

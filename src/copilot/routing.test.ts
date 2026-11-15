@@ -64,6 +64,7 @@ test('Copilot catalogs obey the network setting, stay out of persistent cache, a
   const worker = await mountWorker(workerModule, { host })
   try {
     assert.equal((await worker.request('models.catalog', { preset: 'copilot' })).models.length, 0)
+    assert.equal((await worker.request('logs.get')).copilotModelDiscovery?.stage, 'privacy')
     assert.equal(count, 0)
     await assert.rejects(runChain(worker.api, [copilot], 'Rewrite', 'Private text', { timeoutMs: 1000, fallback: true, fallbackOn: 'any' }))
     assert.equal(host.callsOf('copilot.rewrite').length, 0)
