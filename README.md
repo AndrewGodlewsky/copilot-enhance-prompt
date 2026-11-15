@@ -107,6 +107,8 @@ Before inference, the plugin checks both sessions' GitHub identity and Copilot m
 
 Copilot usage is billed under the account's Copilot plan; Max context can make an additional model request. The two-second chat auto-enhance hook still supports Rules or API models only. The desktop owns SDK/runtime updates. This experimental integration checks required APIs and runtime state and refuses incompatible setups; future desktop changes may still require a plugin update. See [security and compatibility details](docs/copilot-background-rewriting.md).
 
+**Usage Insights visibility:** v0.2.3 deletes each helper's temporary session records and does not save its token or credit totals. Those background requests therefore do not normally appear in the local Usage Insights dashboard, even though Copilot meters them. Dashboard Refresh cannot recover deleted records. See [where usage is recorded](docs/copilot-background-rewriting.md#usage-visibility).
+
 | Capability | Copilot behavior |
 | --- | --- |
 | Prompt editor, rewrite models, fallback, rules, history, attachments | Retained in the canvas |

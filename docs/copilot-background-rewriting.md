@@ -37,6 +37,12 @@ Models come from the attached session's live catalog, filtered to entries explic
 
 Validation on this machine found the same account via an existing GitHub CLI login inside a disposable extension. This is not proof that every desktop-only sign-in is available to a helper. If the identity cannot be established, the plugin refuses the rewrite. It does not install another authentication tool or silently use a different account. Copilot model use and the Models tab's Test action count toward Copilot usage. See [GitHub's authentication guidance](https://docs.github.com/en/copilot/how-tos/copilot-sdk/auth/authenticate) and [SDK usage and billing](https://docs.github.com/en/copilot/how-tos/copilot-sdk/features/usage-and-billing).
 
+## Usage visibility
+
+Background Copilot rewrites count toward the account's Copilot usage, but v0.2.3 does not preserve their local token or credit receipts. Each helper uses a separate temporary Copilot home, outside the homes normally scanned by Usage Insights, and deletes it after completion. The runtime can write usage receipts there even with shared session storage and session telemetry disabled. Enhance Prompt currently returns only the rewritten text; its history and support logs do not retain token counts or credit charges.
+
+Usage Insights reads local `session.usage_record` receipts and uses `session-store.db` as a fallback. It does not obtain account-wide billing records from GitHub. Refreshing that dashboard cannot recover receipts already deleted with a helper. This is a local accounting gap, not evidence of free inference. Preserving accounting without retaining helper transcripts needs an additional integration; it is not implemented in this version. See the [source comparison and fixture validation](research/copilot-sdk-usage-records.md).
+
 ## Security and lifecycle
 
 - Runtime discovery accepts only the currently executing Copilot binary in the recognized extension bootstrap environment with the expected parent PID. It never searches PATH for a runtime, takes an executable from a project/profile, uses `COPILOT_CLI_PATH`, or falls back to npm packages.
