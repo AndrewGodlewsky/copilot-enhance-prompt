@@ -4,6 +4,14 @@ Status: **Classic stick figure and animation approved; available in version 0.5.
 
 The owner selected **A — Classic** from the eight stick figures below, with one correction: the people must pick up the words themselves, with no surrounding box or tile.
 
+## Color and 95% timing proposals
+
+Open [color-preview.html](color-preview.html) to compare **A — Lift green**, **B — Teal**, **C — Amber**, and **D — Small colorful team**. The figures retain their classic silhouette and actual 28-pixel carrying size. Text keeps its normal color; each figure keeps its assigned color throughout a run. All four palettes include dark and light variants. Lift green matches the approved icon and is the recommended starting point.
+
+This separate preview also demonstrates the proposed earlier exit: at 95%, the crew lowers its held words in place, releases them and leaves. The deposited words stay still until the prompt is actually ready, then move downward together at 100% before the original request returns. An early result still plays the set-down and exit. Production progress is an estimate, so the model may finish before the display reaches 95%; the preview's percentage and model-ready time are simulated independently.
+
+Choose a card and use **Play preview**, **Go to 95%**, or **Prompt ready** to compare the colors and timing. Pause and reduced motion are available. This standalone file makes no model calls and saves nothing. Color selection and the earlier exit are **awaiting owner approval**; production remains unchanged at **0.5.1**. Exact rendering, visibility and perceived timing still need manual review.
+
 ## Animation preview
 
 Open [animation-preview.html](animation-preview.html) locally and click **Enhance preview**. It is a standalone HTML file with no install, network requests, model calls or saved data. It is also presented inline in the design conversation. The preview does not modify the plugin.
