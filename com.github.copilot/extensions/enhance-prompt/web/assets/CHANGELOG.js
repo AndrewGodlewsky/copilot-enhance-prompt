@@ -1,5 +1,11 @@
 var e=`# Changes
 
+## [0.6.1] - 2026-11-15
+
+### Fixed
+- Prevent each animated figure from immediately picking up the word it just deposited. Its next trip must start at a different location with a different word; other figures may still collect deposited words.
+- Rest when no different word is available, including one-word requests. Apply the same selection rule to the standalone animation and color previews while preserving the approved colors, movement, and 95% set-down and exit sequence.
+
 ## [0.6.0] - 2026-11-15
 
 ### Added

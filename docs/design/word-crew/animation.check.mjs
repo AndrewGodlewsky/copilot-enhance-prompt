@@ -12,6 +12,23 @@ assert.doesNotMatch(html, /<script[^>]+src=|\bfetch\s*\(|\blocalStorage\b/)
 const context = vm.createContext({})
 vm.runInContext(scripts[0][2], context)
 const { crewCount, layoutWords, makeCrew, sampleCrew, seededRandom, body, finishFrame, finishPose, LINE_HEIGHT, MOTION_SPEED } = context.CrewMotion
+for (const file of ['animation-preview.html', 'color-preview.html']) {
+  const preview = readFileSync(new URL(file, import.meta.url), 'utf8')
+  const source = /<script id="[^"]+">([\s\S]*?)<\/script>/.exec(preview)[1]
+  const sandbox = vm.createContext({})
+  vm.runInContext(source, sandbox)
+  const motion = sandbox.CrewMotion
+  const pair = motion.makeCrew(motion.layoutWords('first second', 200, text => text.length * 7), 200, 1)
+  for (let i = 0; i < 30; i++) {
+    const last = pair.actors[0].job
+    motion.sampleCrew(pair, last.endsAt)
+    assert.notEqual(pair.actors[0].job.from, last.to, `${file}: walk to a different pickup location`)
+    assert.notEqual(pair.actors[0].job.word, last.word, `${file}: choose a different word`)
+  }
+  const solo = motion.makeCrew(motion.layoutWords('solo', 200, () => 30), 200, 1)
+  motion.sampleCrew(solo, 60)
+  assert.equal(solo.completed, 1, `${file}: wait when no different word exists`)
+}
 assert.equal(crewCount(''), 0)
 assert.equal(crewCount('word '.repeat(10)), 1)
 assert.equal(crewCount('word '.repeat(11)), 2)

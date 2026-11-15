@@ -7,7 +7,7 @@ type Job = {
   from: number; to: number; start: Point; end: Point; entry: Point; startedAt: number
   approach: number; carry: number; word: Slot['word']; filler: Slot['word']; direction: number; endsAt: number
 }
-type Actor = { job: Job | null; position: Point | null; recent: number[]; lastTarget: number }
+type Actor = { job: Job | null; position: Point | null; recent: number[]; lastTarget: number; lastWord: Slot['word'] | null }
 type Crew = { slots: Slot[]; vocabulary: Slot['word'][]; actors: Actor[]; bag: number[]; random: () => number; width: number; completed: number }
 export type Pose = { x: number; foot: number; word: Point; grip: number; crouch: number; walk: number; phase: string; carrying: boolean; kick: number; clear: number; fill: number; visible?: boolean }
 const clamp = (v: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v))
@@ -29,8 +29,10 @@ const center = (slot: Slot) => ({ x: slot.x + slot.capacity / 2, y: slot.y })
 function assignJob(crew: Crew, actor: Actor, startedAt: number) {
   const reserved = new Set(crew.actors.flatMap(a => a.job ? [a.job.from, a.job.to] : []))
   const available = crew.slots.map((_, i) => i).filter(i => !reserved.has(i))
-  let candidates = available.filter(i => available.some(j => i !== j && crew.slots[j].capacity >= crew.slots[i].word.width))
-  if (!candidates.length) candidates = available
+  const sources = available.filter(i => i !== actor.lastTarget && crew.slots[i].word !== actor.lastWord)
+  if (!sources.length) return
+  let candidates = sources.filter(i => available.some(j => i !== j && crew.slots[j].capacity >= crew.slots[i].word.width))
+  if (!candidates.length) candidates = sources
   const fresh = candidates.filter(i => !actor.recent.includes(i))
   if (fresh.length) candidates = fresh
   let bagIndex = crew.bag.findIndex(i => candidates.includes(i))
@@ -53,8 +55,9 @@ function assignJob(crew: Crew, actor: Actor, startedAt: number) {
   const filler = snug.length ? pick(snug, crew.random) : fillers.length ? pick(fillers, crew.random) : source.word
   const approach = Math.max(.25, Math.hypot(start.x - entry.x, start.y - entry.y) / 115)
   const carry = Math.max(.6, Math.hypot(end.x - start.x, end.y - start.y) / 48)
+  // A replacement is a new word instance, even when its text has appeared before.
   actor.job = {
-from, to, start, end, entry, startedAt, approach, carry, word: source.word, filler, direction: crew.random() < .5 ? -1 : 1,
+from, to, start, end, entry, startedAt, approach, carry, word: source.word, filler: { ...filler }, direction: crew.random() < .5 ? -1 : 1,
     endsAt: startedAt + (approach + .35 + .45 + carry + .4 + .5 + .3 + .2) / MOTION_SPEED
 }
   actor.recent = [from, ...actor.recent].slice(0, 3); actor.lastTarget = to
@@ -66,18 +69,20 @@ slots: words.map(w => ({ x: w.x, y: w.y, capacity: w.width, word: { text: w.text
 }
   // Keep the previous maximum crew size without hiding text in a wide viewport.
   for (let i = 0;i < Math.min(16, Math.ceil(words.length / 10));i++) {
-    const actor: Actor = { job: null, position: null, recent: [], lastTarget: -1 }; crew.actors.push(actor); assignJob(crew, actor, i * .08)
+    const actor: Actor = { job: null, position: null, recent: [], lastTarget: -1, lastWord: null }; crew.actors.push(actor); assignJob(crew, actor, i * .08)
   }
   return crew
 }
 function advanceCrew(crew: Crew, time: number) {
   // Process exact finish times, so the seeded choices don't depend on frame rate.
   while (true) {
-    const actor = crew.actors.reduce<Actor | null>((first, a) => !first || a.job!.endsAt < first.job!.endsAt ? a : first, null)
+    const actor = crew.actors.reduce<Actor | null>((first, a) => a.job && (!first || a.job.endsAt < first.job!.endsAt) ? a : first, null)
     if (!actor || actor.job!.endsAt > time) break
     const job = actor.job!
     crew.slots[job.from].word = job.filler; crew.slots[job.to].word = job.word
-    actor.position = job.end; actor.job = null; crew.completed++; assignJob(crew, actor, job.endsAt)
+    actor.position = job.end; actor.lastWord = job.word; actor.job = null; crew.completed++
+    assignJob(crew, actor, job.endsAt)
+    for (const waiting of crew.actors) if (!waiting.job && waiting !== actor) assignJob(crew, waiting, job.endsAt)
   }
 }
 function transport(job: Job, time: number): Pose {
@@ -102,6 +107,12 @@ export function sampleCrew(crew: Crew, time: number) {
   const tokens = crew.slots.map(s => ({ ...s.word, x: s.x + (s.capacity - s.word.width) / 2, y: s.y, opacity: 1 }))
   const carried: Token[] = [], poses: Pose[] = []
   for (const actor of crew.actors) {
+    if (!actor.job) {
+      const at = actor.position ?? { x: -20, y: 0 }
+      poses.push({ x: at.x, foot: at.y + 10, word: { ...at }, grip: 0, crouch: 0, walk: 0, phase: 'Waiting', carrying: false, kick: 0, clear: 0, fill: 0 })
+      carried.push({ text: '', width: 0, ...at, opacity: 0 })
+      continue
+    }
     const job = actor.job!, p = transport(job, time); poses.push(p)
     carried.push({ ...job.word, x: p.word.x - job.word.width / 2, y: p.word.y, opacity: p.carrying ? 1 : 0 })
     if (p.carrying) {

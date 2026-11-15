@@ -2,6 +2,8 @@
 
 Status: **Thicker deep-blue figures and the 95% exit approved; available in version 0.5.2.** The standalone previews remain design references.
 
+Version **0.6.1** fixes immediate repeat pickups in production and both previews. Each figure's next job excludes its last deposited word and drop location. Other figures may pick that word up. If no different word is available, the figure rests; it resumes when another completed trip makes a permitted word available. Replacement words are distinct decorative instances even when their text repeats.
+
 The owner selected **A — Classic** from the eight stick figures below, with one correction: the people must pick up the words themselves, with no surrounding box or tile.
 
 ## Approved color and 95% timing

@@ -4,6 +4,51 @@ import { makeCrew, sampleCrew, finishFrame, finishPose, body, type Word } from '
 
 const words: Word[] = Array.from({ length: 31 }, (_, i) => ({ text: ['café', '路径', 'getUser()', '🧑‍💻'][i % 4], width: 60, x: 12 + (i % 7) * 72, y: 20 + Math.floor(i / 7) * 20 }))
 
+test('each figure leaves its last drop location and chooses a different word for its next job', () => {
+  let handoffs = 0
+  for (const count of [2, 7, 31, 240]) {
+    for (const seed of [1, 2, 123, 456]) {
+      const input = Array.from({ length: count }, (_, i) => ({ text: `word${i % 5}`, width: 40 + i % 3 * 10, x: 12 + i % 8 * 72, y: 20 + Math.floor(i / 8) * 20 }))
+      const crew = makeCrew(input, 600, seed)
+      const completed = new Map<object, number>()
+      const previous = new Map<object, { to: number; word: object }>()
+      for (let event = 0; event < 200; event++) {
+        const before = crew.actors.map(actor => actor.job)
+        const active = before.filter(job => job !== null)
+        if (!active.length) break
+        sampleCrew(crew, Math.min(...active.map(job => job.endsAt)))
+        crew.actors.forEach((actor, index) => {
+          const old = before[index]
+          if (old && old !== actor.job) {
+            previous.set(actor, { to: old.to, word: old.word })
+            completed.set(old.word, index)
+          }
+        })
+        crew.actors.forEach((actor, index) => {
+          const next = actor.job, last = previous.get(actor)
+          if (!next || next === before[index] || !last) return
+          assert.notEqual(next.from, last.to, `seed ${seed}: actor ${index} must walk away from its last drop`)
+          assert.notEqual(next.word, last.word, `seed ${seed}: actor ${index} must not pick up its last carried word again`)
+          const owner = completed.get(next.word)
+          if (owner !== undefined && owner !== index) handoffs++
+        })
+      }
+    }
+  }
+  assert.ok(handoffs > 0, 'a different figure may pick up a deposited word')
+})
+
+test('a figure with only one word rests after its first job instead of picking it up again', () => {
+  const crew = makeCrew(words.slice(0, 1), 200, 1)
+  const world = sampleCrew(crew, 60)
+  assert.equal(crew.completed, 1)
+  assert.equal(world.poses.length, 1)
+  assert.equal(world.poses[0].carrying, false)
+  assert.equal(world.tokens[0].text, words[0].text)
+  assert.equal(world.tokens[0].opacity, 1)
+  assert.ok(Number.isFinite(body(world.poses[0]).head.x))
+})
+
 test('a dense viewport keeps every visible word with a bounded number of figures', () => {
   const visible = Array.from({ length: 240 }, (_, i) => ({ text: `word${i}`, width: 40, x: (i % 30) * 50, y: 30 + Math.floor(i / 30) * 24 }))
   const original = structuredClone(visible)
