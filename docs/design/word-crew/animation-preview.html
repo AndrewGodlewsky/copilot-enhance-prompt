@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Classic stick figures — word carrying preview</title>
 <style>
-*{box-sizing:border-box}body{margin:0;padding:24px;background:var(--background,#f5f6f7);color:var(--foreground,#182024);font:14px/1.5 var(--font-sans,system-ui,"Segoe UI",sans-serif)}main{max-width:900px;margin:auto}h1{font-size:24px;line-height:1.2;margin:0 0 8px}h2{font-size:16px;margin:0}p{margin:6px 0 16px}.muted{color:var(--muted-foreground,#626b75)}.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:18px 0}.toolbar label{display:flex;gap:7px;align-items:center}button,select{font:inherit;color:inherit;background:var(--card,#fff);border:1px solid var(--border,#c5ccd2);border-radius:6px;padding:7px 12px}button{cursor:pointer}button:hover{background:var(--accent,#e6ebef);color:var(--accent-foreground,#182024)}button:disabled{opacity:.45;cursor:default}button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--ring,#287a49);outline-offset:3px}.primary{background:#4ccb78;color:#102218;border-color:#287a49;font-weight:600}.primary:hover{background:#65d68c;color:#102218}.mockup{--scene-bg:#fff;--scene-fg:#182024;--scene-border:#c7cdd2;background:var(--scene-bg);color:var(--scene-fg);border:1px solid var(--scene-border);border-radius:12px;padding:18px}.mockup.dark{--scene-bg:#111516;--scene-fg:#eaf0ed;--scene-border:#3e4945}.heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.heading span{font-size:12px}.stage{position:relative;overflow:hidden;border:1px solid var(--scene-border);border-radius:7px;min-height:200px;background:var(--scene-bg)}textarea{display:block;resize:vertical;width:100%;min-height:200px;padding:20px;border:0;background:var(--scene-bg);color:var(--scene-fg);font:14px/1.7 system-ui,"Segoe UI",sans-serif}textarea[readonly]{position:absolute;inset:0;opacity:0;pointer-events:none}svg{display:block;width:100%;overflow:hidden;color:var(--scene-fg)}svg[hidden]{display:none}.word{font:14px system-ui,"Segoe UI",sans-serif;fill:currentColor}.person{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.person circle{fill:var(--scene-bg)}.hint{margin:10px 0;font-size:12px}.run-row{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap}.buttons{display:flex;gap:8px;flex-wrap:wrap}.progress-label{display:flex;justify-content:space-between;margin:14px 0 6px;font-size:12px}.track{height:5px;border-radius:4px;background:var(--scene-border);overflow:hidden}.fill{height:100%;background:#4ccb78;width:0}.result{border-top:1px solid var(--scene-border);padding-top:16px;margin-top:18px}.result p{margin-bottom:0}.note{font-size:12px;margin-top:16px}[hidden]{display:none!important}@media(max-width:520px){body{padding:12px}.mockup{padding:12px}.toolbar{gap:8px}h1{font-size:21px}}
+*{box-sizing:border-box}body{margin:0;padding:24px;background:var(--background,#f5f6f7);color:var(--foreground,#182024);font:14px/1.5 var(--font-sans,system-ui,"Segoe UI",sans-serif)}main{max-width:900px;margin:auto}h1{font-size:24px;line-height:1.2;margin:0 0 8px}h2{font-size:16px;margin:0}p{margin:6px 0 16px}.muted{color:var(--muted-foreground,#626b75)}.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:18px 0}.toolbar label{display:flex;gap:7px;align-items:center}button,select{font:inherit;color:inherit;background:var(--card,#fff);border:1px solid var(--border,#c5ccd2);border-radius:6px;padding:7px 12px}button{cursor:pointer}button:hover{background:var(--accent,#e6ebef);color:var(--accent-foreground,#182024)}button:disabled{opacity:.45;cursor:default}button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--ring,#287a49);outline-offset:3px}.primary{background:#4ccb78;color:#102218;border-color:#287a49;font-weight:600}.primary:hover{background:#65d68c;color:#102218}.mockup{--scene-bg:#fff;--scene-fg:#182024;--scene-border:#c7cdd2;background:var(--scene-bg);color:var(--scene-fg);border:1px solid var(--scene-border);border-radius:12px;padding:18px}.mockup.dark{--scene-bg:#111516;--scene-fg:#eaf0ed;--scene-border:#3e4945}.heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.heading span{font-size:12px}.stage{position:relative;overflow:hidden;border:1px solid var(--scene-border);border-radius:7px;min-height:200px;background:var(--scene-bg)}textarea{display:block;resize:vertical;width:100%;min-height:200px;padding:20px;border:0;background:var(--scene-bg);color:var(--scene-fg);font:14px/24px system-ui,"Segoe UI",sans-serif}textarea[readonly]{position:absolute;inset:0;opacity:0;pointer-events:none}svg{display:block;width:100%;overflow:hidden;color:var(--scene-fg)}svg[hidden]{display:none}.word{font:14px system-ui,"Segoe UI",sans-serif;fill:currentColor}.person{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.person circle{fill:var(--scene-bg)}.hint{margin:10px 0;font-size:12px}.run-row{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap}.buttons{display:flex;gap:8px;flex-wrap:wrap}.progress-label{display:flex;justify-content:space-between;margin:14px 0 6px;font-size:12px}.track{height:5px;border-radius:4px;background:var(--scene-border);overflow:hidden}.fill{height:100%;background:#4ccb78;width:0}.result{border-top:1px solid var(--scene-border);padding-top:16px;margin-top:18px}.result p{margin-bottom:0}.note{font-size:12px;margin-top:16px}[hidden]{display:none!important}@media(max-width:520px){body{padding:12px}.mockup{padding:12px}.toolbar{gap:8px}h1{font-size:21px}}
 </style>
 </head>
 <body>
 <main>
   <h1>The classic crew, carrying actual words</h1>
-  <p class="muted">Animation prototype for approval. The hands lift the letters directly, with no boxes or word tiles.</p>
+  <p class="muted">Same text spacing. A faster crew, fresh word choices, and a little kick to make room.</p>
   <div class="toolbar" aria-label="Preview controls">
     <label>View <select id="zoom"><option value="1">Actual size · 28px figures</option><option value="2">2× detail</option></select></label>
-    <label>Speed <select id="speed"><option value="1">Normal</option><option value="0.5">Half speed</option></select></label>
+    <label>Speed <select id="speed"><option value="1">New pace · 2.5× faster</option><option value="0.5">Half speed</option></select></label>
     <button id="theme" type="button" aria-pressed="false">Dark preview</button>
     <label><input id="reduced" type="checkbox"> Reduce motion</label>
   </div>
@@ -22,7 +22,7 @@
     <div class="heading"><h2><label for="request">Write a request</label></h2><span id="crew-count"></span></div>
     <div class="stage" id="stage">
       <textarea id="request" maxlength="600" spellcheck="false" aria-describedby="request-help">Improve the checkout flow so customers can review their order quickly, understand delivery costs, and recover from payment errors. Include clear validation, accessible controls, and tests for the important paths.</textarea>
-      <svg id="scene" aria-hidden="true" hidden><g id="people"></g><g id="words"></g><path id="press" stroke="#4ccb78" stroke-width="3" fill="none"></path></svg>
+      <svg id="scene" aria-hidden="true" hidden><g id="words"></g><g id="people"></g><g id="carried"></g><path id="press" stroke="#4ccb78" stroke-width="3" fill="none"></path></svg>
     </div>
     <p class="hint" id="request-help">Edit the sample, then click Enhance preview. Your original text is preserved throughout.</p>
     <div class="run-row"><span id="status" role="status">Ready to preview.</span><div class="buttons">
@@ -36,7 +36,7 @@
     <section class="result" id="result" hidden><h2>Prompt creation area</h2><p>The finished prompt would appear here. This preview has not called a model or changed your request.</p></section>
   </section>
   <div class="toolbar"><button id="fail" type="button" disabled>Simulate failure</button></div>
-  <p class="muted note">About one figure per ten words. The demo completes after 18 seconds of playback; “Finish now” previews the exit and descending bar sooner. No model calls, network requests, or saved data. Animation approval comes before plugin integration.</p>
+  <p class="muted note">About one figure per ten words, with new choices each play. Text lines keep their spacing. The demo completes after 18 seconds of playback; “Finish now” previews the ending sooner. No model calls, network requests, or saved data. Animation approval comes before plugin integration.</p>
 </main>
 <script id="motion-model">
 // Approval prototype only. Positions are in CSS pixels at the actual-size setting.
@@ -45,54 +45,110 @@ const mix = (a, b, t) => a + (b - a) * t;
 const ease = t => { t = clamp(t); return t * t * (3 - 2 * t); };
 const point = (a, b, t) => ({x:mix(a.x,b.x,t),y:mix(a.y,b.y,t)});
 const crewCount = text => Math.ceil((text.match(/\S+/gu) || []).length / 10);
-function layoutWords(text, width, measure) {
-  const tokens = text.match(/\S+/gu) || [];
-  let x = 20, y = 34;
-  return tokens.map(value => {
-    const w = measure(value);
-    if (x > 20 && x + w > width - 20) { x = 20; y += 64; }
-    const item = {text:value,x,y,width:w};
-    x += w + measure(' ');
-    return item;
-  });
-}
-function makeJobs(words, width) {
-  const jobs = [];
-  for (let i = 0; i < words.length; i += 10) {
-    const group = words.slice(i, i + 10);
-    // Prefer a word that fits comfortably over a tiny pair of hands.
-    const candidates = group.map((word,j) => ({word,index:i+j})).filter(v => v.word.width >= 18 && v.word.width <= 90 && group.some(w => w !== v.word && w.width >= v.word.width));
-    const chosen = candidates[Math.min(2,candidates.length-1)] || {word:group[0],index:i};
-    const source = {x:chosen.word.x + chosen.word.width / 2,y:chosen.word.y};
-    const target = group.map((word,j) => ({word,index:i+j})).filter(v => v.index !== chosen.index && v.word.width >= chosen.word.width).at(-1);
-    const destination = target ? {x:target.word.x+target.word.width/2,y:target.word.y} : {x:source.x,y:source.y+30};
-    const entry = {x:source.x < width/2 ? -20 : width+20,y:source.y};
-    jobs.push({index:chosen.index,replaced:target?.index,source,destination,entry,delay:jobs.length*.22});
+const LINE_HEIGHT=24, MOTION_SPEED=2.5;
+function layoutWords(text, width, measure, baseline=36) {
+  const words=[];
+  let x=20,y=baseline;
+  for(const value of text.match(/\r\n|[\r\n]|[^\S\r\n]+|\S+/gu)||[]) {
+    if(/^[\r\n]/.test(value)){x=20;y+=LINE_HEIGHT;continue;}
+    if(/^\s/u.test(value)){for(const char of value)x+=char==='\t'?measure(' ')*8-((x-20)%(measure(' ')*8)):measure(char);continue;}
+    const w=measure(value);
+    if(x>20&&x+w>width-20){x=20;y+=LINE_HEIGHT;}
+    words.push({text:value,x,y,width:w});x+=w;
   }
-  return jobs;
+  return words;
 }
-function transport(job, elapsed) {
-  const start = job.source, end = job.destination;
-  const entryTime = Math.max(.5,Math.abs(start.x-job.entry.x)/115);
-  let t = elapsed - job.delay;
-  const rest = (at, phase, walk = 0) => ({x:at.x,foot:at.y+12,word:{...start},grip:0,crouch:0,walk,phase});
-  if (t < 0) return {...rest(job.entry,'Waiting'),visible:false};
-  if (t < entryTime) return rest(point(job.entry,start,ease(t/entryTime)),'Approach',Math.sin(t*19));
-  t -= entryTime;
-  // Repeated trips are deliberate in this approval preview; production will choose fresh jobs.
-  const carryTime = Math.max(1.1,Math.hypot(end.x-start.x,end.y-start.y)/48);
-  const cycle = .4 + .6 + carryTime + .6 + .4 + .3;
-  const turn = Math.floor(t/cycle);
-  t %= cycle;
-  const from = turn%2 ? end : start, to = turn%2 ? start : end;
-  let at = {...from}, lift = 0, grip = 1, crouch = 0, walk = 0, phase;
-  if (t < .4) { phase='Reach'; grip=ease(t/.4); crouch=3*grip; }
-  else if ((t-=.4) < .6) { phase='Lift'; const f=ease(t/.6); lift=14.4*f; crouch=3*(1-f); }
-  else if ((t-=.6) < carryTime) { phase='Carry'; const f=t/carryTime; at=point(from,to,ease(f)); const bob=Math.sin(f*Math.PI)*Math.sin(t*15)*.35; at.y+=bob; lift=14.4; walk=Math.sin(t*15)*Math.sin(f*Math.PI); }
-  else if ((t-=carryTime) < .6) { phase='Set down'; const f=ease(t/.6); at={...to}; lift=14.4*(1-f); crouch=3*f; }
-  else if ((t-=.6) < .4) { phase='Release'; at={...to}; grip=1-ease(t/.4); crouch=3*grip; }
-  else { phase='Ready'; at={...to}; grip=0; }
-  return {x:at.x,foot:at.y+12,word:{x:at.x,y:at.y-lift},grip,crouch,walk,phase};
+function seededRandom(seed) {
+  let state=(seed>>>0)||0x6d2b79f5;
+  return ()=>{state^=state<<13;state^=state>>>17;state^=state<<5;return (state>>>0)/4294967296;};
+}
+function shuffle(values, random) {
+  const result=[...values];
+  for(let i=result.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}
+  return result;
+}
+const pick=(values,random)=>values[Math.floor(random()*values.length)];
+const center=slot=>({x:slot.x+slot.capacity/2,y:slot.y});
+function assignJob(crew,actor,startedAt) {
+  const reserved=new Set(crew.actors.flatMap(a=>a.job?[a.job.from,a.job.to]:[]));
+  const available=crew.slots.map((_,i)=>i).filter(i=>!reserved.has(i));
+  let candidates=available.filter(i=>available.some(j=>i!==j&&crew.slots[j].capacity>=crew.slots[i].word.width));
+  if(!candidates.length)candidates=available;
+  const fresh=candidates.filter(i=>!actor.recent.includes(i));
+  if(fresh.length)candidates=fresh;
+  let bagIndex=crew.bag.findIndex(i=>candidates.includes(i));
+  if(bagIndex<0){crew.bag=shuffle(candidates,crew.random);bagIndex=0;}
+  const from=crew.bag.splice(bagIndex,1)[0];
+  const source=crew.slots[from];
+  let targets=available.filter(i=>i!==from&&crew.slots[i].capacity>=source.word.width);
+  const changed=targets.filter(i=>i!==actor.lastTarget);
+  if(changed.length)targets=changed;
+  const similar=targets.filter(i=>crew.slots[i].capacity<=source.word.width*1.4);
+  if(similar.length)targets=similar;
+  const nearby=targets.filter(i=>Math.abs(crew.slots[i].y-source.y)<=LINE_HEIGHT*2);
+  if(nearby.length)targets=nearby;
+  const to=targets.length?pick(targets,crew.random):from;
+  const destination=crew.slots[to];
+  const start=center(source),end=center(destination);
+  const entry=actor.position||{x:start.x<crew.width/2?-20:crew.width+20,y:start.y};
+  const fillers=crew.vocabulary.filter(w=>w.width<=source.capacity&&w.text!==source.word.text);
+  const snug=fillers.filter(w=>w.width>=source.capacity*.7);
+  const filler=snug.length?pick(snug,crew.random):fillers.length?pick(fillers,crew.random):source.word;
+  const approach=Math.max(.25,Math.hypot(start.x-entry.x,start.y-entry.y)/115);
+  const carry=Math.max(.6,Math.hypot(end.x-start.x,end.y-start.y)/48);
+  actor.job={from,to,start,end,entry,startedAt,approach,carry,word:source.word,filler,direction:crew.random()<.5?-1:1,
+    endsAt:startedAt+(approach+.35+.45+carry+.4+.5+.3+.2)/MOTION_SPEED};
+  actor.recent=[from,...actor.recent].slice(0,3);actor.lastTarget=to;
+}
+function makeCrew(words,width,seed) {
+  const crew={slots:words.map(w=>({x:w.x,y:w.y,capacity:w.width,word:{text:w.text,width:w.width}})),
+    vocabulary:words.map(w=>({text:w.text,width:w.width})),actors:[],bag:[],random:seededRandom(seed),width,completed:0};
+  for(let i=0;i<Math.ceil(words.length/10);i++){
+    const actor={job:null,position:null,recent:[],lastTarget:-1};crew.actors.push(actor);assignJob(crew,actor,i*.08);
+  }
+  return crew;
+}
+function advanceCrew(crew,time) {
+  // Process exact finish times, so the seeded choices don't depend on frame rate.
+  while(true){
+    const actor=crew.actors.reduce((first,a)=>!first||a.job.endsAt<first.job.endsAt?a:first,null);
+    if(!actor||actor.job.endsAt>time)break;
+    const job=actor.job;
+    crew.slots[job.from].word=job.filler;crew.slots[job.to].word=job.word;
+    actor.position=job.end;actor.job=null;crew.completed++;assignJob(crew,actor,job.endsAt);
+  }
+}
+function transport(job,time) {
+  let t=(time-job.startedAt)*MOTION_SPEED;
+  const rest=(at,phase,walk=0)=>({x:at.x,foot:at.y+10,word:{...job.start},grip:0,crouch:0,walk,phase,carrying:false,kick:0,clear:0,fill:0});
+  if(t<0)return {...rest(job.entry,'Waiting'),visible:false};
+  if(t<job.approach)return rest(point(job.entry,job.start,ease(t/job.approach)),'Run to a word',Math.sin(t*19));
+  t-=job.approach;
+  let at={...job.start},lift=0,grip=1,crouch=0,walk=0,kick=0,clear=0,phase,carrying=false;
+  const fill=ease((t-.35)/.4);
+  if(t<.35){phase='Reach';grip=ease(t/.35);crouch=3*grip;}
+  else if((t-=.35)<.45){phase='Lift';const f=ease(t/.45);lift=16.4*f;crouch=3*(1-f);carrying=true;}
+  else if((t-=.45)<job.carry){phase='Carry';const f=t/job.carry;at=point(job.start,job.end,ease(f));at.y+=Math.sin(f*Math.PI)*Math.sin(t*15)*.35;lift=16.4;walk=Math.sin(t*15)*Math.sin(f*Math.PI);carrying=true;}
+  else if((t-=job.carry)<.4){phase='Make room';at={...job.end};lift=16.4;kick=Math.sin(Math.PI*clamp(t/.32));clear=ease((t-.08)/.32);carrying=true;}
+  else if((t-=.4)<.5){phase='Set down';const f=ease(t/.5);at={...job.end};lift=16.4*(1-f);crouch=3*f;clear=1;carrying=true;}
+  else if((t-=.5)<.3){phase='Release';at={...job.end};grip=1-ease(t/.3);crouch=3*grip;clear=1;carrying=true;}
+  else{phase='Next word';at={...job.end};grip=0;clear=1;carrying=true;}
+  return {x:at.x,foot:at.y+10,word:{x:at.x,y:at.y-lift},grip,crouch,walk,phase,carrying,kick:job.from===job.to?0:kick*job.direction,clear,fill};
+}
+function sampleCrew(crew,time) {
+  advanceCrew(crew,time);
+  const tokens=crew.slots.map(s=>({...s.word,x:s.x+(s.capacity-s.word.width)/2,y:s.y,opacity:1}));
+  const carried=[],poses=[];
+  for(const actor of crew.actors){
+    const job=actor.job,p=transport(job,time);poses.push(p);
+    carried.push({...job.word,x:p.word.x-job.word.width/2,y:p.word.y,opacity:p.carrying?1:0});
+    if(p.carrying){
+      const s=crew.slots[job.from];tokens[job.from]={...job.filler,x:s.x+(s.capacity-job.filler.width)/2,y:s.y,opacity:p.fill};
+      if(job.from===job.to){tokens[job.from].opacity=0;continue;}
+      const displaced=tokens[job.to];displaced.x+=job.direction*42*p.clear;displaced.y-=Math.sin(Math.PI*p.clear)*12;displaced.opacity=1-p.clear;
+    }
+  }
+  return {tokens,carried,poses};
 }
 function elbow(shoulder, hand, side) {
   const dx=hand.x-shoulder.x,dy=hand.y-shoulder.y,d=Math.hypot(dx,dy)||1;
@@ -106,9 +162,10 @@ function body(pose) {
   const hands=[-1,1].map(side => point({x:x+side*7,y:foot-10+side*walk*3},{x:word.x+side*4,y:word.y},grip));
   const arms=hands.map((hand,i) => [shoulder,elbow(shoulder,hand,i ? 1:-1),hand]);
   const legs=[-1,1].map(side => [hip,{x:x+side*(2.5+walk*2),y:foot-4},{x:x+side*(5+walk*2),y:foot-Math.max(0,side*walk)*2}]);
+  if(pose.kick){const leg=legs[pose.kick>0?1:0];leg[2]={x:x+pose.kick*16,y:foot-Math.abs(pose.kick)*10};}
   return {head,shoulder,hip,hands,arms,legs};
 }
-globalThis.CrewMotion={clamp,ease,crewCount,layoutWords,makeJobs,transport,body};
+globalThis.CrewMotion={clamp,ease,crewCount,layoutWords,seededRandom,makeCrew,sampleCrew,transport,body,LINE_HEIGHT,MOTION_SPEED};
 </script>
 <script id="preview-app">
 const $ = id => document.getElementById(id);
@@ -117,7 +174,7 @@ const scene=$('scene'), input=$('request'), zoom=$('zoom'), reduce=$('reduced');
 const create=(tag,attrs={})=>{const el=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,v);return el;};
 const set=(el,attrs)=>{for(const [k,v] of Object.entries(attrs))el.setAttribute(k,v);};
 const path=points=>points.map((p,i)=>`${i?'L':'M'}${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
-let words=[],jobs=[],wordEls=[],figures=[],time=0,last=0,frame=0,mode='idle',paused=false,finishTime=0,exitPoses=[],width=700,height=200;
+let words=[],crew,wordEls=[],carryEls=[],figures=[],time=0,last=0,frame=0,mode='idle',paused=false,finishTime=0,finishWorld,width=700,height=200,stageWidth=700;
 let original='';
 const measureCanvas=document.createElement('canvas');
 const measureContext=measureCanvas.getContext('2d');
@@ -133,42 +190,47 @@ function drawFigure(el,pose){
   el.group.style.visibility=pose.visible===false?'hidden':'visible';
 }
 function prepare(){
-  width=Math.max(180,$('stage').clientWidth/Number(zoom.value));
-  words=layoutWords(original,width,t=>measureContext.measureText(t).width);
-  height=Math.max(200/Number(zoom.value),(words.at(-1)?.y||34)+56);
+  stageWidth=$('stage').clientWidth;
+  const textWidth=input.clientWidth||stageWidth;
+  width=Math.max(40,textWidth/Number(zoom.value));
+  const metrics=measureContext.measureText('Mg'),ascent=metrics.fontBoundingBoxAscent||13,descent=metrics.fontBoundingBoxDescent||3;
+  const baseline=20+(LINE_HEIGHT-ascent-descent)/2+ascent;
+  words=layoutWords(original,width,t=>measureContext.measureText(t).width,baseline);
+  for(const word of words)word.y-=(input.scrollTop||0)/Number(zoom.value);
+  height=Math.max(200,input.clientHeight||200)/Number(zoom.value);
   set(scene,{viewBox:`0 0 ${width} ${height}`,height:height*Number(zoom.value)});
-  $('words').replaceChildren();$('people').replaceChildren();
+  scene.style.width=textWidth+'px';
+  $('words').replaceChildren();$('people').replaceChildren();$('carried').replaceChildren();
   wordEls=words.map(w=>{const el=create('text',{x:w.x,y:w.y,class:'word'});el.textContent=w.text;$('words').append(el);return el;});
-  jobs=makeJobs(words,width);
-  figures=jobs.map(()=>{const group=create('g',{class:'person'}),head=create('circle',{r:3.5}),lines=create('path');group.append(head,lines);$('people').append(group);return {group,head,lines};});
+  const seed=globalThis.crypto?.getRandomValues(new Uint32Array(1))[0]??Date.now();
+  crew=makeCrew(words,width,seed);
+  figures=crew.actors.map(()=>{const group=create('g',{class:'person'}),head=create('circle',{r:3.5}),lines=create('path');group.append(head,lines);$('people').append(group);return {group,head,lines};});
+  carryEls=crew.actors.map(()=>{const el=create('text',{class:'word'});$('carried').append(el);return el;});
   $('press').setAttribute('d','');
 }
-function posesAt(t){return jobs.map(job=>transport(job,t));}
+function drawWord(el,word){el.textContent=word.text;set(el,{x:word.x,y:word.y,opacity:word.opacity??1});}
 function draw(t){
   const ending=mode==='finishing';
   const elapsed=ending?t-finishTime:0;
-  const poses=ending?exitPoses:posesAt(t);
-  const exitingFor=1.25;
-  const sweep=ending?ease((elapsed-exitingFor)/.9):0;
+  const world=ending?finishWorld:sampleCrew(crew,t),poses=world.poses;
+  const exitingFor=.6;
+  const sweep=ending?ease((elapsed-exitingFor)/.65):0;
   $('people').style.visibility=reduce.checked?'hidden':'visible';
-  words.forEach((w,i)=>{set(wordEls[i],{x:w.x,y:w.y,opacity:1});});
-  jobs.forEach((job,i)=>{
-    let p=poses[i];
-    if(!reduce.checked){
-      set(wordEls[job.index],{x:p.word.x-words[job.index].width/2,y:p.word.y});
-      const arrival=job.delay+Math.max(.5,Math.abs(job.source.x-job.entry.x)/115);
-      if(job.replaced!==undefined)set(wordEls[job.replaced],{opacity:1-ease(((ending?finishTime:t)-arrival)/.4)});
-    }
-    if(ending){const destination=p.x<width/2?-24:width+24;p={...p,x:mix(p.x,destination,ease(elapsed/exitingFor)),grip:p.grip*(1-ease(elapsed/.22)),crouch:0,walk:Math.sin(elapsed*22),visible:elapsed<exitingFor};}
+  $('carried').style.visibility=reduce.checked?'hidden':'visible';
+  (reduce.checked?words:world.tokens).forEach((w,i)=>drawWord(wordEls[i],w));
+  world.carried.forEach((w,i)=>drawWord(carryEls[i],w));
+  poses.forEach((pose,i)=>{
+    let p=pose;
+    if(ending){const destination=p.x<width/2?-24:width+24;p={...p,x:mix(p.x,destination,ease(elapsed/exitingFor)),grip:p.grip*(1-ease(elapsed/.1)),crouch:0,kick:0,walk:Math.sin(elapsed*45),visible:elapsed<exitingFor};}
     drawFigure(figures[i],p);
   });
   if(ending&&!reduce.checked){
     const barY=mix(-16,height+22,sweep);
-    wordEls.forEach(el=>{const y=Number(el.getAttribute('y'));set(el,{y:y+Math.max(0,barY-(y-14))});});
+    [...wordEls,...carryEls].forEach(el=>{const y=Number(el.getAttribute('y'));set(el,{y:y+Math.max(0,barY-(y-14))});});
     $('press').setAttribute('d',elapsed>=exitingFor?`M0,${barY}H${width}`:'');
   }
   if(!ending){progress(Math.min(95,t/18*95));const first=poses.find(p=>p.visible!==false);$('status').textContent=reduce.checked?'Enhancing preview…':`${first?.phase||'The crew is arriving'} · request locked`;}else{progress(100);$('status').textContent=elapsed<exitingFor?'100% · the crew is leaving':'100% · moving to the prompt';}
-  if(ending&&(reduce.checked||elapsed>=exitingFor+.9))stop('done');
+  if(ending&&(reduce.checked||elapsed>=exitingFor+.65))stop('done');
 }
 function tick(now){
   if(mode==='idle')return;
@@ -192,7 +254,7 @@ function render(t){
 }
 function finish(){
   if(mode!=='running')return;
-  exitPoses=posesAt(time);finishTime=time;mode='finishing';paused=false;$('pause').textContent='Pause';$('complete').disabled=true;render(time);
+  finishWorld=sampleCrew(crew,time);finishTime=time;mode='finishing';paused=false;$('pause').textContent='Pause';$('complete').disabled=true;render(time);
 }
 function stop(reason){
   cancelAnimationFrame(frame);mode='idle';paused=false;scene.setAttribute('hidden','');input.value=original;controls(false);$('result').hidden=reason!=='done';
@@ -208,7 +270,7 @@ $('theme').addEventListener('click',()=>{const dark=$('mockup').classList.toggle
 input.addEventListener('input',()=>{count();$('start').disabled=!input.value.trim();});
 zoom.addEventListener('change',count);
 reduce.addEventListener('change',()=>{if(mode!=='idle')render(time);});
-new ResizeObserver(()=>{if(mode!=='idle'&&Math.abs($('stage').clientWidth/Number(zoom.value)-width)>1){stop('cancelled');$('status').textContent='Preview resized. Original request restored; play again at this width.';}}).observe($('stage'));
+new ResizeObserver(()=>{if(mode!=='idle'&&Math.abs($('stage').clientWidth-stageWidth)>1){stop('cancelled');$('status').textContent='Preview resized. Original request restored; play again at this width.';}}).observe($('stage'));
 document.addEventListener('visibilitychange',()=>{last=performance.now();});
 count();controls(false);
 </script>
