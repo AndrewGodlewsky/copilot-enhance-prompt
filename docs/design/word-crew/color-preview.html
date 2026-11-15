@@ -10,24 +10,30 @@
 </head>
 <body>
 <main>
-<h1>A crew that stands apart from the words</h1>
-<p class="muted">Four color directions. Same classic figures, same 28px size, unchanged text color. Select a card, then play the preview.</p>
+<h1>Dark red or deep blue?</h1>
+<p class="muted">Two darker colors for the same classic figures, at their actual 28px size. Select a card, then play the preview. Text keeps its normal color.</p>
 <div class="toolbar"><button id="theme" type="button" aria-pressed="true">Switch to light preview</button><span class="muted">Colors adapt to each background.</span><label><input id="reduced" type="checkbox">Reduce motion</label></div>
-<div class="palette-grid mock" id="options" aria-label="Crew color choices">
-<button class="option" id="option-a" type="button" aria-pressed="true"><span class="name">A · Lift green <span class="pill">Recommended</span></span><div class="description">Matches the plugin icon. Clear and consistent.</div><svg aria-hidden="true" id="sample-a"></svg><span class="swatches" id="swatches-a"></span></button>
+<div class="mock" id="options" aria-label="Crew color choices">
+<div class="palette-grid">
+<button class="option" id="option-e" type="button" aria-pressed="true"><span class="name">E · Dark red</span><div class="description">A rich crimson. Deeper burgundy in light mode.</div><svg aria-hidden="true" id="sample-e"></svg><span class="swatches" id="swatches-e"></span></button>
+<button class="option" id="option-f" type="button" aria-pressed="false"><span class="name">F · Deep blue</span><div class="description">A deep cobalt. Darker ink blue in light mode.</div><svg aria-hidden="true" id="sample-f"></svg><span class="swatches" id="swatches-f"></span></button>
+</div>
+<details id="previous"><summary style="cursor:pointer;margin:14px 0 10px">Compare with the previous four colors</summary><div class="palette-grid">
+<button class="option" id="option-a" type="button" aria-pressed="false"><span class="name">A · Lift green</span><div class="description">Matches the plugin icon. Clear and consistent.</div><svg aria-hidden="true" id="sample-a"></svg><span class="swatches" id="swatches-a"></span></button>
 <button class="option" id="option-b" type="button" aria-pressed="false"><span class="name">B · Teal</span><div class="description">A cool accent with a little more separation from the brand green.</div><svg aria-hidden="true" id="sample-b"></svg><span class="swatches" id="swatches-b"></span></button>
 <button class="option" id="option-c" type="button" aria-pressed="false"><span class="name">C · Amber</span><div class="description">Warm, easy to spot, and a little more playful.</div><svg aria-hidden="true" id="sample-c"></svg><span class="swatches" id="swatches-c"></span></button>
 <button class="option" id="option-d" type="button" aria-pressed="false"><span class="name">D · Small colorful team</span><div class="description">Green, teal and amber. Each person keeps their own color.</div><svg aria-hidden="true" id="sample-d"></svg><span class="swatches" id="swatches-d"></span></button>
+</div></details>
 </div>
 <section class="demo mock" id="demo" aria-label="Color and completion timing preview">
-<div class="demo-heading"><h2>Write a request</h2><span class="selection" id="selection">A · Lift green · actual figure size</span></div>
+<div class="demo-heading"><h2>Write a request</h2><span class="selection" id="selection">E · Dark red · actual figure size</span></div>
 <div class="stage"><svg id="scene" aria-hidden="true"></svg></div>
 <div class="demo-controls"><button class="play" id="play" type="button">Play preview</button><button id="pause" type="button" disabled>Pause</button><button id="reach95" type="button" disabled>Go to 95%</button><button id="ready" type="button" disabled>Prompt ready</button></div>
 <div class="progress-row"><span id="status" role="status">Ready. Choose a color and play.</span><span id="percent">0%</span></div>
 <div class="track" role="progressbar" aria-label="Simulated enhancement" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress"><div class="fill" id="fill"></div></div>
 <section class="result" id="result" hidden><strong>Finished prompt</strong><p>At 100%, the words move down together and the original request returns above. This is a timing demonstration, not an AI-generated result.</p></section>
 </section>
-<p class="muted caption">Preview only: no model calls or saved settings. At 95%, the crew puts its words down and leaves. The words wait for the model, then slide down at 100%. A quick result still gets the set-down and exit. Tell me A, B, C or D in chat when you have a favorite.</p>
+<p class="muted caption">Preview only: no model calls or saved settings. At 95%, the crew puts its words down and leaves. The words wait for the model, then slide down at 100%. A quick result still gets the set-down and exit. Tell me the color or letter in chat when you have a favorite.</p>
 </main>
 <script id="motion-model">
 // Approval prototype only. Positions are in CSS pixels at the actual-size setting.
@@ -187,7 +193,9 @@ const palettes = {
   a:{name:'A · Lift green',dark:['#4CCB78'],light:['#247941']},
   b:{name:'B · Teal',dark:['#45C9D0'],light:['#0B727A']},
   c:{name:'C · Amber',dark:['#E9B75D'],light:['#8E5E13']},
-  d:{name:'D · Small colorful team',dark:['#4CCB78','#45C9D0','#E9B75D'],light:['#247941','#0B727A','#8E5E13']}
+  d:{name:'D · Small colorful team',dark:['#4CCB78','#45C9D0','#E9B75D'],light:['#247941','#0B727A','#8E5E13']},
+  e:{name:'E · Dark red',dark:['#B84050'],light:['#942D3B']},
+  f:{name:'F · Deep blue',dark:['#426CC2'],light:['#244A9B']}
 };
 // The preview has separate crew-exit and result-ready times. Neither predicts model completion.
 function previewAt(time, exitAt, readyAt, height, reduced=false){
@@ -210,7 +218,7 @@ const set=(el,attrs)=>{for(const[k,v]of Object.entries(attrs))el.setAttribute(k,
 const path=points=>points.map((p,i)=>`${i?'L':'M'}${p.x},${p.y}`).join(' ');
 const sample='Make this request clearer and add useful project context. Keep the original intent and details. Include a practical plan, helpful checks, and any questions the agent needs answered before it starts.';
 const context=document.createElement('canvas').getContext('2d');context.font='14px system-ui, "Segoe UI", sans-serif';
-let selected='a',light=false,running=false,paused=false,time=0,last=null,raf=0,exitAt=null,readyAt=null,frozen=null,demoView=null;
+let selected='e',light=false,running=false,paused=false,time=0,last=null,raf=0,exitAt=null,readyAt=null,frozen=null,demoView=null;
 const reduced=$('reduced');reduced.checked=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function makeView(svg,text){
   const width=svg.clientWidth||500;
@@ -273,6 +281,7 @@ function samples(){
   }
 }
 for(const key of Object.keys(palettes))$('option-'+key).addEventListener('click',()=>choose(key));
+$('previous').addEventListener('toggle',()=>{if($('previous').open)samples();});
 $('theme').addEventListener('click',()=>{light=!light;$('options').classList.toggle('light',light);$('demo').classList.toggle('light',light);$('theme').textContent=light?'Switch to dark preview':'Switch to light preview';$('theme').setAttribute('aria-pressed',String(!light));samples();choose(selected);});
 $('play').addEventListener('click',()=>{reset();running=true;controls();draw();raf=requestAnimationFrame(tick);});
 $('pause').addEventListener('click',()=>{paused=!paused;controls();});
