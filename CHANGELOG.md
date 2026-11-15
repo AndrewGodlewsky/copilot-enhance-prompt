@@ -1,5 +1,12 @@
 # Changes
 
+## [0.5.2] - 2026-11-15
+
+### Changed
+- Use the approved deep-blue stick figures with thicker 2.2-pixel strokes, unchanged body geometry, and a darker blue in light mode. Keep text colors unchanged.
+- At 95% displayed progress, lower held words in place, release them, and only then run offscreen. Keep deposited words still until the prompt succeeds; the final sweep waits for both the result and the crew's exit. Fast completions still play the full set-down and exit sequence.
+- Stop animation frames while waiting after the crew exits. Keep cancellation, failure, reduced motion, original-request restoration, and sending safeguards unchanged.
+
 ## [0.5.1] - 2026-11-15
 
 ### Fixed

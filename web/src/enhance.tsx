@@ -210,7 +210,7 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
       </div>
       <div className="flex items-center justify-between gap-2">
         <p id="composer-help" className="text-muted-foreground text-xs">{locked ? crew.finishing ? 'Prompt ready. Restoring your original request…' : 'Enhancing… Your original request is kept unchanged.' : 'Click Enhance to rewrite in English. Enter adds a new line.'}</p>
-        {crew.visible && !crew.finishing ? <Button size="sm" variant="ghost" onClick={crew.togglePause} aria-pressed={crew.paused}>{crew.paused ? 'Resume animation' : 'Pause animation'}</Button> : null}
+        {crew.visible && !crew.retiring ? <Button size="sm" variant="ghost" onClick={crew.togglePause} aria-pressed={crew.paused}>{crew.paused ? 'Resume animation' : 'Pause animation'}</Button> : null}
       </div>
       {dragging ? (
         <div className="border-primary text-primary pointer-events-none absolute inset-1 grid place-items-center rounded-lg border-2 border-dashed text-sm font-medium">
@@ -600,7 +600,9 @@ export function WorkspacePicker() {
 }
 
 export function EnhanceSection({ refresh }: { refresh: () => void }) {
-  const crew = useWordCrew(read(run), read(draft), read(workspaceKey))
+  const current = read(run)
+  const percent = current?.status === 'running' ? totalPercent(current.steps, read(tick)) : 0
+  const crew = useWordCrew(current, read(draft), read(workspaceKey), percent)
   const output = read(result)
   const warning = modelWarning()
   // With no model yet, an agent CLI found on this machine is one press away: it runs on the

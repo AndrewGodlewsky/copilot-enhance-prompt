@@ -4,6 +4,36 @@ import { makeCrew, sampleCrew, finishFrame, finishPose, body, type Word } from '
 
 const words: Word[] = Array.from({ length: 31 }, (_, i) => ({ text: ['café', '路径', 'getUser()', '🧑‍💻'][i % 4], width: 60, x: 12 + (i % 7) * 72, y: 20 + Math.floor(i / 7) * 20 }))
 
+test('retirement deposits and releases words before exit, then waits for the actual result', () => {
+  const crew = makeCrew(words, 540, 123)
+  const pose = sampleCrew(crew, 1).poses.find(p => p.phase === 'Carry')!
+  assert.ok(pose)
+  for (const seconds of [0, .12, .24, .30, .34]) {
+    const frame = finishFrame(seconds, 200, null)
+    const p = finishPose(pose, frame, 540)
+    assert.equal(frame.exit, 0, 'never run off while putting down or releasing')
+    assert.equal(p.x, pose.x)
+    assert.equal(frame.sweeping, false)
+  }
+  const placed = finishPose(pose, finishFrame(.24, 200, null), 540)
+  assert.equal(placed.word.y, pose.foot - 10)
+  assert.equal(placed.grip, 1)
+  for (const seconds of [.6, 1, 60]) {
+    const frame = finishFrame(seconds, 200, null)
+    const p = finishPose(pose, frame, 540)
+    assert.deepEqual(p.word, placed.word, 'deposited words stay in place while carriers exit and wait')
+    assert.equal(p.grip, 0)
+    assert.equal(frame.offset, 0)
+    assert.equal(frame.sweeping, false)
+    assert.equal(frame.done, false)
+  }
+  assert.equal(finishFrame(.5, 200, .1).sweeping, false, 'an early result cannot skip retirement')
+  assert.equal(finishFrame(1, 200, .1).sweeping, true)
+  assert.equal(finishFrame(60, 200, 60).offset, 0)
+  assert.ok(finishFrame(60.3, 200, 60).offset > 0)
+  assert.equal(finishFrame(60.7, 200, 60).done, true)
+})
+
 test('the completion sweep moves the entire paragraph together, offscreen, without compression', () => {
   const before = structuredClone(words)
   for (const seconds of [.94, 1, 1.2, 1.4, 1.6]) {

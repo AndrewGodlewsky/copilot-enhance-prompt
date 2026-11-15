@@ -66,7 +66,7 @@ export function mountWordCrew(svg: SVGSVGElement, words: Word[], width: number, 
   const seed = globalThis.crypto?.getRandomValues(new Uint32Array(1))[0] ?? Date.now()
   const crew = makeCrew(words, width, seed)
   const tokens = create('g', { fill: 'currentColor' })
-  const people = create('g', { fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' })
+  const people = create('g', { fill: 'none', stroke: 'var(--word-crew-ink)', 'stroke-width': 2.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' })
   const carried = create('g', { fill: 'currentColor' })
   const bar = create('path', { fill: 'none', stroke: 'var(--primary)', 'stroke-width': 3 })
   svg.replaceChildren(tokens, people, carried, bar)
@@ -79,10 +79,10 @@ export function mountWordCrew(svg: SVGSVGElement, words: Word[], width: number, 
   })
   const carryEls = crew.actors.map(() => { const el = create('text'); carried.append(el); return el })
   let time = 0, last: number | null = null, frame = 0, paused = false, disposed = false
-  let finishAt: number | null = null
+  let retireAt: number | null = null, readyAt: number | null = null
   let world = sampleCrew(crew, 0)
   const draw = () => {
-    const ending = finishAt === null ? null : finishFrame(time - finishAt, height)
+    const ending = retireAt === null ? null : finishFrame(time - retireAt, height, readyAt === null ? null : readyAt - retireAt)
     if (!ending) world = sampleCrew(crew, time)
     const poses = ending ? world.poses.map(pose => finishPose(pose, ending, width)) : world.poses
     world.tokens.forEach((word, i) => drawWord(wordEls[i], word))
@@ -97,16 +97,20 @@ export function mountWordCrew(svg: SVGSVGElement, words: Word[], width: number, 
     tokens.setAttribute('transform', translation)
     carried.setAttribute('transform', translation)
     bar.setAttribute('d', ending?.sweeping ? `M0,${ending.barY} H${width}` : '')
-    return ending?.done ?? false
+    return ending
   }
   const dispose = () => { disposed = true; cancelAnimationFrame(frame); svg.replaceChildren() }
   const step = (now: number) => {
     if (disposed) return
+    frame = 0
     const delta = last === null ? 0 : Math.min(.05, Math.max(0, (now - last) / 1000))
     last = now
-    if (!paused || finishAt !== null) time += delta
+    if (!paused || retireAt !== null) time += delta
     try {
-      if (draw()) { disposed = true; settled(); return }
+      const ending = draw()
+      if (ending?.done) { disposed = true; settled(); return }
+      // No frame work while deposited words wait for the model. finish() wakes the sweep.
+      if (ending?.exit === 1 && readyAt === null) { last = null; return }
       frame = requestAnimationFrame(step)
     } catch {
       // Artwork must never prevent editing or hide the actual result.
@@ -116,7 +120,13 @@ export function mountWordCrew(svg: SVGSVGElement, words: Word[], width: number, 
   draw() // Render before the hook hides the textarea, including the first frame's words.
   frame = requestAnimationFrame(step)
   return {
-    finish() { if (finishAt === null) finishAt = time },
+    retire() { if (!disposed && retireAt === null) retireAt = time },
+    finish() {
+      if (disposed || readyAt !== null) return
+      if (retireAt === null) retireAt = time
+      readyAt = time
+      if (!frame) frame = requestAnimationFrame(step)
+    },
     pause(value: boolean) { paused = value },
     dispose
   }

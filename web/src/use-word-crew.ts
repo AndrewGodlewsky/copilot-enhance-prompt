@@ -3,16 +3,18 @@ import type { Run } from '../../src/panel/state.ts'
 import { measureWords, mountWordCrew } from './word-crew'
 
 /** Canvas-local artwork. It cannot write a draft, invoke a model or send a prompt. */
-export function useWordCrew(current: Run | null, text: string, workspace: string | null) {
+export function useWordCrew(current: Run | null, text: string, workspace: string | null, percent = 0) {
   const input = useRef<HTMLTextAreaElement>(null)
   const scene = useRef<SVGSVGElement>(null)
   const controller = useRef<ReturnType<typeof mountWordCrew> | null>(null)
   const [active, setActive] = useState<string | null>(null)
   const [paused, setPaused] = useState(false)
+  const [retiring, setRetiring] = useState(false)
   const [reduced, setReduced] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   const eligible = current && current.prompt === text.trim() && (!current.workspace || current.workspace.key === workspace)
   const runId = eligible ? current.runId : null
   const status = eligible ? current.status : null
+  const reachedExit = percent >= 95
 
   useLayoutEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -45,6 +47,7 @@ export function useWordCrew(current: Run | null, text: string, workspace: string
       controller.current = mountWordCrew(svg, words, width, height, stop)
       setActive(runId)
       setPaused(false)
+      setRetiring(false)
       resize = new ResizeObserver(() => {
         if (textarea.clientWidth !== width || textarea.clientHeight !== height) stop()
       })
@@ -66,17 +69,22 @@ export function useWordCrew(current: Run | null, text: string, workspace: string
   }, [runId, text, workspace, reduced])
 
   useLayoutEffect(() => {
-    if (status === 'done') controller.current?.finish()
+    if (status === 'done' || (status === 'running' && reachedExit)) {
+      if (status === 'done') controller.current?.finish()
+      else controller.current?.retire()
+      setRetiring(true)
+      setPaused(false)
+    }
     else if (status !== 'running') {
       controller.current?.dispose()
       controller.current = null
       setActive(null)
     }
-  }, [status])
+  }, [runId, status, reachedExit, reduced, text, workspace])
 
   const visible = !!runId && active === runId && !reduced && (status === 'running' || status === 'done')
   return {
-    input, scene, visible, paused,
+    input, scene, visible, paused, retiring,
     finishing: visible && status === 'done',
     togglePause() {
       const next = !paused

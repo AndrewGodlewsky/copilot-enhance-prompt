@@ -127,14 +127,15 @@ export function body(pose: Pose) {
   return { head, shoulder, hip, hands, arms, legs }
 }
 
-/** One shared offset for every word. Never clamp individual words against the bar. */
-export function finishFrame(seconds: number, height: number) {
+/** Null readiness holds deposited words; success permits one shared offset after the crew exits. */
+export function finishFrame(seconds: number, height: number, readyAfter: number | null = 0) {
   const lower = ease(seconds / .24)
   const release = ease((seconds - .24) / .1)
   const exit = ease((seconds - .34) / .6)
-  const offset = (height + 30) * ease((seconds - .94) / .65)
+  const sweepAt = readyAfter === null ? Infinity : Math.max(.94, readyAfter)
+  const offset = (height + 30) * ease((seconds - sweepAt) / .65)
   const walk = exit > 0 && exit < 1 ? Math.sin((seconds - .34) * 45) : 0
-  return { lower, release, exit, walk, offset, barY: offset, sweeping: seconds >= .94, done: seconds >= 1.59 }
+  return { lower, release, exit, walk, offset, barY: offset, sweeping: seconds >= sweepAt, done: seconds >= sweepAt + .65 }
 }
 
 /** Lower in place before releasing: the deposited word stays behind as its carrier exits. */

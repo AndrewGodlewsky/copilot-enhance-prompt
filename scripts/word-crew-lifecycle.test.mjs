@@ -48,7 +48,7 @@ test('real run status governs success, cancellation, original content, reduced m
         export const measurement={valid:true,throws:false};
         export function measureWords(){if(measurement.throws)throw Error('layout unavailable'); return measurement.valid?[{text:'word',x:1,y:1,width:10}]:null;}
         export function mountWordCrew(svg,words,width,height,settled){
-          const crew={finished:0,disposed:0,paused:false,settled,finish(){this.finished++},dispose(){this.disposed++},pause(v){this.paused=v}};
+          const crew={retired:0,finished:0,disposed:0,paused:false,settled,retire(){this.retired++},finish(){this.finished++},dispose(){this.disposed++},pause(v){this.paused=v}};
           mounts.push(crew);return crew;
         }
       ` }))
@@ -83,9 +83,28 @@ test('real run status governs success, cancellation, original content, reduced m
     assert.equal(state.visible, false)
     assert.equal(state.finishing, false)
     assert.equal(input.value, source, 'no restoration write or trimming')
+    const slow = { ...base, runId: 'slow' }
+    state = api.render(slow, source, 'project', 94)
+    const retiringCrew = api.mounts.at(-1)
+    assert.equal(retiringCrew.retired, 0)
+    state.togglePause()
+    state = api.render(slow, source, 'project', 95)
+    assert.equal(retiringCrew.retired, 1)
+    assert.equal(retiringCrew.finished, 0)
+    assert.equal(state.visible, true)
+    assert.equal(state.retiring, true)
+    assert.equal(state.paused, false)
+    assert.equal(state.finishing, false, 'the result is still pending')
+    state = api.render(slow, source, 'project', 90)
+    assert.equal(state.retiring, true, 'a progress correction cannot restart the crew')
+    state = api.render({ ...slow, status: 'done' }, source, 'project', 100)
+    assert.equal(retiringCrew.finished, 1)
+    assert.equal(state.finishing, true)
+    api.render({ ...base, runId: 'already-95' }, source, 'project', 95)
+    assert.equal(api.mounts.at(-1).retired, 1, 'a new run already past the threshold retires its own crew')
     for (const outcome of ['error', 'cancelled']) {
       const run = { ...base, runId: outcome }
-      api.render(run, source, 'project')
+      api.render(run, source, 'project', 95)
       const crew = api.mounts.at(-1)
       state = api.render({ ...run, status: outcome }, source, 'project')
       assert.equal(state.visible, false)

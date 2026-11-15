@@ -1,22 +1,22 @@
 # Word crew character concepts
 
-Status: **Classic stick figure and animation approved; available in version 0.5.1.** The standalone preview remains a design reference.
+Status: **Thicker deep-blue figures and the 95% exit approved; available in version 0.5.2.** The standalone previews remain design references.
 
 The owner selected **A — Classic** from the eight stick figures below, with one correction: the people must pick up the words themselves, with no surrounding box or tile.
 
-## Color and 95% timing proposals
+## Approved color and 95% timing
 
 Open [color-preview.html](color-preview.html) to compare crew treatments. The original options were **A — Lift green**, **B — Teal**, **C — Amber**, and **D — Small colorful team**. The figures retain their classic silhouette and actual 28-pixel carrying size. Text keeps its normal color; each figure keeps its assigned color throughout a run. All palettes include dark and light variants.
 
 The follow-up added **E — Dark red** (crimson on dark surfaces, burgundy on light) and **F — Deep blue** (cobalt on dark surfaces, ink blue on light). The owner selected **deep blue**, then requested thicker figures without increasing their height. The current preview compares **F — Original blue** at a 1.6-pixel stroke with **G — Thicker blue** at 2.2 pixels, selected by default. Only stroke weight changes: joint positions, head radius, proportions, motion and text stay unchanged, with no scaling. Expand the earlier options to revisit the other colors. The darker hues retain at least 3:1 stroke-to-background contrast in both themes. Final visibility at this small size still needs the owner's visual review.
 
-This separate preview also demonstrates the proposed earlier exit: at 95%, the crew lowers its held words in place, releases them and leaves. The deposited words stay still until the prompt is actually ready, then move downward together at 100% before the original request returns. An early result still plays the set-down and exit. Production progress is an estimate, so the model may finish before the display reaches 95%; the preview's percentage and model-ready time are simulated independently.
+This separate preview also demonstrates the approved earlier exit: at 95%, the crew lowers its held words in place, releases them and leaves. The deposited words stay still until the prompt is actually ready, then move downward together at 100% before the original request returns. An early result still plays the set-down and exit. Production progress is an estimate, so the model may finish before the display reaches 95%; the preview's percentage and model-ready time are simulated independently.
 
-Choose a card and use **Play preview**, **Go to 95%**, or **Prompt ready** to compare the colors and timing. Pause and reduced motion are available. This standalone file makes no model calls and saves nothing. Blue is selected; the thicker outline and earlier exit are **awaiting owner approval** before integration. Production remains unchanged at **0.5.1**. Exact rendering, visibility and perceived timing still need manual review.
+Choose a card and use **Play preview**, **Go to 95%**, or **Prompt ready** to compare the colors and timing. Pause and reduced motion are available. This standalone file makes no model calls and saves nothing. **G — Thicker blue** and the earlier exit are approved and integrated in **0.5.2**. Exact desktop rendering, visibility and perceived timing still need manual review.
 
 ## Animation preview
 
-Open [animation-preview.html](animation-preview.html) locally and click **Enhance preview**. It is a standalone HTML file with no install, network requests, model calls or saved data. It is also presented inline in the design conversation. The preview does not modify the plugin.
+Open [animation-preview.html](animation-preview.html) locally and click **Enhance preview**. This earlier motion study retains the original thin, monochrome figures and completion-only exit; the color preview above shows the approved update. It is a standalone HTML file with no install, network requests, model calls or saved data. The preview does not modify the plugin.
 
 - Hollow round heads, a simple line torso and bare line hands; no faces or clothing. Characters measure 28 pixels during carrying at actual size, alongside 14-pixel text.
 - Reach, lift, walk, set down and release use continuous positions. While carrying, the hand endpoints and the bare word share coordinates, including the slight walking bob. The word has no visible container.
@@ -50,22 +50,23 @@ The proposed app height is **28 CSS pixels**, approximately two stacked 14-pixel
 
 Option A is the approved direction. The boxes in the original concept sheet are superseded by bare words in the animation preview. For dark surfaces, adapt dark outlines to a light color.
 
-Use the existing Lift green and flat colors for the eventual character assets. Keep the approved plugin icon and still Quiet Desk banner unchanged. The generated sheet is an art-direction reference; it is not a production sprite sheet. The earlier [three-character sheet](character-concepts.png) is retained only as the previous exploration.
+The owner selected deep blue for the characters, retaining flat colors. Keep the approved green Lift plugin icon and still Quiet Desk banner unchanged. The generated sheet is an art-direction reference; it is not a production sprite sheet. The earlier [three-character sheet](character-concepts.png) is retained only as the previous exploration.
 
 ## Approval order
 
 1. Character selection complete: A — Classic, carrying bare words.
 2. Animation approved: running, reaching, lifting, carrying, kicking, placing and exiting.
 3. Integrated into the composer with a success-only whole-paragraph sweep and exact original-request restoration.
+4. Thicker blue strokes and a 95% set-down/release/exit approved and integrated in 0.5.2.
 
-The owner approved both stages before implementation. Production motion lives in `src/panel/word-crew.ts`; `web/src/word-crew.ts` draws it and `web/src/use-word-crew.ts` observes the real run. No animation code writes to draft or result state. Success takes about 1.6 seconds to put words down, release, exit and sweep; model progress is never simulated in the plugin. Pause affects only artwork. Errors, cancellation, changed drafts, project changes, resize, hidden panels and disposal reveal the native input; the real run still controls editing while it is active.
+Production motion lives in `src/panel/word-crew.ts`; `web/src/word-crew.ts` draws it and `web/src/use-word-crew.ts` observes the real run and displayed percentage. No animation code writes to draft or result state. At 95% or success, figures lower their words for 0.24 seconds, release for 0.10 seconds, then exit over 0.60 seconds. The scene stops requesting frames while it waits for the model. A 0.65-second sweep begins only after success and the crew's exit. Pause affects only artwork and does not prevent this handoff. Errors, cancellation, changed drafts, project changes, resize, hidden panels and disposal reveal the native input; the real run still controls editing while it is active.
 
 ## Shipped behavior
 
-- Clicking Enhance starts a little crew inside **Write a request**, approximately one character for every ten words.
+- Clicking Enhance starts a little deep-blue crew with 2.2px strokes inside **Write a request**, approximately one character for every ten words.
 - The characters choose words, lift them, carry them to other positions and put them down. Words may leave and new decorative words may arrive; the visual text can be scrambled.
 - Lock request editing while the enhancement runs. Preserve the original request as data; moving decorative words must never change the model input, saved draft or actual generated result.
-- Keep the existing progress bar visible. When actual enhancement reaches completion, the crew puts its words down in place, releases them, runs off-screen and a descending bar visually pushes the displayed text toward the result section.
+- Keep the existing progress bar visible. At 95% displayed progress (or earlier success), the crew puts its words down in place, releases them, then runs off-screen. A descending bar visually pushes the displayed text toward the result section only after success and the crew's exit.
 - Failure and cancellation restore the editable original request. They must not play a successful-completion effect.
 
 Manual visual verification remains for exact font alignment, clipping, responsive layout, theme contrast and perceived timing in the desktop application. The animation must remain separate from real model progress and sending consent. No desktop or browser UI automation is authorized.
