@@ -1662,6 +1662,8 @@ var MESSAGES = {
   "why.trimmed": "trimmed",
   // Errors and results.
   "error.no_prompt": "Write a prompt first.",
+  "error.effort": "Choose Low, Medium, or High effort.",
+  "error.effort_model": "The model assigned to {effort} effort is unavailable. Choose an enabled model in Settings \u2192 Effort models.",
   "error.attachment_bad": "That attachment could not be received; try attaching it again.",
   "error.attachment_missing": "The attached file {name} is no longer there (attachments are kept for a day). Attach it again.",
   "error.file_too_large": "{name} is {size}; an attachment can be at most {max}.",
@@ -2863,6 +2865,24 @@ function snippet(text, hits, maxChars) {
     last = i;
   }
   return out.join("\n");
+}
+
+// src/effort.ts
+var EFFORTS = ["low", "medium", "high"];
+var EFFORT_LABELS = { low: "Low", medium: "Medium", high: "High" };
+var EFFORT_SETTINGS = { low: "effortLowModel", medium: "effortMediumModel", high: "effortHighModel" };
+var isEffort = (value) => EFFORTS.some((effort) => effort === value);
+var MODEL_SEP = "|";
+var PROFILE_DEFAULT = "__profile_default__";
+function modelAssignment(profileId, model) {
+  return `${profileId}${MODEL_SEP}${model || PROFILE_DEFAULT}`;
+}
+function parseModelAssignment(value) {
+  if (value === "auto") return { profileId: null, model: "" };
+  if (typeof value !== "string" || value.length > 500) return null;
+  const parts = value.split(MODEL_SEP);
+  if (parts.length !== 2 || !parts[0] || !parts[1] || parts.some((part) => part !== part.trim() || /[\r\n\x00]/.test(part))) return null;
+  return { profileId: parts[0], model: parts[1] === PROFILE_DEFAULT ? "" : parts[1] };
 }
 
 // src/context/git.ts
@@ -4706,15 +4726,25 @@ async function enhance(host, input, signal, progress, budgetMs) {
   if (!prompt) throw hostError(msg("error.no_prompt"), "invalid_params");
   const settings = await readSettings(host);
   const config = await loadModels(host);
-  const chosenModel = input.model?.trim().slice(0, 200);
-  const list = candidates(config.profiles, input.profileId ?? null, settings.fallbackEnabled).map(
-    (profile) => chosenModel && profile.id === input.profileId ? { ...profile, model: chosenModel } : profile
+  let profileId = input.profileId ?? null;
+  let chosenModel = input.model?.trim().slice(0, 200);
+  if (input.effort !== void 0) {
+    if (!isEffort(input.effort)) throw hostError(msg("error.effort"), "invalid_params");
+    const assignment = parseModelAssignment(await host.settings.get(EFFORT_SETTINGS[input.effort]) ?? "auto");
+    if (!assignment || assignment.profileId && !config.profiles.some((profile) => profile.id === assignment.profileId && profile.enabled)) {
+      throw hostError(msg("error.effort_model", { effort: EFFORT_LABELS[input.effort] }), "invalid_params");
+    }
+    profileId = assignment.profileId;
+    chosenModel = assignment.model;
+  }
+  const list = candidates(config.profiles, profileId, settings.fallbackEnabled).map(
+    (profile) => chosenModel && profile.id === profileId ? { ...profile, model: chosenModel } : profile
   );
   if (list.length === 0) throw hostError(msg("error.no_model"), "invalid_params");
   const pickerProfiles = config.profiles.filter((profile) => profile.provider === "copilot" === (list[0]?.provider === "copilot"));
   const pickerConfig = {
     ...config,
-    profiles: pickerProfiles.map((profile) => list.find((candidate) => candidate.id === profile.id) ?? profile),
+    profiles: pickerProfiles.map((profile) => profile.id === config.selectorProfileId ? profile : list.find((candidate) => candidate.id === profile.id) ?? profile),
     selectorProfileId: pickerProfiles.some((profile) => profile.id === config.selectorProfileId) ? config.selectorProfileId : list[0]?.id ?? null
   };
   const style = isStyle(input.style) ? input.style : settings.defaultStyle;
@@ -5308,6 +5338,7 @@ function registerDataHandlers(host) {
       const config = await loadModels(host);
       for (const profile of config.profiles) await host.secrets.delete(secretName(profile.id)).catch(() => void 0);
       await host.storage.delete(MODELS_KEY);
+      for (const key of Object.values(EFFORT_SETTINGS)) await host.settings.set(key, "auto");
       await host.storage.delete(RULES_KEY);
       await host.storage.delete(CONSENTS_KEY);
       await host.storage.delete("colorTheme");
@@ -5544,7 +5575,7 @@ function activate(host) {
 import { EventEmitter } from "node:events";
 
 // src/version.ts
-var VERSION = "0.3.2";
+var VERSION = "0.4.0";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([
@@ -5829,6 +5860,9 @@ var DEFAULTS = {
   "defaultStyle": "balanced",
   "customInstructions": "",
   "contextLevel": "standard",
+  "effortLowModel": "auto",
+  "effortMediumModel": "auto",
+  "effortHighModel": "auto",
   "terminalLines": 100,
   "extraContextFiles": "",
   "excludePatterns": "dist/\nbuild/\nout/\ncoverage/\n*.lock\npackage-lock.json\npnpm-lock.yaml\n*.min.js\n*.map\n*.snap",
@@ -6099,10 +6133,11 @@ import { createHash } from "node:crypto";
 var sentKey = (sessionId, text) => `sent:${createHash("sha256").update(sessionId).update("\0").update(text).digest("hex")}`;
 
 // src/copilot/services.ts
-function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DIR || join6(process.env.LOCALAPPDATA || join6(homedir3(), ".local", "share"), "copilot-enhance-prompt"), copilot2) {
+function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DIR || join6(process.env.LOCALAPPDATA || join6(homedir3(), ".local", "share"), "copilot-enhance-prompt"), copilot2, options = {}) {
   const data = persistentStore(join6(directory, "data"));
   const prefs = persistentStore(join6(directory, "preferences"));
   const secrets = protectedSecrets(persistentStore(join6(directory, "credentials")));
+  const scope = createHash2("sha256").update(session2.sessionId).digest("hex").slice(0, 24);
   let migration;
   const prepare = () => migration ??= (async () => {
     await prefs.transaction(async () => {
@@ -6117,8 +6152,26 @@ function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DI
     migration = void 0;
     throw error;
   });
-  const adapter = sessionAdapter({ sessionId: session2.sessionId, rpc: session2.rpc, send: async (options) => {
-    const key = sentKey(session2.sessionId, options.prompt);
+  let effortMigration;
+  const prepareEfforts = () => effortMigration ??= prefs.transaction(async () => {
+    const missing = [];
+    for (const key of Object.values(EFFORT_SETTINGS)) if (await prefs.get(key) === null) missing.push(key);
+    if (!missing.length) return;
+    const saved = parseModelsConfig(await data.get(MODELS_KEY)).profiles;
+    const profiles = (saved.length || await prefs.get("allowEnvKeys") === false ? saved : envProfiles()).filter((profile) => profile.enabled);
+    const legacy = async (key) => await data.get(`session:${scope}:panel:${key}`) ?? await data.get(`panel:${key}`);
+    const choice = await legacy("profileChoice");
+    const selected = profiles.find((profile) => profile.id === choice);
+    const current = selected ?? profiles[0];
+    const override = selected ? await legacy("modelChoice") : null;
+    const assignment = current ? modelAssignment(current.id, typeof override === "string" && override ? override : effectiveModel(current)) : "auto";
+    for (const key of missing) await prefs.set(key, parseModelAssignment(assignment) ? assignment : "auto");
+  }).catch((error) => {
+    effortMigration = void 0;
+    throw error;
+  });
+  const adapter = sessionAdapter({ sessionId: session2.sessionId, rpc: session2.rpc, send: async (options2) => {
+    const key = sentKey(session2.sessionId, options2.prompt);
     await data.transaction(async () => {
       for (const old of (await data.keys()).filter((key2) => key2.startsWith("sent:"))) {
         if (Number(await data.get(old)) < Date.now()) await data.delete(old);
@@ -6126,7 +6179,7 @@ function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DI
       await data.set(key, Date.now() + 12e4);
     });
     try {
-      return await session2.send(options);
+      return await session2.send(options2);
     } catch (error) {
       await data.delete(key);
       throw error;
@@ -6135,6 +6188,7 @@ function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DI
   const settings = {
     get: (async (key) => {
       await prepare();
+      if (!options.promptHook) await prepareEfforts();
       const values = { ...DEFAULTS };
       for (const name of await prefs.keys()) if (Object.hasOwn(DEFAULTS, name)) values[name] = await prefs.get(name);
       for (const name of UNSUPPORTED_SETTINGS) values[name] = false;
@@ -6142,13 +6196,13 @@ function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DI
     }),
     set: async (key, value) => {
       if (!Object.hasOwn(DEFAULTS, key) || typeof value !== typeof DEFAULTS[key]) throw new Error("Invalid setting.");
+      if (Object.values(EFFORT_SETTINGS).some((name) => name === key) && !parseModelAssignment(value)) throw new Error("Invalid effort model assignment.");
       if (UNSUPPORTED_SETTINGS.has(key) && value) throw new Error("This setting is unavailable in the Copilot canvas.");
       await prepare();
       await prefs.set(key, value);
     },
     onDidChange: (listener) => prefs.onDidChange(listener)
   };
-  const scope = createHash2("sha256").update(session2.sessionId).digest("hex").slice(0, 24);
   const scopeKey = (key) => key.startsWith("panel:") ? `session:${scope}:${key}` : key;
   const storage = {
     get: async (key) => {
@@ -6177,7 +6231,7 @@ function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DI
   };
   const host = {
     has: (name) => Boolean(copilot2) && ["copilot.catalog", "copilot.rewrite"].includes(name) || name === "secrets.protection" || adapter.has(name),
-    call: async (name, input, options) => name === "copilot.catalog" && copilot2 ? await copilot2.catalog() : name === "copilot.rewrite" && copilot2 ? { text: await copilot2.rewrite(input, options?.signal) } : name === "secrets.protection" ? { status: secrets.available ? "os-keyring" : "unavailable", backend: "DPAPI" } : adapter.call(name, input, options)
+    call: async (name, input, options2) => name === "copilot.catalog" && copilot2 ? await copilot2.catalog() : name === "copilot.rewrite" && copilot2 ? { text: await copilot2.rewrite(input, options2?.signal) } : name === "secrets.protection" ? { status: secrets.available ? "os-keyring" : "unavailable", backend: "DPAPI" } : adapter.call(name, input, options2)
   };
   return { storage, settings, secrets, host, adapter, directory, data };
 }
@@ -6189,7 +6243,7 @@ import { readFile as readFile6, realpath as realpath3 } from "node:fs/promises";
 import { extname, resolve as resolve3, sep as sep2 } from "node:path";
 var LIMIT = 25e5;
 var MODEL_WRITES = /* @__PURE__ */ new Set(["models.save", "models.delete", "models.move", "models.roles", "consent.set", "rules.save"]);
-var PANEL_KEYS = /* @__PURE__ */ new Set(["tab", "style", "level", "profileChoice", "modelChoice", "structureChoice", "terminalWorkspaces", "optionsOpen", "feedbackAsk", "feedbackOff", "draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked", "sendAfterEnhance", "historyScope"]);
+var PANEL_KEYS = /* @__PURE__ */ new Set(["tab", "style", "level", "effort", "structureChoice", "terminalWorkspaces", "optionsOpen", "feedbackAsk", "feedbackOff", "draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked", "sendAfterEnhance", "historyScope"]);
 var readable = (key) => key === "history" || key === "colorTheme" || key.startsWith("panel:") && PANEL_KEYS.has(key.slice(6));
 var writable = (key) => key === "colorTheme" || key.startsWith("panel:") && PANEL_KEYS.has(key.slice(6));
 var PRIVATE_PANEL_KEYS = /* @__PURE__ */ new Set(["draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked"]);

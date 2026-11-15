@@ -39,6 +39,7 @@ test('the file hook applies opted-in rules, bypasses a panel send, and remains o
   try {
     assert.deepEqual(await runPromptHook(input, directory), {})
     const prefs = persistentStore(join(directory, 'preferences'))
+    assert.equal(await prefs.get('effortMediumModel'), null, 'a prompt hook must not initialize composer assignments')
     await prefs.set('autoEnhanceMode', 'rules')
     await prefs.set('autoEnhanceAppend', 'Run tests.')
     assert.deepEqual(await runPromptHook(input, directory), { modifiedTransformedPrompt: 'Context\nOriginal request\n\nRun tests.' })

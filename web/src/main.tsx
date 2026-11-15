@@ -10,7 +10,7 @@ import { BRAND } from '../../src/brand.ts'
 import { busy, draft, files, history, historyOpen, notice, optionsOpen, put, say, sendAfterEnhance, tab } from '../../src/panel/state.ts'
 import { msg } from '../../src/messages.ts'
 import { previews } from './attach'
-import { enhanceAndSend, enhanceNow, refreshDataSummary, refreshHookLast, refreshTargets } from '../../src/panel/actions.ts'
+import { enhanceAndSend, enhanceNow, openSection, refreshTargets } from '../../src/panel/actions.ts'
 import { closePanel, wirePanel } from '../../src/panel/setup.ts'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Notices } from './common'
@@ -39,14 +39,6 @@ const SECTIONS = [
   { value: 'rules', Icon: ScrollTextIcon },
   { value: 'privacy', Icon: SettingsIcon }
 ] as const
-
-function openSection(value: string): void {
-  set(tab, value)
-  if (value === 'privacy') {
-    void refreshDataSummary()
-    void refreshHookLast()
-  }
-}
 
 function App() {
   usePanel()

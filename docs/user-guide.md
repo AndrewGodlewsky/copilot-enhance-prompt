@@ -18,15 +18,15 @@ Reports include the plugin version, runtime version, OS/architecture, timestamps
 
 ## Enhance
 
-Write the request, choose style and context level, and optionally select a structure. Paste, drop or pick attachments. Preview the context and exclude anything unnecessary before running a model. Cancel stops the current run. Refine moves the result back into the composer. The rewritten instructions and headings use English while preserving your code, paths, quoted text and other supplied data.
+Write the request and choose Context Level, Style, and Effort. Low, Medium, and High use the models assigned in Settings. Options contains structures and the context preview. Paste, drop or pick attachments, and exclude unnecessary context before clicking Enhance. Enter adds a line without enhancing or sending. Cancel stops the current run. Refine moves the result back into the composer. The rewritten instructions and headings use English while preserving your code, paths, quoted text and other supplied data.
 
-The dropdown is named **Context**. **General** is the default style; the other eight offer shorter prompts, specifications, task-specific workflows or custom formatting. Structures change headings while keeping the style's purpose. **Plan first** stops after the plan unless the current task explicitly requests implementation. [Style guide and review](styles.md).
+The dropdown is named **Context Level**. **General** is the default style; the other eight offer shorter prompts, specifications, task-specific workflows or custom formatting. Structures change headings while keeping the style's purpose. **Plan first** stops after the plan unless the current task explicitly requests implementation. [Style guide and review](styles.md).
 
 Send creates a new message in the attached Copilot session. It checks the session again immediately before submitting. Copy and file download are available for manual handoff. A failed send leaves the result available.
 
 ## Models and rules
 
-Models supports GitHub Copilot, API providers, local endpoints, subscription CLIs, custom commands, model catalogs, testing and ordered fallback. To use your Copilot account, add a model with the **GitHub Copilot** preset and choose from its live list. Select that profile in Enhance. The helper reuses the desktop SDK/runtime without npm or another download. Claude models in this preset use Copilot; the separate Claude Code preset uses Claude Code. **Test** makes a small, billable model request.
+Models supports GitHub Copilot, API providers, local endpoints, subscription CLIs, custom commands, model catalogs, testing and ordered fallback. To use your Copilot account, add a model with the **GitHub Copilot** preset and choose from its live list. Assign that profile and model to an effort in **Settings → Effort models**, then select the effort in Enhance. The helper reuses the desktop SDK/runtime without npm or another download. Claude models in this preset use Copilot; the separate Claude Code preset uses Claude Code. **Test** makes a small, billable model request.
 
 The selected rewriting provider receives the prompt and permitted context. The attached chat receives the result only when sent. Copilot runs remain within Copilot for fallback and the AI-assisted file picker. Account mismatches, unavailable models, or missing runtime controls stop the request. [Background rewriting and troubleshooting](copilot-background-rewriting.md).
 

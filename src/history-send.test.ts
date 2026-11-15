@@ -1,9 +1,9 @@
 // What the panel does around sending and the history, with nothing drawn (src/panel/testing.ts):
-// a notice that carries a button (Undo, send anyway), Ctrl+Enter, an agent that is waiting for an
+// a notice that carries a button (Undo, send anyway), explicit send, an agent that is waiting for an
 // answer, and the history by project.
 import { read, set } from '#panel'
 import { assert, mockHost, test } from '#testing'
-import { enhanceNow, enhanceOrSend, refreshTargets, removeEntry, reuse, runNoticeAction, send } from './panel/actions.ts'
+import { enhanceNow, refreshTargets, removeEntry, reuse, runNoticeAction, send } from './panel/actions.ts'
 import { busy, contextShown, draft, filteredHistory, history, historyByProject, historyOpen, historyScope, lastRun, notice, put, result, resultFor, tab, targets } from './panel/state.ts'
 import { mountPanel } from './panel/testing.ts'
 import { targetLabel } from './panel/view.ts'
@@ -24,7 +24,7 @@ const entry = (id: string, original: string, project?: string): HistoryEntry => 
   ...(project ? { project } : {})
 })
 
-test('Ctrl+Enter sends the result while it is the one for what the composer holds, and enhances otherwise', async () => {
+test('enhancement stops at a result and explicit sending preserves edits', async () => {
   const sent: { text: string; enter?: boolean }[] = []
   let runs = 0
   const host = mockHost({
@@ -43,19 +43,19 @@ test('Ctrl+Enter sends the result while it is the one for what the composer hold
   })
   const view = await mountPanel(host)
   put(draft, 'fix the login page')
-  // Nothing to send yet: it enhances.
-  await enhanceOrSend()
+  // Clicking Enhance produces a result without sending it.
+  await enhanceNow()
   assert.equal(runs, 1)
   assert.equal(read(result), 'Better 1: fix the login page')
   assert.equal(sent.length, 0)
   // The result is in front of the person and belongs to this text: it is sent, as it reads now.
   put(result, 'Better 1: fix the login page (edited)')
-  await enhanceOrSend()
+  await send(read(result))
   assert.deepEqual(sent.map((item) => item.text), ['Better 1: fix the login page (edited)'])
   assert.equal(runs, 1)
   // The request changed: the result on screen is not for it, so nothing old is sent.
   put(draft, 'fix the signup page')
-  await enhanceOrSend()
+  await enhanceNow()
   assert.equal(runs, 2)
   assert.equal(sent.length, 1)
   assert.equal(read(resultFor), 'fix the signup page')
@@ -219,7 +219,7 @@ test('in the real Copilot a refusal comes as a code and a text only: the blocked
   await view.unmount()
 })
 
-test('Ctrl+Enter never sends what belongs to another project or was opened from one', async () => {
+test('enhancing a restored or reused request does not send it; explicit Send uses the reviewed result', async () => {
   const sent: string[] = []
   let focus = { workspace: 'main', project: 'Shop', workspaceId: 'w-shop' }
   const host = mockHost({
@@ -245,24 +245,24 @@ test('Ctrl+Enter never sends what belongs to another project or was opened from 
   await enhanceNow()
   assert.equal(read(resultFor), 'fix the failing tests')
   // Back in Shop: its composer holds the old result, and what Reup's result was made from says
-  // nothing here. Ctrl+Enter enhances; the old prompt is not sent.
+  // nothing here. Clicking Enhance produces a new result; the old prompt is not sent.
   focus = { workspace: 'main', project: 'Shop', workspaceId: 'w-shop' }
   await refreshTargets()
   assert.equal(read(draft), 'fix the failing tests')
   assert.equal(read(result), 'Better: fix tests')
   assert.equal(read(resultFor), null)
-  await enhanceOrSend()
+  await enhanceNow()
   assert.deepEqual(sent, [])
   assert.equal(read(result), 'Better: fix the failing tests')
 
-  // An entry written in another project is opened here: one Ctrl+Enter must not send it unread.
+  // Opening an entry written elsewhere and enhancing it here does not send it.
   reuse(entry('h7', 'deploy the billing service', 'Billing'))
   assert.equal(read(resultFor), null)
-  await enhanceOrSend()
+  await enhanceNow()
   assert.deepEqual(sent, [])
-  // An entry of this project is the person's own choice, in front of them: Ctrl+Enter sends it.
+  // An entry of this project is in front of the person: explicit Send uses it.
   reuse(entry('h8', 'add a coupon field', 'Shop'))
-  await enhanceOrSend()
+  await send(read(result))
   assert.deepEqual(sent, ['Better: add a coupon field'])
   assert.deepEqual(view.errors, [])
   await view.unmount()

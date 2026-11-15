@@ -3,7 +3,7 @@
 // into an agent, so what matters most here is every case in which it must not.
 import { read, set } from '#panel'
 import { assert, mockHost, mount, test, type MockHost } from '#testing'
-import { clearData, enhanceAndSend, enhanceOrSend, exportHistory, savePrompt, sendsAfterEnhance, setSendAfterEnhance } from './panel/actions.ts'
+import { clearData, enhanceAndSend, exportHistory, savePrompt, sendsAfterEnhance, setSendAfterEnhance } from './panel/actions.ts'
 import { draft, historyFilter, notice, put, result, sendAfterEnhance, target, type Target } from './panel/state.ts'
 import { closePanel, wirePanel } from './panel/setup.ts'
 import { mountPanel } from './panel/testing.ts'
@@ -58,12 +58,12 @@ async function panel(options: { settings?: Record<string, boolean>; fail?: boole
   return { view, host, sent, world }
 }
 
-test('the one-step send is off until it is turned on; on, Ctrl+Enter enhances and sends the run\'s answer to an idle agent', async () => {
+test('the one-step send is off until it is turned on; on, the explicit button enhances and sends the run\'s answer to an idle agent', async () => {
   const { view, sent, world } = await panel()
-  // Off (the default): Ctrl+Enter stops at the result, as it always did.
+  // Off (the default): even the explicit action stops at the result.
   assert.equal(read(sendAfterEnhance), false)
   assert.equal(sendsAfterEnhance(), false)
-  await enhanceOrSend()
+  await enhanceAndSend()
   assert.equal(world.runs, 1)
   assert.equal(read(result), 'Better: fix the login page')
   assert.deepEqual(sent, [])
@@ -76,7 +76,7 @@ test('the one-step send is off until it is turned on; on, Ctrl+Enter enhances an
   // On: one press enhances and sends, to the terminal that was picked, the text the run answered.
   setSendAfterEnhance(true)
   put(draft, 'fix the signup page')
-  await enhanceOrSend()
+  await enhanceAndSend()
   assert.equal(world.runs, 3)
   assert.deepEqual(sent, [{ terminalId: 't1', text: 'Better: fix the signup page' }])
   assert.equal(read(notice)?.tone, 'success')

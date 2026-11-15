@@ -55,6 +55,25 @@ test('excluded paths and unchecked files stay out of every model context route',
   }, true)
 })
 
+test('effort overrides only rewriting when an AI file selector is explicitly configured', async () => {
+  await fixture({ 'src/auth.ts': 'export function validateSession() { return true }' }, async ({ services, host }) => {
+    await services.storage.set('models', { profiles: [{ id: 'cp', name: 'Fixture', preset: 'copilot', provider: 'copilot', baseUrl: '', model: 'picker-model', enabled: true, maxTokens: 2000, command: '', args: '' }], selectorProfileId: 'cp' })
+    await services.settings.set('effortHighModel', 'cp|rewrite-model')
+    const calls: { model: string; picker: boolean }[] = []
+    const call = host.host.call
+    host.host.call = (async (name: string, input: { model: string; system: string }) => {
+      if (name === 'copilot.rewrite') {
+        const picker = input.system.startsWith('You pick source files')
+        calls.push({ model: input.model, picker })
+        return { text: picker ? '["src/auth.ts"]' : 'Enhanced fixture' }
+      }
+      return call(name as never, input as never)
+    }) as typeof host.host.call
+    await enhance(host, { prompt: 'Fix validateSession', effort: 'high', level: 'max' })
+    assert.deepEqual(calls, [{ model: 'picker-model', picker: true }, { model: 'rewrite-model', picker: false }])
+  })
+})
+
 test('automatic rule, README, extra, stack and Git metadata context masks secrets before trimming', async () => {
   await fixture({ 'AGENTS.md': `Rules ${token}`, 'README.md': `# Demo\n## Setup\nToken ${token}`, 'guide.txt': `Guide ${token}`, 'package.json': JSON.stringify({ scripts: { start: `echo ${'x'.repeat(100)} ${token}` } }) }, async ({ services, host, calls, git }) => {
     git('commit', '--allow-empty', '-qm', `message ${token}`)

@@ -1,7 +1,8 @@
 import { formatText } from '../format.ts'
 // view.ts: what the panel shows, as plain data (labels, options, progress text, the small decisions
 // about what to offer). The web panel (web/src) draws it; the tests check it.
-import { read, set } from '#panel'
+import { read } from '#panel'
+import { MODEL_SEP, PROFILE_DEFAULT, parseModelAssignment, type Effort } from '../effort.ts'
 import { CONTEXT_LEVEL_LABELS, CONTEXT_LEVELS, isContextLevel, type ContextItemView, type ProfileView } from '../presets.ts'
 import { isStyle, STYLE_LABELS, STYLES } from '../prompts.ts'
 import { BRAND } from '../brand.ts'
@@ -9,7 +10,7 @@ import type { HistoryEntry } from '../history.ts'
 import { allStructures, ruleApplies, scopeName, structureById, type Rule, type RulesConfig } from '../rules.ts'
 import { ESTIMATED_STEPS, stepPercent, type Step } from '../progress.ts'
 import type { PrivacyKey } from '../privacy.ts'
-import { type Catalog, type FeedbackAsk, type Run, type Target, catalogs, defaults, enabledProfiles, effectiveLevel, effectiveStyle, modelChoice, models, profileChoice, projectName, rulesState, structureChoice, say, workspaceName } from './state.ts'
+import { type Catalog, type FeedbackAsk, type Run, type Target, catalogs, defaults, enabledProfiles, effectiveLevel, effectiveStyle, effortModels, models, projectName, rulesState, structureChoice, say, workspaceName } from './state.ts'
 
 /**
  * The names of the panel's sections, on its header icons (the Enhance section shows the brand instead).
@@ -80,8 +81,6 @@ export function hookChoice(): string {
   return saved && hookModels().some((profile) => profile.id === saved) ? saved : 'chain'
 }
 
-export const MODEL_SEP = '|'
-export const PROFILE_DEFAULT = '__profile_default__'
 
 /** "sonnet: Sonnet, newest" -> "Sonnet, newest"; display names stay as they are. */
 export const modelDisplay = (label: string) => (label.includes(': ') ? label.slice(label.indexOf(': ') + 2) : label)
@@ -277,26 +276,26 @@ export function modelMenu() {
   return options
 }
 
-export function currentModelValue(): string {
-  const choice = read(profileChoice)
-  if (choice === 'auto') return 'auto'
-  const profile = read(enabledProfiles).find((entry) => entry.id === choice)
-  if (!profile) return 'auto'
-  const model = read(modelChoice) || profile.effectiveModel
-  return `${choice}${MODEL_SEP}${model || PROFILE_DEFAULT}`
+/** Keep an assignment visible even when its catalog is stale or its profile was removed. */
+export function effortModelOptions(effort: Effort) {
+  const options = modelMenu()
+  const value = read(effortModels)[effort]
+  if (!options.some(option => option.value === value)) {
+    const assignment = parseModelAssignment(value)
+    const profile = read(enabledProfiles).find(profile => profile.id === assignment?.profileId)
+    options.push({ value, label: profile
+      ? `${profile.name} · ${assignment?.model || 'Profile default'} (saved)`
+      : 'Unavailable assignment — choose a model' })
+  }
+  return options
 }
 
-export function pickModel(value: string): void {
-  if (value === 'auto') {
-    set(profileChoice, 'auto')
-    set(modelChoice, '')
-    return
-  }
-  const [profileId, model] = value.split(MODEL_SEP)
-  const profile = read(enabledProfiles).find((entry) => entry.id === profileId)
-  set(profileChoice, profileId)
-  // The profile's own model is stored as '' so a later change to the profile follows through.
-  set(modelChoice, model === PROFILE_DEFAULT || model === profile?.effectiveModel ? '' : model)
+export function effortModelLabel(effort: Effort): string {
+  const value = read(effortModels)[effort]
+  const option = effortModelOptions(effort).find(option => option.value === value)!
+  if (value !== 'auto') return option.label
+  const first = read(enabledProfiles)[0]
+  return first ? `${first.name} · ${first.effectiveModel || 'CLI default'} (${option.label})` : 'No model configured'
 }
 
 /** The switches in three groups, as the Settings section shows them: what is read, what is done, what is kept or fetched. */
@@ -421,7 +420,7 @@ export const SEND_AFTER_ROW: SwitchRow<'sendAfterEnhance'> = {
   key: 'sendAfterEnhance',
   group: 'acts',
   label: 'Send right after enhancing',
-  hint: 'Ctrl+Enter, or the button next to Enhance, enhances and sends a new Copilot message without review. Enter alone stops at the result. Off until you turn it on.',
+  hint: 'Adds an Enhance and send button that sends a new Copilot message without review. The Enhance button stops at the result. Off until you turn it on.',
   risk: 'Copilot acts on a prompt you have not read. A model can misunderstand your request or add an unwanted step.',
   when: 'On for small, low-risk requests, with an agent that asks before it does anything hard to undo. Leave it off when the agent runs with wide permissions, or when a wrong instruction would be costly.'
 }
@@ -435,7 +434,7 @@ export const switchRow = (key: string | null): SwitchRow | null => [...PRIVACY_R
  */
 export const DISCLOSURES: Partial<Record<PrivacyKey | 'sendAfterEnhance', string[]>> = {
   sendAfterEnhance: [
-    'Adds a second button next to Enhance. Ctrl+Enter enhances the prompt and sends the result as a new Copilot message. Enter alone only enhances.',
+    'Adds an Enhance and send button next to Enhance. Clicking it enhances the prompt and sends the result as a new Copilot message. Enhance stops at the result.',
     'Automatic sending requires the same attached session and project, an idle session, and unchanged input. Closing or cancelling the run prevents sending.',
     'Whenever one of these does not hold, nothing is sent: the result stays in the composer with a note that says why, and you send it yourself.',
     'It needs "Send to Copilot" to be on, and the checks of that switch still apply.'

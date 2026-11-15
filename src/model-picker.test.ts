@@ -1,10 +1,10 @@
-// The composer's model menu: every model of every enabled profile, like the menu in ChatGPT or Claude.
+// Effort assignments reuse every enabled profile and its live model list in Settings.
 import { assert, mockHost, mountWorker, test } from '#testing'
-import { enhanceNow, openForm, applyPreset, patchForm, formCatalogInput, saveForm } from './panel/actions.ts'
-import { draft, put, form } from './panel/state.ts'
-import { read } from '#panel'
+import { enhanceNow, setSetting, openSection, openForm, applyPreset, patchForm, formCatalogInput, saveForm } from './panel/actions.ts'
+import { draft, put, form, effort, effortModels, dataSummary, tab } from './panel/state.ts'
+import { read, set } from '#panel'
 import { mountPanel } from './panel/testing.ts'
-import { currentModelValue, modelMenu, pickModel } from './panel/view.ts'
+import { modelMenu, effortModelOptions, effortModelLabel } from './panel/view.ts'
 import { PRESETS, type ProfileView } from './presets.ts'
 import * as main from './worker.ts'
 
@@ -43,8 +43,22 @@ const claude: ProfileView = {
 }
 const codex: ProfileView = { ...claude, id: 'codex', name: 'Codex', preset: 'codex', model: '', effectiveModel: '' }
 
-test('lists each model of each profile and sends the one you pick', async () => {
-  const sent: { profileId?: string | null; model?: string }[] = []
+test('opening effort settings loads the Settings data on first navigation', async () => {
+  const summary = { history: 2, profiles: 1, keys: 0, catalogs: 1 }
+  const host = mockHost({ requests: { 'models.get': { profiles: [claude], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS }, 'data.summary': summary, 'hook.last': null } })
+  const panel = await mountPanel(host)
+  try {
+    assert.equal(read(dataSummary), null)
+    openSection('privacy')
+    await panel.settled()
+    assert.equal(read(tab), 'privacy')
+    assert.deepEqual(read(dataSummary), summary)
+    assert.ok(host.callsOf('plugin.request').some(call => call.name === 'hook.last'))
+  } finally { await panel.unmount() }
+})
+
+test('lists models for effort settings and sends the selected effort without stale model fields', async () => {
+  const sent: { effort?: string; profileId?: string | null; model?: string }[] = []
   const host = mockHost({
     requests: {
       'models.get': { profiles: [claude, codex], hookProfileId: null, selectorProfileId: null, fromEnv: false, presets: PRESETS },
@@ -82,32 +96,29 @@ test('lists each model of each profile and sends the one you pick', async () => 
       'Codex · GPT-6.1-Sol'
     ]
   )
-  // Nothing picked yet: Auto, and no profile or model is named in the request.
-  assert.equal(currentModelValue(), 'auto')
-
-  pickModel('claude|claude-opus-5-5')
-  assert.equal(currentModelValue(), 'claude|claude-opus-5-5')
+  await setSetting('effortLowModel', 'claude|claude-opus-5-5')
+  await setSetting('effortMediumModel', 'claude|haiku')
+  await setSetting('effortHighModel', 'codex|__profile_default__')
+  assert.equal(read(effortModels).low, 'claude|claude-opus-5-5')
+  assert.match(effortModelLabel('low'), /Opus 5.5/)
   put(draft, 'fix it')
+  for (const tier of ['low', 'medium', 'high']) {
+    set(effort, tier)
+    await enhanceNow()
+    assert.equal(sent.at(-1)?.effort, tier)
+    assert.equal(sent.at(-1)?.model, undefined)
+    assert.equal(sent.at(-1)?.profileId, undefined)
+  }
+  // Corrupt old panel state normalizes to Medium; assignments stay in Settings.
+  set(effort, 'not-a-tier')
   await enhanceNow()
-  assert.equal(sent.at(-1)?.model, 'claude-opus-5-5')
-
-  pickModel('claude|opus')
-  await enhanceNow()
-  assert.equal(sent.at(-1)?.profileId, 'claude')
-  assert.equal(sent.at(-1)?.model, 'opus')
-
-  // The profile's own model is sent as no override, so editing the profile later still applies.
-  pickModel('claude|haiku')
-  assert.equal(currentModelValue(), 'claude|haiku')
-  await enhanceNow()
-  assert.equal(sent.at(-1)?.profileId, 'claude')
-  assert.equal(sent.at(-1)?.model, undefined)
-
-  // Back to Auto: the chain decides, no profile is forced.
-  pickModel('auto')
-  await enhanceNow()
-  assert.equal(sent.at(-1)?.profileId, null)
-  assert.equal(sent.at(-1)?.model, undefined)
+  assert.equal(sent.at(-1)?.effort, 'medium')
+  await setSetting('effortLowModel', 'deleted|model')
+  assert.equal(effortModelOptions('low').at(-1)?.value, 'deleted|model')
+  assert.match(effortModelLabel('low'), /Unavailable assignment/)
+  // A pinned model missing from a refreshed catalog remains visibly selected.
+  await setSetting('effortMediumModel', 'claude|older-model')
+  assert.match(effortModelLabel('medium'), /older-model.*saved/)
   assert.deepEqual(view.errors, [])
   await view.unmount()
 })

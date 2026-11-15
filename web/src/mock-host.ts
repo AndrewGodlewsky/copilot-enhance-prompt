@@ -7,6 +7,7 @@
 import { bindPanel, type PanelClient } from '../../src/runtime.ts'
 import { english, msg, raw, type Message } from '../../src/messages.ts'
 import { DEFAULTS } from '../../src/defaults.ts'
+import { EFFORT_SETTINGS, isEffort, parseModelAssignment } from '../../src/effort.ts'
 import { UNSUPPORTED_SETTINGS } from '../../src/capabilities.ts'
 import { createDiagnostics } from '../../src/diagnostics.ts'
 
@@ -142,8 +143,13 @@ async function enhance(input: Record<string, unknown>, signal?: AbortSignal) {
   const runId = String(input.runId)
   const startedAt = Date.now()
   const keys = ['workspace', 'project', 'git', 'search', 'model'] as const
-  const first = { profileId: 'claude', name: 'Claude Code', model: 'sonnet' }
-  const answered = fallbackDemo ? { profileId: 'gpt', name: 'OpenAI', model: 'gpt-5-mini' } : first
+  const tier = isEffort(input.effort) ? input.effort : 'medium'
+  const assignment = parseModelAssignment(settingsValues[EFFORT_SETTINGS[tier]])
+  const selected = assignment?.profileId ? models.profiles.find(profile => profile.id === assignment.profileId && profile.enabled) : models.profiles.find(profile => profile.enabled)
+  if (!assignment || !selected) throw new Error('Choose an enabled effort model in Settings.')
+  const first = { profileId: selected.id, name: selected.name, model: assignment.model || selected.model }
+  const backup = models.profiles.find(profile => profile.enabled && profile.id !== selected.id)
+  const answered = fallbackDemo && backup ? { profileId: backup.id, name: backup.name, model: backup.model } : first
   // What each step says once it is done, as the worker reports it: a name, or a count the panel words.
   const done: Record<(typeof keys)[number], string> = { workspace: `${PROJECT}: ${CHECKOUT}`, project: '214', git: '3', search: '2', model: `${answered.name} · ${answered.model}` }
   const steps: { key: string; status: string; detail?: string; startedAt?: number; fraction?: number }[] = keys.map((key) => ({ key, status: 'pending' }))

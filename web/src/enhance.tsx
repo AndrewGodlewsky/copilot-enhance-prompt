@@ -1,13 +1,13 @@
 import { formatText } from '../../src/format.ts'
-// The Enhance section of the web panel: the composer (paste, drop or attach files; Enter enhances),
+// The Enhance section of the web panel: the composer (paste, drop or attach files; Enhance starts a rewrite),
 // the run's progress, the context sent, and the enhanced prompt with Send.
-import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent } from 'react'
 import { read, set, settings, update } from '#panel'
+import { EFFORTS, EFFORT_LABELS } from '../../src/effort.ts'
 import { CONTEXT_LEVEL_HINTS, isContextLevel } from '../../src/presets.ts'
 import { contextKey } from '../../src/panel/context-preview.ts'
 import {
   CopyIcon,
-  CornerDownLeftIcon,
   DownloadIcon,
   FileTextIcon,
   PaperclipIcon,
@@ -32,6 +32,8 @@ import {
   contextError,
   draft,
   effectiveEnter,
+  effectiveEffort,
+  effort,
   effectiveLevel,
   effectiveStyle,
   excluded,
@@ -61,12 +63,12 @@ import {
   allowed,
   launchAgent,
   openFile,
+  openSection,
   cancel,
   closeFeedback,
   copy,
   enhanceAndSend,
   enhanceNow,
-  enhanceOrSend,
   pickWorkspace,
   previewContext,
   refreshTargets,
@@ -81,14 +83,11 @@ import {
 } from '../../src/panel/actions.ts'
 import {
   contextKind,
-  currentModelValue,
+  effortModelLabel,
   itemWhy,
   levelOptions,
-  modelMenu,
   modelWarning,
   targetLabel,
-  optionsSummary,
-  pickModel,
   runSeconds,
   seconds,
   STEP_GLYPH,
@@ -153,22 +152,7 @@ function Attachments() {
   )
 }
 
-/** The model menu: every model of every enabled profile, plus Auto. */
-function ModelPicker() {
-  const options = modelMenu()
-  const value = currentModelValue()
-  return (
-    <Pick
-      label={'Model'}
-      value={options.some((option) => option.value === value) ? value : 'auto'}
-      options={options}
-      onChange={pickModel}
-      className="bg-background"
-    />
-  )
-}
-
-/** The composer: text, attachments, then model · options · preview on the left and attach + Enter on the right. */
+/** The request composer and its explicit enhancement buttons. */
 function Composer({ refresh }: { refresh: () => void }) {
   const [dragging, setDragging] = useState(false)
   const picker = useRef<HTMLInputElement>(null)
@@ -176,16 +160,6 @@ function Composer({ refresh }: { refresh: () => void }) {
   const text = read(draft)
   const attachedCount = read(files).length + uploadingNames().length
 
-  const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Enter enhances (the button shows the Enter key); Shift+Enter is a new line. Ctrl+Enter (⌘ on
-    // a Mac) sends the result once it is there and still the one for this text, so a prompt goes
-    // from idea to terminal without the mouse, and never unread, unless the person turned on
-    // "Send right after enhancing": then Ctrl+Enter enhances and sends in one go.
-    if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
-      event.preventDefault()
-      void (event.ctrlKey || event.metaKey ? enhanceOrSend() : enhanceNow())
-    }
-  }
   const onPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
     const pasted = filesOf(event.clipboardData)
     if (pasted.length === 0) return
@@ -221,26 +195,36 @@ function Composer({ refresh }: { refresh: () => void }) {
         value={text}
         rows={3}
         onChange={(event) => put(draft, event.target.value)}
-        onKeyDown={onKeyDown}
         onPaste={onPaste}
         className="max-h-80 min-h-28 resize-y bg-background shadow-none dark:bg-background"
       />
-      <p id="composer-help" className="text-muted-foreground text-xs">{'Enter to enhance in English · Shift+Enter for a new line'}</p>
+      <p id="composer-help" className="text-muted-foreground text-xs">Click Enhance to rewrite in English. Enter adds a new line.</p>
       {dragging ? (
         <div className="border-primary text-primary pointer-events-none absolute inset-1 grid place-items-center rounded-lg border-2 border-dashed text-sm font-medium">
           {'Drop files to attach'}
         </div>
       ) : null}
-      <div className="flex items-end gap-2">
-        <Field label={'Model'} className="flex-1">
-          <ModelPicker />
+      <div className="grid grid-cols-1 gap-3 min-[440px]:grid-cols-3">
+        <Field label="Context Level">
+          <Pick label="Context Level" value={read(effectiveLevel)} options={levelOptions(read(effectiveLevel))} onChange={(value) => set(level, value)} />
         </Field>
+        <Field label="Style">
+          <Pick label="Style" value={read(effectiveStyle)} options={styleOptions()} onChange={(value) => set(style, value)} />
+        </Field>
+        <Field label="Effort">
+          <Pick label="Effort" value={read(effectiveEffort)} options={EFFORTS.map(value => ({ value, label: EFFORT_LABELS[value] }))} onChange={(value) => set(effort, value)} />
+        </Field>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-muted-foreground min-w-0 flex-1 break-words text-xs">Model: {effortModelLabel(read(effectiveEffort))}</p>
+        <Button size="sm" variant="ghost" onClick={() => openSection('privacy')}>Effort settings</Button>
         <Button size="sm" variant="outline" aria-expanded={read(optionsOpen)} aria-controls={read(optionsOpen) ? 'prompt-options' : undefined} onClick={() => update(optionsOpen, (open) => !open)}>
           <SlidersHorizontalIcon />
           {'Options'}
         </Button>
       </div>
-      <p className="text-muted-foreground text-xs">{optionsSummary()}</p>
+      <p className="text-muted-foreground text-xs">{CONTEXT_LEVEL_HINTS[isContextLevel(read(effectiveLevel)) ? read(effectiveLevel) as keyof typeof CONTEXT_LEVEL_HINTS : 'standard']}</p>
+      {read(effectiveStyle) === 'custom' ? <CustomInstructions /> : null}
       <PromptOptions />
       <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
           <input
@@ -267,14 +251,13 @@ function Composer({ refresh }: { refresh: () => void }) {
             <>
               {/* "Send right after enhancing" is on: the one-step button sits next to Enhance, which still stops at the result. */}
               {sendsAfterEnhance() ? (
-                <Button size="sm" title={'Enhance and send without reading (Ctrl+Enter)'} variant="outline" onClick={() => void enhanceAndSend()} disabled={!text.trim() || working !== null || !read(target)}>
+                <Button size="sm" title={'Enhance and send without reviewing'} variant="outline" onClick={() => void enhanceAndSend()} disabled={!text.trim() || working !== null || !read(target)}>
                   <SendIcon />
                   {'Enhance and send'}
                 </Button>
               ) : null}
               <Button size="sm" onClick={() => void enhanceNow()} disabled={!text.trim() || working !== null}>
                 {'Enhance'}
-                <kbd aria-hidden="true"><CornerDownLeftIcon className="size-3" /></kbd>
               </Button>
             </>
           )}
@@ -310,24 +293,14 @@ function CustomInstructions() {
   )
 }
 
-/** Style, context and structure, under the composer when opened, and the context sent. */
+/** Structure and context preview, under the composer when opened. */
 function PromptOptions() {
   if (!read(optionsOpen)) return null
   return (
     <div id="prompt-options" className="bg-muted/50 flex flex-col gap-3 rounded-lg border p-3">
-      <div className="grid grid-cols-1 gap-3 min-[380px]:grid-cols-2">
-        <Field label={'Style'}>
-          <Pick label={'Style'} value={read(effectiveStyle)} options={styleOptions()} onChange={(value) => set(style, value)} />
-        </Field>
-        <Field label={'Context'}>
-          <Pick label={'Context'} value={read(effectiveLevel)} options={levelOptions(read(effectiveLevel))} onChange={(value) => set(level, value)} />
-        </Field>
-        <Field label={'Structure'}>
-          <Pick label={'Structure'} value={structureValue()} options={structureOptions()} onChange={(value) => set(structureChoice, value === 'style' ? '' : value)} />
-        </Field>
-      </div>
-      {read(effectiveStyle) === 'custom' ? <CustomInstructions /> : null}
-      <p className="text-muted-foreground text-xs">{CONTEXT_LEVEL_HINTS[isContextLevel(read(effectiveLevel)) ? read(effectiveLevel) as keyof typeof CONTEXT_LEVEL_HINTS : 'standard']}</p>
+      <Field label={'Structure'}>
+        <Pick label={'Structure'} value={structureValue()} options={structureOptions()} onChange={(value) => set(structureChoice, value === 'style' ? '' : value)} />
+      </Field>
       <div>
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-medium">{'Context to include'}</h3>

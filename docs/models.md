@@ -1,6 +1,6 @@
 # Models
 
-Enhance Prompt runs on models you choose: the subscription CLIs already signed in on your machine, any API key, or a local server. Manage them in the panel's **Models** tab.
+Enhance Prompt runs on models you choose: GitHub Copilot, the subscription CLIs already signed in on your machine, API providers, or a local server. Manage them in the panel's **Models** tab and assign them to Low, Medium, and High in **Settings → Effort models**.
 
 ## Subscription CLIs
 
@@ -71,7 +71,7 @@ Models are tried from top to bottom. The **#** menu on each card sets its positi
 - Models without a key are skipped.
 - After an enhance, the panel shows which model answered and which ones failed first, for example *Fell back after: OpenAI (429: rate limit)*.
 
-The **Model** menu on the Enhance tab can pick one model for a single prompt. With fallback on, the rest of the chain still backs it up.
+The **Effort** menu on Enhance selects the Low, Medium, or High assignment from Settings. With fallback on, the rest of the chain still backs up the assigned model within the same Copilot or external-provider route. The result identifies the model actually used. [Effort settings](settings.md#effort-models).
 
 ## Models for special jobs
 

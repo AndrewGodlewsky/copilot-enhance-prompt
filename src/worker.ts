@@ -9,6 +9,7 @@ import { copyToClipboard } from './clipboard.ts'
 import { forgetActivity, recordSave, recordStatus, recordTool } from './context/activity.ts'
 import { isSensitive } from './context/files.ts'
 import { formatText } from './format.ts'
+import { EFFORT_LABELS, EFFORT_SETTINGS, isEffort, parseModelAssignment } from './effort.ts'
 import { atLeast, cachedStatic, contextItem, findFocusedWorkspace, focusedCandidates, focusedProject, gatherContext, isLocalWorkspace, projectNameOf, staticParts, workspaceOfTerminal, type ContextItem, type Workspace } from './context/index.ts'
 import { forgetTerminals, learnTerminal, loadTerminals } from './context/terminals.ts'
 import { workspaceTitle } from './workspaces.ts'
@@ -271,6 +272,7 @@ export async function enhance(
     level?: string
     profileId?: string | null
     model?: string
+    effort?: string
     exclude?: string[]
     structureId?: string
     /** Attached files of any kind (the panel's paste, drop and picker), by the path attachments.put answered. */
@@ -289,14 +291,24 @@ export async function enhance(
   if (!prompt) throw hostError(msg('error.no_prompt'), 'invalid_params')
   const settings = await readSettings(host)
   const config = await loadModels(host)
-  const chosenModel = input.model?.trim().slice(0, 200)
-  const list = candidates(config.profiles, input.profileId ?? null, settings.fallbackEnabled).map((profile) =>
-    chosenModel && profile.id === input.profileId ? { ...profile, model: chosenModel } : profile
+  let profileId = input.profileId ?? null
+  let chosenModel = input.model?.trim().slice(0, 200)
+  if (input.effort !== undefined) {
+    if (!isEffort(input.effort)) throw hostError(msg('error.effort'), 'invalid_params')
+    const assignment = parseModelAssignment(await host.settings.get(EFFORT_SETTINGS[input.effort]) ?? 'auto')
+    if (!assignment || (assignment.profileId && !config.profiles.some(profile => profile.id === assignment.profileId && profile.enabled))) {
+      throw hostError(msg('error.effort_model', { effort: EFFORT_LABELS[input.effort] }), 'invalid_params')
+    }
+    profileId = assignment.profileId
+    chosenModel = assignment.model
+  }
+  const list = candidates(config.profiles, profileId, settings.fallbackEnabled).map((profile) =>
+    chosenModel && profile.id === profileId ? { ...profile, model: chosenModel } : profile
   )
   if (list.length === 0) throw hostError(msg('error.no_model'), 'invalid_params')
   // File selection is part of the same data/billing route as rewriting.
   const pickerProfiles = config.profiles.filter(profile => (profile.provider === 'copilot') === (list[0]?.provider === 'copilot'))
-  const pickerConfig = { ...config, profiles: pickerProfiles.map(profile => list.find(candidate => candidate.id === profile.id) ?? profile),
+  const pickerConfig = { ...config, profiles: pickerProfiles.map(profile => profile.id === config.selectorProfileId ? profile : list.find(candidate => candidate.id === profile.id) ?? profile),
     selectorProfileId: pickerProfiles.some(profile => profile.id === config.selectorProfileId) ? config.selectorProfileId : list[0]?.id ?? null }
   const style: Style = isStyle(input.style) ? input.style : settings.defaultStyle
   const requested: ContextLevel = isContextLevel(input.level) ? input.level : settings.contextLevel
@@ -1054,6 +1066,7 @@ function registerDataHandlers(host: EnhanceWorker): void {
       const config = await loadModels(host)
       for (const profile of config.profiles) await host.secrets.delete(secretName(profile.id)).catch(() => undefined)
       await host.storage.delete(MODELS_KEY)
+      for (const key of Object.values(EFFORT_SETTINGS)) await host.settings.set(key, 'auto')
       await host.storage.delete(RULES_KEY)
       // Confirmations go too: a switch that needs one asks again; what the host reported is forgotten.
       await host.storage.delete(CONSENTS_KEY)

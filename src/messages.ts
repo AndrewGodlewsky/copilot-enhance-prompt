@@ -37,6 +37,8 @@ export const MESSAGES = {
 
   // Errors and results.
   'error.no_prompt': 'Write a prompt first.',
+  'error.effort': 'Choose Low, Medium, or High effort.',
+  'error.effort_model': 'The model assigned to {effort} effort is unavailable. Choose an enabled model in Settings → Effort models.',
   'error.attachment_bad': 'That attachment could not be received; try attaching it again.',
   'error.attachment_missing': 'The attached file {name} is no longer there (attachments are kept for a day). Attach it again.',
   'error.file_too_large': '{name} is {size}; an attachment can be at most {max}.',

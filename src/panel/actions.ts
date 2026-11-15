@@ -1,3 +1,4 @@
+import { EFFORT_SETTINGS } from '../effort.ts'
 import { formatText } from '../format.ts'
 // actions.ts: what the panel does (what its buttons call): requests to the worker, and the changes
 // to the state (state.ts) that follow. No UI here; the web panel (web/src) and the tests call these.
@@ -13,7 +14,7 @@ import { NEEDS_CONSENT, parseOtherAgentsLimits, parsePrivacy } from '../privacy.
 import { stepPercent, totalPercent, type Step } from '../progress.ts'
 import { PANEL_REQUEST_LIMIT_MS, type ProfileInput } from '../protocol.ts'
 import { pathInWorkspaceId, pathKey } from '../workspaces.ts'
-import { consents, feedbackAsk, feedbackOff, feedbackShown, files, ruleDraft, ruleScope, structureDraft, type Form, terminalWorkspaces, workspaceChoices, tick, workspaceKey, projectName, parked, MAX_PARKED, type Slot, rulesState, structureChoice, workspaceName, tab, draft, result, style, profileChoice, modelChoice, excluded, target, historyRaw, confirmClearHistory, form, detected, catalogs, catalogLoading, customModel, type Run, run, dataSummary, privacy, confirmWipe, busy, notice, lastRun, contextShown, contextNotes, KEPT, mayKeep, put, forgetSaved, targets, models, defaults, effectiveStyle, effectiveLevel, effectiveEnter, say, message, errorMessage, historyOpen, hookLast, resultFor, sendAfterEnhance, filteredHistory, type NoticeAction } from './state.ts'
+import { consents, feedbackAsk, feedbackOff, feedbackShown, files, ruleDraft, ruleScope, structureDraft, type Form, terminalWorkspaces, workspaceChoices, tick, workspaceKey, projectName, parked, MAX_PARKED, type Slot, rulesState, structureChoice, workspaceName, tab, draft, result, style, effectiveEffort, effortModels, excluded, target, historyRaw, confirmClearHistory, form, detected, catalogs, catalogLoading, customModel, type Run, run, dataSummary, privacy, confirmWipe, busy, notice, lastRun, contextShown, contextNotes, KEPT, mayKeep, put, forgetSaved, targets, models, defaults, effectiveStyle, effectiveLevel, effectiveEnter, say, message, errorMessage, historyOpen, hookLast, resultFor, sendAfterEnhance, filteredHistory, type NoticeAction } from './state.ts'
 import { contextPreferences } from './state.ts'
 import { cancelContextPreview, contextKey, knownWorkspaceId, showContext } from './context-preview.ts'
 export { knownWorkspaceId, showContext, previewContext } from './context-preview.ts'
@@ -103,7 +104,7 @@ function switchWorkspace(key: string, name: string | null, sameTerminals = false
   put(files, incoming?.files ?? [])
   if (incoming) park(key, { ...incoming, draft: '', result: '', contextShown: [], files: [] })
   // Which request the result on screen was made from is known for the composer that was just
-  // put away, not for this one: Ctrl+Enter enhances here until a run says otherwise.
+  // put away, not for this one: its freshness must be established by a new run.
   set(resultFor, null)
   beforeReuse = null
   put(workspaceKey, key)
@@ -152,6 +153,14 @@ export function workspaceRemoved(workspaceId: string, path?: string): void {
 
 // ---------------------------------------------------------------- data
 
+export function openSection(value: string): void {
+  set(tab, value)
+  if (value === 'privacy') {
+    void refreshDataSummary()
+    void refreshHookLast()
+  }
+}
+
 export async function refreshDefaults(): Promise<void> {
   const all = await settings.get().catch(() => ({}) as Record<string, JsonValue>)
   set(defaults, {
@@ -164,6 +173,7 @@ export async function refreshDefaults(): Promise<void> {
     notifyWhenDone: all.notifyWhenDone === true,
     otherAgents: parseOtherAgentsLimits(all)
   })
+  set(effortModels, { low: String(all[EFFORT_SETTINGS.low] ?? 'auto') || '__invalid__', medium: String(all[EFFORT_SETTINGS.medium] ?? 'auto') || '__invalid__', high: String(all[EFFORT_SETTINGS.high] ?? 'auto') || '__invalid__' })
   set(contextPreferences, JSON.stringify([all.extraContextFiles, all.excludePatterns, all.terminalLines, parsePrivacy(all), parseOtherAgentsLimits(all)]))
   set(privacy, parsePrivacy(all))
   // Saving history is off: nothing typed or produced stays on disk after the panel closes.
@@ -269,7 +279,6 @@ async function runEnhance(): Promise<Enhanced | null> {
   set(notice, null)
   set(feedbackShown, false)
   try {
-    const choice = read(profileChoice)
     const input = {
       prompt,
       runId,
@@ -281,8 +290,7 @@ async function runEnhance(): Promise<Enhanced | null> {
       ...knownWorkspaceId(),
       level: read(effectiveLevel),
       terminalId: read(target),
-      profileId: choice === 'auto' ? null : choice,
-      ...(choice !== 'auto' && read(modelChoice) ? { model: read(modelChoice) } : {}),
+      effort: read(effectiveEffort),
       // Leave the key out (not undefined): request inputs must be plain JSON.
       exclude: read(excluded)
     }
@@ -293,7 +301,7 @@ async function runEnhance(): Promise<Enhanced | null> {
     const ran = { model: answer.model, profileName: answer.profileName, ms: answer.ms, attempts: answer.attempts }
     if (origin.key === read(workspaceKey)) {
       put(result, answer.enhanced)
-      // While the composer still holds this request, Ctrl+Enter sends the result (enhanceOrSend).
+      // Remember which request produced the result for the banner state.
       set(resultFor, prompt)
       put(lastRun, ran)
       showContext(answer.context, answer.notes, contextAtStart)
@@ -435,18 +443,6 @@ async function typeInto(terminalId: string, text: string, force: boolean): Promi
       set(notice, { tone: 'warning', text: message(error), action: { label: 'Type it without Enter', run: { kind: 'send.anyway', terminalId, text } } })
     } else set(notice, { tone: 'danger', text: message(error) })
   }
-}
-
-/**
- * Ctrl+Enter in the composer: sends the result while it is the one made from what the composer
- * still holds (the person has it in front of them), and enhances otherwise. With "Send right after
- * enhancing" on, the enhance goes on to the send by itself (enhanceAndSend).
- */
-export async function enhanceOrSend(): Promise<void> {
-  const output = read(result)
-  const current = output.trim() !== '' && read(resultFor) !== null && read(resultFor) === read(draft).trim()
-  if (current && read(target) && read(busy) === null) return send(output)
-  return enhanceAndSend()
 }
 
 /** Whether a one-step send is on: its own switch, and "Send to the host", which it needs. */
@@ -611,7 +607,7 @@ export function reuse(entry: HistoryEntry): void {
   if (isStyle(entry.style)) set(style, entry.style)
   set(tab, 'enhance')
   // Written in another project, or (where the host cannot tell which project is open) in one that may
-  // be another: it says where it is from, and Ctrl+Enter does not send it before it was read.
+  // be another: it says where it is from, and is not marked fresh for this project.
   const here = read(projectName)
   const elsewhere = entry.project && entry.project !== here ? entry.project : null
   set(resultFor, elsewhere ? null : entry.original.trim())

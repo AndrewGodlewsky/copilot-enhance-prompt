@@ -47,6 +47,8 @@ export interface PluginRequests {
         style?: string
         terminalId?: string | null
         level?: string
+        /** Settings choose the rewriting model for this effort; direct model fields are ignored. */
+        effort?: string
         profileId?: string | null
         /** A model of that profile for this prompt only (from its live list). */
         model?: string

@@ -19,7 +19,7 @@ import {
 export const secretName = (profileId: string) => `apiKey.${profileId}`
 
 /** Profiles synthesized from environment keys when the person has not added any. */
-function envProfiles(): ModelProfile[] {
+export function envProfiles(): ModelProfile[] {
   const out: ModelProfile[] = []
   for (const preset of PRESETS) {
     if (preset.env && process.env[preset.env]) {

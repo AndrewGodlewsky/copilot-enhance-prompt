@@ -91,11 +91,13 @@ Choose **Relevant code** for most coding tasks: it adds local source matches wit
 The Quiet Desk banner changes its still scene with local time and the current enhancement state. Use the single button at its top right to toggle light/dark mode; your choice is remembered across sessions. The footer links to this repository, Settings, Show Logs and Feedback, with the version in plain gray text. Release notes appear once after an update. See the [user guide](docs/user-guide.md) for the scene's triggers and support logs.
 
 1. In **Models**, click **Add a model**, keep the **GitHub Copilot** preset, choose a model from the live list, and save. Existing profiles are preserved; select the new Copilot profile explicitly in Enhance if another profile was already first. Claude models in this preset use GitHub Copilot, not Claude Code. The separate Claude Code preset still uses Claude Code's authentication and billing.
-2. In **Enhance → Write a request**, describe the task and choose a model. **Options** opens style, context and structure settings. Preview the context and uncheck items to exclude them; use **Attach files** for explicit attachments.
+2. In **Enhance → Write a request**, describe the task and choose **Context Level**, **Style**, and **Effort**. Assign Low, Medium, and High to models in **Settings → Effort models**; all three initially use your current model. **Options** opens structures and the context preview. Uncheck items to exclude them; use **Attach files** for explicit attachments.
 3. Click **Enhance**. Progress reports the context and model steps; Cancel stops the run.
 4. In **Review and send**, edit the enhanced prompt. **Send to Copilot** submits a new message to the attached session shown in **Send to**. **Copy** keeps the handoff manual. The download icon saves a file; the up-arrow uses the result as a new input for refinement.
 
-In the request box, **Enter** enhances and **Shift+Enter** adds a line. **Ctrl+Enter** (or **⌘+Enter**) sends a current result, or enhances first when one is not ready. In the result box it sends your edited text. If you explicitly enable **Send right after enhancing**, the request-box shortcut and separate **Enhance and send** button can skip review; **Enhance** still stops at the result. Navigation has visible labels, controls have keyboard focus indicators, and segmented choices support arrow keys.
+In the request box, **Enter** adds a line. Enter and modified Enter keys never start enhancement or send a prompt: use **Enhance**. In the result box, **Ctrl+Enter** (or **⌘+Enter**) sends your edited text. If you explicitly enable **Send right after enhancing**, the separate **Enhance and send** button can skip review; **Enhance** still stops at the result. Navigation has visible labels, controls have keyboard focus indicators, and segmented choices support arrow keys.
+
+**Effort** chooses the rewriting model, independently of context and style. It does not change a model's internal reasoning setting or the separate chat auto-enhance model. The assigned model appears beneath the controls, and results identify the model actually used, including fallback. [Effort assignments and migration](docs/settings.md#effort-models).
 
 Send refuses busy, blocked, queued, disconnected or unknown sessions. It never answers a pending permission request. Copilot's SDK has no atomic “send only if still idle” operation: the plugin checks immediately before sending and uses the normal queue, never immediate steering. If work starts between those operations, the message waits in the queue.
 
@@ -152,7 +154,7 @@ npm run check
 npm run web:dev
 ```
 
-The development panel runs at `http://localhost:5174` with sample data, without model calls or real sends. Use `?lang=vi&theme=dark&width=380`, `?tab=models`, or `?demo=fix+the+login+page` to preview states.
+The development panel runs at `http://localhost:5174` with sample data, without model calls or real sends. Use `?theme=dark&width=380`, `?tab=models`, or `?demo=fix+the+login+page` to preview states.
 
 `scripts/e2e.mjs` loads the built package in an isolated installed Copilot runtime and exercises canvas discovery, project metadata, context preview, enhancement, sending and the packaged prompt hook. Its disposable session uses a local model fixture; no external model is called. Set `COPILOT_SDK_DIR` and `COPILOT_CLI_PATH` to the desktop SDK directory and runtime executable. See [AGENTS.md](AGENTS.md) for the architecture and behavioral invariants.
 

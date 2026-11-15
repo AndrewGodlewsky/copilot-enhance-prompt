@@ -1,5 +1,13 @@
 # Changes
 
+## [0.4.0] - 2026-11-14
+
+### Changed
+- Replace the composer's Model picker with Context Level, Style, and Effort. Keep structures and context preview in Options.
+- Assign Low, Medium, and High to rewriting models in Settings. Start all three with the current model and show the assignment beside an Effort settings link. Effort is independent of context and provider reasoning settings.
+- Preserve saved profiles, credentials and user data. Initialize assignments once across sessions and report deleted or disabled assignments clearly. Existing fallback and billing-route safeguards remain in effect.
+- Make request-box Enter keys ordinary editing keys. Start enhancement with Enhance or the explicitly enabled Enhance and send button. Keep Ctrl/Cmd+Enter sending in the result editor.
+
 ## [0.3.2] - 2026-11-14
 
 ### Changed

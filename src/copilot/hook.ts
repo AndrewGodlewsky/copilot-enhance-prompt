@@ -32,7 +32,7 @@ export async function runPromptHook(input: Record<string, unknown>, directory?: 
     },
     send: async () => { throw new Error('A prompt hook cannot send a message.') }
   }
-  const services = createServices(session, directory)
+  const services = createServices(session, directory, undefined, { promptHook: true })
   const bypass = await services.storage.transaction!(async () => {
     const key = sentKey(sessionId, prompt)
     const until = await services.storage.get(key)

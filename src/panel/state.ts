@@ -1,6 +1,7 @@
 // state.ts: what the panel knows (its atoms), with no UI in it. The web panel (web/src) draws it and
 // the tests read it; actions.ts changes it, view.ts turns it into labels and options, setup.ts wires
 // the host's events to it.
+import { isEffort, type Effort } from '../effort.ts'
 import { atom, derived, read, set, type Atom, type JsonValue } from '#panel'
 import { HISTORY_KEY, parseHistory } from '../history.ts'
 import type { RulesConfig } from '../rules.ts'
@@ -33,9 +34,9 @@ export const draft = atom('')
 export const result = atom('')
 export const style = atom<string | null>('style', null, { persist: 'plugin' })
 export const level = atom<string | null>('level', null, { persist: 'plugin' })
-export const profileChoice = atom('profileChoice', 'auto', { persist: 'plugin' })
-/** The model picked for that profile in the composer; '' = the profile's own model. */
-export const modelChoice = atom('modelChoice', '', { persist: 'plugin' })
+export const effort = atom<string>('effort', 'medium', { persist: 'plugin' })
+export const effectiveEffort = derived(() => isEffort(read(effort)) ? read(effort) as Effort : 'medium')
+export const effortModels = atom<Record<Effort, string>>({ low: 'auto', medium: 'auto', high: 'auto' })
 export const excluded = atom<string[]>('excluded', [])
 export const target = atom<string | null>('target', null)
 export const pressEnter = atom<boolean | null>('pressEnter', null)
@@ -107,7 +108,7 @@ export const privacy = atom<Record<string, boolean>>({})
 export const confirmWipe = atom(false)
 /** The Privacy switches the person confirmed in the panel (the worker keeps them); see NEEDS_CONSENT. */
 export const consents = atom<string[]>([])
-/** The composer's options (style, context, Enter) are shown. */
+/** The composer's structure and context preview are shown. */
 export const optionsOpen = atom('optionsOpen', false, { persist: 'plugin' })
 
 export const busy = atom<'enhance' | 'preview' | 'send' | 'test' | 'save' | null>(null)
@@ -202,14 +203,9 @@ export function restoreSaved(): void {
   for (const [now, saved] of KEPT) set(now, read(saved))
 }
 export const targets = atom<Target[]>([])
-/** The draft the shown result was made from: while the composer still holds it, Ctrl+Enter sends the result. */
+/** The draft the shown result was made from, for freshness and banner state. */
 export const resultFor = atom<string | null>(null)
-/**
- * "Send right after enhancing": Ctrl+Enter (or the button next to Enhance) enhances and types the
- * result into the agent with no read in between (actions.ts: enhanceAndSend). Off until the person
- * has read what it does and turned it on in Settings. A preference of the panel, not a setting in
- * the manifest: the host counts a new setting as more access and asks every user to approve again.
- */
+/** The explicit Enhance and send button is off until confirmed in Settings. */
 export const sendAfterEnhance = atom('sendAfterEnhance', false, { persist: 'plugin' })
 /** What auto-enhance did with the last prompt it saw (the worker keeps it in memory), for the Settings section. */
 export const hookLast = atom<HookRecord | null>(null)
