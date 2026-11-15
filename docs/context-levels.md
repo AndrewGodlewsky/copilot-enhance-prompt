@@ -3,6 +3,10 @@
 Context comes from the working directory of the Copilot session that opened the canvas.
 Choose it per prompt, or set a default in Settings. Existing defaults are preserved.
 
+For a worked example, source-by-source explanations and privacy simulations, open the
+[interactive HTML guide](context-levels-guide.html). Download the file and open it in a
+browser; it is self-contained, works offline and does not read your files.
+
 | Choice | Best use | Automatically gathered context | Approximate character budget |
 | --- | --- | --- | --- |
 | Off | General requests or context you supply yourself | None; saved rewrite instructions and explicit attachments still apply | 0 |

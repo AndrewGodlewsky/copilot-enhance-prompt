@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>How Context Level works · Enhance Prompt</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--background, #fafaf8); color: var(--foreground, #202721); font: 16px/1.6 var(--font-sans, system-ui, sans-serif); }
+    main { max-width: 1080px; margin: auto; padding: 32px 24px 48px; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { max-width: 760px; font-size: clamp(29px, 5vw, 43px); line-height: 1.15; letter-spacing: -.025em; margin-bottom: 16px; }
+    h2 { font-size: 24px; line-height: 1.3; margin-bottom: 12px; }
+    h3 { font-size: 18px; margin-bottom: 8px; }
+    p { margin-bottom: 14px; }
+    a { color: var(--foreground, #202721); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { text-decoration-thickness: 2px; }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible { outline: 3px solid var(--ring, #287747); outline-offset: 4px; }
+    .muted, small { color: var(--muted-foreground, #58625b); }
+    .eyebrow { font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; }
+    .brand-mark { width: 30px; height: 30px; flex: 0 0 30px; }
+    .lead { max-width: 790px; font-size: 18px; }
+    .jump { display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 22px 0 30px; font-size: 14px; }
+    .card { background: var(--card, #fff); color: var(--card-foreground, #202721); border: 1px solid var(--border, #d8ddd7); border-radius: 10px; padding: 22px; }
+    .section { margin-top: 38px; scroll-margin-top: 16px; }
+    .flow { padding: 0; margin: 22px 0 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; list-style: none; }
+    .flow li { padding: 14px; border: 1px solid var(--border, #d8ddd7); border-radius: 8px; background: var(--card, #fff); color: var(--card-foreground, #202721); }
+    .flow strong { display: block; font-size: 15px; }
+    .flow span { display: block; font-size: 13px; color: var(--muted-foreground, #58625b); margin-top: 6px; }
+    .flow .number { font: 700 12px var(--font-mono, monospace); margin: 0 0 8px; }
+    .choices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 20px 0 14px; }
+    .choices button { text-align: left; border: 1px solid var(--border, #d8ddd7); border-radius: 8px; background: var(--card, #fff); color: var(--card-foreground, #202721); padding: 13px; line-height: 1.35; }
+    .choices strong, .choices small { display: block; }
+    .choices small { margin-top: 6px; font-size: 12px; }
+    .choices button:hover { background: var(--accent, #eaf0e8); color: var(--accent-foreground, #18271a); }
+    .choices button[aria-pressed="true"] { border: 2px solid #388052; padding: 12px; box-shadow: inset 0 -3px #388052; }
+    .level-heading { display: flex; justify-content: space-between; gap: 16px; align-items: start; }
+    .badge { display: inline-block; border: 1px solid var(--border, #d8ddd7); border-radius: 5px; padding: 2px 7px; font-size: 12px; white-space: nowrap; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 17px 0; margin: 8px 0 18px; border-top: 1px solid var(--border, #d8ddd7); border-bottom: 1px solid var(--border, #d8ddd7); }
+    .stats dt { font-size: 13px; color: var(--muted-foreground, #58625b); }
+    .stats dd { margin: 3px 0 0; font-weight: 700; font-size: 19px; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .steps { margin: 0; padding-left: 24px; }
+    .steps li { padding: 0 0 12px 5px; }
+    .steps li::marker { font-weight: 700; }
+    .steps strong { display: block; }
+    .steps span { color: var(--muted-foreground, #58625b); font-size: 14px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; padding: 0; list-style: none; margin: 0 0 16px; }
+    .chips li { border: 1px solid var(--border, #d8ddd7); border-radius: 5px; padding: 4px 8px; font-size: 13px; }
+    .note { border-left: 3px solid #388052; padding: 9px 0 9px 14px; margin: 16px 0; }
+    .note p:last-child { margin-bottom: 0; }
+    .demo { background: var(--muted, #f1f3ee); color: var(--foreground, #202721); border-radius: 8px; padding: 16px; }
+    .demo blockquote { margin: 8px 0 16px; font-size: 17px; }
+    .demo p:last-child { margin-bottom: 0; }
+    details { border-top: 1px solid var(--border, #d8ddd7); padding: 15px 0; }
+    details:last-child { border-bottom: 1px solid var(--border, #d8ddd7); }
+    summary { cursor: pointer; font-weight: 650; }
+    details > div { padding: 15px 0 0 20px; }
+    details p:last-child { margin-bottom: 0; }
+    .controls { display: flex; flex-wrap: wrap; gap: 14px 26px; margin: 0 0 12px; }
+    .controls label { display: flex; align-items: center; gap: 9px; }
+    input[type="checkbox"] { width: 18px; height: 18px; accent-color: #287747; }
+    .scroll-table { overflow-x: auto; border: 1px solid var(--border, #d8ddd7); border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    caption { text-align: left; padding: 12px; color: var(--muted-foreground, #58625b); }
+    th, td { text-align: left; vertical-align: top; padding: 12px; border-bottom: 1px solid var(--border, #d8ddd7); min-width: 112px; }
+    th { font-weight: 650; background: var(--muted, #f1f3ee); color: var(--foreground, #202721); }
+    tbody th { min-width: 175px; }
+    tr:last-child th, tr:last-child td { border-bottom: 0; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--muted, #f1f3ee); color: var(--foreground, #202721); padding: 16px; border-radius: 7px; font: 13px/1.7 var(--font-mono, Consolas, monospace); }
+    code { overflow-wrap: anywhere; font-family: var(--font-mono, Consolas, monospace); font-size: .9em; }
+    li + li { margin-top: 5px; }
+    .source-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 26px; padding-left: 21px; font-size: 14px; }
+    .source-list li + li { margin-top: 0; }
+    footer { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border, #d8ddd7); font-size: 13px; color: var(--muted-foreground, #58625b); }
+    [hidden] { display: none !important; }
+    @media (max-width: 700px) {
+      main { padding: 24px 16px 32px; }
+      .choices, .flow { grid-template-columns: 1fr 1fr; }
+      .two, .source-list { grid-template-columns: 1fr; }
+      .card { padding: 17px; }
+      .stats { gap: 10px; }
+      .stats dd { font-size: 16px; }
+      .level-heading { display: block; }
+      .level-heading .badge { margin-bottom: 12px; }
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: var(--background, #151a17); color: var(--foreground, #e6ece7); }
+      a { color: var(--foreground, #e6ece7); }
+      .card, .flow li, .choices button { background: var(--card, #1d241f); color: var(--card-foreground, #e6ece7); border-color: var(--border, #465149); }
+      .muted, small, .flow span, .stats dt, .steps span, caption, footer { color: var(--muted-foreground, #b1bcb3); }
+      .demo, pre, th { background: var(--muted, #252e28); color: var(--foreground, #e6ece7); }
+      .choices button:hover { background: var(--accent, #304135); color: var(--accent-foreground, #e6ece7); }
+      .choices button[aria-pressed="true"] { border-color: #62b77e; box-shadow: inset 0 -3px #62b77e; }
+    }
+    @media print {
+      main { max-width: none; padding: 0; }
+      .choices, #simulation, .jump { display: none; }
+      .scroll-table { overflow: visible; }
+      .card, details, .flow li { break-inside: avoid; }
+      a { text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow brand"><svg class="brand-mark" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><rect x="8" y="8" width="240" height="240" rx="48" fill="#182024"/><path d="M80 49 H176 C197 49 214 66 214 87 V144 C214 165 197 182 176 182 H104 L63 210 C58 214 53 210 55 204 L64 179 C51 173 42 160 42 144 V87 C42 66 59 49 80 49 Z" fill="#4CCB78"/><path d="M126 76 Q128 74 130 76 L171 118 Q173 120 170 120 H144 V160 H112 V120 H86 Q83 120 85 118 Z" fill="#182024"/></svg> Enhance Prompt <span class="muted">/ Context guide / v0.5.2</span></p>
+    <h1>Context Level controls what the rewriter learns about your project.</h1>
+    <p class="lead">It starts with the project attached to your Copilot session. Each level adds different sources, filters them, and gives the rewriting model a limited set of excerpts. It does not give that model your entire repository.</p>
+    <ol class="flow" aria-label="The enhancement pipeline">
+      <li><span class="number">01 →</span><strong>Your request + session</strong><span>The task you type and the attached project folder.</span></li>
+      <li><span class="number">02 →</span><strong>Gather context</strong><span>The selected level, file permissions, exclusions and size limits decide what to include.</span></li>
+      <li><span class="number">03 →</span><strong>Rewrite the prompt</strong><span>The Effort assignment chooses the model; Style and Structure guide the wording.</span></li>
+      <li><span class="number">04</span><strong>Review, then send</strong><span>The result is a prompt for Copilot to act on. Enhancement itself does not implement the task.</span></li>
+    </ol>
+    <p class="muted"><strong>Three different controls:</strong> Context Level chooses project information. Style chooses the approach to the task. Effort chooses a model assignment, not the amount of project context.</p>
+  </header>
+  <nav class="jump" aria-label="Guide sections">
+    <a href="#explore">Explore a level</a><a href="#compare">Compare all four</a><a href="#sources">Where the entries come from</a><a href="#selection">How files are chosen</a><a href="#payload">What the model receives</a><a href="#preview">Preview and refresh</a>
+  </nav>
+
+  <section id="explore" aria-labelledby="explore-heading">
+    <h2 id="explore-heading">Choose a level to follow its path</h2>
+    <p class="muted">This is an interactive explanation of the code, not a live scan. The example assumes a local project and uses invented file contents.</p>
+    <div class="choices" role="group" aria-label="Context level to explore">
+      <button type="button" data-level="off" aria-pressed="false" aria-controls="level-detail"><strong>Off</strong><small>No automatic context</small></button>
+      <button type="button" data-level="standard" aria-pressed="true" aria-controls="level-detail"><strong>Project overview</strong><small>Orientation · current default</small></button>
+      <button type="button" data-level="deep" aria-pressed="false" aria-controls="level-detail"><strong>Relevant code</strong><small>Local search + excerpts</small></button>
+      <button type="button" data-level="max" aria-pressed="false" aria-controls="level-detail"><strong>AI-assisted</strong><small>Model-assisted file selection</small></button>
+    </div>
+    <noscript><p>JavaScript is disabled. The comparison table and source explanations below contain the guide; enable JavaScript to switch the worked example.</p></noscript>
+    <div class="card" id="level-detail" role="region" aria-labelledby="level-title">
+      <div class="level-heading"><div><h3 id="level-title">Project overview</h3><p id="level-intro">Project identity, instructions, README, stack and a compact file map. No automatic source-code search.</p></div><span id="level-id" class="badge">Stored as: standard</span></div>
+      <dl class="stats">
+        <div><dt>Automatic context budget</dt><dd id="budget">≈12,000 characters</dd></div>
+        <div><dt>Selected source snippets</dt><dd id="file-limit">None</dd></div>
+        <div><dt>Extra selection stage</dt><dd id="model-calls">No model call</dd></div>
+      </dl>
+      <div class="two">
+        <div><h3>What it tries to do</h3><ol id="level-steps" class="steps"><li>Identify the attached project and destination agent.</li><li>Read allowed instructions, README and stack details.</li><li>Build a compact tree and fit the context budget.</li></ol></div>
+        <div><h3>What can enter the rewrite</h3><ul id="included" class="chips"><li>Workspace</li><li>Target agent</li><li>Instructions + extra files</li><li>README digest</li><li>Stack + commands</li><li>Repository tree</li></ul><p id="level-limit" class="note">The project overview does not search for the implementation of your request. Configured extra files may still include code you explicitly chose.</p><div class="demo"><small>Same request at every level · illustrative</small><blockquote>“Fix the login timeout in <code>src/auth/session.ts</code> and add a regression test.”</blockquote><p id="example">The rewriter can learn the project’s conventions and test commands, but cannot see the login implementation unless it was supplied separately.</p></div></div>
+      </div>
+      <p id="selection-status" class="muted" role="status" aria-live="polite"></p>
+      <details id="simulation"><summary>Explore the effect of privacy settings</summary><div>
+        <div class="controls"><label><input id="project-access" type="checkbox" checked> Project file access allowed</label><label><input id="git-access" type="checkbox" checked> Git reads allowed</label></div>
+        <p class="muted">These switches change only this guide. They do not change your plugin settings. Turning project file access off reduces any file-reading level to project identity only. Turning Git off removes Git reads but keeps filesystem-based context and local search.</p>
+      </div></details>
+    </div>
+  </section>
+
+  <section id="compare" class="section">
+    <h2>The levels differ in sources, not just size</h2>
+    <div class="scroll-table" tabindex="0" role="region" aria-label="Context level comparison, scroll horizontally if needed">
+      <table>
+        <caption>Normal behavior with a local project, file/Git access enabled, and no exclusions. Missing or oversized sources may be omitted. This table does not change with the example switches.</caption>
+        <thead><tr><th scope="col">Source / limit</th><th scope="col">Off</th><th scope="col">Project overview</th><th scope="col">Relevant code</th><th scope="col">AI-assisted</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Workspace + target agent</th><td>—</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+          <tr><th scope="row">Instructions, extra files, README digest</th><td>—</td><td>Yes</td><td>Same allowance</td><td>Same allowance</td></tr>
+          <tr><th scope="row">Stack, commands, compact tree</th><td>—</td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+          <tr><th scope="row">Git status + recent commits</th><td>—</td><td>—</td><td>Up to 60 status entries + 6 non-merge commits</td><td>Same</td></tr>
+          <tr><th scope="row">Uncommitted diff body</th><td>—</td><td>—</td><td>≈5,000 characters</td><td>≈9,000 characters</td></tr>
+          <tr><th scope="row">Local relevance search</th><td>—</td><td>—</td><td>Yes</td><td>Yes</td></tr>
+          <tr><th scope="row">Source excerpts</th><td>—</td><td>No automatic selection</td><td>Up to 6 × ≈1,400 characters</td><td>Up to 10 × ≈1,800 characters</td></tr>
+          <tr><th scope="row">AI file selector</th><td>—</td><td>—</td><td>—</td><td>One extra selection stage; up to 8 choices, local matches fill remaining slots</td></tr>
+          <tr><th scope="row">Automatic context budget</th><td>0</td><td>≈12,000 characters</td><td>≈28,000 characters</td><td>≈45,000 characters</td></tr>
+          <tr><th scope="row">Typed request, saved rewrite rules, explicit attachments</th><td>Still apply</td><td>Still apply</td><td>Still apply</td><td>Still apply</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note"><strong>Practical starting point:</strong> Project overview for orientation; Relevant code when your task concerns implementation; AI-assisted when local matches seem weak or you do not know which files matter. Off works when your request and explicit inputs already supply enough context. A higher level cannot guarantee that the right code is found.</p>
+    <details><summary>What happened to Basic?</summary><div><p>A saved <strong>Basic (saved): project identity only</strong> choice still works, with a roughly 1,000-character allowance for Workspace and Target agent. It is not offered as a new choice. The same basic behavior is used when project file access is disabled. Existing saved defaults are preserved; the default for a new installation is Project overview.</p><p>Internal names remain <code>off</code>, <code>basic</code>, <code>standard</code>, <code>deep</code> and <code>max</code> for compatibility. The interface’s clearer names do not describe five new algorithms.</p></div></details>
+  </section>
+
+  <section id="sources" class="section">
+    <h2>Where those context entries actually come from</h2>
+    <p>Paths below are relative to the <strong>project folder attached to the Copilot session that opened the panel</strong>. For example, if that folder is <code>C:\Projects\storefront</code>, then <code>README.md</code> means <code>C:\Projects\storefront\README.md</code>. Your screenshot alone does not identify that folder.</p>
+    <details open><summary>Workspace — generated project identity, not a file</summary><div>
+      <p>The Copilot adapter asks the session for <code>metadata.snapshot().workingDirectory</code>, requires a local absolute path, and resolves its real location. It uses that folder’s name and path to build the Workspace entry.</p>
+      <pre>Illustrative Workspace content:
+C:\Projects\storefront: storefront</pre>
+      <p>There is no “Workspace” document to open. It does not include all files or a chat transcript. The current adapter does not supply a branch in this summary; Git status at the higher levels supplies branch information separately. An unknown or remote project root does not cause the plugin to read its own installation folder instead.</p>
+    </div></details>
+    <details><summary>Target agent — Copilot’s identity and activity state, not the rewriting model</summary><div>
+      <pre>Illustrative Target agent content:
+copilot (waiting)</pre>
+      <p>This is generated from the attached session. It names the destination agent and its state: waiting, working, blocked or unknown. The state comes from activity, processing, queued work and pending permissions. It is not a file, the agent’s full instructions, the chat history, or the Claude/GPT model selected through Effort. The agent identity can also guide the rewriter’s target-specific instructions when adaptation is enabled.</p>
+    </div></details>
+    <details><summary>CONTRIBUTING.md and other project instructions — real files, bounded excerpts</summary><div>
+      <p><code>CONTRIBUTING.md</code> is an optional file at the project root. It commonly describes contribution, coding and testing conventions. The plugin reads whatever your project actually puts there; it does not generate that file.</p>
+      <p>The collection order is: configured <strong>Extra context files</strong> first, then the following known paths, then up to four <code>.md</code>/<code>.mdc</code> files found under <code>.cursor/rules/</code>. Duplicate paths in that instruction list are removed.</p>
+      <pre>AGENTS.md
+CLAUDE.md
+GEMINI.md
+.github/copilot-instructions.md
+.cursorrules
+.windsurfrules
+.clinerules
+CONTRIBUTING.md</pre>
+      <p>Each instruction/extra file gets up to approximately <strong>4,000 characters</strong>. All instruction files, extra files and the README digest share a <strong>9,000-character</strong> allowance. Earlier files can consume it, leaving later files or README out. Increasing Context Level does not enlarge this allowance.</p>
+      <p>These are specific paths relative to the attached project root. There is no general recursive search for every nested <code>AGENTS.md</code> or for instructions in parent/home directories. A nested instruction file can be included explicitly as an extra file; it is not automatically inherited here.</p>
+    </div></details>
+    <details><summary>README.md — a deterministic digest of a real root file</summary><div>
+      <p>The plugin finds a root <code>README</code>, <code>README.md</code>, <code>README.rst</code> or <code>README.txt</code> (case-insensitive). It takes an introductory excerpt and sections with Markdown headings matching setup, installation, usage, development, testing, build/run, contributing, architecture, structure, overview, stack, scripts or commands.</p>
+      <p>This is text extraction, <strong>not an AI summary</strong>. It recognizes Markdown headings through level four; RST headings are not parsed as Markdown headings. The introduction gets at most one quarter of the available digest size. The whole digest is capped near <strong>3,500 characters</strong> and can be smaller because it shares the instruction allowance. It can omit later sections even if they are relevant.</p>
+      <p>Open the original in a text editor to see the whole document. The original will not necessarily match the included excerpt: content can be masked, selected or shortened.</p>
+    </div></details>
+    <details><summary>Stack and commands — generated from manifests and build files</summary><div>
+      <p>This is a summary, not a separate file. At the root, <code>package.json</code> can provide the project name, package manager, up to 30 dependency names and 25 scripts. Permitted lockfile names help infer the package manager; commands are shortened. A root <code>tsconfig.json</code> signals TypeScript.</p>
+      <p>Other recognized sources include Python’s <code>pyproject.toml</code>/<code>requirements.txt</code>, <code>go.mod</code>, <code>Cargo.toml</code>, <code>Makefile</code> and <code>justfile</code>. Maven, Gradle, Composer, Bundler, .NET, Flutter and Docker can be recognized by root filenames. Some command hints are conventional, such as <code>cargo test</code>, rather than extracted scripts.</p>
+      <p>Up to five <code>.github/workflows/</code> paths are listed as CI hints. Their contents are not loaded by stack detection. Nested package manifests are not recursively summarized. The plugin reads these clues; it does not execute build or test commands to gather context. Stack text reads allow up to 300,000 bytes per manifest, while ordinary instruction/source reads allow 200,000.</p>
+    </div></details>
+    <details><summary>Repository tree — a generated map, not the contents of every file</summary><div>
+      <p>With Git available and allowed, the plugin lists tracked and non-ignored untracked paths, capped at 50,000 entries before deduplication/filtering. Otherwise it walks the filesystem with limits of 8,000 files and six directory levels, skipping common dependency/build/cache directories and most hidden directories (supported <code>.github</code> and <code>.cursor</code> paths remain eligible).</p>
+      <pre>Illustrative compact tree:
+src/ (41)
+  src/auth/ (6)
+tests/ (12)
+AGENTS.md
+README.md
+package.json</pre>
+      <p>The summary shows directories through depth two with descendant file counts, followed by root filenames. It keeps up to 70 lines, plus an omission marker. <strong>“Repository tree (81 files)” means 81 eligible listed file paths, not 81 file contents sent to the model.</strong> The count is a filtered, bounded inventory, not a promise to enumerate the whole repository. Git and filesystem listing differ; do not assume every generated folder is excluded when Git tracks it.</p>
+      <p>Turning off Git switches to filesystem walking; that walker uses its own skip rules and does not parse <code>.gitignore</code>. Use the plugin’s Excluded paths for exclusions you need in either mode.</p>
+    </div></details>
+    <details><summary>Git context — current changes and recent history, at Relevant code and AI-assisted</summary><div>
+      <p>Three independent reads gather: current branch/status with up to 60 permitted change entries; the six latest non-merge commit summaries (short hash, subject and relative time); and uncommitted changes compared with <code>HEAD</code>, including staged and unstaged tracked changes.</p>
+      <p>The diff has a file-stat summary and a patch with two surrounding lines. Its patch body is limited near 5,000 characters for Relevant code or 9,000 for AI-assisted, plus summary/truncation text. Untracked file contents are not part of <code>git diff HEAD</code>; those files may still qualify for source snippets. No Git repository, disabled Git or failed Git reads can leave these entries absent while local context continues.</p>
+      <p>Exclusions and sensitive-file checks filter status and diff paths, including both sides of renames. Diff/search path rules also omit names containing <code>lock</code>, minified files and source maps. If too many diff exclusions are needed (over 300), the diff is omitted. Recent commit subjects are repository-wide text, not filtered to selected files, so a subject can still mention an excluded filename.</p>
+      <p>Unchecking the Git status item keeps it out of the payload, but status can still be read locally to prioritize changed files. Disable Git in privacy settings to prevent the Git reads themselves.</p>
+    </div></details>
+  </section>
+
+  <section id="selection" class="section">
+    <h2>“Relevant” means ranked candidates, not proven dependencies</h2>
+    <p>Relevant code and AI-assisted both start with the same local search. Neither parses a full dependency graph, runs your app, or proves which file caused a bug.</p>
+    <details open><summary>1. Turn your request into weighted search terms</summary><div>
+      <p>The plugin extracts up to 12 keywords. Exact paths, backtick-quoted text, dotted names and filenames get strong weight; identifiers such as <code>refreshSession</code> are stronger than generic words. Common filler words are dropped. At most eight keywords of at least four characters are used for content search.</p>
+      <p>For example, <code>Fix the login timeout in src/auth/session.ts</code> gives the selector much better clues than <code>Fix this</code>. Input is accepted as Unicode, but keyword extraction is largely identifier/ASCII-oriented; non-English prose may produce fewer useful local terms.</p>
+    </div></details>
+    <details><summary>2. Search permitted files locally and rank them</summary><div>
+      <p>Git search uses case-insensitive literal string matches. Without Git search, a bounded fallback tries likely paths first and stops after 300 candidate-file attempts, 4 MB of text or about 1.5 seconds. A read already underway can make that time limit slightly longer. If it stops early, the context notes say so.</p>
+      <p>Path matches, content matches and changed files raise a file’s score. Rare content matches count more than words found across many files. Fixtures, snapshots, migrations, generated code and locale directories receive lower scores; test files get a smaller penalty unless the request mentions tests. Instruction files already included do not compete again. Other prose files only compete when their paths start with <code>docs/</code>.</p>
+      <p>Files with no positive score are not local selections. Relevant code keeps up to six highest-ranked paths; AI-assisted starts with up to ten local choices. A locally searched file does not automatically become model input. The small snippet allowance limits what is sent, not necessarily every local file read by search.</p>
+    </div></details>
+    <details><summary>3. AI-assisted only: ask a model to choose from filenames</summary><div>
+      <p>The selector receives <strong>your request plus up to 600 permitted candidate paths</strong>. Up to 150 top local matches lead that list, then the remaining eligible paths fill it. It receives no file bodies in this selection step and cannot browse the repository itself through this operation.</p>
+      <p>It is asked for up to eight exact paths. Duplicate, invented or ineligible paths are discarded. Valid AI choices go first; local choices fill the remaining places, to a maximum of ten files total. Selection is not recursive: there is no second search triggered by reading a selected file.</p>
+      <p>The selector model role is used when compatible with the rewrite route; otherwise the rewrite route’s first model is selected. Copilot rewrites keep selection within Copilot profiles. Non-Copilot rewrites use non-Copilot profiles, which may include different providers. Fallback settings may cause more than one attempted model call, so “one selection stage” is not a guarantee of exactly one billed request.</p>
+      <p>The picker gets at most 25 seconds, shortened when the run has less time left. If selection fails or returns no valid paths, local choices remain. An empty candidate list skips selection. This extra step can add latency and usage; it does not guarantee better results.</p>
+    </div></details>
+    <details><summary>4. Read short snippets from the chosen files</summary><div>
+      <p>Readable selected files are opened from the project, with a 200,000-byte per-file limit. Recognized credentials are masked before excerpting. The snippet takes the first six keyword hits, with four lines before and two after each, merges overlapping ranges, and adds line numbers. If there are no hits, it starts with up to the first 40 lines.</p>
+      <p>Each source line is capped at 240 characters; each snippet is roughly 1,400 characters at Relevant code or 1,800 at AI-assisted. Ellipses mark omitted spans. A selected file that is missing, empty, binary, too large or disallowed can be skipped, so the actual count may be lower than six or ten. It is not automatically replaced with another ranked file after a failed read.</p>
+    </div></details>
+  </section>
+
+  <section id="payload" class="section">
+    <h2>What actually reaches the rewriting model</h2>
+    <div class="two">
+      <div class="card"><h3>System instructions</h3><p>The rewriter’s job, English output policy, selected Style, optional Structure, custom instructions and applicable saved rewrite rules. If enabled, target-agent adaptation adds destination-specific guidance.</p><p class="muted">These are not the Context Level character budget. Saved Rules-tab instructions are different from automatically read project rule files such as AGENTS.md.</p></div>
+      <div class="card"><h3>User message + attachments</h3><p>Selected context items are wrapped in <code>&lt;project_context&gt;</code> with kind/label metadata. Your typed task is wrapped in <code>&lt;request&gt;</code>. Explicit file paths are listed; attached text excerpts and supported images are supplied separately from automatic project collection.</p><p class="muted">Off does not erase explicit inputs or saved rewrite instructions. Attachments have their own limits and are added after automatic context has been budgeted.</p></div>
+    </div>
+    <details><summary>See the shape of the message for the level selected above</summary><div>
+      <p class="muted">Illustrative, shortened message. The file contents and counts below are invented, not read from your computer. System instructions and image payloads are not shown.</p>
+      <pre id="payload-example">Select a level above to inspect the example message.</pre>
+    </div></details>
+    <details><summary>What happens when the context is too large?</summary><div>
+      <p>The automatic items are ordered by priority before fitting the total allowance:</p>
+      <ol><li>Workspace and Target agent</li><li>Instructions, extra files and README</li><li>Stack and commands</li><li>Selected source snippets</li><li>Git status, log and diff</li><li>Repository tree</li></ol>
+      <p>An item that crosses the allowance is shortened if more than 400 characters remain. Otherwise it is skipped; a later, smaller item may still fit. Lower-priority items can disappear. A checked item is eligible, not guaranteed inclusion.</p>
+      <p>The numbers are approximate <strong>characters, not tokens or prices</strong>. Truncation markers, wrappers, your request, system instructions and explicit attachments add text outside some of these nominal limits. More context often means more model input, but these budgets cannot predict a charge.</p>
+    </div></details>
+    <p class="note">The model is instructed to use context to make the prompt precise, to call search-selected files “likely relevant,” and to avoid inventing paths or commands. The final prompt is not a guaranteed verbatim copy of every included item. Copilot can inspect the actual project later when it acts on the prompt.</p>
+  </section>
+
+  <section id="preview" class="section">
+    <h2>The context preview is a checklist, not a frozen payload</h2>
+    <ol>
+      <li><strong>Open Options.</strong> The list shows item labels, kinds, included character counts and any explanatory notes. Its checkboxes choose exclusions; labels are not expandable content viewers.</li>
+      <li><strong>Edit the request or change the level.</strong> While Options is open and enhancement is idle, changes to the request, target, level, exclusions or context preferences trigger a preview after a short debounce (300 ms).</li>
+      <li><strong>Refresh context after external file edits.</strong> This rereads current project data. It does not rewrite your prompt and makes no model selection call.</li>
+      <li><strong>Click Enhance.</strong> Context is gathered afresh. AI-assisted now runs the file selector when candidates exist, so its final file choices can differ from the preview. Preview also omits the separate attachment processing done for the actual rewrite.</li>
+    </ol>
+    <p>Closing Options hides the controls; it does not clear your choices. A file you uncheck is excluded from automatic rules, tree/listing, source selection and relevant Git diff paths. Unchecking only the tree hides the generated map; it does not disable the inventory needed to find relevant files.</p>
+    <details><summary>How can I inspect the real files on my computer?</summary><div>
+      <p>Use the attached session’s project folder as the base. Open that folder in your editor or File Explorer, then open <code>README.md</code>, <code>CONTRIBUTING.md</code> or the listed relative path. These Markdown files are plain text and can be read in Notepad or VS Code.</p>
+      <p>Workspace, Target agent, Stack and Repository tree are assembled in memory; there is no matching generated file on disk to open. The current panel does not expose the exact assembled context text: the worker sends the preview metadata without its content. Opening an original file shows the source, not the redacted/trimmed version used for enhancement.</p>
+    </div></details>
+  </section>
+
+  <section id="limits" class="section">
+    <h2>Why a source may be missing</h2>
+    <details><summary>Privacy, file safety and exclusions apply at every file-reading level</summary><div>
+      <ul>
+        <li>Project-file access disabled: overview/code/AI-assisted requests are reduced to Basic identity-only context. Explicit inputs and saved rewrite rules remain separate.</li>
+        <li>Git disabled: no Git reads, even for listing/search. Filesystem collection and bounded local search remain available.</li>
+        <li>Unknown/remote root: no local project files. The plugin does not guess a different folder.</li>
+        <li>Excluded paths or unchecked files: removed from automatic file candidates and reads; resolved link targets must obey the same policy.</li>
+        <li>Sensitive filenames (such as <code>.env*</code>, private keys and credentials files), binary content and links escaping the project are refused.</li>
+        <li>Missing, unreadable, oversized or unselected files, scan limits and context budgets can leave a source out.</li>
+      </ul>
+      <p>Recognized secrets in automatically included content are masked before shortening. This is pattern-based protection, not a guarantee that every secret or confidential detail can be detected. Typed text and explicit attachments are deliberate inputs with separate handling; turning Context Level off does not remove them.</p>
+    </div></details>
+    <details><summary>Copilot host limits: what no context level adds</summary><div>
+      <p>The installed Copilot canvas integration does not provide terminal scrollback, other agents’ session output, editor-save notifications or recent agent-activity context. Those legacy capabilities contribute nothing here. AI-assisted does not unlock them and does not silently add the full Copilot conversation.</p>
+      <p>The rewriter sees the assembled request/context, not the destination agent’s complete working environment. Sending the finished prompt is a separate action with attached-session activity, permission and queue checks. Automatic sending remains an explicit opt-in.</p>
+    </div></details>
+    <details><summary>Chat auto-enhance follows a separate context switch</summary><div>
+      <p>This guide’s four levels control the panel’s Enhance workflow. AI chat auto-enhance uses its own <strong>Include context in auto-enhance</strong> setting. When enabled, it can include Workspace plus permitted instructions, extra files, README and stack information; it omits the tree, source selection, Git changes and the Target agent item described above.</p>
+      <p>The AI hook also has its own model route: it currently requires an enabled OpenAI-compatible or Anthropic API profile within a short time budget. It does not run the panel’s background Copilot model or Effort assignment. Without an eligible API model it leaves the prompt unchanged. Rules-only auto-enhance simply appends its configured text and does not gather this context.</p>
+      <p>The Copilot hook prepares fresh static context when enabled; reusable static context is keyed to file preferences and has a 90-second lifetime. The hook does not use the panel’s four total budgets or per-request checkbox list. Saved privacy, extra-file and excluded-path settings still apply. Disabled, ambiguous, failed or timed-out hooks leave the original prompt unchanged and preserve runtime-added context.</p>
+    </div></details>
+  </section>
+
+  <section id="evidence" class="section">
+    <h2>Implementation references</h2>
+    <p class="muted">This guide describes plugin <strong>v0.5.2</strong>, source snapshot <code>7728506</code>. Links below open the exact source snapshot on GitHub. The guide itself works offline and does not load remote resources.</p>
+    <ul class="source-list">
+      <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/context/index.ts">Collection stages, limits and final priority</a></li>
+      <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/context/instructions.ts">Instruction paths and README digest</a></li>
+      <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/context/stack.ts">Stack and command extraction</a></li>
+      <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/context/files.ts">File safety, listing, tree and snippets</a></li>
+      <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/context/relevance.ts">Keyword extraction and ranking</a></li>
+      <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/context/search.ts">Bounded local fallback search</a></li>
+      <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/context/git.ts">Git data and filtering</a></li>
+      <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/worker.ts">Privacy, model selection, preview and assembly</a></li>
+      <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/prompts.ts">Model instructions and message wrapping</a></li>
+      <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/copilot/session.ts">Attached project and agent identity</a></li>
+      <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/panel/context-preview.ts">Preview refresh behavior</a></li>
+      <li><a href="https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/77285063b1343c4480ed4e210f2aad55b6fa0f5a/src/copilot/hook.ts">Separate chat auto-enhance path</a></li>
+    </ul>
+  </section>
+  <footer>Standalone guide · No file access, model calls, analytics, network requests or saved preferences. The controls only change this explanation. Read-only GitHub source links are optional.</footer>
+</main>
+<script>
+  'use strict';
+  const overviewSources = ['Workspace', 'Target agent', 'Instructions + extra files', 'README digest', 'Stack + commands', 'Repository tree'];
+  const identityStep = ['Identify the attached project', 'Use the local session working directory and destination agent identity/state.'];
+  const staticStep = ['Read project orientation', 'Collect allowed instructions and extra files, extract a README digest, summarize the stack and build a compact file map.'];
+  const levels = {
+    off: {
+      title: 'Off', budget: 0, files: 0,
+      intro: 'Skip automatic project context. Your request, saved rewrite instructions and explicit attachments still go to the rewrite.',
+      steps: [['Skip automatic collection', 'No Workspace/Target agent items, project file inventory, project-file excerpts, Git reads or relevance search from this collector.'], ['Use the inputs you supplied', 'Apply your selected Style, Structure and saved rewrite instructions. Add explicit attachments, if any.'], ['Rewrite the request', 'The chosen Effort model still runs. Off is not a zero-model or offline enhancement mode.']],
+      sources: ['No automatic context items'],
+      limit: 'Off controls automatic collection only. The plugin can still resolve project identity to scope saved rules and history; it does not discard your explicit inputs.',
+      example: 'The rewriter knows the path because you typed it, but does not read the file through automatic context. It can make the request clearer without knowing the actual timeout logic.'
+    },
+    standard: {
+      title: 'Project overview', budget: 12000, files: 0,
+      intro: 'Project identity, instructions, README, stack and a compact file map. No automatic source-code search.',
+      steps: [identityStep, staticStep, ['Fit the overview into the allowance', 'Prioritize identity, instructions and stack; place the tree later. Send the retained excerpts to the rewriting model.']],
+      sources: overviewSources,
+      limit: 'No automatic search for the implementation of your task. Configured extra files may still include code you explicitly chose. README and instructions keep the same shared 9,000-character allowance at higher levels.',
+      example: 'The rewriter can learn the project’s conventions and test commands, but cannot see the login implementation unless it was supplied separately.'
+    },
+    deep: {
+      title: 'Relevant code', budget: 28000, files: 6,
+      intro: 'Add uncommitted changes and source excerpts selected by local search. File selection itself uses no model.',
+      steps: [identityStep, staticStep, ['Read Git context, when allowed', 'Gather branch/status, six recent non-merge commit subjects and a bounded diff. Changed files also help local ranking.'], ['Find and excerpt likely files', 'Weight request keywords, filenames, identifiers and content matches. Keep up to six snippets, approximately 1,400 characters each.'], ['Fit and rewrite', 'Mask recognized secrets, prioritize items and pass the assembled context to the chosen rewriting model.']],
+      sources: [...overviewSources, 'Git status + recent commits', 'Uncommitted diff', 'Up to 6 source snippets'],
+      limit: 'Local matches are candidates, not proof. A short or vague request can produce few matches. Search can inspect more files locally than the small set of snippets ultimately sent.',
+      example: 'The explicit session.ts path is a strong ranking clue. Matching login/timeout code and relevant tests can become excerpts, alongside current changes. It does not necessarily read the complete authentication flow.'
+    },
+    max: {
+      title: 'AI-assisted', budget: 45000, files: 10,
+      intro: 'Start with local search, then ask a selector model which permitted files look useful. Include a larger set of excerpts.',
+      steps: [identityStep, staticStep, ['Read Git context and rank local matches', 'Use the same local search as Relevant code, with a larger diff allowance.'], ['Ask the selector to choose files', 'Send your request and up to 600 candidate filenames, not file contents. Accept up to eight valid exact paths.'], ['Combine choices and excerpt files', 'Put AI choices first and fill with local matches, up to ten total. Read roughly 1,800 characters per snippet; selection failure keeps local choices.'], ['Fit and rewrite', 'Fit the automatic context allowance and give the selected content to the rewriting model.']],
+      sources: [...overviewSources, 'Git status + recent commits', 'Larger uncommitted diff', 'Up to 10 source snippets'],
+      limit: 'The selector sees filenames, not source bodies. It is a single selection stage, not an agent exploring the repository. Preview skips this model step; final choices are made when you click Enhance.',
+      example: 'The selector might add a session store or timeout configuration whose filename suggests it matters but which local search ranked lower. Those choices are checked, read and excerpted before rewriting; better coverage is possible, not guaranteed.'
+    },
+    basic: {
+      title: 'Project identity only', budget: 1000, files: 0,
+      intro: 'Project file access is off. The requested level is reduced to the existing Basic identity-only behavior.',
+      steps: [identityStep, ['Skip file-based context', 'No instruction/README reads, stack summary, tree, Git context, local source search or AI file selector.'], ['Rewrite with the remaining inputs', 'Use identity if available, plus your request, saved rewrite instructions and explicit attachments.']],
+      sources: ['Workspace', 'Target agent'],
+      limit: 'Privacy takes precedence over the selected level. This does not erase explicit attachments, typed content or saved rewrite rules.',
+      example: 'The rewriter can know which project and agent will receive the prompt, but it learns the session.ts path only from your typed request. It does not inspect that file automatically.'
+    }
+  };
+  const buttons = [...document.querySelectorAll('[data-level]')];
+  const projectAccess = document.getElementById('project-access');
+  const gitAccess = document.getElementById('git-access');
+  const setText = (id, value) => { document.getElementById(id).textContent = value; };
+  let selected = 'standard';
+  // All strings below are authored examples. No user text, file data or URL parameters enter HTML.
+  function render() {
+    const effective = !projectAccess.checked && selected !== 'off' ? 'basic' : selected;
+    const level = levels[effective];
+    const codeLevel = effective === 'deep' || effective === 'max';
+    const withGit = codeLevel && gitAccess.checked;
+    buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.level === selected)));
+    setText('level-title', level.title);
+    setText('level-id', effective === 'basic' ? 'Privacy cap: basic' : `Stored as: ${selected}`);
+    setText('level-intro', level.intro);
+    setText('budget', level.budget ? `≈${level.budget.toLocaleString('en-US')} characters` : '0 characters');
+    setText('file-limit', level.files ? `Up to ${level.files}` : 'None');
+    setText('model-calls', effective === 'max' ? 'AI selector if candidates exist' : 'No model call');
+    let steps = level.steps;
+    if (!gitAccess.checked && codeLevel) {
+      steps = steps.map(([title, text]) => title.startsWith('Read Git') ? ['Use filesystem-based context', 'Skip Git status, history and diffs. Build the eligible file list by walking the project; use bounded local content search.'] : [title, text]);
+    } else if (!gitAccess.checked && effective === 'standard') {
+      steps = steps.map(([title, text]) => title === staticStep[0] ? [title, text + ' The file inventory comes from filesystem walking because Git is disabled.'] : [title, text]);
+    }
+    document.getElementById('level-steps').innerHTML = steps.map(([title, text]) => `<li><strong>${title}</strong><span>${text}</span></li>`).join('');
+    const sources = level.sources.filter(source => gitAccess.checked || !/Git|diff/.test(source));
+    document.getElementById('included').innerHTML = sources.map(source => `<li>${source}</li>`).join('');
+    setText('level-limit', level.limit);
+    setText('example', level.example + (!gitAccess.checked && codeLevel ? ' With Git disabled, recent changes and commit history are absent.' : ''));
+    setText('selection-status', `${levels[selected].title} selected. ${effective === 'basic' ? 'File privacy reduces this to project identity only.' : 'The figures describe automatic context only; every enhancement still has a rewrite stage.'}`);
+    const items = [];
+    if (effective !== 'off') {
+      items.push(['workspace', 'Workspace', 'C:\\Projects\\storefront: storefront']);
+      items.push(['agent', 'Target agent', 'copilot (waiting)']);
+    }
+    if (['standard', 'deep', 'max'].includes(effective)) {
+      items.push(['rules', 'AGENTS.md', 'Example convention: add a focused regression test for bug fixes.']);
+      items.push(['rules', 'README.md', 'Example README digest: storefront with authenticated sessions.']);
+      items.push(['stack', 'Stack and commands', 'Example script: npm run test']);
+      if (codeLevel) items.push(['file', 'src/auth/session.ts', 'Illustrative numbered excerpt only; no real source code was loaded.']);
+      if (effective === 'max') items.push(['file', 'src/auth/session-store.ts', 'Illustrative possible AI choice; actual selection may choose something else.']);
+      if (withGit) items.push(['git', 'Git status / log / diff', 'Illustrative current changes and recent commit subjects.']);
+      items.push(['tree', 'Repository tree', 'src/ (41)\n  src/auth/ (6)\ntests/ (12)\nREADME.md\npackage.json']);
+    }
+    const context = items.length ? `<project_context>\n${items.map(([kind, label, content]) => `<item kind="${kind}" label="${label}">\n${content}\n</item>`).join('\n\n')}\n</project_context>\n\n` : '';
+    setText('payload-example', `${context}<request>\nFix the login timeout in src/auth/session.ts and add a regression test.\n</request>\n\nRewrite the request above into the final prompt.`);
+  }
+  buttons.forEach(button => button.addEventListener('click', () => { selected = button.dataset.level; render(); }));
+  projectAccess.addEventListener('change', render);
+  gitAccess.addEventListener('change', render);
+  render();
+</script>
+</body>
+</html>
