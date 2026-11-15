@@ -60,28 +60,39 @@ assert.equal(JSON.stringify(words), before, 'Motion must not mutate source words
 
 // Exercise the standalone controls without starting a browser or making model calls.
 class Element {
-  constructor() {
+  constructor(htmlElement = true) {
     this.attributes = {}; this.children = []; this.style = {}; this.listeners = {}
-    this.value = ''; this.disabled = false; this.hidden = false; this.clientWidth = 700
+    this.value = ''; this.disabled = false; this.clientWidth = 700
+    // HTMLElement.hidden reflects an attribute; SVGElement has no such property.
+    if (htmlElement) Object.defineProperty(this, 'hidden', {
+      get: () => this.hasAttribute('hidden'),
+      set: value => value ? this.setAttribute('hidden', '') : this.removeAttribute('hidden')
+    })
     const classes = new Set()
     this.classList = { toggle: value => { if (classes.delete(value)) return false; classes.add(value); return true } }
   }
   setAttribute(key, value) { this.attributes[key] = String(value) }
   getAttribute(key) { return this.attributes[key] }
+  hasAttribute(key) { return Object.hasOwn(this.attributes, key) }
+  removeAttribute(key) { delete this.attributes[key] }
   append(...children) { this.children.push(...children) }
   replaceChildren(...children) { this.children = children }
   addEventListener(name, callback) { this.listeners[name] = callback }
   getContext() { return { measureText: value => ({ width: value.length * 7 }) } }
   click() { if (!this.disabled) this.listeners.click?.() }
 }
-const elements = new Map([...html.matchAll(/\bid="([^"]+)"/g)].map(([,id]) => [id, new Element()]))
+const elements = new Map([...html.matchAll(/<([\w-]+)\b([^>]*\bid="([^"]+)"[^>]*)>/g)].map(([,tag,attrs,id]) => {
+  const element = new Element(!['svg', 'g', 'path'].includes(tag))
+  if (/\bhidden(?:\s|$|=)/.test(attrs)) element.setAttribute('hidden', '')
+  return [id, element]
+}))
 const get = id => { assert.ok(elements.has(id), `Unknown DOM element: ${id}`); return elements.get(id) }
 get('request').value = input
 get('zoom').value = '1'
 get('speed').value = '1'
 let callback, now = 0
 const app = vm.createContext({
-  document: { getElementById: get, createElementNS: () => new Element(), createElement: () => new Element(), addEventListener() {} },
+  document: { getElementById: get, createElementNS: () => new Element(false), createElement: () => new Element(), addEventListener() {} },
   window: { matchMedia: () => ({ matches: false }) },
   performance: { now: () => now },
   ResizeObserver: class { observe() {} },
@@ -90,10 +101,16 @@ const app = vm.createContext({
 })
 vm.runInContext(scripts.map(([, , source]) => source).join('\n'), app)
 const advance = seconds => { for (let t=0;t<seconds;t+=.02) { now+=20; const fn=callback; callback=undefined; fn?.(now) } }
+assert.equal(get('scene').hasAttribute('hidden'), true)
 get('start').click()
 assert.equal(get('request').readOnly, true)
-assert.equal(get('scene').hidden, false)
+assert.equal(get('scene').hasAttribute('hidden'), false, 'The SVG must lose its hidden attribute before the original request becomes invisible')
+assert.ok(get('words').children.length > 0, 'The visible SVG must contain request words')
+assert.ok(get('people').children.length > 0, 'The visible SVG must contain figures')
+const firstHead = get('people').children[0].children[0]
+const initialHeadX = firstHead.getAttribute('cx')
 advance(5)
+assert.notEqual(firstHead.getAttribute('cx'), initialHeadX, 'A visible figure must move after playback starts')
 assert.equal(get('request').value, input)
 get('pause').click()
 const pausedProgress = get('progress').getAttribute('aria-valuenow')
@@ -110,7 +127,7 @@ for (const action of ['cancel', 'fail']) {
   get('start').click(); advance(3); get(action).click()
   assert.equal(get('request').value, input)
   assert.equal(get('request').readOnly, false)
-  assert.equal(get('scene').hidden, true)
+  assert.equal(get('scene').hasAttribute('hidden'), true)
   assert.equal(get('result').hidden, true)
   assert.equal(callback, undefined)
 }
@@ -129,4 +146,28 @@ get('start').click(); advance(21)
 assert.equal(get('result').hidden, false)
 assert.equal(get('request').readOnly, false)
 assert.equal(get('request').value, input)
-console.log('PASS: syntax, standalone size, crew count, Unicode preservation, 28px carrying height, hand/word contact, continuous motion, input locking, pause, completion, cancellation, failure, and reduced-motion controls. Visual timing still requires owner review.')
+
+const wordLayer = get('words')
+const append = wordLayer.append
+wordLayer.append = () => { throw new Error('Injected startup drawing failure') }
+get('start').click()
+wordLayer.append = append
+assert.equal(get('request').readOnly, false)
+assert.equal(get('request').value, input)
+assert.equal(get('scene').hasAttribute('hidden'), true)
+assert.match(get('status').textContent, /could not render/)
+assert.equal(callback, undefined)
+
+get('start').click()
+const lines = get('people').children[0].children[1]
+lines.setAttribute = () => { throw new Error('Injected frame drawing failure') }
+advance(.1)
+assert.equal(get('request').readOnly, false)
+assert.equal(get('request').value, input)
+assert.equal(get('scene').hasAttribute('hidden'), true)
+assert.match(get('status').textContent, /could not render/)
+assert.equal(callback, undefined)
+get('start').click(); advance(.1)
+assert.equal(get('scene').hasAttribute('hidden'), false, 'Retry must create a fresh visible scene')
+get('cancel').click()
+console.log('PASS: syntax, standalone size, crew count, Unicode preservation, 28px carrying height, hand/word contact, continuous motion, SVG attribute visibility, visible figure movement, input locking, pause, completion, cancellation, failure, reduced motion, and startup/frame error recovery. Visual timing still requires owner review.')

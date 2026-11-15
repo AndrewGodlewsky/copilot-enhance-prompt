@@ -172,21 +172,31 @@ function draw(t){
 }
 function tick(now){
   if(mode==='idle')return;
-  if(!paused){time+=Math.min(.05,(now-last)/1000)*Number($('speed').value);if(mode==='running'&&time>=18)finish();if(mode!=='idle')draw(time);}
+  if(!paused){time+=Math.min(.05,(now-last)/1000)*Number($('speed').value);if(mode==='running'&&time>=18)finish();if(mode!=='idle')render(time);}
   last=now;
   if(mode!=='idle')frame=requestAnimationFrame(tick);
 }
 function start(){
   if(mode!=='idle'||!input.value.trim())return;
-  original=input.value;time=0;paused=false;mode='running';prepare();scene.hidden=false;controls(true);$('result').hidden=true;last=performance.now();draw(0);frame=requestAnimationFrame(tick);
+  original=input.value;time=0;paused=false;mode='running';
+  try {
+    prepare();
+    if(!render(0))return;
+    // SVGElement.hidden does not reflect the attribute as HTMLElement.hidden does.
+    scene.removeAttribute('hidden');controls(true);$('result').hidden=true;last=performance.now();frame=requestAnimationFrame(tick);
+  } catch { stop('render-error'); }
+}
+function render(t){
+  try { draw(t); return true; }
+  catch { stop('render-error'); return false; }
 }
 function finish(){
   if(mode!=='running')return;
-  exitPoses=posesAt(time);finishTime=time;mode='finishing';paused=false;$('pause').textContent='Pause';$('complete').disabled=true;draw(time);
+  exitPoses=posesAt(time);finishTime=time;mode='finishing';paused=false;$('pause').textContent='Pause';$('complete').disabled=true;render(time);
 }
 function stop(reason){
-  cancelAnimationFrame(frame);mode='idle';paused=false;scene.hidden=true;input.value=original;controls(false);$('result').hidden=reason!=='done';
-  $('status').textContent=reason==='done'?'Preview complete. Original request restored.':reason==='failed'?'Simulated failure. Original request restored.':'Cancelled. Original request restored.';
+  cancelAnimationFrame(frame);mode='idle';paused=false;scene.setAttribute('hidden','');input.value=original;controls(false);$('result').hidden=reason!=='done';
+  $('status').textContent=reason==='done'?'Preview complete. Original request restored.':reason==='render-error'?'The animation could not render. Original request restored.':reason==='failed'?'Simulated failure. Original request restored.':'Cancelled. Original request restored.';
   progress(reason==='done'?100:0);$('press').setAttribute('d','');
 }
 $('start').addEventListener('click',start);
@@ -197,7 +207,7 @@ $('fail').addEventListener('click',()=>stop('failed'));
 $('theme').addEventListener('click',()=>{const dark=$('mockup').classList.toggle('dark');$('theme').setAttribute('aria-pressed',dark);$('theme').textContent=dark?'Light preview':'Dark preview';});
 input.addEventListener('input',()=>{count();$('start').disabled=!input.value.trim();});
 zoom.addEventListener('change',count);
-reduce.addEventListener('change',()=>{if(mode!=='idle')draw(time);});
+reduce.addEventListener('change',()=>{if(mode!=='idle')render(time);});
 new ResizeObserver(()=>{if(mode!=='idle'&&Math.abs($('stage').clientWidth/Number(zoom.value)-width)>1){stop('cancelled');$('status').textContent='Preview resized. Original request restored; play again at this width.';}}).observe($('stage'));
 document.addEventListener('visibilitychange',()=>{last=performance.now();});
 count();controls(false);
