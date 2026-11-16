@@ -12,7 +12,7 @@ The English-language React panel retains model chains and fallback, prompt style
 
 ## Download and install
 
-**Development preview, version 0.10.3.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
+**Development preview, version 0.10.4.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
 
 ### Requirements
 
@@ -92,7 +92,7 @@ The Quiet Desk banner changes its still scene with local time and the current en
 3. Click **Enhance**. The request locks while a small blue stick-figure crew rearranges a decorative copy of its words. Progress reports the real context and model steps; model progress is estimated and Cancel stops the run. At 95%, the figures lower their words where they are standing, release them, then run offscreen. The words stay still until the prompt succeeds, then slide downward together before your original request becomes editable again. A fast result that skips 95% still plays the set-down and exit first. **Pause animation** pauses only the artwork; the crew still puts its words down and leaves at 95% or completion. Reduced-motion preferences skip the artwork.
 4. In **Review and send**, edit the enhanced prompt. **Send to Copilot** submits a new message to the attached session shown in **Send to**. **Copy** keeps the handoff manual. The download icon saves a file; the up-arrow uses the result as a new input for refinement.
 
-**History** is a project library with a compact list and a separate reading pane. Select any saved project, search original and enhanced text, and switch between the two texts before choosing **Reuse**, **Copy**, or **Delete**. Reuse opens the saved prompt in Enhance without sending it; Delete offers Undo. Narrow canvases use a project dropdown. **More** contains filtered export and clear-history actions. [History guide](docs/user-guide.md#history-and-settings).
+**History** is a project library with a wider, collapsible sidebar and expandable prompt rows. Use **Projects** to hide or show the sidebar; long project names wrap. Select any saved project, search original and enhanced text, then click a prompt to expand its details directly underneath. Click again to close it. Switch between the two saved texts before choosing **Reuse**, **Copy**, or **Delete**. Reuse opens the saved prompt in Enhance without sending it; Delete offers Undo. Narrow canvases use a project dropdown. **More** contains filtered export and clear-history actions. [History guide](docs/user-guide.md#history-and-settings).
 
 In the request box, **Enter** adds a line. Enter and modified Enter keys never start enhancement or send a prompt: use **Enhance**. In the result box, **Ctrl+Enter** (or **⌘+Enter**) sends your edited text. If you explicitly enable **Send right after enhancing**, the separate **Enhance and send** button can skip review; **Enhance** still stops at the result. Navigation has visible labels, controls have keyboard focus indicators, and segmented choices support arrow keys.
 

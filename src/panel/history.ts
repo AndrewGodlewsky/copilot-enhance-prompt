@@ -52,7 +52,7 @@ export function pageHistory(entries: HistoryEntry[], requestedPage: number, sele
   return {
     entries: visible, page, pages, total: entries.length,
     start: entries.length ? start + 1 : 0, end: start + visible.length,
-    selected: visible.find(entry => entry.id === selectedId) ?? visible[0] ?? null
+    selected: visible.find(entry => entry.id === selectedId) ?? null
   }
 }
 

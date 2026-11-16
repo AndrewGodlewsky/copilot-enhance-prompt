@@ -1,5 +1,11 @@
 # Changes
 
+## [0.10.4] - 2026-11-15
+
+### Changed
+- Widen the History project sidebar and wrap long project names. Add a Projects button to hide or show the sidebar while keeping the selected project filter.
+- Expand prompt details directly below each history row instead of in a separate reading pane. Rows start closed, open one at a time, and close when clicked again. Keep both saved texts, metadata, project location, Reuse, Copy and Delete available in the expanded row.
+
 ## [0.10.3] - 2026-11-15
 
 ### Changed

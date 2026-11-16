@@ -1,13 +1,13 @@
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useId, useRef, useState } from 'react'
 import { read, set } from '#panel'
-import { CopyIcon, DownloadIcon, EllipsisIcon, FolderIcon, PencilIcon, SearchIcon, Trash2Icon } from 'lucide-react'
+import { ChevronDownIcon, ChevronRightIcon, CopyIcon, DownloadIcon, EllipsisIcon, FolderIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PencilIcon, SearchIcon, Trash2Icon } from 'lucide-react'
 import type { HistoryEntry } from '../../src/history.ts'
 import { isStyle, STYLE_LABELS } from '../../src/prompts.ts'
 import { historyExcerpt, historyMatchParts, historyTitle } from '../../src/panel/history.ts'
 import { clearHistory, copy, exportHistory, removeEntry, reuse } from '../../src/panel/actions.ts'
 import {
   confirmClearHistory, filteredHistory, history, historyFilter, historyOpen, historyOrder,
-  historyPageNumber, historyProject, historyProjectChoices, historyScope, historyWindow
+  historyPageNumber, historyProject, historyProjectChoices, historyProjectsExpanded, historyScope, historyWindow
 } from '../../src/panel/state.ts'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,8 +36,7 @@ type SavedText = 'original' | 'enhanced'
 
 export function HistoryReader({ entry, text, onTextChange }: { entry: HistoryEntry; text: SavedText; onTextChange: (text: SavedText) => void }) {
   return (
-    <section className="history-reader" aria-label="Selected prompt">
-      <h3><Highlight text={historyTitle(entry)} /></h3>
+    <section className="history-reader" aria-label="Prompt details">
       <div className="history-details">
         <span>{styleName(entry)}</span><span>{entry.model}</span><time>{date(entry.at)}</time>
         {entry.source === 'hook' ? <span>Chat auto-enhance (legacy)</span> : null}
@@ -61,6 +60,25 @@ export function HistoryReader({ entry, text, onTextChange }: { entry: HistoryEnt
   )
 }
 
+function HistoryItem({ entry, projectLabel, expanded, onToggle }: { entry: HistoryEntry; projectLabel: string; expanded: boolean; onToggle: () => void }) {
+  const id = useId()
+  const query = read(historyFilter).trim().toLowerCase()
+  const [text, setText] = useState<SavedText>('enhanced')
+  return (
+    <article className="history-item">
+      <button type="button" className="history-entry" aria-expanded={expanded} aria-controls={id} onClick={() => { setText('enhanced'); onToggle() }}>
+        <span className="history-entry-heading">{expanded ? <ChevronDownIcon aria-hidden="true" /> : <ChevronRightIcon aria-hidden="true" />}<span className="history-entry-title"><Highlight text={historyTitle(entry)} /></span></span>
+        {!expanded ? <span className="history-entry-excerpt"><Highlight text={historyExcerpt(entry)} /></span> : null}
+        <span className="history-entry-meta"><span title={entry.project || 'No project recorded'}>{projectLabel}</span><time title={date(entry.at)}>{ago(entry.at)}</time></span>
+        {query && !entry.original.toLowerCase().includes(query) ? <span className="history-match-note">Match in enhanced prompt</span> : null}
+      </button>
+      <div id={id} hidden={!expanded}>
+        {expanded ? <HistoryReader entry={entry} text={text} onTextChange={setText} /> : null}
+      </div>
+    </article>
+  )
+}
+
 export function HistorySection() {
   const all = read(history)
   const query = read(historyFilter)
@@ -71,7 +89,8 @@ export function HistorySection() {
   const selected = window.selected
   const scope = project === null ? 'all' : project ? `path:${project}` : 'unassigned'
   const allMatches = choices.reduce((count, choice) => count + choice.count, 0)
-  const [reading, setReading] = useState<{ id: string; text: SavedText } | null>(null)
+  const projectsExpanded = read(historyProjectsExpanded)
+  const projectsId = useId()
   const scroll = useRef<HTMLDivElement>(null)
   // React keeps the list and its scroll on selection; a changed filter or page starts at the top.
   useEffect(() => { if (scroll.current) scroll.current.scrollTop = 0 }, [scope, query, order, window.page])
@@ -92,12 +111,13 @@ export function HistorySection() {
         </DropdownMenu>
       </div>
       <div className="history-toolbar">
+        <Button variant="outline" size="sm" className="history-project-toggle" aria-label={projectsExpanded ? 'Hide projects' : 'Show projects'} aria-expanded={projectsExpanded} aria-controls={projectsId} onClick={() => set(historyProjectsExpanded, !projectsExpanded)}>{projectsExpanded ? <PanelLeftCloseIcon /> : <PanelLeftOpenIcon />}Projects</Button>
         <div className="history-search"><SearchIcon className="size-4" aria-hidden="true" /><Input type="search" aria-label="Search original and enhanced prompts" placeholder="Search original and enhanced prompts" value={query} onChange={event => { set(historyFilter, event.target.value); resetPage() }} /></div>
         <div className="history-project-select"><Pick label="Filter history by project" value={scope} options={[{ value: 'all', label: `All projects (${allMatches})` }, ...choices.map(choice => ({ value: choice.value, label: `${choice.label}${choice.current ? ' · Current' : ''} (${choice.count})` }))]} onChange={chooseProject} /></div>
         <div className="history-order"><span aria-hidden="true">Order</span><Pick label="Order prompts" value={order} options={[{ value: 'newest', label: 'Newest first' }, { value: 'oldest', label: 'Oldest first' }]} onChange={value => { set(historyOrder, value === 'oldest' ? 'oldest' : 'newest'); resetPage() }} /></div>
       </div>
-      <div className="history-library">
-        <aside className="history-projects" aria-label="Projects">
+      <div className="history-library" data-projects-open={projectsExpanded}>
+        <aside id={projectsId} className="history-projects" aria-label="Projects" hidden={!projectsExpanded}>
           <h3>Projects</h3>
           <button type="button" className="history-project" aria-pressed={scope === 'all'} onClick={() => chooseProject('all')}><FolderIcon className="size-4" /><span className="history-project-name">All projects</span><span className="history-count">{allMatches}</span></button>
           <div className="history-project-divider" />
@@ -110,20 +130,14 @@ export function HistorySection() {
           ))}
         </aside>
         <section className="history-entries" aria-label="Saved prompts">
-          <div className="history-list-heading"><span>{project === null ? 'All prompts' : choices.find(choice => choice.path === project)?.name}</span><span>{window.total} {query.trim() ? 'matches' : 'saved'}</span></div>
+          <div className="history-list-heading"><span title={project ?? undefined}>{project === null ? 'All prompts' : choices.find(choice => choice.path === project)?.label}</span><span>{window.total} {query.trim() ? 'matches' : 'saved'}</span></div>
           <div className="history-list-scroll" ref={scroll}>
             {window.entries.map(entry => (
-              <button type="button" className="history-entry" key={entry.id} aria-pressed={selected?.id === entry.id} onClick={() => { set(historyOpen, entry.id); setReading(null) }}>
-                <span className="history-entry-title"><Highlight text={historyTitle(entry)} /></span>
-                <span className="history-entry-excerpt"><Highlight text={historyExcerpt(entry)} /></span>
-                <span className="history-entry-meta"><span title={entry.project || 'No project recorded'}>{project === null ? choices.find(choice => choice.path === (entry.project || ''))?.label : styleName(entry)}</span><time title={date(entry.at)}>{ago(entry.at)}</time></span>
-                {query.trim() && !entry.original.toLowerCase().includes(query.trim().toLowerCase()) ? <span className="history-match-note">Match in enhanced prompt</span> : null}
-              </button>
+              <HistoryItem key={entry.id} entry={entry} expanded={selected?.id === entry.id} onToggle={() => set(historyOpen, selected?.id === entry.id ? null : entry.id)} projectLabel={project === null ? choices.find(choice => choice.path === (entry.project || ''))?.label ?? 'No project recorded' : styleName(entry)} />
             ))}
             {window.total === 0 ? <div className="history-empty"><strong>{all.length ? 'No matching prompts' : 'No history yet'}</strong><p>{all.length ? 'Try another project or a shorter search.' : 'Enhanced prompts show up here.'}</p></div> : null}
           </div>
         </section>
-        {selected ? <HistoryReader entry={selected} text={reading?.id === selected.id ? reading.text : 'enhanced'} onTextChange={text => setReading({ id: selected.id, text })} /> : <div className="history-empty history-reader-empty"><p>{all.length ? 'Select a matching prompt to read it here.' : 'Your saved prompts will be available to read and reuse here.'}</p></div>}
       </div>
       <div className="history-pagination">
         <span aria-live="polite">{window.total ? `${window.start}–${window.end} of ${window.total}${query.trim() ? ' matching' : ''} prompts` : '0 prompts'}</span>

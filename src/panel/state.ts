@@ -200,7 +200,8 @@ export const defaults = atom<Defaults>({
 export const history = derived(() => parseHistory(read(historyRaw)))
 /** Existing all/project values remain valid; new selections use path:<saved project> or unassigned. */
 export const historyScope = atom<string>('historyScope', 'all', { persist: 'plugin' })
-/** The entry selected for reading, without changing the composer. */
+/** Canvas-local navigation and expanded row; browsing never changes the composer. */
+export const historyProjectsExpanded = atom(true)
 export const historyOpen = atom<string | null>(null)
 export const historyProject = derived(() => resolveHistoryProject(read(historyScope), read(history), read(projectName)))
 export const historyProjectChoices = derived(() => historyProjects(read(history), read(projectName), read(historyFilter)))
