@@ -1,5 +1,13 @@
 var e=`# Changes
 
+## [0.9.0] - 2026-11-15
+
+### Added
+- Configure separate model and reasoning choices for Low, Medium and High effort. Recommended presets are Claude Haiku 5.5 at highest supported reasoning, GPT-6.1 Sol at High, and Claude Opus 5.5 at Medium, subject to your Copilot catalog. Existing assignments stay unchanged until you select Use recommended presets.
+- Show account/catalog status beside the composer with Retry and Show Logs. Missing models, sign-in failures and unsupported reasoning have actionable explanations. Retry checks metadata without submitting your draft.
+- Validate explicit reasoning against both Copilot catalogs and the helper's applied setting before inference. Use it for rewriting, AI Test and the following AI-assisted selector; separate selectors and fallback models keep their own defaults. Stop on unsupported or ignored reasoning instead of silently substituting a level.
+- Include safe readiness diagnostics and the successful attempt's reasoning in the result. Keep SDK/runtime reuse, isolated helpers, usage accounting and sending safeguards.
+
 ## [0.8.0] - 2026-11-15
 
 ### Changed

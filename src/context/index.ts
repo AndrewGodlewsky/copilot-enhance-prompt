@@ -504,7 +504,7 @@ async function dynamicParts(
       step('pick', 'done', String(picked.length))
     } catch (error) {
       stopIfCancelled(signal)
-      if (messageOf(error).code === 'error.copilot_usage') throw error
+      if (['error.copilot_usage', 'error.copilot_reasoning', 'error.copilot_reasoning_applied'].includes(messageOf(error).code)) throw error
       notes.push(msg('note.picker_skipped', { reason: messageOf(error) }))
       step('pick', 'skipped')
     }

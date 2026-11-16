@@ -7,7 +7,8 @@
 import { bindPanel, type PanelClient } from '../../src/runtime.ts'
 import { english, msg, raw, type Message } from '../../src/messages.ts'
 import { DEFAULTS } from '../../src/defaults.ts'
-import { EFFORT_SETTINGS, isEffort, parseModelAssignment } from '../../src/effort.ts'
+import { EFFORT_SETTINGS, REASONING_SETTINGS, isEffort, resolveEffort } from '../../src/effort.ts'
+import type { ModelProfile } from '../../src/presets.ts'
 import { UNSUPPORTED_SETTINGS } from '../../src/capabilities.ts'
 import { createDiagnostics } from '../../src/diagnostics.ts'
 
@@ -131,10 +132,8 @@ async function enhance(input: Record<string, unknown>, signal?: AbortSignal) {
   const startedAt = Date.now()
   const keys = ['workspace', 'project', 'git', 'search', 'model'] as const
   const tier = isEffort(input.effort) ? input.effort : 'medium'
-  const assignment = parseModelAssignment(settingsValues[EFFORT_SETTINGS[tier]])
-  const selected = assignment?.profileId ? models.profiles.find(profile => profile.id === assignment.profileId && profile.enabled) : models.profiles.find(profile => profile.enabled)
-  if (!assignment || !selected) throw new Error('Choose an enabled effort model in Settings.')
-  const first = { profileId: selected.id, name: selected.name, model: assignment.model || selected.model }
+  const { profile: selected, reasoningEffort } = resolveEffort(tier, String(settingsValues[EFFORT_SETTINGS[tier]]), String(settingsValues[REASONING_SETTINGS[tier]] ?? 'default'), models.profiles as ModelProfile[], sampleCatalog())
+  const first = { profileId: selected.id, name: selected.name, model: selected.model, reasoningEffort }
   const backup = models.profiles.find(profile => profile.enabled && profile.id !== selected.id)
   const answered = fallbackDemo && backup ? { profileId: backup.id, name: backup.name, model: backup.model } : first
   // What each step says once it is done, as the worker reports it: a name, or a count the panel words.
@@ -170,13 +169,16 @@ async function enhance(input: Record<string, unknown>, signal?: AbortSignal) {
 let attachmentCount = 0
 /** Switches confirmed in the panel (the worker keeps them in storage). */
 const granted = new Set<string>()
+// Preview data only: this is not evidence of availability in a real Copilot account.
+const sampleCatalog = () => ({ models: [
+  { id: 'claude-sonnet-4.5', label: 'Claude Sonnet 4.5' }, { id: 'gpt-5-mini', label: 'GPT-5 mini' }, { id: 'gpt-5', label: 'GPT-5' },
+  { id: 'claude-haiku-5.5', label: 'Claude Haiku 5.5', supportedReasoningEfforts: ['low', 'medium', 'high', 'max'] },
+  { id: 'gpt-6.1-sol', label: 'GPT-6.1 Sol', supportedReasoningEfforts: ['low', 'medium', 'high'] },
+  { id: 'claude-opus-5.5', label: 'Claude Opus 5.5', supportedReasoningEfforts: ['low', 'medium', 'high'] }
+], source: 'Copilot preview data', fetchedAt: Date.now() })
 const handlers: Record<string, (input: Record<string, unknown>, signal?: AbortSignal) => unknown> = {
   'models.get': () => models,
-  'models.catalog': () => ({
-    models: [{ id: 'claude-sonnet-4.5', label: 'Claude Sonnet 4.5' }, { id: 'gpt-5-mini', label: 'GPT-5 mini' }, { id: 'gpt-5', label: 'GPT-5' }],
-    source: 'copilot',
-    fetchedAt: Date.now()
-  }),
+  'models.catalog': sampleCatalog,
   'models.save': (input) => {
     const next = { ...profile(String(input.id ?? `p${Date.now()}`), String(input.name), String(input.model)), ...input }
     const exists = models.profiles.some((entry) => entry.id === next.id)

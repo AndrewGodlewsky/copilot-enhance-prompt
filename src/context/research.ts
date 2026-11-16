@@ -182,7 +182,7 @@ export async function researchContext(options: ResearchOptions): Promise<{ items
       }
     }
   } catch (error) {
-    if (options.signal?.aborted || ['error.research_privacy_changed', 'error.copilot_usage'].includes(messageOf(error).code)) {
+    if (options.signal?.aborted || ['error.research_privacy_changed', 'error.copilot_usage', 'error.copilot_reasoning', 'error.copilot_reasoning_applied'].includes(messageOf(error).code)) {
       options.onStep?.('research', 'failed')
       record?.('context.research', options.signal?.aborted ? 'cancelled' : 'failed')
       if (options.signal?.aborted) throw new LlmError(msg('error.cancelled'), 'cancelled')

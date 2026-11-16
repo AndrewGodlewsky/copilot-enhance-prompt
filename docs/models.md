@@ -1,6 +1,6 @@
 # Models
 
-Enhance Prompt uses the models available through your GitHub Copilot account. Manage saved profiles in **Models**, then assign them to Low, Medium and High in **Settings > Effort models**. Claude, GPT and other model families shown in this catalog all use Copilot authentication and usage accounting.
+Enhance Prompt uses the models available through your GitHub Copilot account. Use the recommended presets or manage saved profiles in **Models**, then assign model/reasoning pairs to Low, Medium and High in **Settings > Effort models**. Claude, GPT and other model families shown in this catalog all use Copilot authentication and usage accounting. See [effort settings](settings.md#effort-models) for the preset table and upgrade behavior.
 
 ## Add and choose a model
 
@@ -16,7 +16,7 @@ Direct provider APIs, local model servers, subscription CLIs and custom commands
 
 The **#** menu on each card sets its position; the switch skips that profile. The model assigned to the selected effort is tried first. With **Fallback to the next model when one fails** enabled, remaining eligible Copilot profiles can back it up within the run's time budget.
 
-**Fall back on** selects either any model error or only network errors, timeouts, rate limits and server errors. Accounting failures stop fallback. The result identifies the model that answered and any failed attempts.
+**Fall back on** selects either any model error or only network errors, timeouts, rate limits and server errors. Accounting failures and unsupported or unapplied reasoning stop fallback. Fallback models use their own default reasoning, rather than inheriting a level chosen for another model. The result identifies the model that answered and any failed attempts.
 
 The **File picker model** selects the profile used for [AI-assisted context](context-levels.md). **AI Test** uses the selected effort's model for its research rounds and does not use research fallback. All of these requests stay within Copilot.
 

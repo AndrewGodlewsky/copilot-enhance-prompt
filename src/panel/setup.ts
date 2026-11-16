@@ -6,6 +6,7 @@ import { on, plugin, read, settings } from '#panel'
 import {
   applyProgress,
   cancel,
+  cancelCatalogLoads,
   learnTerminals,
   refreshConsents,
   refreshDataSummary,
@@ -55,6 +56,7 @@ export function wirePanel(): () => void {
 /** The panel is closing or reloading: its run ends, and the request's signal stops the worker's model call too. */
 export function closePanel(): void {
   cancelContextPreview()
+  cancelCatalogLoads()
   cancel()
   stopTicking()
 }

@@ -62,6 +62,8 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
     assert.doesNotMatch(ending.html, />Try again<|>Dismiss</, 'success must not expose retry actions during the completion lock')
     assert.equal(ending.inputs.find(input => input['aria-label'] === 'Your prompt').readOnly, true)
     assert.match(html, />Enhance</)
+    assert.match(html, />Retry</)
+    assert.match(html, /Copilot has not been checked/)
     assert.ok(inputs.some(input => input !== request && typeof input.onKeyDown === 'function'), 'reviewed-result send shortcut remains')
   }
 })
@@ -95,6 +97,8 @@ test('settings and model setup expose only supported Copilot controls', async ()
     assert.doesNotMatch(html, /Start new agents|Auto-enhance|Notify when|Ask for feedback|API key|API format|Max tokens|external provider|aria-label="Preset"/i)
     for (const label of ['Effort models', 'Feedback', 'Open an issue on GitHub', 'Send right after enhancing']) assert.ok(html.includes(label), label)
     assert.match(html, /Copilot/)
+    for (const tier of ['Low', 'Medium', 'High']) assert.match(html, new RegExp(`aria-label="${tier} reasoning"`))
+    assert.match(html, /Use recommended presets/)
     if (!editing) assert.match(html, /Select a Copilot model/)
   }
   const retired = module.exports.render(false, true)

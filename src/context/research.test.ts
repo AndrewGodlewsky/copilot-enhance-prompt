@@ -9,7 +9,7 @@ import { LlmError } from '../llm.ts'
 import { researchContext, RESEARCH_LIMITS } from './research.ts'
 import { planSteps } from '../progress.ts'
 
-type Call = { system: string; user: string; model: string }
+type Call = { system: string; user: string; model: string; reasoningEffort?: string }
 const research = (call: Call) => call.system.startsWith('You research project context')
 const cp = normalizeProfile({ id: 'cp', preset: 'copilot', provider: 'copilot', model: 'saved-model' })!
 const external = { id: 'external', preset: 'ollama', provider: 'openai', model: 'external-model' }
@@ -29,6 +29,7 @@ async function fixture(check: (f: {
     'workspace.readContext': { displayName: 'Fixture', branch: '', terminals: [], workspaceId: 'project' },
     'workspace.list': { workspaces: [{ id: 'project', name: 'Fixture', path: root, branch: null, hostId: null }] },
     'agents.list': { agents: [] },
+    'copilot.catalog': { models: [{ id: 'effort-model', label: 'Effort model', supportedReasoningEfforts: ['high', 'medium'] }], source: 'GitHub Copilot', fetchedAt: 1 },
     'copilot.rewrite': async (call: Call) => { calls.push(call); return { text: await reply(call) } }
   } })
   const worker = await mountWorker(workerModule, { host })
@@ -43,6 +44,7 @@ async function fixture(check: (f: {
 test('AI Test feeds requested evidence into the next round and the final English rewrite on the effort model', async () => {
   await fixture(async ({ host, worker, calls, answer }) => {
     await host.settings.set('effortHighModel', 'cp|effort-model')
+    await host.settings.set('effortHighReasoning', 'medium')
     let rounds = 0
     answer(call => {
       if (!research(call)) return 'Enhanced prompt'
@@ -57,6 +59,7 @@ test('AI Test feeds requested evidence into the next round and the final English
     assert.equal(rounds, 2)
     assert.equal(calls.length, 3)
     assert.ok(calls.every(call => call.model === 'effort-model'))
+    assert.ok(calls.every(call => call.reasoningEffort === 'medium'))
     assert.match(calls.at(-1)!.system, /English/)
     assert.match(calls.at(-1)!.user, /EVIDENCE_ONE/)
     assert.match(calls.at(-1)!.user, /EVIDENCE_TWO/)

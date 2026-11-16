@@ -6,7 +6,7 @@ import { copyToClipboard } from './clipboard.ts'
 import { forgetActivity, recordSave, recordStatus, recordTool } from './context/activity.ts'
 import { researchContext, RESEARCH_LIMITS } from './context/research.ts'
 import { isSensitive } from './context/files.ts'
-import { EFFORT_LABELS, EFFORT_SETTINGS, isEffort, parseModelAssignment } from './effort.ts'
+import { EFFORT_SETTINGS, REASONING_SETTINGS, isEffort, resolveEffort } from './effort.ts'
 import { atLeast, contextItem, findFocusedWorkspace, focusedCandidates, focusedProject, gatherContext, projectNameOf, type ContextItem } from './context/index.ts'
 import { forgetTerminals, learnTerminal, loadTerminals } from './context/terminals.ts'
 import { imagesBlock, withImagePaths } from './images.ts'
@@ -171,13 +171,14 @@ async function pickFilesWithModel(
   tree: string[],
   prompt: string,
   signal?: AbortSignal,
-  totalMs: number = RUN_LIMITS.pickerMs
+  totalMs: number = RUN_LIMITS.pickerMs,
+  reasoningEffort?: string
 ): Promise<string[]> {
   const system =
     'You pick source files relevant to a coding task. Answer ONLY a JSON array of up to 8 file paths copied exactly from the list, most relevant first. No prose.'
   const user = `<task>\n${prompt}\n</task>\n<files>\n${tree.join('\n')}\n</files>`
   const list = candidates(config.profiles, config.selectorProfileId, settings.fallbackEnabled)
-  const { text } = await runChain(host, list, system, user, chainOptions(settings, signal, { timeoutMs: RUN_LIMITS.pickerMs, totalMs }))
+  const { text } = await runChain(host, list, system, user, chainOptions(settings, signal, { timeoutMs: RUN_LIMITS.pickerMs, totalMs, reasoningEffort }))
   const match = /\[[\s\S]*\]/.exec(text)
   if (!match) return []
   let parsed: unknown
@@ -265,25 +266,29 @@ export async function enhance(
   if (!prompt) throw hostError(msg('error.no_prompt'), 'invalid_params')
   const settings = await readSettings(host)
   const config = await loadModels(host)
-  let profileId = input.profileId ?? null
-  let chosenModel = input.model?.trim().slice(0, 200)
+  let list: ModelProfile[]
+  let reasoningEffort: string | undefined
   if (input.effort !== undefined) {
     if (!isEffort(input.effort)) throw hostError(msg('error.effort'), 'invalid_params')
-    const assignment = parseModelAssignment(await host.settings.get(EFFORT_SETTINGS[input.effort]) ?? 'auto')
-    if (!assignment || (assignment.profileId && !config.profiles.some(profile => profile.id === assignment.profileId && profile.enabled))) {
-      throw hostError(msg('error.effort_model', { effort: EFFORT_LABELS[input.effort] }), 'invalid_params')
-    }
-    profileId = assignment.profileId
-    chosenModel = assignment.model
+    const assignment = String(await host.settings.get(EFFORT_SETTINGS[input.effort]) ?? 'recommended')
+    const reasoning = String(await host.settings.get(REASONING_SETTINGS[input.effort]) ?? 'default')
+    const needsCatalog = assignment === 'recommended' || reasoning !== 'default'
+    if (needsCatalog && !settings.privacy.allowOnlineModelLists) throw hostError(msg('error.lists_off'), 'unavailable')
+    const catalog = needsCatalog ? await host.host.call('copilot.catalog', {}) : undefined
+    const resolved = resolveEffort(input.effort, assignment, reasoning, config.profiles, catalog)
+    reasoningEffort = resolved.reasoningEffort
+    list = [resolved.profile, ...candidates(config.profiles, null, true).filter(profile => profile.id !== resolved.profile.id && profile.model !== resolved.profile.model)]
+    if (!settings.fallbackEnabled) list = list.slice(0, 1)
+  } else {
+    const profileId = input.profileId ?? null
+    const chosenModel = input.model?.trim().slice(0, 200)
+    list = candidates(config.profiles, profileId, settings.fallbackEnabled).map(profile =>
+      chosenModel && profile.id === profileId ? { ...profile, model: chosenModel } : profile)
   }
-  const list = candidates(config.profiles, profileId, settings.fallbackEnabled).map((profile) =>
-    chosenModel && profile.id === profileId ? { ...profile, model: chosenModel } : profile
-  )
   if (list.length === 0) throw hostError(msg('error.no_model'), 'invalid_params')
-  // File selection is part of the same data/billing route as rewriting.
-  const pickerProfiles = config.profiles
-  const pickerConfig = { ...config, profiles: pickerProfiles.map(profile => profile.id === config.selectorProfileId ? profile : list.find(candidate => candidate.id === profile.id) ?? profile),
-    selectorProfileId: config.selectorProfileId ?? list[0]?.id ?? null }
+  // A separately configured selector keeps its own model defaults; otherwise it shares the effort pair.
+  const pickerConfig = config.selectorProfileId ? config : { profiles: list, selectorProfileId: list[0].id }
+  const pickerReasoning = config.selectorProfileId ? undefined : reasoningEffort
   const style: Style = isStyle(input.style) ? input.style : settings.defaultStyle
   const requested: ContextLevel = isContextLevel(input.level) ? input.level : settings.contextLevel
   const level = allowedLevel(requested, settings)
@@ -305,7 +310,7 @@ export async function enhance(
     extraFiles: settings.extraContextFiles,
     excludePatterns: settings.excludePatterns,
     // The picker gets its own share, so the rewrite itself always has time left.
-    pickFiles: (tree, task) => pickFilesWithModel(host, pickerConfig, settings, tree, task, signal, Math.min(RUN_LIMITS.pickerMs, (left() ?? Infinity) / 2)),
+    pickFiles: (tree, task) => pickFilesWithModel(host, pickerConfig, settings, tree, task, signal, Math.min(RUN_LIMITS.pickerMs, (left() ?? Infinity) / 2), pickerReasoning),
     ...privacy,
     onStep: step,
     signal,
@@ -327,7 +332,7 @@ export async function enhance(
       budgetMs: Math.min(RESEARCH_LIMITS.ms, (left() ?? RUN_LIMITS.totalMs) / 2),
       ensureAccess: checkResearchAccess, onStep: step, diagnostics: host.diagnostics,
       ask: async (system, user, researchSignal, remainingMs) => (await runChain(host, list.slice(0, 1), system, user,
-        chainOptions(settings, researchSignal, { fallback: false, totalMs: remainingMs, timeoutMs: remainingMs }))).text
+        chainOptions(settings, researchSignal, { fallback: false, totalMs: remainingMs, timeoutMs: remainingMs, reasoningEffort }))).text
     })
     gathered.items = researched.items
     gathered.notes.push(researched.note)
@@ -370,6 +375,7 @@ export async function enhance(
       chainOptions(settings, signal, {
         ...(deadline === undefined ? {} : { totalMs: left() }),
         images,
+        reasoningEffort,
         onAttempt: (profile, model, attempt, total) => {
           tried = `${profile.name} · ${model || 'default'}${attempt > 1 ? ` · ${attempt}/${total}` : ''}`
           step('model', 'running', tried)
@@ -871,7 +877,8 @@ function registerDataHandlers(host: EnhanceWorker): void {
     }
     if (what === 'all') {
       await host.storage.delete(MODELS_KEY)
-      for (const key of Object.values(EFFORT_SETTINGS)) await host.settings.set(key, 'auto')
+      for (const key of Object.values(EFFORT_SETTINGS)) await host.settings.set(key, 'recommended')
+      for (const key of Object.values(REASONING_SETTINGS)) await host.settings.set(key, 'default')
       await host.storage.delete(RULES_KEY)
       // Confirmations go too: a switch that needs one asks again; what the host reported is forgotten.
       await host.storage.delete(CONSENTS_KEY)

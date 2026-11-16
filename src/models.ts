@@ -20,9 +20,11 @@ export function viewProfiles(profiles: ModelProfile[]): ProfileView[] {
 }
 
 /** `error` is English (logs, history); `errorText` the same as a Message for the panel. */
-export type Attempt = { profileId: string; name: string; model: string; ok: boolean; error?: string; errorText?: Message; ms: number }
+export type Attempt = { profileId: string; name: string; model: string; reasoningEffort?: string; ok: boolean; error?: string; errorText?: Message; ms: number }
 
 export type ChainOptions = {
+  /** Applies to the first candidate only; fallback profiles retain their model defaults. */
+  reasoningEffort?: string
   /** The person's cancel. */
   signal?: AbortSignal
   /** Per-model timeout. */
@@ -89,6 +91,7 @@ export async function runChain(
     }
     const attemptStart = Date.now()
     const model = effectiveModel(profile)
+    const reasoningEffort = attempts.length === 0 ? options.reasoningEffort : undefined
     options.onAttempt?.(profile, model, attempts.length + 1, list.length)
     const controller = new AbortController()
     // The per-model timeout keeps time for the model that comes next. The last one to try has no
@@ -107,8 +110,8 @@ export async function runChain(
       if ((await host.settings.get('allowOnlineModelLists')) === false) {
         throw new LlmError(msg('error.lists_off'), 'unavailable')
       }
-      const { text } = await host.host.call('copilot.rewrite', { model, system, user, images: (options.images ?? []).map(image => ({ type: image.type, base64: image.base64 })) }, { signal: controller.signal })
-      attempts.push({ profileId: profile.id, name: profile.name, model, ok: true, ms: Date.now() - attemptStart })
+      const { text } = await host.host.call('copilot.rewrite', { model, ...(reasoningEffort ? { reasoningEffort } : {}), system, user, images: (options.images ?? []).map(image => ({ type: image.type, base64: image.base64 })) }, { signal: controller.signal })
+      attempts.push({ profileId: profile.id, name: profile.name, model, ...(reasoningEffort ? { reasoningEffort } : {}), ok: true, ms: Date.now() - attemptStart })
       return { text, profile, attempts }
     } catch (caught) {
       const accountingFailed = messageOf(caught).code === 'error.copilot_usage'
@@ -120,13 +123,14 @@ export async function runChain(
         profileId: profile.id,
         name: profile.name,
         model,
+        ...(reasoningEffort ? { reasoningEffort } : {}),
         ok: false,
         error: (error as Error).message,
         errorText: messageOf(error),
         ms: Date.now() - attemptStart
       })
       // A charged request may already have completed. Keep the recording failure visible.
-      if (accountingFailed) throw new ChainError(messageOf(error), 'action_failed', attempts)
+      if (accountingFailed || ['error.copilot_reasoning', 'error.copilot_reasoning_applied'].includes(messageOf(error).code)) throw new ChainError(messageOf(error), 'action_failed', attempts)
       if (options.signal?.aborted) {
         break
       }

@@ -43,7 +43,7 @@ test('efforts inherit the current model once and preserve existing assignments a
   } finally { await rm(dir, { recursive: true, force: true }) }
 })
 
-test('Auto migrates to the first enabled model; an empty installation remains usable after adding a model', async () => {
+test('Auto migrates to the first enabled model; a new installation starts with recommended presets', async () => {
   for (const configured of [false, true]) {
     const dir = await mkdtemp(join(tmpdir(), 'enhance-effort-test-'))
     try {
@@ -51,10 +51,10 @@ test('Auto migrates to the first enabled model; an empty installation remains us
       if (configured) await data.set('models', { profiles: [{ ...profile('disabled'), enabled: false }, profile('first')] })
       const services = createServices(session('auto'), dir)
       const all = await services.settings.get()
-      for (const key of ['effortLowModel', 'effortMediumModel', 'effortHighModel']) assert.equal(all[key], configured ? 'first|first-default' : 'auto')
+      for (const key of ['effortLowModel', 'effortMediumModel', 'effortHighModel']) assert.equal(all[key], configured ? 'first|first-default' : 'recommended')
       if (!configured) {
         await services.storage.set('models', { profiles: [profile('added')] })
-        assert.equal(await services.settings.get('effortMediumModel'), 'auto')
+        assert.equal(await services.settings.get('effortMediumModel'), 'recommended')
       }
     } finally { await rm(dir, { recursive: true, force: true }) }
   }
@@ -80,7 +80,30 @@ test('worker resolves each effort at run time and ignores stale direct model ove
     assert.equal(calls.at(-1)?.model, 'changed-low')
     assert.equal((await worker.request('models.get')).profiles[0].model, 'copilot-default')
     await worker.request('data.clear', { what: 'all' })
-    for (const key of ['effortLowModel', 'effortMediumModel', 'effortHighModel']) assert.equal(await host.settings.get(key), 'auto')
+    for (const key of ['effortLowModel', 'effortMediumModel', 'effortHighModel']) assert.equal(await host.settings.get(key), 'recommended')
+  } finally { await worker.deactivate() }
+})
+
+test('recommended effort works without saved profiles and ignores request reasoning overrides', async () => {
+  const calls: { model: string; reasoningEffort?: string }[] = []
+  const host = mockHost({ results: {
+    'workspace.readContext': null,
+    'copilot.catalog': { models: [{ id: 'actual-sol', label: 'GPT-6.1 Sol', supportedReasoningEfforts: ['medium', 'high'] }], source: 'GitHub Copilot', fetchedAt: 1 },
+    'copilot.rewrite': (input: { model: string; reasoningEffort?: string }) => { calls.push(input); return { text: 'English rewrite' } }
+  } })
+  const worker = await mountWorker(main, { host })
+  try {
+    const answer = await worker.request('prompt.enhance', { prompt: 'Fix tests', effort: 'medium', level: 'off', model: 'untrusted', reasoningEffort: 'max' } as any)
+    assert.equal(answer.model, 'actual-sol')
+    assert.equal(answer.attempts[0].reasoningEffort, 'high')
+    assert.equal(calls[0].reasoningEffort, 'high')
+    assert.equal((await worker.request('models.get')).profiles.length, 0)
+    await host.settings.set('effortMediumReasoning', 'max')
+    await assert.rejects(worker.request('prompt.enhance', { prompt: 'Fix tests', effort: 'medium', level: 'off' }), /reasoning/)
+    assert.equal(calls.length, 1)
+    await host.settings.set('allowOnlineModelLists', false)
+    await assert.rejects(worker.request('prompt.enhance', { prompt: 'Fix tests', effort: 'medium', level: 'off' }), /lists.*off/)
+    assert.equal(calls.length, 1)
   } finally { await worker.deactivate() }
 })
 

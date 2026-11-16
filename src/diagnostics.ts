@@ -10,7 +10,7 @@ const OPERATIONS = new Set([
   'history.remove', 'history.clear', 'history.restore', 'consents.get', 'consent.set', 'editor.open',
   'targets.list', 'rules.get', 'rules.save', 'data.summary', 'data.clear',
   'copilot.refresh', 'copilot.catalog', 'copilot.runtime', 'copilot.start', 'copilot.session', 'copilot.access', 'copilot.workspace',
-  'copilot.tools', 'copilot.images', 'copilot.account', 'copilot.generate', 'copilot.usage', 'copilot.cleanup'
+  'copilot.reasoning', 'copilot.tools', 'copilot.images', 'copilot.account', 'copilot.generate', 'copilot.usage', 'copilot.cleanup'
 ])
 const CODES = new Set(['aborted', 'cancelled', 'timeout', 'unavailable', 'invalid_params', 'action_failed', 'rate_limited',
   'disconnected', 'request_failed', 'unauthorized', 'forbidden', 'network', 'AbortError', 'TimeoutError', 'NotAllowedError',
@@ -18,8 +18,8 @@ const CODES = new Set(['aborted', 'cancelled', 'timeout', 'unavailable', 'invali
   ...Object.keys(MESSAGES).filter(code => code.startsWith('error.'))])
 export type DiagnosticOutcome = 'started' | 'ok' | 'failed' | 'cancelled' | 'pending'
 export type DiagnosticEntry = { at: string; operation: string; outcome: DiagnosticOutcome; ms?: number; code?: string; status?: number }
-const DISCOVERY_STAGES = ['runtime_identity', 'runtime_path', 'sdk_import', 'sdk_api', 'session_api', 'model_list', 'filter', 'complete', 'privacy'] as const
-const DISCOVERY_CHECKS = ['executableAllowed', 'bootstrapPresent', 'bootstrapEmbedded', 'sdkPathPresent', 'parentMatches', 'extensionSandboxed', 'runtimePathResolved', 'sdkImported', 'clientAvailable', 'stdioAvailable', 'modelListAvailable', 'responseIsList'] as const
+const DISCOVERY_STAGES = ['runtime_identity', 'runtime_path', 'sdk_import', 'sdk_api', 'session_api', 'authentication', 'model_list', 'filter', 'complete', 'privacy'] as const
+const DISCOVERY_CHECKS = ['executableAllowed', 'bootstrapPresent', 'bootstrapEmbedded', 'sdkPathPresent', 'parentMatches', 'extensionSandboxed', 'runtimePathResolved', 'sdkImported', 'clientAvailable', 'stdioAvailable', 'modelListAvailable', 'responseIsList', 'authenticated'] as const
 const DISCOVERY_COUNTS = ['received', 'eligible', 'invalid', 'otherProvider', 'unattributed', 'policyBlocked'] as const
 export type ModelDiscovery = {
   attempt: number; startedAt: string; completedAt?: string; stage: typeof DISCOVERY_STAGES[number]

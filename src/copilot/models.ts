@@ -4,6 +4,7 @@ import { basename, isAbsolute, join, relative } from 'node:path'
 import { tmpdir } from 'node:os'
 import { randomUUID } from 'node:crypto'
 import type { Catalog } from '../catalog.ts'
+import { validReasoning } from '../effort.ts'
 import type { ImageType } from '../images.ts'
 import { LlmError } from '../llm.ts'
 import { msg } from '../messages.ts'
@@ -11,9 +12,9 @@ import { diagnosticError, type Diagnostics, type DiscoveryProbe } from '../diagn
 import { createUsageRecorder, reconcileUsageJournal, type UsageRecorder } from './usage.ts'
 
 type Auth = { isAuthenticated: boolean; login?: string; host?: string }
-type Model = { id: string; name?: string; provider?: { kind?: string }; policy?: { state?: string }; capabilities?: { supports?: { vision?: boolean } } }
+type Model = { id: string; name?: string; provider?: { kind?: string }; policy?: { state?: string }; capabilities?: { supports?: { vision?: boolean; reasoningEffort?: boolean } }; supportedReasoningEfforts?: unknown; defaultReasoningEffort?: unknown }
 export type ModelSession = { rpc: {
-  model: { list(options?: { refresh?: boolean }): Promise<{ list: unknown[] }>; getCurrent(): Promise<{ modelId?: string }> }
+  model: { list(options?: { refresh?: boolean }): Promise<{ list: unknown[] }>; getCurrent(): Promise<{ modelId?: string; reasoningEffort?: string }> }
   gitHubAuth: { getStatus(): Promise<Auth> }
   metadata: { snapshot(): Promise<{ workingDirectory: string; isRemote: boolean }> }
 } }
@@ -24,7 +25,7 @@ type HelperSession = ModelSession & {
 }
 type Client = { start(): Promise<unknown>; createSession(config: Record<string, unknown>): Promise<HelperSession>; forceStop(): Promise<unknown> }
 export type DesktopSdk = { CopilotClient: new (options: Record<string, unknown>) => Client; RuntimeConnection: { forStdio(options: { path: string; args: string[] }): unknown } }
-export type CopilotRewrite = { model: string; system: string; user: string; images?: { type: ImageType; base64: string }[] }
+export type CopilotRewrite = { model: string; reasoningEffort?: string; system: string; user: string; images?: { type: ImageType; base64: string }[] }
 
 const unavailable = () => new LlmError(msg('error.copilot_unavailable'), 'unavailable')
 const cancelled = () => new LlmError(msg('error.cancelled'), 'cancelled')
@@ -86,6 +87,21 @@ function sameAccount(left: Auth, right: Auth): boolean {
     left.login.toLowerCase() === right.login?.toLowerCase() && left.host.toLowerCase() === right.host?.toLowerCase()
 }
 
+function reasoningMetadata(model: Model) {
+  const choices = model.supportedReasoningEfforts
+  // Do not drop unknown entries and then misidentify a remaining level as the highest.
+  const supportedReasoningEfforts = model.capabilities?.supports?.reasoningEffort === true && Array.isArray(choices) && choices.length <= 20 && choices.every(validReasoning)
+    ? [...new Set<string>(choices)] : []
+  return { supportedReasoningEfforts, ...(validReasoning(model.defaultReasoningEffort) && supportedReasoningEfforts.includes(model.defaultReasoningEffort)
+    ? { defaultReasoningEffort: model.defaultReasoningEffort } : {}) }
+}
+
+function checkReasoning(model: Model, effort: string | undefined) {
+  if (effort !== undefined && (!validReasoning(effort) || !reasoningMetadata(model).supportedReasoningEfforts.includes(effort))) {
+    throw new LlmError(msg('error.copilot_reasoning'), 'invalid_params')
+  }
+}
+
 // Dependency injection is used only by local fixture tests. Production always calls desktopRuntime.
 export function createCopilotModels(parent: ModelSession, runtime = desktopRuntime, diagnostics?: Diagnostics, usageRecorder = createUsageRecorder) {
   const active = new Set<AbortController>()
@@ -98,6 +114,10 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
       probe?.stage('session_api')
       probe?.check('modelListAvailable', typeof parent.rpc?.model?.list === 'function')
       if (typeof parent.rpc?.model?.list !== 'function') throw new LlmError(msg('error.copilot_catalog'), 'unavailable')
+      probe?.stage('authentication')
+      const auth = await withDeadline(parent.rpc.gitHubAuth.getStatus(), 15_000, timedOut)
+      probe?.check('authenticated', auth.isAuthenticated === true)
+      if (auth.isAuthenticated !== true) throw new LlmError(msg('error.copilot_sign_in'), 'unavailable')
       probe?.stage('model_list')
       const result = await withDeadline(parent.rpc.model.list({ refresh: true }), 15_000, timedOut)
       probe?.check('responseIsList', Array.isArray(result?.list))
@@ -117,11 +137,11 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
       probe?.stage('complete')
       probe?.finish('ok')
       diagnostics?.record('copilot.catalog', 'ok', { ms: Date.now() - started })
-      return { models: result.list.filter(eligible).map(model => ({ id: model.id, label: model.name || model.id })), source: 'GitHub Copilot', fetchedAt: Date.now() }
+      return { models: result.list.filter(eligible).map(model => ({ id: model.id, label: model.name || model.id, ...reasoningMetadata(model) })), source: 'GitHub Copilot', fetchedAt: Date.now() }
     } catch (error) {
       probe?.finish('failed', error)
       diagnostics?.record('copilot.catalog', 'failed', { ms: Date.now() - started, ...diagnosticError(error) })
-      if (error instanceof LlmError && ['error.copilot_runtime', 'error.copilot_sdk', 'error.copilot_catalog', 'error.copilot_no_models'].includes(error.text.code)) throw error
+      if (error instanceof LlmError && ['error.copilot_runtime', 'error.copilot_sdk', 'error.copilot_catalog', 'error.copilot_no_models', 'error.copilot_sign_in'].includes(error.text.code)) throw error
       throw new LlmError(msg('error.copilot_catalog'), 'unavailable')
     }
   }
@@ -147,6 +167,14 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
     try {
       const { sdk, path } = await runtime()
       check()
+      if (input.reasoningEffort !== undefined) {
+        stage('copilot.reasoning')
+        const advertised = await withDeadline(parent.rpc.model.list({ refresh: true }), 15_000)
+        const requested = advertised.list.filter(eligible).find(model => model.id === input.model)
+        if (!requested) throw new LlmError(msg('error.copilot_model'), 'invalid_params')
+        checkReasoning(requested, input.reasoningEffort)
+        check()
+      }
       directory = await mkdtemp(join(tmpdir(), 'enhance-copilot-'))
       const workspace = join(directory, 'workspace')
       await mkdir(workspace)
@@ -164,6 +192,7 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
       const session = await withDeadline(client.createSession({
         sessionId, onEvent: (event: unknown) => usage!.record(event),
         workingDirectory: workspace, configDirectory: join(directory, 'home'), model: input.model,
+        ...(input.reasoningEffort !== undefined ? { reasoningEffort: input.reasoningEffort } : {}),
         systemMessage: { mode: 'replace', content: input.system },
         availableTools: [], onPermissionRequest: () => ({ kind: 'denied-by-rules', rules: [] }),
         requestExtensions: false, requestCanvasRenderer: false, pluginDirectories: [], mcpServers: {},
@@ -182,13 +211,21 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
       ]), 20_000)
       if (!sameAccount(parentAuth, helperAuth)) throw new LlmError(msg('error.copilot_account'), 'unavailable')
       const model = helperModels.list.filter(eligible).find(model => model.id === input.model)
-      if (!model || !parentModels.list.filter(eligible).some(model => model.id === input.model)) throw new LlmError(msg('error.copilot_model'), 'invalid_params')
+      const parentModel = parentModels.list.filter(eligible).find(model => model.id === input.model)
+      if (!model || !parentModel) throw new LlmError(msg('error.copilot_model'), 'invalid_params')
+      checkReasoning(parentModel, input.reasoningEffort)
+      checkReasoning(model, input.reasoningEffort)
       stage('copilot.workspace')
       if (metadata.isRemote !== false || await realpath(metadata.workingDirectory) !== await realpath(workspace)) throw unavailable()
       stage('copilot.tools')
       await withDeadline(session.rpc.tools.initializeAndValidate(), 15_000)
       const [tools, selected] = await withDeadline(Promise.all([session.rpc.tools.getCurrentMetadata(), session.rpc.model.getCurrent()]), 15_000)
       if (!Array.isArray(tools.tools) || tools.tools.length !== 0 || selected.modelId !== input.model) throw unavailable()
+      stage('copilot.reasoning')
+      if (input.reasoningEffort !== undefined && selected.reasoningEffort !== input.reasoningEffort) {
+        throw new LlmError(msg('error.copilot_reasoning_applied'), 'invalid_params')
+      }
+      diagnostics?.record(phase, 'ok', { ms: Date.now() - phaseStarted })
       const images = input.images ?? []
       stage('copilot.images')
       if (images.length && model.capabilities?.supports?.vision !== true) throw new LlmError(msg('error.copilot_images'), 'invalid_params')

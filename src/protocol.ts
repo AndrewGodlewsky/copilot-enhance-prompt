@@ -6,7 +6,7 @@ import type { ContextItemView, ProfileView } from './presets.ts'
 /** The longest a panel may wait for its worker (the host caps `timeoutMs` at 120000). */
 export const PANEL_REQUEST_LIMIT_MS = 120_000
 
-export type AttemptView = { profileId: string; name: string; model: string; ok: boolean; error?: string; errorText?: Message; ms: number }
+export type AttemptView = { profileId: string; name: string; model: string; reasoningEffort?: string; ok: boolean; error?: string; errorText?: Message; ms: number }
 export type ProfileInput = {
   id?: string
   name: string
@@ -28,7 +28,7 @@ export interface PluginRequests {
         style?: string
         terminalId?: string | null
         level?: string
-        /** Settings choose the rewriting model for this effort; direct model fields are ignored. */
+        /** Settings choose the rewriting model and reasoning for this effort; direct model fields are ignored. */
         effort?: string
         profileId?: string | null
         /** A model of that profile for this prompt only (from its live list). */
@@ -118,7 +118,7 @@ export interface PluginRequests {
     'models.catalog': {
       input: { preset?: 'copilot'; profileId?: string; refresh?: boolean }
       output: {
-        models: { id: string; label: string; description?: string; isDefault?: boolean }[]
+        models: import('./catalog.ts').Catalog['models']
         source: string
         fetchedAt: number
         error?: string

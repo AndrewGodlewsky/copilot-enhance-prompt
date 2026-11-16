@@ -132,6 +132,67 @@ test('max level adds terminal output and AI-picked files', async () => {
   await worker.deactivate()
 })
 
+test('AI-assisted shares the effort reasoning unless its own selector is explicitly configured', async () => {
+  for (const selectorProfileId of [null, 'separate']) {
+    const root = project()
+    const calls = stubRewrite(call => call.system.startsWith('You pick source files') ? '["src/index.ts"]' : 'done')
+    const host = mockHost({
+      settings: { effortMediumModel: 'main|chosen', effortMediumReasoning: 'high' },
+      storage: { models: { profiles: [profile('main'), profile('separate', 'selector')], selectorProfileId } },
+      results: hostFor(root, { 'copilot.catalog': { models: [{ id: 'chosen', label: 'Chosen', supportedReasoningEfforts: ['high'] }], source: 'GitHub Copilot', fetchedAt: 1 } })
+    })
+    const worker = await mountWorker(main, { host })
+    try {
+      await worker.request('prompt.enhance', { prompt: 'make the tests pass', effort: 'medium', level: 'max' })
+      assert.equal(calls.length, 2)
+      assert.equal(calls[0].model, selectorProfileId ? 'selector' : 'chosen')
+      assert.equal(calls[0].reasoningEffort, selectorProfileId ? undefined : 'high')
+      assert.equal(calls[1].model, 'chosen')
+      assert.equal(calls[1].reasoningEffort, 'high')
+    } finally { await worker.deactivate() }
+  }
+})
+
+test('reasoning rejection during AI-assisted selection or AI Test stops before rewriting', async () => {
+  for (const level of ['max', 'ai-test']) for (const code of ['error.copilot_reasoning', 'error.copilot_reasoning_applied'] as const) {
+    const calls = stubRewrite((_call, index) => { if (index === 0) throw new LlmError({ code }, 'invalid_params'); return 'Must not rewrite' })
+    const host = mockHost({ settings: { effortMediumModel: 'main|chosen', effortMediumReasoning: 'high' },
+      storage: { models: { profiles: [profile('main')] } },
+      results: hostFor(project(), { 'copilot.catalog': { models: [{ id: 'chosen', label: 'Chosen', supportedReasoningEfforts: ['high'] }], source: 'GitHub Copilot', fetchedAt: 1 } }) })
+    const worker = await mountWorker(main, { host })
+    try {
+      await assert.rejects(worker.request('prompt.enhance', { prompt: 'Help improve the application', effort: 'medium', level }), /reasoning/)
+      assert.equal(calls.length, 1)
+      assert.equal(host.data().storage.history, undefined)
+    } finally { await worker.deactivate() }
+  }
+})
+
+test('effort reasoning never leaks to a fallback, and rejected reasoning never silently falls back', async () => {
+  for (const unsupported of [false, true]) {
+    const calls = stubRewrite((_call, index) => {
+      if (index === 0) throw new LlmError(unsupported ? { code: 'error.copilot_reasoning_applied' } : 'Rate limit', unsupported ? 'invalid_params' : 'rate_limited')
+      return 'Fallback answer'
+    })
+    const host = mockHost({ settings: { effortMediumModel: 'first|chosen', effortMediumReasoning: 'high', fallbackEnabled: true, fallbackOn: 'any' },
+      storage: { models: { profiles: [profile('first'), profile('second', 'fallback')] } },
+      results: hostFor(null, { 'copilot.catalog': { models: [{ id: 'chosen', label: 'Chosen', supportedReasoningEfforts: ['high'] }], source: 'GitHub Copilot', fetchedAt: 1 } }) })
+    const worker = await mountWorker(main, { host })
+    try {
+      const request = worker.request('prompt.enhance', { prompt: 'fix the tests', effort: 'medium', level: 'off' })
+      if (unsupported) { await assert.rejects(request, /reasoning/); assert.equal(calls.length, 1) }
+      else {
+        const answer = await request
+        assert.equal(answer.model, 'fallback')
+        assert.equal(answer.attempts[0].reasoningEffort, 'high')
+        assert.equal(answer.attempts[1].reasoningEffort, undefined)
+        assert.equal(calls[1].reasoningEffort, undefined)
+      }
+      assert.equal(calls[0].reasoningEffort, 'high')
+    } finally { await worker.deactivate() }
+  }
+})
+
 test('falls back to the next model and reports attempts', async () => {
   const calls = stubRewrite((_call, index) => { if (index === 0) throw new LlmError('Rate limit', 'rate_limited'); return 'From Claude.' })
   const host = mockHost({

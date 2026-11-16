@@ -5,6 +5,9 @@ import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent } from
 import { read, set, settings, update } from '#panel'
 import { useWordCrew } from './use-word-crew'
 import { EFFORTS, EFFORT_LABELS } from '../../src/effort.ts'
+import { copilotStatus } from '../../src/panel/copilot-status.ts'
+import { retryCopilot } from '../../src/panel/actions.ts'
+import { LogsButton } from './logs'
 import { CONTEXT_LEVEL_HINTS, isContextLevel } from '../../src/presets.ts'
 import { contextKey } from '../../src/panel/context-preview.ts'
 import {
@@ -227,6 +230,7 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
           {'Options'}
         </Button>
       </div>
+      <CopilotConnection />
       <p className="text-muted-foreground text-xs">{CONTEXT_LEVEL_HINTS[isContextLevel(read(effectiveLevel)) ? read(effectiveLevel) as keyof typeof CONTEXT_LEVEL_HINTS : 'standard']}</p>
       {read(effectiveStyle) === 'custom' ? <CustomInstructions /> : null}
       <PromptOptions />
@@ -456,6 +460,20 @@ function TargetPicker() {
   )
 }
 
+function CopilotConnection() {
+  const status = copilotStatus()
+  return <div className={`rounded-lg border px-3 py-2 text-xs ${status.kind === 'error' ? 'border-warning-foreground/40 bg-warning/10' : 'bg-muted/30'}`}>
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <p role="status" className="font-medium">{status.title}</p>
+      <div className="flex items-center gap-2">
+        <Button type="button" size="sm" variant="ghost" disabled={status.kind === 'checking' || read(busy) !== null} onClick={() => void retryCopilot()}><RotateCcwIcon className="size-3.5" />{status.kind === 'checking' ? 'Checking…' : 'Retry'}</Button>
+        {status.kind === 'error' ? <LogsButton /> : null}
+      </div>
+    </div>
+    <p className="text-muted-foreground mt-1 leading-relaxed">{status.detail}</p>
+  </div>
+}
+
 function ResultCard({ output }: { output: string }) {
   const working = read(busy)
   const info = read(lastRun)
@@ -467,6 +485,7 @@ function ResultCard({ output }: { output: string }) {
           {info ? <Badge variant="success-light">{`${'Done'} · ${seconds(info.ms)}`}</Badge> : null}
       </div>
       <p id="result-help" className="text-muted-foreground text-xs">{'Edit the enhanced prompt below, then copy it or send it to Copilot.'}</p>
+      {info ? <p className="text-muted-foreground text-xs">Used {info.model} · {info.attempts.find(attempt => attempt.ok)?.reasoningEffort ?? 'model default'} reasoning</p> : null}
       <Textarea
         aria-label={'Enhanced prompt'}
         aria-describedby="result-help"

@@ -6,12 +6,13 @@ import { createDiagnostics } from '../diagnostics.ts'
 
 function fixture() {
   const state = { helperLogin: 'person', parentLogin: 'person', host: 'https://github.com', tools: [] as unknown[], selected: 'model-a', provider: 'copilot', policy: 'enabled', currentDirectory: '', sent: [] as unknown[], stopped: 0, config: {} as Record<string, unknown>, options: {} as Record<string, unknown>, hold: false,
-    prepared: '', recorded: [] as unknown[], flushed: false, prepareFails: false, flushFails: false, generateFails: false }
+    prepared: '', recorded: [] as unknown[], flushed: false, prepareFails: false, flushFails: false, generateFails: false,
+    authenticated: true, supportsReasoning: true, efforts: ['low', 'medium', 'high', 'max'], appliedReasoning: 'high', helperEfforts: null as string[] | null }
   const emit = (event: unknown) => (state.config.onEvent as ((event: unknown) => void) | undefined)?.(event)
-  const model = () => ({ id: 'model-a', name: 'Model A', provider: { kind: state.provider }, policy: { state: state.policy }, capabilities: { supports: { vision: true } } })
+  const model = () => ({ id: 'model-a', name: 'Model A', provider: { kind: state.provider }, policy: { state: state.policy }, capabilities: { supports: { vision: true, reasoningEffort: state.supportsReasoning } }, supportedReasoningEfforts: state.efforts, defaultReasoningEffort: 'medium' })
   const parent: ModelSession = { rpc: {
     model: { list: async () => ({ list: [model()] }), getCurrent: async () => ({ modelId: 'model-a' }) },
-    gitHubAuth: { getStatus: async () => ({ isAuthenticated: true, login: state.parentLogin, host: state.host }) },
+    gitHubAuth: { getStatus: async () => ({ isAuthenticated: state.authenticated, login: state.parentLogin, host: state.host }) },
     metadata: { snapshot: async () => ({ workingDirectory: 'parent-project', isRemote: false }) }
   } }
   let release: (() => void) | undefined
@@ -26,7 +27,7 @@ function fixture() {
         state.currentDirectory = config.workingDirectory as string
         return { sessionId: config.sessionId as string, rpc: {
           ...parent.rpc,
-          model: { list: async () => ({ list: [model()] }), getCurrent: async () => ({ modelId: state.selected }) },
+          model: { list: async () => ({ list: [{ ...model(), supportedReasoningEfforts: state.helperEfforts ?? state.efforts }] }), getCurrent: async () => ({ modelId: state.selected, reasoningEffort: state.appliedReasoning }) },
           gitHubAuth: { getStatus: async () => ({ isAuthenticated: true, login: state.helperLogin, host: state.host }) },
           metadata: { snapshot: async () => ({ workingDirectory: state.currentDirectory, isRemote: false }) },
           tools: { initializeAndValidate: async () => ({}), getCurrentMetadata: async () => ({ tools: state.tools }) }
@@ -47,6 +48,42 @@ function fixture() {
     } }
   }) }
 }
+
+test('catalog checks authentication without starting a helper and retains supported reasoning metadata', async () => {
+  const { provider, state } = fixture()
+  const catalog = await provider.catalog()
+  assert.deepEqual(catalog.models[0].supportedReasoningEfforts, ['low', 'medium', 'high', 'max'])
+  assert.equal(catalog.models[0].defaultReasoningEffort, 'medium')
+  assert.deepEqual(state.config, {})
+  state.authenticated = false
+  await assert.rejects(provider.catalog(), { text: { code: 'error.copilot_sign_in' } })
+  assert.equal(state.sent.length, 0)
+})
+
+test('reasoning is passed to the helper and verified before sending the prompt', async () => {
+  const { provider, state } = fixture()
+  await provider.rewrite({ model: 'model-a', reasoningEffort: 'high', system: 'Rewrite', user: 'Draft' })
+  assert.equal(state.config.reasoningEffort, 'high')
+  assert.equal(state.sent.length, 1)
+})
+
+test('malformed reasoning metadata is not partially advertised as a complete list', async () => {
+  const { provider, state } = fixture()
+  state.efforts = ['low', 'max', 'unknown level']
+  const catalog = await provider.catalog()
+  assert.deepEqual(catalog.models[0].supportedReasoningEfforts, [])
+  assert.equal(catalog.models[0].defaultReasoningEffort, undefined)
+})
+
+test('unsupported, ignored or changed reasoning fails before inference without leaking private details', async () => {
+  for (const change of [{ supportsReasoning: false }, { efforts: ['low'] }, { helperEfforts: ['low'] }, { appliedReasoning: 'medium' }, { appliedReasoning: '' }]) {
+    const { provider, state, diagnostics } = fixture()
+    Object.assign(state, change)
+    await assert.rejects(provider.rewrite({ model: 'model-a', reasoningEffort: 'high', system: 'PRIVATE rules', user: 'PRIVATE prompt' }), /reasoning/)
+    assert.equal(state.sent.length, 0)
+    assert.doesNotMatch(JSON.stringify(diagnostics.snapshot()), /PRIVATE/)
+  }
+})
 
 test('helper usage is prepared before inference and flushed after late shutdown receipts', async () => {
   const { provider, state } = fixture()

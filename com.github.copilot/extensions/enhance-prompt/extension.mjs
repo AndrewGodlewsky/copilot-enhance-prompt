@@ -1876,6 +1876,10 @@ var MESSAGES = {
   "error.copilot_account": "The background runtime could not verify the same GitHub account as this Copilot session. Check your existing Copilot sign-in. No prompt was sent.",
   "error.copilot_model": "This model is not available through GitHub Copilot in both sessions. Refresh the model list and choose a Copilot model.",
   "error.copilot_images": "This Copilot model does not report image support. Choose a model with image support or remove the images.",
+  "error.copilot_sign_in": "Sign in through GitHub Copilot\u2019s account menu, then select Retry here. The plugin uses that account and does not collect credentials.",
+  "error.copilot_recommended": "{model} could not be uniquely found in your Copilot model list. Select Retry or choose an available model in Effort settings.",
+  "error.copilot_reasoning": "Copilot does not advertise this reasoning level for the selected model. Select Retry or choose a supported level in Effort settings. No prompt was sent to this model.",
+  "error.copilot_reasoning_applied": "The background runtime did not apply the requested reasoning level. No prompt was sent to this model. Select Retry, check Effort settings, or update Copilot. Show Logs includes the failure stage.",
   "error.copilot_usage": "Copilot usage could not be saved. Check free disk space and plugin data-folder permissions, then open Show Logs. Any remaining helper files have been kept for recovery.",
   "error.send_off": "Sending to Copilot is off in Settings.",
   "error.session_not_idle": "Copilot is busy, waiting for your answer, or disconnected. Wait until the session is idle before sending.",
@@ -2942,7 +2946,7 @@ ${diff.diff}`));
       step("pick", "done", String(picked.length));
     } catch (error) {
       stopIfCancelled(signal);
-      if (messageOf(error).code === "error.copilot_usage") throw error;
+      if (["error.copilot_usage", "error.copilot_reasoning", "error.copilot_reasoning_applied"].includes(messageOf(error).code)) throw error;
       notes.push(msg("note.picker_skipped", { reason: messageOf(error) }));
       step("pick", "skipped");
     }
@@ -3211,7 +3215,7 @@ ${extra.content}`, chars: item2.chars + extra.chars + 2, why: extra.why, note: e
       }
     }
   } catch (error) {
-    if (options.signal?.aborted || ["error.research_privacy_changed", "error.copilot_usage"].includes(messageOf(error).code)) {
+    if (options.signal?.aborted || ["error.research_privacy_changed", "error.copilot_usage", "error.copilot_reasoning", "error.copilot_reasoning_applied"].includes(messageOf(error).code)) {
       options.onStep?.("research", "failed");
       record?.("context.research", options.signal?.aborted ? "cancelled" : "failed");
       if (options.signal?.aborted) throw new LlmError(msg("error.cancelled"), "cancelled");
@@ -3233,6 +3237,49 @@ ${extra.content}`, chars: item2.chars + extra.chars + 2, why: extra.why, note: e
 var EFFORTS = ["low", "medium", "high"];
 var EFFORT_LABELS = { low: "Low", medium: "Medium", high: "High" };
 var EFFORT_SETTINGS = { low: "effortLowModel", medium: "effortMediumModel", high: "effortHighModel" };
+var REASONING_SETTINGS = { low: "effortLowReasoning", medium: "effortMediumReasoning", high: "effortHighReasoning" };
+var RECOMMENDED = {
+  low: { name: "Claude Haiku 5.5", aliases: ["claudehaiku55", "haiku55"], reasoning: "highest" },
+  medium: { name: "GPT-6.1 Sol", aliases: ["gpt61sol"], reasoning: "high" },
+  high: { name: "Claude Opus 5.5", aliases: ["claudeopus55", "opus55"], reasoning: "medium" }
+};
+var validReasoning = (value) => typeof value === "string" && /^[a-z][a-z0-9_-]{0,39}$/.test(value);
+var REASONING_ORDER = ["minimal", "low", "medium", "high", "xhigh", "max"];
+function resolveReasoning(model, choice) {
+  if (choice === "default") return void 0;
+  const supported = model.supportedReasoningEfforts ?? [];
+  if (choice === "highest" && supported.length && supported.every((value) => REASONING_ORDER.includes(value))) {
+    return REASONING_ORDER.filter((value) => supported.includes(value)).at(-1);
+  }
+  if (choice !== "highest" && validReasoning(choice) && supported.includes(choice)) return choice;
+  throw new LlmError(msg("error.copilot_reasoning"), "invalid_params");
+}
+function resolveEffortModel(effort, assignment, profiles, catalog) {
+  const fail = () => new LlmError(msg("error.effort_model", { effort: EFFORT_LABELS[effort] }), "invalid_params");
+  const enabled = profiles.filter((profile2) => profile2.enabled && profile2.provider === "copilot" && profile2.preset === "copilot");
+  let profile;
+  if (assignment === "recommended") {
+    const preset = RECOMMENDED[effort];
+    const normalize = (value) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const matches = catalog?.models.filter((model2) => preset.aliases.some((alias) => alias === normalize(model2.id) || alias === normalize(model2.label))) ?? [];
+    if (matches.length !== 1) throw new LlmError(msg("error.copilot_recommended", { model: preset.name }), "invalid_params");
+    profile = { id: "copilot-recommended", name: "GitHub Copilot", preset: "copilot", provider: "copilot", model: matches[0].id, enabled: true };
+  } else {
+    const parsed = parseModelAssignment(assignment);
+    const selected = parsed?.profileId ? enabled.find((profile2) => profile2.id === parsed.profileId) : parsed ? enabled[0] : void 0;
+    if (!selected) throw fail();
+    profile = { ...selected, model: parsed.model || selected.model };
+  }
+  const model = catalog?.models.find((model2) => model2.id === profile.model);
+  if (catalog && !model) throw fail();
+  return profile;
+}
+function resolveEffort(effort, assignment, reasoning, profiles, catalog) {
+  const profile = resolveEffortModel(effort, assignment, profiles, catalog);
+  const model = catalog?.models.find((model2) => model2.id === profile.model);
+  if (assignment === "recommended" && reasoning === "default") reasoning = RECOMMENDED[effort].reasoning;
+  return { profile, reasoningEffort: resolveReasoning(model ?? { id: profile.model, label: profile.model }, reasoning) };
+}
 var isEffort = (value) => EFFORTS.some((effort) => effort === value);
 var MODEL_SEP = "|";
 var PROFILE_DEFAULT = "__profile_default__";
@@ -3576,6 +3623,7 @@ async function runChain(host, list, system, user, options) {
     }
     const attemptStart = Date.now();
     const model = effectiveModel(profile);
+    const reasoningEffort = attempts.length === 0 ? options.reasoningEffort : void 0;
     options.onAttempt?.(profile, model, attempts.length + 1, list.length);
     const controller = new AbortController();
     const last = profile === list[list.length - 1];
@@ -3591,8 +3639,8 @@ async function runChain(host, list, system, user, options) {
       if (await host.settings.get("allowOnlineModelLists") === false) {
         throw new LlmError(msg("error.lists_off"), "unavailable");
       }
-      const { text: text2 } = await host.host.call("copilot.rewrite", { model, system, user, images: (options.images ?? []).map((image) => ({ type: image.type, base64: image.base64 })) }, { signal: controller.signal });
-      attempts.push({ profileId: profile.id, name: profile.name, model, ok: true, ms: Date.now() - attemptStart });
+      const { text: text2 } = await host.host.call("copilot.rewrite", { model, ...reasoningEffort ? { reasoningEffort } : {}, system, user, images: (options.images ?? []).map((image) => ({ type: image.type, base64: image.base64 })) }, { signal: controller.signal });
+      attempts.push({ profileId: profile.id, name: profile.name, model, ...reasoningEffort ? { reasoningEffort } : {}, ok: true, ms: Date.now() - attemptStart });
       return { text: text2, profile, attempts };
     } catch (caught) {
       const accountingFailed = messageOf(caught).code === "error.copilot_usage";
@@ -3602,12 +3650,13 @@ async function runChain(host, list, system, user, options) {
         profileId: profile.id,
         name: profile.name,
         model,
+        ...reasoningEffort ? { reasoningEffort } : {},
         ok: false,
         error: error.message,
         errorText: messageOf(error),
         ms: Date.now() - attemptStart
       });
-      if (accountingFailed) throw new ChainError(messageOf(error), "action_failed", attempts);
+      if (accountingFailed || ["error.copilot_reasoning", "error.copilot_reasoning_applied"].includes(messageOf(error).code)) throw new ChainError(messageOf(error), "action_failed", attempts);
       if (options.signal?.aborted) {
         break;
       }
@@ -4019,7 +4068,7 @@ async function addHistory(host, settings, entry) {
     await host.storage.set(HISTORY_KEY, next.map(toJson));
   });
 }
-async function pickFilesWithModel(host, config, settings, tree, prompt, signal, totalMs = RUN_LIMITS.pickerMs) {
+async function pickFilesWithModel(host, config, settings, tree, prompt, signal, totalMs = RUN_LIMITS.pickerMs, reasoningEffort) {
   const system = "You pick source files relevant to a coding task. Answer ONLY a JSON array of up to 8 file paths copied exactly from the list, most relevant first. No prose.";
   const user = `<task>
 ${prompt}
@@ -4028,7 +4077,7 @@ ${prompt}
 ${tree.join("\n")}
 </files>`;
   const list = candidates(config.profiles, config.selectorProfileId, settings.fallbackEnabled);
-  const { text } = await runChain(host, list, system, user, chainOptions(settings, signal, { timeoutMs: RUN_LIMITS.pickerMs, totalMs }));
+  const { text } = await runChain(host, list, system, user, chainOptions(settings, signal, { timeoutMs: RUN_LIMITS.pickerMs, totalMs, reasoningEffort }));
   const match = /\[[\s\S]*\]/.exec(text);
   if (!match) return [];
   let parsed;
@@ -4074,27 +4123,27 @@ async function enhance(host, input, signal, progress, budgetMs) {
   if (!prompt) throw hostError(msg("error.no_prompt"), "invalid_params");
   const settings = await readSettings(host);
   const config = await loadModels(host);
-  let profileId = input.profileId ?? null;
-  let chosenModel = input.model?.trim().slice(0, 200);
+  let list;
+  let reasoningEffort;
   if (input.effort !== void 0) {
     if (!isEffort(input.effort)) throw hostError(msg("error.effort"), "invalid_params");
-    const assignment = parseModelAssignment(await host.settings.get(EFFORT_SETTINGS[input.effort]) ?? "auto");
-    if (!assignment || assignment.profileId && !config.profiles.some((profile) => profile.id === assignment.profileId && profile.enabled)) {
-      throw hostError(msg("error.effort_model", { effort: EFFORT_LABELS[input.effort] }), "invalid_params");
-    }
-    profileId = assignment.profileId;
-    chosenModel = assignment.model;
+    const assignment = String(await host.settings.get(EFFORT_SETTINGS[input.effort]) ?? "recommended");
+    const reasoning = String(await host.settings.get(REASONING_SETTINGS[input.effort]) ?? "default");
+    const needsCatalog = assignment === "recommended" || reasoning !== "default";
+    if (needsCatalog && !settings.privacy.allowOnlineModelLists) throw hostError(msg("error.lists_off"), "unavailable");
+    const catalog = needsCatalog ? await host.host.call("copilot.catalog", {}) : void 0;
+    const resolved = resolveEffort(input.effort, assignment, reasoning, config.profiles, catalog);
+    reasoningEffort = resolved.reasoningEffort;
+    list = [resolved.profile, ...candidates(config.profiles, null, true).filter((profile) => profile.id !== resolved.profile.id && profile.model !== resolved.profile.model)];
+    if (!settings.fallbackEnabled) list = list.slice(0, 1);
+  } else {
+    const profileId = input.profileId ?? null;
+    const chosenModel = input.model?.trim().slice(0, 200);
+    list = candidates(config.profiles, profileId, settings.fallbackEnabled).map((profile) => chosenModel && profile.id === profileId ? { ...profile, model: chosenModel } : profile);
   }
-  const list = candidates(config.profiles, profileId, settings.fallbackEnabled).map(
-    (profile) => chosenModel && profile.id === profileId ? { ...profile, model: chosenModel } : profile
-  );
   if (list.length === 0) throw hostError(msg("error.no_model"), "invalid_params");
-  const pickerProfiles = config.profiles;
-  const pickerConfig = {
-    ...config,
-    profiles: pickerProfiles.map((profile) => profile.id === config.selectorProfileId ? profile : list.find((candidate) => candidate.id === profile.id) ?? profile),
-    selectorProfileId: config.selectorProfileId ?? list[0]?.id ?? null
-  };
+  const pickerConfig = config.selectorProfileId ? config : { profiles: list, selectorProfileId: list[0].id };
+  const pickerReasoning = config.selectorProfileId ? void 0 : reasoningEffort;
   const style = isStyle(input.style) ? input.style : settings.defaultStyle;
   const requested = isContextLevel(input.level) ? input.level : settings.contextLevel;
   const level = allowedLevel(requested, settings);
@@ -4113,7 +4162,7 @@ async function enhance(host, input, signal, progress, budgetMs) {
     extraFiles: settings.extraContextFiles,
     excludePatterns: settings.excludePatterns,
     // The picker gets its own share, so the rewrite itself always has time left.
-    pickFiles: (tree, task) => pickFilesWithModel(host, pickerConfig, settings, tree, task, signal, Math.min(RUN_LIMITS.pickerMs, (left() ?? Infinity) / 2)),
+    pickFiles: (tree, task) => pickFilesWithModel(host, pickerConfig, settings, tree, task, signal, Math.min(RUN_LIMITS.pickerMs, (left() ?? Infinity) / 2), pickerReasoning),
     ...privacy,
     onStep: step,
     signal,
@@ -4145,7 +4194,7 @@ async function enhance(host, input, signal, progress, budgetMs) {
         list.slice(0, 1),
         system2,
         user2,
-        chainOptions(settings, researchSignal, { fallback: false, totalMs: remainingMs, timeoutMs: remainingMs })
+        chainOptions(settings, researchSignal, { fallback: false, totalMs: remainingMs, timeoutMs: remainingMs, reasoningEffort })
       )).text
     });
     gathered.items = researched.items;
@@ -4182,6 +4231,7 @@ ${otherFiles.map((path, index) => `${index + 1}. ${path}`).join("\n")}
       chainOptions(settings, signal, {
         ...deadline === void 0 ? {} : { totalMs: left() },
         images,
+        reasoningEffort,
         onAttempt: (profile, model, attempt, total) => {
           tried = `${profile.name} \xB7 ${model || "default"}${attempt > 1 ? ` \xB7 ${attempt}/${total}` : ""}`;
           step("model", "running", tried);
@@ -4585,7 +4635,8 @@ function registerDataHandlers(host) {
     }
     if (what === "all") {
       await host.storage.delete(MODELS_KEY);
-      for (const key of Object.values(EFFORT_SETTINGS)) await host.settings.set(key, "auto");
+      for (const key of Object.values(EFFORT_SETTINGS)) await host.settings.set(key, "recommended");
+      for (const key of Object.values(REASONING_SETTINGS)) await host.settings.set(key, "default");
       await host.storage.delete(RULES_KEY);
       await host.storage.delete(CONSENTS_KEY);
       await host.storage.delete("colorTheme");
@@ -4667,7 +4718,7 @@ function activate(host) {
 import { EventEmitter } from "node:events";
 
 // src/version.ts
-var VERSION = "0.8.0";
+var VERSION = "0.9.0";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([
@@ -4711,6 +4762,7 @@ var OPERATIONS = /* @__PURE__ */ new Set([
   "copilot.session",
   "copilot.access",
   "copilot.workspace",
+  "copilot.reasoning",
   "copilot.tools",
   "copilot.images",
   "copilot.account",
@@ -4742,8 +4794,8 @@ var CODES = /* @__PURE__ */ new Set([
   "EPERM",
   ...Object.keys(MESSAGES).filter((code) => code.startsWith("error."))
 ]);
-var DISCOVERY_STAGES = ["runtime_identity", "runtime_path", "sdk_import", "sdk_api", "session_api", "model_list", "filter", "complete", "privacy"];
-var DISCOVERY_CHECKS = ["executableAllowed", "bootstrapPresent", "bootstrapEmbedded", "sdkPathPresent", "parentMatches", "extensionSandboxed", "runtimePathResolved", "sdkImported", "clientAvailable", "stdioAvailable", "modelListAvailable", "responseIsList"];
+var DISCOVERY_STAGES = ["runtime_identity", "runtime_path", "sdk_import", "sdk_api", "session_api", "authentication", "model_list", "filter", "complete", "privacy"];
+var DISCOVERY_CHECKS = ["executableAllowed", "bootstrapPresent", "bootstrapEmbedded", "sdkPathPresent", "parentMatches", "extensionSandboxed", "runtimePathResolved", "sdkImported", "clientAvailable", "stdioAvailable", "modelListAvailable", "responseIsList", "authenticated"];
 var DISCOVERY_COUNTS = ["received", "eligible", "invalid", "otherProvider", "unattributed", "policyBlocked"];
 function diagnosticError(error) {
   const value = error;
@@ -4953,9 +5005,12 @@ var DEFAULTS = {
   "defaultStyle": "balanced",
   "customInstructions": "",
   "contextLevel": "standard",
-  "effortLowModel": "auto",
-  "effortMediumModel": "auto",
-  "effortHighModel": "auto",
+  "effortLowModel": "recommended",
+  "effortMediumModel": "recommended",
+  "effortHighModel": "recommended",
+  "effortLowReasoning": "default",
+  "effortMediumReasoning": "default",
+  "effortHighReasoning": "default",
   "terminalLines": 100,
   "extraContextFiles": "",
   "excludePatterns": "dist/\nbuild/\nout/\ncoverage/\n*.lock\npackage-lock.json\npnpm-lock.yaml\n*.min.js\n*.map\n*.snap",
@@ -5172,7 +5227,8 @@ function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DI
     const missing = [];
     for (const key of Object.values(EFFORT_SETTINGS)) if (await prefs.get(key) === null) missing.push(key);
     if (!missing.length) return;
-    const saved = parseModelsConfig(await data.get(MODELS_KEY)).profiles;
+    const storedModels = await data.get(MODELS_KEY);
+    const saved = parseModelsConfig(storedModels).profiles;
     const profiles = saved.filter((profile) => profile.enabled);
     const legacy = async (key) => await data.get(`session:${scope}:panel:${key}`) ?? await data.get(`panel:${key}`);
     const choice = await legacy("profileChoice");
@@ -5180,8 +5236,8 @@ function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DI
     const selected = profiles.find((profile) => profile.id === explicit);
     const current = selected ?? profiles[0];
     const override = explicit ? await legacy("modelChoice") : null;
-    const assignment = explicit ? modelAssignment(explicit, typeof override === "string" && override ? override : selected ? effectiveModel(selected) : "") : current ? modelAssignment(current.id, effectiveModel(current)) : "auto";
-    for (const key of missing) await prefs.set(key, parseModelAssignment(assignment) ? assignment : "auto");
+    const assignment = explicit ? modelAssignment(explicit, typeof override === "string" && override ? override : selected ? effectiveModel(selected) : "") : current ? modelAssignment(current.id, effectiveModel(current)) : storedModels === null && choice === null ? "recommended" : "auto";
+    for (const key of missing) await prefs.set(key, assignment === "recommended" || parseModelAssignment(assignment) ? assignment : "auto");
   }).catch((error) => {
     effortMigration = void 0;
     throw error;
@@ -5198,7 +5254,8 @@ function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DI
     }),
     set: async (key, value) => {
       if (!Object.hasOwn(DEFAULTS, key) || typeof value !== typeof DEFAULTS[key]) throw new Error("Invalid setting.");
-      if (Object.values(EFFORT_SETTINGS).some((name) => name === key) && !parseModelAssignment(value)) throw new Error("Invalid effort model assignment.");
+      if (Object.values(EFFORT_SETTINGS).some((name) => name === key) && value !== "recommended" && !parseModelAssignment(value)) throw new Error("Invalid effort model assignment.");
+      if (Object.values(REASONING_SETTINGS).some((name) => name === key) && !validReasoning(value)) throw new Error("Invalid reasoning level.");
       if (UNSUPPORTED_SETTINGS.has(key) && value) throw new Error("This setting is unavailable in the Copilot canvas.");
       await prepare();
       await prefs.set(key, value);
@@ -5637,6 +5694,16 @@ function eligible(value) {
 function sameAccount(left, right) {
   return left.isAuthenticated === true && right.isAuthenticated === true && !!left.login && !!left.host && left.login.toLowerCase() === right.login?.toLowerCase() && left.host.toLowerCase() === right.host?.toLowerCase();
 }
+function reasoningMetadata(model) {
+  const choices = model.supportedReasoningEfforts;
+  const supportedReasoningEfforts = model.capabilities?.supports?.reasoningEffort === true && Array.isArray(choices) && choices.length <= 20 && choices.every(validReasoning) ? [...new Set(choices)] : [];
+  return { supportedReasoningEfforts, ...validReasoning(model.defaultReasoningEffort) && supportedReasoningEfforts.includes(model.defaultReasoningEffort) ? { defaultReasoningEffort: model.defaultReasoningEffort } : {} };
+}
+function checkReasoning(model, effort) {
+  if (effort !== void 0 && (!validReasoning(effort) || !reasoningMetadata(model).supportedReasoningEfforts.includes(effort))) {
+    throw new LlmError(msg("error.copilot_reasoning"), "invalid_params");
+  }
+}
 function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usageRecorder = createUsageRecorder) {
   const active = /* @__PURE__ */ new Set();
   async function catalog() {
@@ -5648,6 +5715,10 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       probe?.stage("session_api");
       probe?.check("modelListAvailable", typeof parent.rpc?.model?.list === "function");
       if (typeof parent.rpc?.model?.list !== "function") throw new LlmError(msg("error.copilot_catalog"), "unavailable");
+      probe?.stage("authentication");
+      const auth = await withDeadline(parent.rpc.gitHubAuth.getStatus(), 15e3, timedOut);
+      probe?.check("authenticated", auth.isAuthenticated === true);
+      if (auth.isAuthenticated !== true) throw new LlmError(msg("error.copilot_sign_in"), "unavailable");
       probe?.stage("model_list");
       const result = await withDeadline(parent.rpc.model.list({ refresh: true }), 15e3, timedOut);
       probe?.check("responseIsList", Array.isArray(result?.list));
@@ -5670,11 +5741,11 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       probe?.stage("complete");
       probe?.finish("ok");
       diagnostics2?.record("copilot.catalog", "ok", { ms: Date.now() - started });
-      return { models: result.list.filter(eligible).map((model) => ({ id: model.id, label: model.name || model.id })), source: "GitHub Copilot", fetchedAt: Date.now() };
+      return { models: result.list.filter(eligible).map((model) => ({ id: model.id, label: model.name || model.id, ...reasoningMetadata(model) })), source: "GitHub Copilot", fetchedAt: Date.now() };
     } catch (error) {
       probe?.finish("failed", error);
       diagnostics2?.record("copilot.catalog", "failed", { ms: Date.now() - started, ...diagnosticError(error) });
-      if (error instanceof LlmError && ["error.copilot_runtime", "error.copilot_sdk", "error.copilot_catalog", "error.copilot_no_models"].includes(error.text.code)) throw error;
+      if (error instanceof LlmError && ["error.copilot_runtime", "error.copilot_sdk", "error.copilot_catalog", "error.copilot_no_models", "error.copilot_sign_in"].includes(error.text.code)) throw error;
       throw new LlmError(msg("error.copilot_catalog"), "unavailable");
     }
   }
@@ -5711,6 +5782,14 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
     try {
       const { sdk, path } = await runtime();
       check();
+      if (input.reasoningEffort !== void 0) {
+        stage("copilot.reasoning");
+        const advertised = await withDeadline(parent.rpc.model.list({ refresh: true }), 15e3);
+        const requested = advertised.list.filter(eligible).find((model2) => model2.id === input.model);
+        if (!requested) throw new LlmError(msg("error.copilot_model"), "invalid_params");
+        checkReasoning(requested, input.reasoningEffort);
+        check();
+      }
       directory = await mkdtemp(join6(tmpdir2(), "enhance-copilot-"));
       const workspace = join6(directory, "workspace");
       await mkdir4(workspace);
@@ -5742,6 +5821,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
         workingDirectory: workspace,
         configDirectory: join6(directory, "home"),
         model: input.model,
+        ...input.reasoningEffort !== void 0 ? { reasoningEffort: input.reasoningEffort } : {},
         systemMessage: { mode: "replace", content: input.system },
         availableTools: [],
         onPermissionRequest: () => ({ kind: "denied-by-rules", rules: [] }),
@@ -5780,13 +5860,21 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       ]), 2e4);
       if (!sameAccount(parentAuth, helperAuth)) throw new LlmError(msg("error.copilot_account"), "unavailable");
       const model = helperModels.list.filter(eligible).find((model2) => model2.id === input.model);
-      if (!model || !parentModels.list.filter(eligible).some((model2) => model2.id === input.model)) throw new LlmError(msg("error.copilot_model"), "invalid_params");
+      const parentModel = parentModels.list.filter(eligible).find((model2) => model2.id === input.model);
+      if (!model || !parentModel) throw new LlmError(msg("error.copilot_model"), "invalid_params");
+      checkReasoning(parentModel, input.reasoningEffort);
+      checkReasoning(model, input.reasoningEffort);
       stage("copilot.workspace");
       if (metadata.isRemote !== false || await realpath4(metadata.workingDirectory) !== await realpath4(workspace)) throw unavailable2();
       stage("copilot.tools");
       await withDeadline(session2.rpc.tools.initializeAndValidate(), 15e3);
       const [tools, selected] = await withDeadline(Promise.all([session2.rpc.tools.getCurrentMetadata(), session2.rpc.model.getCurrent()]), 15e3);
       if (!Array.isArray(tools.tools) || tools.tools.length !== 0 || selected.modelId !== input.model) throw unavailable2();
+      stage("copilot.reasoning");
+      if (input.reasoningEffort !== void 0 && selected.reasoningEffort !== input.reasoningEffort) {
+        throw new LlmError(msg("error.copilot_reasoning_applied"), "invalid_params");
+      }
+      diagnostics2?.record(phase, "ok", { ms: Date.now() - phaseStarted });
       const images = input.images ?? [];
       stage("copilot.images");
       if (images.length && model.capabilities?.supports?.vision !== true) throw new LlmError(msg("error.copilot_images"), "invalid_params");

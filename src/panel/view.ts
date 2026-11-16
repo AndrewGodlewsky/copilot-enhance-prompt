@@ -2,7 +2,7 @@ import { formatText } from '../format.ts'
 // view.ts: what the panel shows, as plain data (labels, options, progress text, the small decisions
 // about what to offer). The web panel (web/src) draws it; the tests check it.
 import { read } from '#panel'
-import { MODEL_SEP, PROFILE_DEFAULT, parseModelAssignment, type Effort } from '../effort.ts'
+import { MODEL_SEP, PROFILE_DEFAULT, parseModelAssignment, RECOMMENDED, resolveEffort, type Effort } from '../effort.ts'
 import { CONTEXT_LEVEL_LABELS, CONTEXT_LEVELS, isContextLevel, type ContextItemView } from '../presets.ts'
 import { isStyle, STYLE_LABELS, STYLES } from '../prompts.ts'
 import { BRAND } from '../brand.ts'
@@ -10,6 +10,7 @@ import type { HistoryEntry } from '../history.ts'
 import { allStructures, ruleApplies, scopeName, structureById, type Rule, type RulesConfig } from '../rules.ts'
 import { ESTIMATED_STEPS, stepPercent, type Step } from '../progress.ts'
 import type { PrivacyKey } from '../privacy.ts'
+import { effectiveEffort, effortReasoning } from './state.ts'
 import { type Catalog, type Run, type Target, catalogs, defaults, enabledProfiles, effectiveLevel, effectiveStyle, effortModels, models, projectName, rulesState, structureChoice, say, workspaceName } from './state.ts'
 
 /**
@@ -45,7 +46,7 @@ export function runSeconds(current: Pick<Run, 'status' | 'startedAt' | 'finished
 /** No enabled Copilot model has been configured yet. */
 export function modelWarning(): 'no-model' | null {
   if (read(models) === null) return null
-  return read(enabledProfiles).length === 0 ? 'no-model' : null
+  return read(effortModels)[read(effectiveEffort)] !== 'recommended' && read(enabledProfiles).length === 0 ? 'no-model' : null
 }
 
 /** "sonnet: Sonnet, newest" -> "Sonnet, newest"; display names stay as they are. */
@@ -224,7 +225,7 @@ export function modelMenu() {
     { value: 'auto', label: read(defaults).fallbackEnabled ? 'Auto (fallback)' : 'Auto' }
   ]
   for (const profile of read(enabledProfiles)) {
-    const catalog = read(catalogs)[profile.id]
+    const catalog = read(catalogs)[profile.id] ?? read(catalogs).copilot
     const listed = catalog?.models ?? []
     const seen = new Set<string>()
     const add = (id: string, label: string) => {
@@ -244,7 +245,7 @@ export function modelMenu() {
 
 /** Keep an assignment visible even when its catalog is stale or its profile was removed. */
 export function effortModelOptions(effort: Effort) {
-  const options = modelMenu()
+  const options = [{ value: 'recommended', label: `Recommended: ${RECOMMENDED[effort].name}` }, ...modelMenu()]
   const value = read(effortModels)[effort]
   if (!options.some(option => option.value === value)) {
     const assignment = parseModelAssignment(value)
@@ -258,6 +259,11 @@ export function effortModelOptions(effort: Effort) {
 
 export function effortModelLabel(effort: Effort): string {
   const value = read(effortModels)[effort]
+  try {
+    const resolved = resolveEffort(effort, value, read(effortReasoning)[effort], read(enabledProfiles), read(catalogs).copilot)
+    const label = read(catalogs).copilot?.models.find(model => model.id === resolved.profile.model)?.label ?? resolved.profile.model
+    return `${label} / ${resolved.reasoningEffort ? `${resolved.reasoningEffort} reasoning` : 'model default reasoning'}`
+  } catch { /* The status below explains missing access or unsupported settings. */ }
   const option = effortModelOptions(effort).find(option => option.value === value)!
   if (value !== 'auto') return option.label
   const first = read(enabledProfiles)[0]

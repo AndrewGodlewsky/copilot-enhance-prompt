@@ -1,4 +1,4 @@
-import { EFFORT_SETTINGS } from '../effort.ts'
+import { EFFORTS, EFFORT_SETTINGS, REASONING_SETTINGS } from '../effort.ts'
 import { formatText } from '../format.ts'
 // actions.ts: what the panel does (what its buttons call): requests to the worker, and the changes
 // to the state (state.ts) that follow. No UI here; the web panel (web/src) and the tests call these.
@@ -15,9 +15,10 @@ import { stepPercent, totalPercent, type Step } from '../progress.ts'
 import { PANEL_REQUEST_LIMIT_MS } from '../protocol.ts'
 import { pathInWorkspaceId, pathKey } from '../workspaces.ts'
 import { consents, files, ruleDraft, ruleScope, structureDraft, type Form, terminalWorkspaces, workspaceChoices, tick, workspaceKey, projectName, parked, MAX_PARKED, type Slot, rulesState, structureChoice, workspaceName, tab, draft, result, style, effectiveEffort, effortModels, excluded, target, historyRaw, confirmClearHistory, form, catalogs, catalogLoading, type Run, run, dataSummary, privacy, confirmWipe, busy, notice, lastRun, contextShown, contextNotes, KEPT, mayKeep, put, forgetSaved, targets, models, defaults, effectiveStyle, effectiveLevel, effectiveEnter, say, message, errorMessage, historyOpen, resultFor, sendAfterEnhance, filteredHistory, type NoticeAction } from './state.ts'
-import { contextPreferences } from './state.ts'
+import { effortReasoning, copilotRunFailure, contextPreferences } from './state.ts'
 import { cancelContextPreview, contextKey, knownWorkspaceId, showContext } from './context-preview.ts'
 export { knownWorkspaceId, showContext, previewContext } from './context-preview.ts'
+import { connectionFailure, effortConfiguration } from './copilot-status.ts'
 import { panelDiagnostics } from './diagnostics.ts'
 import { diagnosticError } from '../diagnostics.ts'
 
@@ -170,7 +171,8 @@ export async function refreshDefaults(): Promise<void> {
     fallbackOn: all.fallbackOn === 'transient' ? 'transient' : 'any',
     otherAgents: parseOtherAgentsLimits(all)
   })
-  set(effortModels, { low: String(all[EFFORT_SETTINGS.low] ?? 'auto') || '__invalid__', medium: String(all[EFFORT_SETTINGS.medium] ?? 'auto') || '__invalid__', high: String(all[EFFORT_SETTINGS.high] ?? 'auto') || '__invalid__' })
+  set(effortModels, { low: String(all[EFFORT_SETTINGS.low] ?? 'recommended') || '__invalid__', medium: String(all[EFFORT_SETTINGS.medium] ?? 'recommended') || '__invalid__', high: String(all[EFFORT_SETTINGS.high] ?? 'recommended') || '__invalid__' })
+  set(effortReasoning, { low: String(all[REASONING_SETTINGS.low] ?? 'default'), medium: String(all[REASONING_SETTINGS.medium] ?? 'default'), high: String(all[REASONING_SETTINGS.high] ?? 'default') })
   set(contextPreferences, JSON.stringify([all.extraContextFiles, all.excludePatterns, all.terminalLines, parsePrivacy(all), parseOtherAgentsLimits(all)]))
   set(privacy, parsePrivacy(all))
   // Saving history is off: nothing typed or produced stays on disk after the panel closes.
@@ -181,13 +183,30 @@ export async function refreshModels(): Promise<void> {
   try {
     const view = await plugin.request('models.get')
     set(models, view)
-    // Cards use the Copilot catalog for quick model switching.
-    for (const profile of view.profiles) {
-      if (!read(catalogs)[profile.id]) void loadCatalog(profile.id, { preset: profile.preset, profileId: profile.id })
-    }
+    // All profiles use this attached account's catalog.
+    if (!read(catalogs).copilot) void retryCopilot()
   } catch (error) {
     set(notice, { tone: 'danger', text: message(error) })
   }
+}
+
+const catalogRequests = new Map<string, number>()
+let catalogSequence = 0
+export function cancelCatalogLoads() { catalogRequests.clear(); set(catalogLoading, {}) }
+export const retryCopilot = () => loadCatalog('copilot', { preset: 'copilot' }, true)
+
+export async function applyRecommendedEfforts() {
+  if (read(busy)) return
+  set(busy, 'save')
+  try {
+    for (const effort of EFFORTS) {
+      await settings.set(REASONING_SETTINGS[effort], 'default')
+      await settings.set(EFFORT_SETTINGS[effort], 'recommended')
+    }
+    await refreshDefaults()
+    await retryCopilot()
+  } catch (error) { set(notice, { tone: 'danger', text: message(error) }) }
+  finally { set(busy, null) }
 }
 
 export async function loadCatalog(
@@ -195,20 +214,23 @@ export async function loadCatalog(
   input: { preset?: 'copilot'; profileId?: string },
   refresh = false
 ): Promise<void> {
+  const request = ++catalogSequence
+  catalogRequests.set(key, request)
+  const current = () => catalogRequests.get(key) === request
   update(catalogLoading, (map) => ({ ...map, [key]: true }))
   const operation = refresh ? 'copilot.refresh' : 'copilot.catalog'
   const started = Date.now()
   panelDiagnostics.record(operation, 'started')
   try {
     const clean = Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined && value !== ''))
-    const catalog = await plugin.request('models.catalog', { preset: input.preset, ...clean, refresh }, { timeoutMs: 40_000 })
+    const catalog = await plugin.request('models.catalog', { preset: input.preset, ...clean, refresh }, { timeoutMs: 60_000 })
     panelDiagnostics.record(operation, catalog.error ? 'failed' : 'ok', { ms: Date.now() - started, ...(catalog.error ? diagnosticError({ text: catalog.errorText }) : {}) })
-    update(catalogs, (map) => ({ ...map, [key]: catalog }))
+    if (current()) update(catalogs, (map) => ({ ...map, [key]: catalog }))
   } catch (error) {
-    update(catalogs, (map) => ({ ...map, [key]: { models: [], source: '', fetchedAt: Date.now(), error: message(error) } }))
+    if (current()) update(catalogs, (map) => ({ ...map, [key]: { models: [], source: '', fetchedAt: Date.now(), error: message(error), ...(errorMessage(error) ? { errorText: errorMessage(error)! } : {}) } }))
     panelDiagnostics.record(operation, 'failed', { ms: Date.now() - started, ...diagnosticError(error) })
   } finally {
-    update(catalogLoading, (map) => ({ ...map, [key]: false }))
+    if (current()) update(catalogLoading, (map) => ({ ...map, [key]: false }))
   }
 }
 
@@ -255,6 +277,7 @@ type Enhanced = { prompt: string; enhanced: string }
  * there to act on: it failed or was cancelled, or its project is no longer the one in focus.
  */
 async function runEnhance(): Promise<Enhanced | null> {
+  const configuration = effortConfiguration()
   const prompt = read(draft).trim()
   if (!prompt || read(busy)) return null
   cancelContextPreview()
@@ -304,10 +327,15 @@ async function runEnhance(): Promise<Enhanced | null> {
       // Its project is gone (or unknown): showing it here could send it to the wrong agent.
       set(notice, { tone: 'warning', text: 'The project this prompt was written for is closed, so its enhanced prompt was dropped.' })
     }
+    set(copilotRunFailure, null)
     finishRun(runId, 'done')
   } catch (error) {
     if (controller.signal.aborted) finishRun(runId, 'cancelled')
-    else finishRun(runId, 'error', message(error))
+    else {
+      const text = connectionFailure(errorMessage(error))
+      if (text) set(copilotRunFailure, { configuration, text })
+      finishRun(runId, 'error', message(error))
+    }
   } finally {
     if (inFlight === controller) inFlight = null
     if (runOrigin === origin) runOrigin = null

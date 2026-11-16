@@ -147,6 +147,7 @@ test('Feedback opens the issue page without reminder state', async () => {
 test('warns when no model is configured, and adds one from the Models tab', async () => {
   const saved: ProfileInput[] = []
   const host = mockHost({
+    settings: { effortMediumModel: 'auto' },
     requests: {
       'models.get': modelsView([]),
       'targets.list': { targets: [] },

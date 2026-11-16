@@ -124,7 +124,7 @@ function ProfileForm() {
 }
 
 function ProfileCard({ profile, index, count }: { profile: ProfileView; index: number; count: number }) {
-  const options = modelOptions(read(catalogs)[profile.id], profile.effectiveModel)
+  const options = modelOptions(read(catalogs)[profile.id] ?? read(catalogs).copilot, profile.effectiveModel)
   const testing = read(busy) === 'test'
   return (
     <div className={cn('bg-card flex flex-col gap-3 rounded-xl border p-3', !profile.enabled && 'bg-muted/40')}>

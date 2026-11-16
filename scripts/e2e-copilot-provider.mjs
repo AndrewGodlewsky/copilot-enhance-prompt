@@ -24,6 +24,7 @@ const fixture = createServer(async (request, response) => {
 await new Promise(resolve => fixture.listen(0, '127.0.0.1', resolve))
 const auth = { isAuthenticated: true, login: 'fixture', host: 'https://github.com' }
 const catalog = { list: [{ id: 'gpt-4.1', name: 'Fixture model', provider: { kind: 'copilot' }, policy: { state: 'enabled' }, capabilities: { supports: { vision: true } } }] }
+catalog.list.push({ id: 'gpt-5', name: 'Reasoning fixture', provider: { kind: 'copilot' }, policy: { state: 'enabled' }, capabilities: { supports: { vision: true, reasoningEffort: true } }, supportedReasoningEfforts: ['low', 'medium', 'high'] })
 const parent = { rpc: { model: { list: async () => catalog }, gitHubAuth: { getStatus: async () => auth } } }
 const homes = []
 const clients = []
@@ -79,19 +80,23 @@ try {
   await rejection
   for (let i = 0; i < 30 && !heldClosed; i++) await new Promise(resolve => setTimeout(resolve, 50))
   assert.ok(heldClosed, 'cancel closes the fixture request')
+  await service.rewrite({ model: 'gpt-5', reasoningEffort: 'high', system: 'Rewrite only.', user: 'Check the reasoning setting.' })
+  assert.equal(requests.length, 4)
+  assert.equal(requests[3].model, 'gpt-5')
+  assert.equal(requests[3].reasoning_effort, 'high', 'the real runtime sends the requested reasoning level')
   for (const directory of homes) await assert.rejects(access(directory))
   const sessions = await readdir(join(retained, 'session-state'))
-  assert.equal(sessions.length, 3)
+  assert.equal(sessions.length, 4)
   const journals = await Promise.all(sessions.map(id => readFile(join(retained, 'session-state', id, 'events.jsonl'), 'utf8')))
   const events = journals.flatMap(text => text.trim().split('\n').map(line => JSON.parse(line)))
   const receipts = events.filter(event => event.type === 'session.usage_record')
-  assert.equal(receipts.length, 2, 'real runtime accounting survives helper cleanup')
+  assert.equal(receipts.length, 3, 'real runtime accounting survives helper cleanup')
   assert.ok(suppressedUsage > 0, 'a missing live event is recovered from the real runtime journal')
   assert.ok(receipts.every(event => event.data.usage.inputTokens === 1 && event.data.usage.outputTokens === 1))
   assert.ok(receipts.every(event => event.data.usage.isByok === true), 'local fixture is never relabeled as Copilot usage')
   assert.ok(receipts.every(event => sessions.includes(event.data.usage.accounting.sourceSessionId)))
   assert.doesNotMatch(journals.join('\n'), /PRIVATE_|Add a dark mode|Rewrite only|Fixture rewritten|CANCEL_SENTINEL|127\.0\.0\.1|apiKey|data:image/)
-  console.log('Production Copilot helper: output, model selection, images, isolation, cancellation, retained usage and cleanup passed. No paid inference.')
+  console.log('Production Copilot helper: output, model selection, applied reasoning, images, isolation, cancellation, retained usage and cleanup passed. No paid inference.')
 } finally {
   clearTimeout(watchdog)
   service.close()
