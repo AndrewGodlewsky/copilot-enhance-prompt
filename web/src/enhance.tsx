@@ -172,7 +172,8 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
 
   return (
     <div
-      className={cn('bg-card relative flex flex-col gap-3 rounded-xl border p-4', dragging && 'border-primary bg-primary/5')}
+      className="composer relative"
+      data-dragging={dragging}
       onDragOver={(event) => {
         if (!locked && Array.from(event.dataTransfer.types).includes('Files')) {
           event.preventDefault()
@@ -184,6 +185,7 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
       }}
       onDrop={onDrop}
     >
+      <div className="composer-body">
       <h2 className="text-base font-semibold">{'Write a request'}</h2>
       <Attachments />
       <div className="relative overflow-hidden rounded-md">
@@ -215,7 +217,7 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
           {'Drop files to attach'}
         </div>
       ) : null}
-      <div className="grid grid-cols-1 gap-3 min-[440px]:grid-cols-3">
+      <div className="request-controls">
         <Field label="Context Level">
           <Pick label="Context Level" value={read(effectiveLevel)} options={levelOptions(read(effectiveLevel))} onChange={(value) => set(level, value)} />
         </Field>
@@ -240,7 +242,9 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
       {read(copilotDetailsOpen) || copilotStatus().kind === 'error' ? <div id="copilot-connection-details"><CopilotConnection onCheck={() => set(copilotDetailsOpen, true)} /></div> : null}
       <p className="text-muted-foreground text-xs">{CONTEXT_LEVEL_HINTS[isContextLevel(read(effectiveLevel)) ? read(effectiveLevel) as keyof typeof CONTEXT_LEVEL_HINTS : 'standard']}</p>
       {read(effectiveStyle) === 'custom' ? <CustomInstructions /> : null}
+      </div>
       <PromptOptions />
+      <div className="composer-footer">
       <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
           <input
             ref={picker}
@@ -280,6 +284,7 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
       </div>
       {!text.trim() && !locked && working === null ? <p className="text-muted-foreground text-xs">Enter a request to enable Enhance.</p> : null}
       {sendsAfterEnhance() ? <p className="text-muted-foreground text-xs">{'Enhance and send skips review. Enhance lets you edit first.'}</p> : null}
+      </div>
     </div>
   )
 }
@@ -309,23 +314,23 @@ function CustomInstructions() {
   )
 }
 
-/** Structure and context preview, under the composer when opened. */
+/** One options panel, inline on narrow canvases and beside the composer on wide ones. */
 function PromptOptions() {
   if (!read(optionsOpen)) return null
   return (
-    <div id="prompt-options" className="bg-muted/50 flex flex-col gap-3 rounded-lg border p-3">
+    <section id="prompt-options" aria-label="Prompt options" className="prompt-options bg-muted/50 flex min-w-0 flex-col gap-3 rounded-lg border p-3">
       <Field label={'Structure'}>
         <Pick label={'Structure'} value={structureValue()} options={structureOptions()} onChange={(value) => set(structureChoice, value === 'style' ? '' : value)} />
       </Field>
       <div>
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-medium">{'Context to include'}</h3>
           <Button size="sm" variant="ghost" disabled={read(contextLoading) || read(busy) !== null} onClick={() => void previewContext()}><RotateCcwIcon className="size-3.5" />Refresh context</Button>
         </div>
         <p className="text-muted-foreground text-xs">{'Uncheck files to leave them out of automatic context, including Git diffs and AI selection. Refresh after editing project files.'}</p>
       </div>
       <ContextList />
-    </div>
+    </section>
   )
 }
 
@@ -558,7 +563,7 @@ export function EnhanceSection({ refresh }: { refresh: () => void }) {
   const output = read(result)
   const warning = modelWarning()
   return (
-    <div className="flex flex-col gap-3">
+    <div className="enhance-layout" data-options-open={read(optionsOpen)}>
       <WorkspacePicker />
       <Composer refresh={refresh} crew={crew} />
       <RunCard finishing={crew.finishing} />

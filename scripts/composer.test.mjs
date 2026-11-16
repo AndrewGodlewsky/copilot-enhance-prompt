@@ -64,6 +64,14 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
     for (const label of ['Context Level', 'Style', 'Effort']) {
       assert.equal((html.match(new RegExp(`aria-label="${label}"`, 'g')) ?? []).length, 1)
     }
+    assert.equal((html.match(/aria-label="Your prompt"/g) ?? []).length, 1, 'responsive layout keeps one request editor')
+    assert.equal((html.match(/id="prompt-options"/g) ?? []).length, open ? 1 : 0, 'Options stays optional and has one shared inline/sidebar panel')
+    assert.equal((html.match(/aria-label="Structure"/g) ?? []).length, open ? 1 : 0)
+    if (open) {
+      assert.match(html, /aria-expanded="true" aria-controls="prompt-options"/)
+      assert.ok(html.indexOf('id="prompt-options"') < html.indexOf('>Enhance<'), 'context controls precede enhancement in reading and keyboard order')
+    }
+    assert.ok(html.indexOf('>Enhance<') < html.indexOf('aria-label="Enhanced prompt"'), 'review stays after the request and its actions')
     assert.doesNotMatch(html, /Or start a new agent|aria-label="Model"|Enter to enhance|Shift\+Enter for a new line/)
     const request = inputs.find(input => input['aria-label'] === 'Your prompt')
     assert.ok(request)

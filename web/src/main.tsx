@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client'
 import { onPersistenceError, read, set } from '#panel'
 import { BookOpenIcon, BotIcon, ScrollTextIcon, SettingsIcon, SparklesIcon } from 'lucide-react'
 import './index.css'
+import './layout.css'
 import { SECTION_LABELS } from '../../src/panel/view.ts'
 import { BRAND } from '../../src/brand.ts'
 import { busy, draft, files, history, historyOpen, notice, optionsOpen, put, say, sendAfterEnhance, tab } from '../../src/panel/state.ts'
@@ -48,7 +49,7 @@ function App() {
   const current = SECTIONS.find((section) => section.value === read(tab)) ?? SECTIONS[0]
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-4 p-3 sm:p-4">
+      <div className="panel-shell mx-auto flex min-h-screen w-full flex-col gap-4 p-3 sm:p-4">
         <header className="flex flex-col gap-3">
           <QuietDesk />
           <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
@@ -70,6 +71,7 @@ function App() {
             </nav>
           </div>
         </header>
+        <main className="panel-section" data-section={current.value}>
         <Suspense fallback={null}>
           {current.value === 'history' ? (
             <HistorySection />
@@ -83,6 +85,7 @@ function App() {
             <EnhanceSection refresh={refresh} />
           )}
         </Suspense>
+        </main>
         <Footer onSettings={() => { openSection('privacy'); window.scrollTo({ top: 0, behavior: 'instant' }) }} />
       </div>
       <Notices />
@@ -160,7 +163,7 @@ async function start(): Promise<void> {
       const page = document.querySelector('#root > div')
       if (!page) return
       const bottom = Math.max(0, ...Array.from(page.children).map((child) => child.getBoundingClientRect().bottom))
-      const options = read(optionsOpen) ? document.querySelector('#root .grid.grid-cols-2')?.parentElement?.getBoundingClientRect() : undefined
+      const options = read(optionsOpen) ? document.getElementById('prompt-options')?.getBoundingClientRect() : undefined
       const where = options ? ` options:${[options.left, options.top, options.right, options.bottom].map(Math.round).join(',')}` : ''
       document.title = `height:${Math.ceil(bottom + 12)}${where}`
     }, 250)

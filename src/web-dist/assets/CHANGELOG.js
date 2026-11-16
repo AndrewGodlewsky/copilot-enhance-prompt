@@ -1,5 +1,13 @@
 var e=`# Changes
 
+## [0.10.9] - 2026-11-15
+
+### Changed
+- Give the canvas more room at wide sizes, with separate reading widths for each tab. Keep request writing, progress and review vertically ordered.
+- Move opened prompt options and context into a right-hand column on wide canvases. Keep the same controls inline on smaller canvases, without changing the selected context or opening Options automatically.
+- Stack Context Level, Style and Effort on narrow editors, use two rows at medium widths, and show all three across only when the editor has room.
+- Compact the Quiet Desk banner on narrow and short canvases. Keep the theme toggle and workflow status available, and limit the artwork's size on large screens.
+
 ## [0.10.8] - 2026-11-15
 
 ### Changed

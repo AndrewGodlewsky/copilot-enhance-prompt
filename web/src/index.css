@@ -167,7 +167,7 @@
   position: relative;
   isolation: isolate;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 46%);
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
   min-height: 206px;
   border-radius: 10px;
   background: var(--desk-surface);
@@ -203,11 +203,27 @@
 .quiet-desk .quiet-desk-theme:focus-visible { outline-color: var(--desk-foreground); }
 .quiet-desk-scene { align-self: end; height: 164px; margin: 41px 12px 0 0; overflow: hidden; border-radius: 0 0 8px 0; }
 .quiet-desk-scene svg { display: block; width: 100%; height: 100%; }
-@media (max-width: 640px) {
-  .quiet-desk { grid-template-columns: minmax(0, 1fr); }
-  .quiet-desk-copy { padding: 20px 20px 0; }
-  .quiet-desk-platform { margin-bottom: 17px; padding-right: 40px; min-height: 24px; }
-  .quiet-desk h1 { font-size: 25px; }
-  .quiet-desk-status { margin-top: 12px; }
-  .quiet-desk-scene { width: 100%; height: 130px; margin: 4px 0 0; padding: 0 12px; }
+@container panel (max-width: 40rem) {
+  .quiet-desk { grid-template-columns: minmax(0, 1fr) minmax(120px, 30%); min-height: 156px; }
+  .quiet-desk-copy { padding: 16px 0 16px 16px; }
+  .quiet-desk-platform { margin-bottom: 6px; }
+  .quiet-desk h1 { font-size: 24px; }
+  .quiet-desk-tagline { margin-top: 6px; }
+  .quiet-desk-status { margin-top: 10px; }
+  .quiet-desk-scene { height: auto; aspect-ratio: 360 / 165; margin: 48px 12px 0 0; }
+}
+@container panel (max-width: 25rem) {
+  .quiet-desk { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  .quiet-desk-copy { padding: 16px; }
+  .quiet-desk-platform { padding-right: 40px; }
+  .quiet-desk-scene { display: none; }
+}
+@media (max-height: 600px) {
+  .quiet-desk { min-height: 0; }
+  .quiet-desk-copy { padding: 12px 16px; }
+  .quiet-desk-platform { margin-bottom: 6px; }
+  .quiet-desk h1 { font-size: 24px; }
+  .quiet-desk-tagline { display: none; }
+  .quiet-desk-status { margin-top: 8px; }
+  .quiet-desk-scene { width: 210px; max-width: calc(100% - 12px); height: auto; aspect-ratio: 360 / 165; justify-self: end; margin-top: 32px; }
 }
