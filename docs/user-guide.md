@@ -24,7 +24,7 @@ The dropdown is named **Context Level**. **AI Test** is a separate experimental 
 
 **Clear**, beside **Write a request**, empties the saved request and removes all its images and attachments. They stay cleared when you reopen the canvas. Saved history, the reviewed result and your Context Level, Style and Effort choices remain available. Clear is disabled while an upload, operation or completion animation is running. It removes attachments from this request; it does not delete the original files on your computer.
 
-Send creates a new message in the attached Copilot session. It checks the session again immediately before submitting. Copy and file download are available for manual handoff. A failed send leaves the result available.
+Send creates a new message in the attached Copilot session. It checks the session again immediately before submitting. Copy and file download are available for manual handoff. **Save as a file** downloads a Markdown file; the notification names the file and directs you to your Downloads folder. History exports use the same notification. A failed send leaves the result available.
 
 ## Models and rules
 

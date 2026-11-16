@@ -1,5 +1,10 @@
 # Changes
 
+## [0.10.6] - 2026-11-15
+
+### Changed
+- Include the Markdown filename and Downloads folder guidance in the confirmation when downloading a reviewed prompt or history export.
+
 ## [0.10.5] - 2026-11-15
 
 ### Added

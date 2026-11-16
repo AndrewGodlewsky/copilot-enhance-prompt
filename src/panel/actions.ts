@@ -602,7 +602,7 @@ async function saveFile(name: string, data: string): Promise<void> {
   try {
     const { status } = await panelFiles.saveAs({ suggestedName: name, mimeType: 'text/markdown', data })
     if (status === 'saved') set(notice, { tone: 'success', text: 'Saved as a file.' })
-    if (status === 'downloaded') set(notice, { tone: 'success', text: 'Download started.' })
+    if (status === 'downloaded') set(notice, { tone: 'success', text: formatText('Download started. Look for {name} in your Downloads folder.', { name }) })
   } catch {
     set(notice, { tone: 'danger', text: 'The file could not be saved.' })
   }
