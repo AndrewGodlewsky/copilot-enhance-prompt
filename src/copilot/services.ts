@@ -8,7 +8,7 @@ import { persistentStore } from './storage.ts'
 import { sessionAdapter, type CopilotSession } from './session.ts'
 import { UNSUPPORTED_SETTINGS } from '../capabilities.ts'
 import type { createCopilotModels } from './models.ts'
-import { EFFORT_SETTINGS, REASONING_SETTINGS, validReasoning, modelAssignment, parseModelAssignment } from '../effort.ts'
+import { EFFORT_SETTINGS, REASONING_SETTINGS, validReasoning, modelAssignment, parseModelAssignment, parseCatalogAssignment } from '../effort.ts'
 import { MODELS_KEY, parseModelsConfig, modelsToJson } from '../presets.ts'
 import { effectiveModel } from '../models.ts'
 
@@ -72,7 +72,7 @@ export function createServices(session: CopilotSession, directory = process.env.
     }) as SettingsStore['get'],
     set: async (key, value) => {
       if (!Object.hasOwn(DEFAULTS, key) || typeof value !== typeof DEFAULTS[key]) throw new Error('Invalid setting.')
-      if (Object.values(EFFORT_SETTINGS).some(name => name === key) && value !== 'recommended' && !parseModelAssignment(value)) throw new Error('Invalid effort model assignment.')
+      if (Object.values(EFFORT_SETTINGS).some(name => name === key) && value !== 'recommended' && !parseModelAssignment(value) && !parseCatalogAssignment(value)) throw new Error('Invalid effort model assignment.')
       if (Object.values(REASONING_SETTINGS).some(name => name === key) && !validReasoning(value)) throw new Error('Invalid reasoning level.')
       if (UNSUPPORTED_SETTINGS.has(key) && value) throw new Error('This setting is unavailable in the Copilot canvas.')
       await prepare()

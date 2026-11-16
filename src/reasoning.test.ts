@@ -28,6 +28,19 @@ test('custom and Auto assignments preserve their models and default reasoning', 
   assert.equal(custom.model, 'sol-exact')
 })
 
+test('direct Copilot choices need no saved profile but require current catalog access', () => {
+  const resolved = resolveEffort('medium', 'catalog:sol-exact', 'high', [], catalog)
+  assert.equal(resolved.profile.provider, 'copilot')
+  assert.equal(resolved.profile.model, 'sol-exact')
+  assert.equal(resolved.reasoningEffort, 'high')
+  assert.throws(() => resolveEffort('medium', 'catalog:sol-exact', 'default', []))
+  assert.throws(() => resolveEffort('medium', 'catalog:missing', 'default', [], catalog))
+  assert.throws(() => resolveEffort('medium', 'catalog:sol-exact', 'max', [], catalog))
+  assert.throws(() => resolveEffort('medium', 'catalog:sol-exact', 'default', [], { ...catalog, error: 'Access failed' }))
+  assert.throws(() => resolveEffort('medium', 'external|sol-exact', 'default', [], catalog), 'retired references must not become direct choices')
+  assert.equal(resolveEffort('medium', 'catalog:legacy|sol-exact', 'default', [{ ...custom, id: 'catalog:legacy' }], catalog).profile.id, 'catalog:legacy')
+})
+
 test('missing, ambiguous, disabled and unsupported recommendations fail closed', () => {
   assert.throws(() => resolveEffort('low', 'recommended', 'default', [], { ...catalog, models: catalog.models.slice(1) }))
   assert.throws(() => resolveEffort('low', 'recommended', 'default', [], { ...catalog, models: [...catalog.models, { ...catalog.models[0], id: 'duplicate' }] }))

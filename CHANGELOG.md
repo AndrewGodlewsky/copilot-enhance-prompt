@@ -1,5 +1,15 @@
 # Changes
 
+## [0.10.0] - 2026-11-15
+
+### Changed
+- Move Low, Medium and High model/reasoning settings to the Models tab and point Enhance's Effort settings shortcut there. Choose directly from the account's Copilot catalog without adding a profile. Preserve existing assignments and reasoning choices.
+- Keep optional saved profiles, ordered fallback, model tests and the separate AI-assisted context model under Advanced model options.
+
+### Fixed
+- Make connection checks visibly complete with a check number, time and result. Show Check connection when connected, Retry connection after an access failure and Refresh models for configuration problems. A check never submits a prompt or erases a background rewrite failure.
+- Keep Show Logs available after success and include safe check outcomes, empty-request and busy states. Explain why an empty request leaves Enhance disabled.
+
 ## [0.9.0] - 2026-11-15
 
 ### Added

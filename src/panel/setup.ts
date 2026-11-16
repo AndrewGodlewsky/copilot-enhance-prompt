@@ -7,6 +7,7 @@ import {
   applyProgress,
   cancel,
   cancelCatalogLoads,
+  startCatalogLoads,
   learnTerminals,
   refreshConsents,
   refreshDataSummary,
@@ -25,6 +26,7 @@ import { watchContextPreview, cancelContextPreview } from './context-preview.ts'
  * rules and confirmations. Returns a function that stops following the events.
  */
 export function wirePanel(): () => void {
+  startCatalogLoads()
   restoreSaved()
   const stopPreview = watchContextPreview()
   const subscriptions = [

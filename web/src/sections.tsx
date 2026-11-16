@@ -64,6 +64,8 @@ import { Field, Group, IconAction, Pick, Row, Section, Segmented } from './commo
 import { WorkspacePicker } from './enhance'
 import { UNSUPPORTED_SETTINGS } from '../../src/capabilities.ts'
 import { Preferences } from './preferences'
+import { EffortModels } from './effort-models'
+import { CopilotConnection } from './copilot-connection'
 
 // ---------------------------------------------------------------- Models
 
@@ -104,7 +106,7 @@ function ProfileForm() {
   const invalid = !current.name.trim() || read(catalogLoading).form === true || !!read(catalogs).form?.error || !read(catalogs).form?.models.some(model => model.id === current.model)
   return (
     <div className="border-primary/40 flex flex-col gap-2 rounded-lg border p-3">
-      <p className="text-sm font-semibold">{editing ? formatText('Edit {name}', { name: current.name }) : 'Add a Copilot model'}</p>
+      <p className="text-sm font-semibold">{editing ? formatText('Edit {name}', { name: current.name }) : 'Add an advanced profile'}</p>
       <Field label={'Name'}>
         <Input className="h-8" value={current.name} onChange={(event) => patchForm({ name: event.target.value })} />
       </Field>
@@ -192,11 +194,17 @@ export function ModelsSection() {
   ]
   return (
     <div className="flex flex-col gap-4">
-      <Section title={'Your models'} hint={'Copilot models are tried top to bottom. Disabled models are skipped.'}>
+      <EffortModels />
+      <CopilotConnection />
+      <details className="rounded-xl border p-4">
+        <summary className="cursor-pointer rounded-sm text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">Advanced model options</summary>
+        <div className="mt-4 flex flex-col gap-4">
+      <p className="text-muted-foreground text-xs">Saved profiles provide an ordered fallback list, model tests, and an optional separate model for AI-assisted context. Fallbacks and the separate context model use model-default reasoning. Test makes a small request that counts toward Copilot usage.</p>
+      <Section title={'Saved model profiles'} hint={'The selected effort runs first, then enabled fallback profiles in order. Auto starts with the first enabled profile.'}>
         {view.profiles.length === 0 && !read(form) ? (
           <div className="text-muted-foreground rounded-xl border border-dashed p-4 text-center text-sm">
-            <p className="text-foreground font-medium">{'No models yet'}</p>
-            <p>{'Select a Copilot model to rewrite with your GitHub Copilot account.'}</p>
+            <p className="text-foreground font-medium">{'No advanced profiles'}</p>
+            <p>{'Choose your effort models above. Add a profile only for the advanced options below.'}</p>
           </div>
         ) : null}
         <div className="flex flex-col gap-1.5">
@@ -209,7 +217,7 @@ export function ModelsSection() {
         ) : (
           <Button variant="outline" size="sm" className="self-start" onClick={() => openForm()}>
             <PlusIcon />
-            {'Add model'}
+            {'Add advanced profile'}
           </Button>
         )}
       </Section>
@@ -229,7 +237,7 @@ export function ModelsSection() {
           }
         />
       </Group>
-      {view.profiles.length > 1 || unavailableSelector ? (
+      {view.profiles.length > 0 || unavailableSelector ? (
         <Group title={'AI-assisted context level'}>
           <Row title={'File picker model (AI-assisted context level)'} description={unavailableSelector ? 'The saved file picker model is unavailable. Choose a Copilot model or follow the selected effort.' : undefined}>
             <Pick
@@ -241,6 +249,8 @@ export function ModelsSection() {
           </Row>
         </Group>
       ) : null}
+        </div>
+      </details>
     </div>
   )
 }

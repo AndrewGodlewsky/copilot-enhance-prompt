@@ -6,7 +6,7 @@ import { copyToClipboard } from './clipboard.ts'
 import { forgetActivity, recordSave, recordStatus, recordTool } from './context/activity.ts'
 import { researchContext, RESEARCH_LIMITS } from './context/research.ts'
 import { isSensitive } from './context/files.ts'
-import { EFFORT_SETTINGS, REASONING_SETTINGS, isEffort, resolveEffort } from './effort.ts'
+import { EFFORT_SETTINGS, REASONING_SETTINGS, isEffort, resolveEffort, parseCatalogAssignment } from './effort.ts'
 import { atLeast, contextItem, findFocusedWorkspace, focusedCandidates, focusedProject, gatherContext, projectNameOf, type ContextItem } from './context/index.ts'
 import { forgetTerminals, learnTerminal, loadTerminals } from './context/terminals.ts'
 import { imagesBlock, withImagePaths } from './images.ts'
@@ -272,7 +272,7 @@ export async function enhance(
     if (!isEffort(input.effort)) throw hostError(msg('error.effort'), 'invalid_params')
     const assignment = String(await host.settings.get(EFFORT_SETTINGS[input.effort]) ?? 'recommended')
     const reasoning = String(await host.settings.get(REASONING_SETTINGS[input.effort]) ?? 'default')
-    const needsCatalog = assignment === 'recommended' || reasoning !== 'default'
+    const needsCatalog = assignment === 'recommended' || parseCatalogAssignment(assignment) !== null || reasoning !== 'default'
     if (needsCatalog && !settings.privacy.allowOnlineModelLists) throw hostError(msg('error.lists_off'), 'unavailable')
     const catalog = needsCatalog ? await host.host.call('copilot.catalog', {}) : undefined
     const resolved = resolveEffort(input.effort, assignment, reasoning, config.profiles, catalog)

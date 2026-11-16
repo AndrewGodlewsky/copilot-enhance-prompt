@@ -40,6 +40,9 @@ test('efforts inherit the current model once and preserve existing assignments a
     assert.equal(await second.settings.get('effortMediumModel'), 'chosen|chosen-override')
     assert.equal(await first.storage.get('panel:draft'), 'Keep 你好 and paths verbatim')
     await assert.rejects(first.settings.set('effortLowModel', 'malformed'), /Invalid/)
+    await first.settings.set('effortLowModel', 'catalog:gpt-model')
+    assert.equal(await second.settings.get('effortLowModel'), 'catalog:gpt-model')
+    for (const invalid of ['catalog:', 'catalog: bad', 'catalog:bad\nvalue']) await assert.rejects(first.settings.set('effortLowModel', invalid), /Invalid/)
   } finally { await rm(dir, { recursive: true, force: true }) }
 })
 
@@ -120,5 +123,27 @@ test('missing, disabled and invalid effort assignments fail before calling a mod
       await assert.rejects(worker.request('prompt.enhance', { prompt: 'Fix the code', effort, level: 'off' }), /effort|Effort/)
     }
     assert.equal(called, false)
+  } finally { await worker.deactivate() }
+})
+
+test('direct catalog effort is usable without profiles and is revalidated before rewriting', async () => {
+  let calls = 0
+  let available = true
+  const host = mockHost({
+    settings: { effortMediumModel: 'catalog:chosen', fallbackEnabled: false },
+    results: {
+      'workspace.readContext': null,
+      'copilot.catalog': () => ({ models: available ? [{ id: 'chosen', label: 'Chosen model' }] : [], source: 'GitHub Copilot', fetchedAt: Date.now() }),
+      'copilot.rewrite': (input: { model: string }) => { calls++; assert.equal(input.model, 'chosen'); return { text: 'A clearer request.' } }
+    }
+  })
+  const worker = await mountWorker(main, { host })
+  try {
+    assert.equal((await worker.request('prompt.enhance', { prompt: 'Fix tests', effort: 'medium', level: 'off' })).model, 'chosen')
+    available = false
+    await assert.rejects(worker.request('prompt.enhance', { prompt: 'Fix tests', effort: 'medium', level: 'off' }), /effort/i)
+    await host.settings.set('allowOnlineModelLists', false)
+    await assert.rejects(worker.request('prompt.enhance', { prompt: 'Fix tests', effort: 'medium', level: 'off' }), /lists.*off/)
+    assert.equal(calls, 1)
   } finally { await worker.deactivate() }
 })

@@ -1863,7 +1863,7 @@ var MESSAGES = {
   "error.no_prompt": "Write a prompt first.",
   "error.effort": "Choose Low, Medium, or High effort.",
   "error.selector_model": "The saved AI-assisted model is unavailable. Select an enabled Copilot model for AI-assisted context in Models.",
-  "error.effort_model": "The model assigned to {effort} effort is unavailable. Choose an enabled Copilot model in Settings \u2192 Effort models.",
+  "error.effort_model": "The model assigned to {effort} effort is unavailable. Choose an available Copilot model in Models \u2192 Effort models.",
   "error.attachment_bad": "That attachment could not be received; try attaching it again.",
   "error.attachment_missing": "The attached file {name} is no longer there (attachments are kept for a day). Attach it again.",
   "error.file_too_large": "{name} is {size}; an attachment can be at most {max}.",
@@ -1877,7 +1877,7 @@ var MESSAGES = {
   "error.copilot_model": "This model is not available through GitHub Copilot in both sessions. Refresh the model list and choose a Copilot model.",
   "error.copilot_images": "This Copilot model does not report image support. Choose a model with image support or remove the images.",
   "error.copilot_sign_in": "Sign in through GitHub Copilot\u2019s account menu, then select Retry here. The plugin uses that account and does not collect credentials.",
-  "error.copilot_recommended": "{model} could not be uniquely found in your Copilot model list. Select Retry or choose an available model in Effort settings.",
+  "error.copilot_recommended": "{model} could not be uniquely found in your Copilot model list. Refresh models or choose an available model in Models \u2192 Effort models.",
   "error.copilot_reasoning": "Copilot does not advertise this reasoning level for the selected model. Select Retry or choose a supported level in Effort settings. No prompt was sent to this model.",
   "error.copilot_reasoning_applied": "The background runtime did not apply the requested reasoning level. No prompt was sent to this model. Select Retry, check Effort settings, or update Copilot. Show Logs includes the failure stage.",
   "error.copilot_usage": "Copilot usage could not be saved. Check free disk space and plugin data-folder permissions, then open Show Logs. Any remaining helper files have been kept for recovery.",
@@ -3257,8 +3257,12 @@ function resolveReasoning(model, choice) {
 function resolveEffortModel(effort, assignment, profiles, catalog) {
   const fail = () => new LlmError(msg("error.effort_model", { effort: EFFORT_LABELS[effort] }), "invalid_params");
   const enabled = profiles.filter((profile2) => profile2.enabled && profile2.provider === "copilot" && profile2.preset === "copilot");
+  const direct = parseCatalogAssignment(assignment);
   let profile;
-  if (assignment === "recommended") {
+  if (direct) {
+    if (!catalog || catalog.error || !catalog.models.some((model2) => model2.id === direct)) throw fail();
+    profile = { id: "copilot-catalog", name: "GitHub Copilot", preset: "copilot", provider: "copilot", model: direct, enabled: true };
+  } else if (assignment === "recommended") {
     const preset = RECOMMENDED[effort];
     const normalize = (value) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
     const matches = catalog?.models.filter((model2) => preset.aliases.some((alias) => alias === normalize(model2.id) || alias === normalize(model2.label))) ?? [];
@@ -3283,6 +3287,9 @@ function resolveEffort(effort, assignment, reasoning, profiles, catalog) {
 var isEffort = (value) => EFFORTS.some((effort) => effort === value);
 var MODEL_SEP = "|";
 var PROFILE_DEFAULT = "__profile_default__";
+function parseCatalogAssignment(value) {
+  return typeof value === "string" ? /^catalog:([^\s|\x00-\x1f\x7f]{1,200})$/u.exec(value)?.[1] ?? null : null;
+}
 function modelAssignment(profileId, model) {
   return `${profileId}${MODEL_SEP}${model || PROFILE_DEFAULT}`;
 }
@@ -4129,7 +4136,7 @@ async function enhance(host, input, signal, progress, budgetMs) {
     if (!isEffort(input.effort)) throw hostError(msg("error.effort"), "invalid_params");
     const assignment = String(await host.settings.get(EFFORT_SETTINGS[input.effort]) ?? "recommended");
     const reasoning = String(await host.settings.get(REASONING_SETTINGS[input.effort]) ?? "default");
-    const needsCatalog = assignment === "recommended" || reasoning !== "default";
+    const needsCatalog = assignment === "recommended" || parseCatalogAssignment(assignment) !== null || reasoning !== "default";
     if (needsCatalog && !settings.privacy.allowOnlineModelLists) throw hostError(msg("error.lists_off"), "unavailable");
     const catalog = needsCatalog ? await host.host.call("copilot.catalog", {}) : void 0;
     const resolved = resolveEffort(input.effort, assignment, reasoning, config.profiles, catalog);
@@ -4718,7 +4725,7 @@ function activate(host) {
 import { EventEmitter } from "node:events";
 
 // src/version.ts
-var VERSION = "0.9.0";
+var VERSION = "0.10.0";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([
@@ -5254,7 +5261,7 @@ function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DI
     }),
     set: async (key, value) => {
       if (!Object.hasOwn(DEFAULTS, key) || typeof value !== typeof DEFAULTS[key]) throw new Error("Invalid setting.");
-      if (Object.values(EFFORT_SETTINGS).some((name) => name === key) && value !== "recommended" && !parseModelAssignment(value)) throw new Error("Invalid effort model assignment.");
+      if (Object.values(EFFORT_SETTINGS).some((name) => name === key) && value !== "recommended" && !parseModelAssignment(value) && !parseCatalogAssignment(value)) throw new Error("Invalid effort model assignment.");
       if (Object.values(REASONING_SETTINGS).some((name) => name === key) && !validReasoning(value)) throw new Error("Invalid reasoning level.");
       if (UNSUPPORTED_SETTINGS.has(key) && value) throw new Error("This setting is unavailable in the Copilot canvas.");
       await prepare();

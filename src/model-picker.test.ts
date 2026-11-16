@@ -1,10 +1,10 @@
-// Effort assignments reuse every enabled profile and its live model list in Settings.
+// Effort assignments use the Copilot catalog while preserving saved profile choices.
 import { assert, mockHost, mountWorker, test } from '#testing'
 import { enhanceNow, setSetting, openSection } from './panel/actions.ts'
 import { draft, put, effort, effortModels, dataSummary, tab } from './panel/state.ts'
 import { read, set } from '#panel'
 import { mountPanel } from './panel/testing.ts'
-import { modelMenu, effortModelOptions, effortModelLabel } from './panel/view.ts'
+import { effortModelOptions, effortModelLabel } from './panel/view.ts'
 import { type ProfileView } from './presets.ts'
 import * as main from './worker.ts'
 
@@ -13,7 +13,7 @@ const claude: ProfileView = {
 }
 const gpt: ProfileView = { ...claude, id: 'gpt', name: 'GPT-5 mini', model: 'gpt-5-mini', effectiveModel: 'gpt-5-mini' }
 
-test('opening effort settings loads the Settings data on first navigation', async () => {
+test('opening Settings loads its data summary on first navigation', async () => {
   const summary = { history: 2, profiles: 1, catalogs: 1 }
   const host = mockHost({ requests: { 'models.get': { profiles: [claude], selectorProfileId: null }, 'data.summary': summary } })
   const panel = await mountPanel(host)
@@ -45,14 +45,8 @@ test('lists models for effort settings and sends the selected effort without sta
   })
   const view = await mountPanel(host)
   assert.deepEqual(
-    modelMenu().map((option) => option.label),
-    [
-      'Auto (fallback)',
-      'Claude Sonnet · Claude Sonnet 4.5 · default',
-      'Claude Sonnet · GPT-5 mini',
-      'GPT-5 mini · Claude Sonnet 4.5',
-      'GPT-5 mini · GPT-5 mini · default'
-    ]
+    effortModelOptions('low').map(option => option.value),
+    ['recommended', 'catalog:claude-sonnet-4.5', 'catalog:gpt-5-mini', 'auto']
   )
   await setSetting('effortLowModel', 'claude|claude-sonnet-4.5')
   await setSetting('effortMediumModel', 'claude|gpt-5-mini')
@@ -67,7 +61,7 @@ test('lists models for effort settings and sends the selected effort without sta
     assert.equal(sent.at(-1)?.model, undefined)
     assert.equal(sent.at(-1)?.profileId, undefined)
   }
-  // Corrupt old panel state normalizes to Medium; assignments stay in Settings.
+  // Corrupt old panel state normalizes to Medium; saved assignments stay unchanged.
   set(effort, 'not-a-tier')
   await enhanceNow()
   assert.equal(sent.at(-1)?.effort, 'medium')

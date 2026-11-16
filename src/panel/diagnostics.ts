@@ -1,7 +1,7 @@
 import { plugin, read } from '#panel'
 import { createDiagnostics, diagnosticError, type WorkerDiagnostics } from '../diagnostics.ts'
 import { BRAND } from '../brand.ts'
-import { form, catalogs, catalogLoading, effectiveEffort, effortModels, effortReasoning, copilotRunFailure } from './state.ts'
+import { form, catalogs, catalogLoading, effectiveEffort, effortModels, effortReasoning, copilotRunFailure, copilotCheck, draft, busy } from './state.ts'
 import { copilotStatus } from './copilot-status.ts'
 
 export const panelDiagnostics = createDiagnostics()
@@ -20,6 +20,7 @@ export async function collectDiagnostics(): Promise<{ text: string; connected: b
       modelCount: catalog?.models.length ?? 0, modelSelected: Boolean(read(form)?.model),
       ...(catalog?.error ? { failure: diagnosticError({ text: catalog.errorText }) } : {}) },
     enhance: { status: status.kind, effort, recommended: read(effortModels)[effort] === 'recommended',
+      connectionCheck: read(copilotCheck), requestEmpty: !read(draft).trim(), busy: read(busy),
       reasoning: ['default', 'highest', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'].includes(reasoning) ? reasoning : 'model-specific',
       modelCount: read(catalogs).copilot?.models.length ?? 0,
       ...(status.code ? { failure: diagnosticError({ text: { code: status.code } }) } : {}),

@@ -15,7 +15,7 @@ import { stepPercent, totalPercent, type Step } from '../progress.ts'
 import { PANEL_REQUEST_LIMIT_MS } from '../protocol.ts'
 import { pathInWorkspaceId, pathKey } from '../workspaces.ts'
 import { consents, files, ruleDraft, ruleScope, structureDraft, type Form, terminalWorkspaces, workspaceChoices, tick, workspaceKey, projectName, parked, MAX_PARKED, type Slot, rulesState, structureChoice, workspaceName, tab, draft, result, style, effectiveEffort, effortModels, excluded, target, historyRaw, confirmClearHistory, form, catalogs, catalogLoading, type Run, run, dataSummary, privacy, confirmWipe, busy, notice, lastRun, contextShown, contextNotes, KEPT, mayKeep, put, forgetSaved, targets, models, defaults, effectiveStyle, effectiveLevel, effectiveEnter, say, message, errorMessage, historyOpen, resultFor, sendAfterEnhance, filteredHistory, type NoticeAction } from './state.ts'
-import { effortReasoning, copilotRunFailure, contextPreferences } from './state.ts'
+import { effortReasoning, copilotRunFailure, copilotCheck, contextPreferences } from './state.ts'
 import { cancelContextPreview, contextKey, knownWorkspaceId, showContext } from './context-preview.ts'
 export { knownWorkspaceId, showContext, previewContext } from './context-preview.ts'
 import { connectionFailure, effortConfiguration } from './copilot-status.ts'
@@ -180,33 +180,48 @@ export async function refreshDefaults(): Promise<void> {
 }
 
 export async function refreshModels(): Promise<void> {
+  if (!catalogOpen) return
+  const generation = catalogGeneration
   try {
     const view = await plugin.request('models.get')
+    if (!catalogOpen || generation !== catalogGeneration) return
     set(models, view)
     // All profiles use this attached account's catalog.
     if (!read(catalogs).copilot) void retryCopilot()
   } catch (error) {
-    set(notice, { tone: 'danger', text: message(error) })
+    if (catalogOpen && generation === catalogGeneration) set(notice, { tone: 'danger', text: message(error) })
   }
 }
 
 const catalogRequests = new Map<string, number>()
 let catalogSequence = 0
-export function cancelCatalogLoads() { catalogRequests.clear(); set(catalogLoading, {}) }
+let catalogGeneration = 0
+let catalogOpen = false
+export function startCatalogLoads() { catalogGeneration++; catalogOpen = true }
+export function cancelCatalogLoads() {
+  catalogGeneration++
+  catalogOpen = false
+  catalogRequests.clear()
+  set(catalogLoading, {})
+  set(copilotCheck, null)
+}
 export const retryCopilot = () => loadCatalog('copilot', { preset: 'copilot' }, true)
 
 export async function applyRecommendedEfforts() {
-  if (read(busy)) return
+  if (!catalogOpen || read(busy)) return
+  const generation = catalogGeneration
+  const current = () => catalogOpen && generation === catalogGeneration
   set(busy, 'save')
   try {
     for (const effort of EFFORTS) {
       await settings.set(REASONING_SETTINGS[effort], 'default')
       await settings.set(EFFORT_SETTINGS[effort], 'recommended')
     }
+    if (!current()) return
     await refreshDefaults()
-    await retryCopilot()
-  } catch (error) { set(notice, { tone: 'danger', text: message(error) }) }
-  finally { set(busy, null) }
+    if (current()) await retryCopilot()
+  } catch (error) { if (current()) set(notice, { tone: 'danger', text: message(error) }) }
+  finally { if (current()) set(busy, null) }
 }
 
 export async function loadCatalog(
@@ -214,21 +229,30 @@ export async function loadCatalog(
   input: { preset?: 'copilot'; profileId?: string },
   refresh = false
 ): Promise<void> {
+  if (!catalogOpen) return
+  const generation = catalogGeneration
   const request = ++catalogSequence
   catalogRequests.set(key, request)
-  const current = () => catalogRequests.get(key) === request
+  const current = () => catalogOpen && generation === catalogGeneration && catalogRequests.get(key) === request
   update(catalogLoading, (map) => ({ ...map, [key]: true }))
   const operation = refresh ? 'copilot.refresh' : 'copilot.catalog'
   const started = Date.now()
+  const attempt = (read(copilotCheck)?.attempt ?? 0) + 1
+  if (key === 'copilot') set(copilotCheck, { attempt, startedAt: started, outcome: 'checking' })
+  const completeCheck = (outcome: 'ok' | 'failed') => {
+    if (key === 'copilot' && current()) set(copilotCheck, { attempt, startedAt: started, completedAt: Date.now(), outcome })
+  }
   panelDiagnostics.record(operation, 'started')
   try {
     const clean = Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined && value !== ''))
     const catalog = await plugin.request('models.catalog', { preset: input.preset, ...clean, refresh }, { timeoutMs: 60_000 })
     panelDiagnostics.record(operation, catalog.error ? 'failed' : 'ok', { ms: Date.now() - started, ...(catalog.error ? diagnosticError({ text: catalog.errorText }) : {}) })
     if (current()) update(catalogs, (map) => ({ ...map, [key]: catalog }))
+    completeCheck(catalog.error ? 'failed' : 'ok')
   } catch (error) {
     if (current()) update(catalogs, (map) => ({ ...map, [key]: { models: [], source: '', fetchedAt: Date.now(), error: message(error), ...(errorMessage(error) ? { errorText: errorMessage(error)! } : {}) } }))
     panelDiagnostics.record(operation, 'failed', { ms: Date.now() - started, ...diagnosticError(error) })
+    completeCheck('failed')
   } finally {
     if (current()) update(catalogLoading, (map) => ({ ...map, [key]: false }))
   }

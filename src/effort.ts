@@ -29,8 +29,12 @@ export function resolveReasoning(model: Catalog['models'][number], choice: strin
 export function resolveEffortModel(effort: Effort, assignment: string, profiles: ModelProfile[], catalog?: Catalog): ModelProfile {
   const fail = () => new LlmError(msg('error.effort_model', { effort: EFFORT_LABELS[effort] }), 'invalid_params')
   const enabled = profiles.filter(profile => profile.enabled && profile.provider === 'copilot' && profile.preset === 'copilot')
+  const direct = parseCatalogAssignment(assignment)
   let profile: ModelProfile
-  if (assignment === 'recommended') {
+  if (direct) {
+    if (!catalog || catalog.error || !catalog.models.some(model => model.id === direct)) throw fail()
+    profile = { id: 'copilot-catalog', name: 'GitHub Copilot', preset: 'copilot', provider: 'copilot', model: direct, enabled: true }
+  } else if (assignment === 'recommended') {
     const preset = RECOMMENDED[effort]
     const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '')
     const matches = catalog?.models.filter(model => preset.aliases.some(alias => alias === normalize(model.id) || alias === normalize(model.label))) ?? []
@@ -56,6 +60,13 @@ export function resolveEffort(effort: Effort, assignment: string, reasoning: str
 export const isEffort = (value: unknown): value is Effort => EFFORTS.some(effort => effort === value)
 export const MODEL_SEP = '|'
 export const PROFILE_DEFAULT = '__profile_default__'
+
+/** No pipe: a legacy profile id starting with "catalog:" remains a profile assignment. */
+export function parseCatalogAssignment(value: unknown): string | null {
+  return typeof value === 'string' ? /^catalog:([^\s|\x00-\x1f\x7f]{1,200})$/u.exec(value)?.[1] ?? null : null
+}
+
+export const catalogAssignment = (model: string) => `catalog:${model}`
 
 export function modelAssignment(profileId: string, model: string): string {
   return `${profileId}${MODEL_SEP}${model || PROFILE_DEFAULT}`

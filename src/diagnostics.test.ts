@@ -4,7 +4,7 @@ import { createWorkerHost } from './worker-host.ts'
 import { msg, withMessage } from './messages.ts'
 import { collectDiagnostics } from './panel/diagnostics.ts'
 import { hostRuntime } from './copilot/models.ts'
-import { loadCatalog } from './panel/actions.ts'
+import { loadCatalog, startCatalogLoads, cancelCatalogLoads } from './panel/actions.ts'
 import { catalogs, catalogLoading, form } from './panel/state.ts'
 import { read, set } from '#panel'
 
@@ -111,7 +111,7 @@ test('refresh retries the Copilot request and includes failure/recovery in copie
         : { models: [{ id: 'PRIVATE model id', label: 'PRIVATE label' }], source: 'GitHub Copilot', fetchedAt: 1 }
     }
   } })
-  const panel = await mount({ setup() {} }, { host })
+  const panel = await mount({ setup() { startCatalogLoads(); return cancelCatalogLoads } }, { host })
   set(form, { provider: 'copilot', model: 'PRIVATE model id' } as any)
   try {
     await loadCatalog('form', { preset: 'copilot' }, true)

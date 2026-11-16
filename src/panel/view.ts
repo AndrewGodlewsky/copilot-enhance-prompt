@@ -2,7 +2,7 @@ import { formatText } from '../format.ts'
 // view.ts: what the panel shows, as plain data (labels, options, progress text, the small decisions
 // about what to offer). The web panel (web/src) draws it; the tests check it.
 import { read } from '#panel'
-import { MODEL_SEP, PROFILE_DEFAULT, parseModelAssignment, RECOMMENDED, resolveEffort, type Effort } from '../effort.ts'
+import { parseModelAssignment, parseCatalogAssignment, catalogAssignment, RECOMMENDED, resolveEffort, type Effort } from '../effort.ts'
 import { CONTEXT_LEVEL_LABELS, CONTEXT_LEVELS, isContextLevel, type ContextItemView } from '../presets.ts'
 import { isStyle, STYLE_LABELS, STYLES } from '../prompts.ts'
 import { BRAND } from '../brand.ts'
@@ -46,7 +46,8 @@ export function runSeconds(current: Pick<Run, 'status' | 'startedAt' | 'finished
 /** No enabled Copilot model has been configured yet. */
 export function modelWarning(): 'no-model' | null {
   if (read(models) === null) return null
-  return read(effortModels)[read(effectiveEffort)] !== 'recommended' && read(enabledProfiles).length === 0 ? 'no-model' : null
+  const assignment = read(effortModels)[read(effectiveEffort)]
+  return assignment !== 'recommended' && !parseCatalogAssignment(assignment) && read(enabledProfiles).length === 0 ? 'no-model' : null
 }
 
 /** "sonnet: Sonnet, newest" -> "Sonnet, newest"; display names stay as they are. */
@@ -219,34 +220,16 @@ export function structureValue(): string {
   return id && structureById(rulesConfig(), id) ? id : 'style'
 }
 
-/** Every model of every enabled profile, from its live list, plus Auto. */
-export function modelMenu() {
-  const options: { value: string; label: string }[] = [
-    { value: 'auto', label: read(defaults).fallbackEnabled ? 'Auto (fallback)' : 'Auto' }
-  ]
-  for (const profile of read(enabledProfiles)) {
-    const catalog = read(catalogs)[profile.id] ?? read(catalogs).copilot
-    const listed = catalog?.models ?? []
-    const seen = new Set<string>()
-    const add = (id: string, label: string) => {
-      if (seen.has(id)) return
-      seen.add(id)
-      const saved = id !== '' && id === profile.effectiveModel
-      options.push({
-        value: `${profile.id}${MODEL_SEP}${id || PROFILE_DEFAULT}`,
-        label: `${profile.name} · ${label}${saved ? ` · ${'default'}` : ''}`
-      })
-    }
-    if (profile.effectiveModel && !listed.some((model) => model.id === profile.effectiveModel)) add(profile.effectiveModel, profile.effectiveModel)
-    for (const model of listed) add(model.id, shortModelName(model.id, model.label))
-  }
-  return options
-}
-
 /** Keep an assignment visible even when its catalog is stale or its profile was removed. */
 export function effortModelOptions(effort: Effort) {
-  const options = [{ value: 'recommended', label: `Recommended: ${RECOMMENDED[effort].name}` }, ...modelMenu()]
+  const options = [{ value: 'recommended', label: `Recommended: ${RECOMMENDED[effort].name}` }]
+  const catalog = read(catalogs).copilot
+  if (!catalog?.error) for (const model of catalog?.models ?? []) {
+    const value = catalogAssignment(model.id)
+    if (parseCatalogAssignment(value) && !options.some(option => option.value === value)) options.push({ value, label: model.label })
+  }
   const value = read(effortModels)[effort]
+  if (read(enabledProfiles).length || value === 'auto') options.push({ value: 'auto', label: 'First enabled advanced profile' })
   if (!options.some(option => option.value === value)) {
     const assignment = parseModelAssignment(value)
     const profile = read(enabledProfiles).find(profile => profile.id === assignment?.profileId)

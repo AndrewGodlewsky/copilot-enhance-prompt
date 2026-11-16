@@ -2,7 +2,7 @@ import { read } from '#panel'
 import { RECOMMENDED, resolveEffort, resolveEffortModel, type Effort } from '../effort.ts'
 import { diagnosticError } from '../diagnostics.ts'
 import { isMessage, type Message } from '../messages.ts'
-import { catalogs, catalogLoading, copilotRunFailure, effectiveEffort, effortModels, effortReasoning, enabledProfiles, privacy, message, say } from './state.ts'
+import { catalogs, catalogLoading, copilotCheck, copilotRunFailure, effectiveEffort, effortModels, effortReasoning, enabledProfiles, privacy, message, say } from './state.ts'
 
 export function effortConfiguration() {
   const effort = read(effectiveEffort)
@@ -36,7 +36,16 @@ export function reasoningOptions(effort: Effort) {
   return options
 }
 
-export function copilotStatus(): { kind: 'checking' | 'ready' | 'error'; title: string; detail: string; code?: string } {
+export function effortProblem(effort: Effort): string | null {
+  const catalog = read(catalogs).copilot
+  if (!catalog || catalog.error || read(catalogLoading).copilot) return null
+  try {
+    resolveEffort(effort, read(effortModels)[effort], read(effortReasoning)[effort], read(enabledProfiles), catalog)
+    return null
+  } catch (error) { return message(error) }
+}
+
+function readinessStatus(): { kind: 'checking' | 'ready' | 'error'; title: string; detail: string; code?: string } {
   if (read(privacy).allowOnlineModelLists === false) return { kind: 'error', title: 'Copilot model access is off', detail: 'Enable Fetch model lists online in Settings to use Copilot models, then select Retry.', code: 'error.lists_off' }
   const catalog = read(catalogs).copilot
   if (read(catalogLoading).copilot) return { kind: 'checking', title: 'Checking Copilot…', detail: 'Checking your account and available models. No prompt is submitted.' }
@@ -49,6 +58,21 @@ export function copilotStatus(): { kind: 'checking' | 'ready' | 'error'; title: 
     return { kind: 'error', title: 'Effort configuration needs attention', detail: message(error), code: diagnosticError(error).code }
   }
   const failure = read(copilotRunFailure)
-  if (failure?.configuration === effortConfiguration()) return { kind: 'error', title: 'The last background attempt failed', detail: `${say(failure.text)} Retry checks the account and catalog only; select Enhance to try the background model again.`, code: failure.text.code }
+  if (failure?.configuration === effortConfiguration()) return { kind: 'error', title: 'The last background attempt failed', detail: `${say(failure.text)} Check connection checks the account and model list only; select Enhance to try the background model again.`, code: failure.text.code }
   return { kind: 'ready', title: 'Copilot account connected', detail: 'Model and reasoning are available. Background access is verified when you select Enhance.' }
+}
+
+export function copilotStatus() {
+  const status = readinessStatus()
+  const catalog = read(catalogs).copilot
+  const check = read(copilotCheck)
+  const actionLabel = status.kind === 'checking' ? 'Checking…'
+    : !catalog || catalog.error || status.code === 'error.lists_off' ? 'Retry connection'
+    : status.code === 'error.effort_model' || status.code === 'error.copilot_recommended' || status.code === 'error.copilot_reasoning' ? 'Refresh models'
+    : 'Check connection'
+  const checkedAt = check?.completedAt ? new Date(check.completedAt).toLocaleTimeString('en-US') : ''
+  const feedback = !check ? '' : check.outcome === 'checking' ? `Connection check ${check.attempt} is running.`
+    : check.outcome === 'ok' ? `Check ${check.attempt} completed at ${checkedAt}: account and model list refreshed.`
+    : `Check ${check.attempt} failed at ${checkedAt}. See the message above or open Show Logs.`
+  return { ...status, actionLabel, feedback }
 }

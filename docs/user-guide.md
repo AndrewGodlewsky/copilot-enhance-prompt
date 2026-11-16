@@ -18,7 +18,7 @@ Reports include the plugin version, runtime version, OS/architecture, timestamps
 
 ## Enhance
 
-Write the request and choose Context Level, Style, and Effort. Low, Medium, and High use the models assigned in Settings. Options contains structures and the context preview. Paste, drop or pick attachments, and exclude unnecessary context before clicking Enhance. Enter adds a line without enhancing or sending. Cancel stops the current run. Refine moves the result back into the composer. The rewritten instructions and headings use English while preserving your code, paths, quoted text and other supplied data.
+Write the request and choose Context Level, Style, and Effort. Low, Medium, and High use the model and reasoning pairs assigned in Models. Options contains structures and the context preview. Paste, drop or pick attachments, and exclude unnecessary context before clicking Enhance. Enter adds a line without enhancing or sending. Cancel stops the current run. Refine moves the result back into the composer. The rewritten instructions and headings use English while preserving your code, paths, quoted text and other supplied data.
 
 The dropdown is named **Context Level**. **AI Test** is a separate experimental choice beside AI-assisted: the effort model can inspect excerpts and request more evidence before rewriting, in up to two rounds and 45 seconds. Preview shows its initial context only. Research adds model usage; its progress and final context note show the work performed. [AI Test limits and privacy](context-levels.md#ai-test-experimental-follow-up-research). **General** is the default style; the other eight offer shorter prompts, specifications, task-specific workflows or custom formatting. Structures change headings while keeping the style's purpose. **Plan first** stops after the plan unless the current task explicitly requests implementation. [Style guide and review](styles.md).
 
@@ -26,7 +26,7 @@ Send creates a new message in the attached Copilot session. It checks the sessio
 
 ## Models and rules
 
-Models offers the live GitHub Copilot catalog, saved profiles, testing and ordered fallback. Add a model from that list, assign it to an effort in **Settings > Effort models**, then select the effort in Enhance. The helper reuses the desktop SDK/runtime without npm or another download. Claude, GPT and other listed model families use your Copilot account. **Test** makes a small model request that counts toward Copilot usage.
+Models starts with **Effort models**: select a model and reasoning level for each effort directly from the live GitHub Copilot catalog. Existing choices are preserved. **Advanced model options** contains optional profiles, testing, ordered fallback and a separate AI-assisted context model. Enhance’s **Effort settings** shortcut opens Models. **Check connection** displays a completion time and check number; **Retry connection** appears after a failed check. Neither generates text. The helper reuses the desktop SDK/runtime without npm or another download. Claude, GPT and other listed model families use your Copilot account. **Test** makes a small model request that counts toward Copilot usage.
 
 The selected Copilot model receives the prompt and permitted context. The attached chat receives the result only when sent. Copilot runs remain within Copilot for fallback, the AI-assisted file picker and AI Test research. Account mismatches, unavailable models, or missing runtime controls stop the request. [Background rewriting and troubleshooting](copilot-background-rewriting.md).
 

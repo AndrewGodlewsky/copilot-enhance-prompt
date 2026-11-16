@@ -38,6 +38,7 @@ export const effectiveEffort = derived(() => isEffort(read(effort)) ? read(effor
 export const effortModels = atom<Record<Effort, string>>({ low: 'recommended', medium: 'recommended', high: 'recommended' })
 export const effortReasoning = atom<Record<Effort, string>>({ low: 'default', medium: 'default', high: 'default' })
 export const copilotRunFailure = atom<{ configuration: string; text: Message } | null>(null)
+export const copilotCheck = atom<{ attempt: number; startedAt: number; completedAt?: number; outcome: 'checking' | 'ok' | 'failed' } | null>(null)
 export const excluded = atom<string[]>('excluded', [])
 export const target = atom<string | null>('target', null)
 export const pressEnter = atom<boolean | null>('pressEnter', null)

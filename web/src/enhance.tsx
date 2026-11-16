@@ -5,9 +5,7 @@ import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent } from
 import { read, set, settings, update } from '#panel'
 import { useWordCrew } from './use-word-crew'
 import { EFFORTS, EFFORT_LABELS } from '../../src/effort.ts'
-import { copilotStatus } from '../../src/panel/copilot-status.ts'
-import { retryCopilot } from '../../src/panel/actions.ts'
-import { LogsButton } from './logs'
+import { CopilotConnection } from './copilot-connection'
 import { CONTEXT_LEVEL_HINTS, isContextLevel } from '../../src/presets.ts'
 import { contextKey } from '../../src/panel/context-preview.ts'
 import {
@@ -224,7 +222,7 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-muted-foreground min-w-0 flex-1 break-words text-xs">Model: {effortModelLabel(read(effectiveEffort))}</p>
-        <Button size="sm" variant="ghost" onClick={() => openSection('privacy')}>Effort settings</Button>
+        <Button size="sm" variant="ghost" onClick={() => openSection('models')}>Effort settings</Button>
         <Button size="sm" variant="outline" aria-expanded={read(optionsOpen)} aria-controls={read(optionsOpen) ? 'prompt-options' : undefined} onClick={() => update(optionsOpen, (open) => !open)}>
           <SlidersHorizontalIcon />
           {'Options'}
@@ -271,6 +269,7 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
           )}
         </div>
       </div>
+      {!text.trim() && !locked && working === null ? <p className="text-muted-foreground text-xs">Enter a request to enable Enhance.</p> : null}
       {sendsAfterEnhance() ? <p className="text-muted-foreground text-xs">{'Enhance and send skips review. Enhance lets you edit first.'}</p> : null}
     </div>
   )
@@ -458,20 +457,6 @@ function TargetPicker() {
       />
     </Field>
   )
-}
-
-function CopilotConnection() {
-  const status = copilotStatus()
-  return <div className={`rounded-lg border px-3 py-2 text-xs ${status.kind === 'error' ? 'border-warning-foreground/40 bg-warning/10' : 'bg-muted/30'}`}>
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <p role="status" className="font-medium">{status.title}</p>
-      <div className="flex items-center gap-2">
-        <Button type="button" size="sm" variant="ghost" disabled={status.kind === 'checking' || read(busy) !== null} onClick={() => void retryCopilot()}><RotateCcwIcon className="size-3.5" />{status.kind === 'checking' ? 'Checking…' : 'Retry'}</Button>
-        {status.kind === 'error' ? <LogsButton /> : null}
-      </div>
-    </div>
-    <p className="text-muted-foreground mt-1 leading-relaxed">{status.detail}</p>
-  </div>
 }
 
 function ResultCard({ output }: { output: string }) {

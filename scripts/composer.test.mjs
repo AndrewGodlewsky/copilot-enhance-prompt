@@ -13,16 +13,18 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
       import { TooltipProvider } from './src/components/ui/tooltip.tsx'
       import { captured } from './src/components/ui/textarea.tsx'
       import { set } from '../src/runtime.ts'
-      import { optionsOpen, result, draft, busy, run } from '../src/panel/state.ts'
+      import { optionsOpen, result, draft, busy, run, catalogs, copilotCheck } from '../src/panel/state.ts'
       import { testCrew } from './src/use-word-crew.ts'
-      export function render(open, working = false, finishing = false) {
+      export function render(open, working = false, finishing = false, request = 'A multiline request', connected = false) {
         testCrew.finishing = finishing
         testCrew.visible = finishing
         set(run, finishing ? { runId: 'test', status: 'done', startedAt: 0, finishedAt: 1000, endPercent: 100, steps: [] } : null)
         set(busy, working ? 'enhance' : null)
         captured.length = 0
         set(optionsOpen, open)
-        set(draft, 'A multiline request')
+        set(draft, request)
+        set(catalogs, connected ? { copilot: { models: [{id:'sol',label:'GPT-6.1 Sol',supportedReasoningEfforts:['high']}], source:'Copilot',fetchedAt:1 } } : {})
+        set(copilotCheck, connected ? {attempt:4,startedAt:1,completedAt:2,outcome:'ok'} : null)
         set(result, 'An existing result')
         const html = renderToStaticMarkup(React.createElement(TooltipProvider, null,
           React.createElement(EnhanceSection, { refresh() {} })))
@@ -62,10 +64,15 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
     assert.doesNotMatch(ending.html, />Try again<|>Dismiss</, 'success must not expose retry actions during the completion lock')
     assert.equal(ending.inputs.find(input => input['aria-label'] === 'Your prompt').readOnly, true)
     assert.match(html, />Enhance</)
-    assert.match(html, />Retry</)
+    assert.match(html, />Retry connection</)
     assert.match(html, /Copilot has not been checked/)
     assert.ok(inputs.some(input => input !== request && typeof input.onKeyDown === 'function'), 'reviewed-result send shortcut remains')
   }
+  const connected = module.exports.render(false, false, false, '', true).html
+  assert.match(connected, />Check connection</)
+  assert.doesNotMatch(connected, />Retry connection</)
+  assert.match(connected, /Check 4 completed/)
+  assert.match(connected, /Enter a request to enable Enhance/)
 })
 
 
@@ -78,13 +85,14 @@ test('settings and model setup expose only supported Copilot controls', async ()
       import { TooltipProvider } from './src/components/ui/tooltip.tsx'
       import { set } from '../src/runtime.ts'
       import { models, form, catalogs, dataSummary } from '../src/panel/state.ts'
-      export function render(editing = false, unavailableSelector = false) {
+      export function render(editing = false, unavailableSelector = false, section = 'all') {
         set(models, { profiles: [], selectorProfileId: unavailableSelector ? 'retired' : null })
         set(dataSummary, { history: 0, profiles: 0, catalogs: 0 })
         set(catalogs, { form: { models: [{ id: 'gpt-5', label: 'GPT-5' }], source: 'copilot', fetchedAt: 1 } })
         set(form, editing ? { name: 'GitHub Copilot', preset: 'copilot', provider: 'copilot', model: 'gpt-5', enabled: true } : null)
+        const sections = section === 'settings' ? [SettingsSection] : section === 'models' ? [ModelsSection] : [SettingsSection, ModelsSection, RulesSection]
         return renderToStaticMarkup(React.createElement(TooltipProvider, null,
-          React.createElement(SettingsSection), React.createElement(ModelsSection), React.createElement(RulesSection)))
+          ...sections.map(Component => React.createElement(Component))))
       }
     `, resolveDir: fileURLToPath(new URL('../web/', import.meta.url)) },
     tsconfig: 'web/tsconfig.json', bundle: true, write: false, platform: 'node', format: 'cjs', logLevel: 'silent',
@@ -99,9 +107,19 @@ test('settings and model setup expose only supported Copilot controls', async ()
     assert.match(html, /Copilot/)
     for (const tier of ['Low', 'Medium', 'High']) assert.match(html, new RegExp(`aria-label="${tier} reasoning"`))
     assert.match(html, /Use recommended presets/)
-    if (!editing) assert.match(html, /Select a Copilot model/)
+    if (!editing) assert.match(html, /Advanced model options/)
   }
   const retired = module.exports.render(false, true)
   assert.match(retired, /saved file picker model is unavailable/)
   assert.match(retired, /aria-label="File picker model/)
+  const settings = module.exports.render(false, false, 'settings')
+  const models = module.exports.render(false, false, 'models')
+  assert.doesNotMatch(settings, /Effort models|Low reasoning|Medium reasoning|High reasoning/)
+  for (const tier of ['Low', 'Medium', 'High']) assert.match(models, new RegExp(`aria-label="${tier} reasoning"`))
+  assert.match(models, /Copilot has not been checked/)
+  assert.match(models, /Show Logs/)
+  assert.match(models, /no profile setup is needed/)
+  assert.match(models, /highest supported reasoning/)
+  assert.match(models, /saved unsupported choice stays visible/)
+  assert.ok(models.indexOf('Effort models') < models.indexOf('Advanced model options'))
 })
