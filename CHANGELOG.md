@@ -1,5 +1,10 @@
 # Changes
 
+## [0.10.5] - 2026-11-15
+
+### Added
+- Add Clear beside Write a request to remove the saved request text, images and attachments. Cleared content stays empty when reopening the canvas; saved history, the reviewed result and prompt preferences remain available. Clear waits for uploads, active operations and the completion animation to finish.
+
 ## [0.10.4] - 2026-11-15
 
 ### Changed

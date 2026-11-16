@@ -22,6 +22,8 @@ Write the request and choose Context Level, Style, and Effort. Low, Medium, and 
 
 The dropdown is named **Context Level**. **AI Test** is a separate experimental choice beside AI-assisted: the effort model can inspect excerpts and request more evidence before rewriting, in up to two rounds and 45 seconds. Preview shows its initial context only. Research adds model usage; its progress and final context note show the work performed. [AI Test limits and privacy](context-levels.md#ai-test-experimental-follow-up-research). **General** is the default style; the other eight offer shorter prompts, specifications, task-specific workflows or custom formatting. Structures change headings while keeping the style's purpose. **Plan first** stops after the plan unless the current task explicitly requests implementation. [Style guide and review](styles.md).
 
+**Clear**, beside **Write a request**, empties the saved request and removes all its images and attachments. They stay cleared when you reopen the canvas. Saved history, the reviewed result and your Context Level, Style and Effort choices remain available. Clear is disabled while an upload, operation or completion animation is running. It removes attachments from this request; it does not delete the original files on your computer.
+
 Send creates a new message in the attached Copilot session. It checks the session again immediately before submitting. Copy and file download are available for manual handoff. A failed send leaves the result available.
 
 ## Models and rules

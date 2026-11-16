@@ -4727,7 +4727,7 @@ function activate(host) {
 import { EventEmitter } from "node:events";
 
 // src/version.ts
-var VERSION = "0.10.4";
+var VERSION = "0.10.5";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([

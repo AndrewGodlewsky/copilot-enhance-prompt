@@ -14,12 +14,13 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
       import { TooltipProvider } from './src/components/ui/tooltip.tsx'
       import { captured } from './src/components/ui/textarea.tsx'
       import { set } from '../src/runtime.ts'
-      import { optionsOpen, result, draft, busy, run, catalogs, catalogLoading, copilotCheck, copilotDetailsOpen } from '../src/panel/state.ts'
+      import { optionsOpen, result, draft, files, busy, run, catalogs, catalogLoading, copilotCheck, copilotDetailsOpen } from '../src/panel/state.ts'
       import { testCrew } from './src/use-word-crew.ts'
+      import { pending } from './src/attach.ts'
       export const indicator = () => CopilotConnectionIndicator()?.props
       export const redraw = () => renderToStaticMarkup(React.createElement(TooltipProvider, null,
         React.createElement(EnhanceSection, { refresh() {} })))
-      export function render(open, working = false, finishing = false, request = 'A multiline request', connection = {}) {
+      export function render(open, working = false, finishing = false, request = 'A multiline request', connection = {}, attachments = [], uploading = []) {
         testCrew.finishing = finishing
         testCrew.visible = finishing
         set(run, finishing ? { runId: 'test', status: 'done', startedAt: 0, finishedAt: 1000, endPercent: 100, steps: [] } : null)
@@ -27,6 +28,8 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
         captured.length = 0
         set(optionsOpen, open)
         set(draft, request)
+        set(files, attachments)
+        pending.splice(0, pending.length, ...uploading)
         set(catalogs, connection.connected ? { copilot: { models: [{id:'sol',label:'GPT-6.1 Sol',supportedReasoningEfforts:['high']}], source:'Copilot',fetchedAt:1, ...(connection.error ? {error:'Connection failed'} : {}) } } : {})
         set(catalogLoading, {copilot: connection.checking === true})
         set(copilotDetailsOpen, false)
@@ -36,6 +39,9 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
       }
     `, resolveDir: fileURLToPath(new URL('../web/', import.meta.url)) },
     plugins: [{ name: 'capture-textarea-props', setup(build) {
+      build.onLoad({ filter: /[\\/]attach\.ts$/ }, () => ({
+        contents: `export const pending = []; export const previews = new Map(); export const MAX_FILES = 8; export const uploadingNames = () => pending; export const filesOf = () => []; export async function attachFiles() {}`
+      }))
       build.onLoad({ filter: /use-word-crew\.ts$/ }, () => ({
         contents: `export const testCrew = { input: {current:null}, scene: {current:null}, visible:false, finishing:false, paused:false, togglePause(){} }; export const useWordCrew = () => testCrew;`
       }))
@@ -47,8 +53,14 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
   })
   const module = { exports: {} }
   new Function('require', 'module', 'exports', compiled.outputFiles[0].text)(createRequire(import.meta.url), module, module.exports)
+  const clearButton = html => {
+    const button = html.match(/<button\b[^>]*aria-label="Clear request"[^>]*>/)?.[0]
+    assert.ok(button, 'Clear request is available beside the composer heading')
+    return button
+  }
   for (const open of [false, true]) {
     const { html, inputs } = module.exports.render(open)
+    assert.doesNotMatch(clearButton(html), / disabled=""/)
     for (const label of ['Context Level', 'Style', 'Effort']) {
       assert.equal((html.match(new RegExp(`aria-label="${label}"`, 'g')) ?? []).length, 1)
     }
@@ -60,9 +72,12 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
     assert.equal(request.onKeyUp, undefined)
     assert.equal(request.readOnly, false)
     assert.match(request.className, /\bpt-5\b/, 'reserve room for lifted first-line words without changing line spacing')
-    const locked = module.exports.render(open, true).inputs.find(input => input['aria-label'] === 'Your prompt')
+    const enhancing = module.exports.render(open, true)
+    assert.match(clearButton(enhancing.html), / disabled=""/)
+    const locked = enhancing.inputs.find(input => input['aria-label'] === 'Your prompt')
     assert.equal(locked.readOnly, true, 'request editing is locked for the real enhancement run')
     const ending = module.exports.render(open, false, true)
+    assert.match(clearButton(ending.html), / disabled=""/, 'clearing cannot interrupt the completion animation')
     assert.match(ending.html, /100%/)
     assert.match(ending.html, /Prompt ready/)
     assert.doesNotMatch(ending.html, />Try again<|>Dismiss</, 'success must not expose retry actions during the completion lock')
@@ -73,6 +88,13 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
     assert.ok(inputs.some(input => input !== request && typeof input.onKeyDown === 'function'), 'reviewed-result send shortcut remains')
   }
   const connected = module.exports.render(false, false, false, '', {connected:true}).html
+  assert.match(clearButton(connected), / disabled=""/, 'there is nothing in the request to clear')
+  const file = { path: '/attachments/image.png', name: 'image.png', type: 'image/png', bytes: 20 }
+  assert.doesNotMatch(clearButton(module.exports.render(false, false, false, '', {}, [file]).html), / disabled=""/, 'attachments can be cleared without request text')
+  const uploading = clearButton(module.exports.render(false, false, false, 'Request', {}, [], ['image.png']).html)
+  assert.match(uploading, / disabled=""/)
+  assert.match(uploading, /Wait for attachments to finish uploading/)
+  module.exports.render(false, false, false, '', {connected:true})
   assert.match(connected, /aria-label="Connected: show connection details"/)
   assert.doesNotMatch(connected, />Check connection</)
   assert.doesNotMatch(connected, />Retry connection</)

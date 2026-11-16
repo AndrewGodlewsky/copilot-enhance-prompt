@@ -63,6 +63,7 @@ import {
   openFile,
   openSection,
   cancel,
+  clearRequest,
   copy,
   enhanceAndSend,
   enhanceNow,
@@ -183,7 +184,10 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
       }}
       onDrop={onDrop}
     >
-      <h2 className="text-base font-semibold">{'Write a request'}</h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-base font-semibold">{'Write a request'}</h2>
+        <Button size="sm" variant="ghost" aria-label="Clear request" title={uploadingNames().length ? 'Wait for attachments to finish uploading' : 'Clear request text and attachments'} disabled={locked || working !== null || uploadingNames().length > 0 || (text.length === 0 && attachedCount === 0)} onClick={() => { if (!locked && uploadingNames().length === 0 && clearRequest()) crew.input.current?.focus() }}><XIcon />Clear</Button>
+      </div>
       <Attachments />
       <div className="relative overflow-hidden rounded-md">
         <Textarea

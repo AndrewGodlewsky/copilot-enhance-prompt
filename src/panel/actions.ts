@@ -435,6 +435,16 @@ export function removeFile(path: string): void {
   update(excluded, (list) => list.filter((entry) => entry !== id))
 }
 
+/** Clear this request through the same saved-state and attachment cleanup paths as editing. */
+export function clearRequest(): boolean {
+  if (read(busy) !== null) return false
+  put(draft, '')
+  for (const file of read(files)) removeFile(file.path)
+  set(resultFor, null)
+  set(notice, { tone: 'neutral', text: 'Request text and attachments cleared.' })
+  return true
+}
+
 export function cancel(): void {
   // The request's signal stops the worker; enhanceNow then records the run as cancelled.
   inFlight?.abort()
