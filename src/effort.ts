@@ -19,10 +19,10 @@ const REASONING_ORDER = ['minimal', 'low', 'medium', 'high', 'xhigh', 'max']
 export function resolveReasoning(model: Catalog['models'][number], choice: string): string | undefined {
   if (choice === 'default') return undefined
   const supported = model.supportedReasoningEfforts ?? []
+  if (validReasoning(choice) && supported.includes(choice)) return choice
   if (choice === 'highest' && supported.length && supported.every(value => REASONING_ORDER.includes(value))) {
     return REASONING_ORDER.filter(value => supported.includes(value)).at(-1)!
   }
-  if (choice !== 'highest' && validReasoning(choice) && supported.includes(choice)) return choice
   throw new LlmError(msg('error.copilot_reasoning'), 'invalid_params')
 }
 

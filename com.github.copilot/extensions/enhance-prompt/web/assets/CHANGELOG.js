@@ -1,5 +1,14 @@
 var e=`# Changes
 
+## [0.10.1] - 2026-11-15
+
+### Fixed
+- Read reasoning capabilities from both the raw Copilot session catalog and normalized SDK metadata. Restore supported reasoning choices, including Max for the recommended Claude Haiku 5.5 Low preset, while retaining account, model and applied-reasoning checks before inference.
+- Keep a saved Highest choice available when it resolves to an advertised level, and accept an explicitly advertised Highest level.
+
+### Changed
+- Show a compact green check and Connected beside Enhance's model description. Click it to open connection checks and logs. Errors open the details automatically; manual checks keep their progress and result visible. Models retains its full connection controls.
+
 ## [0.10.0] - 2026-11-15
 
 ### Changed

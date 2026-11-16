@@ -50,6 +50,7 @@ test('missing, ambiguous, disabled and unsupported recommendations fail closed',
 })
 
 test('reasoning accepts only supported values and never assumes the order of unknown levels', () => {
+  assert.equal(resolveReasoning({ id: 'literal', label: 'Literal', supportedReasoningEfforts: ['highest'] }, 'highest'), 'highest')
   assert.equal(resolveReasoning(catalog.models[0], 'highest'), 'max')
   assert.throws(() => resolveReasoning(catalog.models[1], 'max'))
   assert.throws(() => resolveReasoning({ id: 'opaque', label: 'Opaque', supportedReasoningEfforts: ['deep', 'shallow'] }, 'highest'))

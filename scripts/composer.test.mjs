@@ -10,12 +10,16 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
       import React from 'react'
       import { renderToStaticMarkup } from 'react-dom/server'
       import { EnhanceSection } from './src/enhance.tsx'
+      import { CopilotConnectionIndicator } from './src/copilot-connection.tsx'
       import { TooltipProvider } from './src/components/ui/tooltip.tsx'
       import { captured } from './src/components/ui/textarea.tsx'
       import { set } from '../src/runtime.ts'
-      import { optionsOpen, result, draft, busy, run, catalogs, copilotCheck } from '../src/panel/state.ts'
+      import { optionsOpen, result, draft, busy, run, catalogs, catalogLoading, copilotCheck, copilotDetailsOpen } from '../src/panel/state.ts'
       import { testCrew } from './src/use-word-crew.ts'
-      export function render(open, working = false, finishing = false, request = 'A multiline request', connected = false) {
+      export const indicator = () => CopilotConnectionIndicator()?.props
+      export const redraw = () => renderToStaticMarkup(React.createElement(TooltipProvider, null,
+        React.createElement(EnhanceSection, { refresh() {} })))
+      export function render(open, working = false, finishing = false, request = 'A multiline request', connection = {}) {
         testCrew.finishing = finishing
         testCrew.visible = finishing
         set(run, finishing ? { runId: 'test', status: 'done', startedAt: 0, finishedAt: 1000, endPercent: 100, steps: [] } : null)
@@ -23,12 +27,12 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
         captured.length = 0
         set(optionsOpen, open)
         set(draft, request)
-        set(catalogs, connected ? { copilot: { models: [{id:'sol',label:'GPT-6.1 Sol',supportedReasoningEfforts:['high']}], source:'Copilot',fetchedAt:1 } } : {})
-        set(copilotCheck, connected ? {attempt:4,startedAt:1,completedAt:2,outcome:'ok'} : null)
+        set(catalogs, connection.connected ? { copilot: { models: [{id:'sol',label:'GPT-6.1 Sol',supportedReasoningEfforts:['high']}], source:'Copilot',fetchedAt:1, ...(connection.error ? {error:'Connection failed'} : {}) } } : {})
+        set(catalogLoading, {copilot: connection.checking === true})
+        set(copilotDetailsOpen, false)
+        set(copilotCheck, connection.connected ? {attempt:4,startedAt:1,completedAt:2,outcome:'ok'} : null)
         set(result, 'An existing result')
-        const html = renderToStaticMarkup(React.createElement(TooltipProvider, null,
-          React.createElement(EnhanceSection, { refresh() {} })))
-        return { html, inputs: captured }
+        return { html: redraw(), inputs: captured }
       }
     `, resolveDir: fileURLToPath(new URL('../web/', import.meta.url)) },
     plugins: [{ name: 'capture-textarea-props', setup(build) {
@@ -68,11 +72,28 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
     assert.match(html, /Copilot has not been checked/)
     assert.ok(inputs.some(input => input !== request && typeof input.onKeyDown === 'function'), 'reviewed-result send shortcut remains')
   }
-  const connected = module.exports.render(false, false, false, '', true).html
-  assert.match(connected, />Check connection</)
+  const connected = module.exports.render(false, false, false, '', {connected:true}).html
+  assert.match(connected, /aria-label="Connected: show connection details"/)
+  assert.doesNotMatch(connected, />Check connection</)
   assert.doesNotMatch(connected, />Retry connection</)
-  assert.match(connected, /Check 4 completed/)
+  assert.doesNotMatch(connected, /Check 4 completed/)
   assert.match(connected, /Enter a request to enable Enhance/)
+  assert.equal(module.exports.indicator()['aria-expanded'], false)
+  module.exports.indicator().onClick()
+  assert.equal(module.exports.indicator()['aria-expanded'], true)
+  assert.equal(module.exports.indicator()['aria-controls'], 'copilot-connection-details')
+  assert.match(module.exports.redraw(), /Check 4 completed/)
+  assert.match(module.exports.redraw(), />Check connection</)
+  module.exports.indicator().onClick()
+  assert.doesNotMatch(module.exports.redraw(), /Check 4 completed/)
+  const checking = module.exports.render(false, false, false, '', {connected:true,checking:true}).html
+  assert.match(checking, /show connection details/)
+  assert.doesNotMatch(checking, /id="copilot-connection-details"/)
+  const failed = module.exports.render(false, false, false, '', {connected:true,error:true}).html
+  assert.match(failed, /id="copilot-connection-details"/)
+  assert.match(failed, /Connection failed/)
+  assert.match(failed, />Retry connection</)
+  assert.doesNotMatch(failed, /aria-label="Connected:/)
 })
 
 

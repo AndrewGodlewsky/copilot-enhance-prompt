@@ -12,7 +12,7 @@ import { diagnosticError, type Diagnostics, type DiscoveryProbe } from '../diagn
 import { createUsageRecorder, reconcileUsageJournal, type UsageRecorder } from './usage.ts'
 
 type Auth = { isAuthenticated: boolean; login?: string; host?: string }
-type Model = { id: string; name?: string; provider?: { kind?: string }; policy?: { state?: string }; capabilities?: { supports?: { vision?: boolean; reasoningEffort?: boolean } }; supportedReasoningEfforts?: unknown; defaultReasoningEffort?: unknown }
+type Model = { id: string; name?: string; provider?: { kind?: string }; policy?: { state?: string }; capabilities?: { supports?: { vision?: boolean; reasoningEffort?: boolean; reasoning_effort?: unknown } }; supportedReasoningEfforts?: unknown; defaultReasoningEffort?: unknown }
 export type ModelSession = { rpc: {
   model: { list(options?: { refresh?: boolean }): Promise<{ list: unknown[] }>; getCurrent(): Promise<{ modelId?: string; reasoningEffort?: string }> }
   gitHubAuth: { getStatus(): Promise<Auth> }
@@ -88,9 +88,13 @@ function sameAccount(left: Auth, right: Auth): boolean {
 }
 
 function reasoningMetadata(model: Model) {
-  const choices = model.supportedReasoningEfforts
+  const supports = model.capabilities?.supports
+  // Session RPC can return the raw Copilot API shape; client.listModels normalizes it.
+  const normalized = supports?.reasoningEffort !== undefined || model.supportedReasoningEfforts !== undefined
+  const choices = normalized ? model.supportedReasoningEfforts : supports?.reasoning_effort
+  const configurable = normalized ? supports?.reasoningEffort === true : Array.isArray(choices)
   // Do not drop unknown entries and then misidentify a remaining level as the highest.
-  const supportedReasoningEfforts = model.capabilities?.supports?.reasoningEffort === true && Array.isArray(choices) && choices.length <= 20 && choices.every(validReasoning)
+  const supportedReasoningEfforts = configurable && Array.isArray(choices) && choices.length <= 20 && choices.every(validReasoning)
     ? [...new Set<string>(choices)] : []
   return { supportedReasoningEfforts, ...(validReasoning(model.defaultReasoningEffort) && supportedReasoningEfforts.includes(model.defaultReasoningEffort)
     ? { defaultReasoningEffort: model.defaultReasoningEffort } : {}) }

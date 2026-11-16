@@ -1,5 +1,5 @@
 import { read } from '#panel'
-import { RECOMMENDED, resolveEffort, resolveEffortModel, type Effort } from '../effort.ts'
+import { RECOMMENDED, resolveEffort, resolveEffortModel, resolveReasoning, type Effort } from '../effort.ts'
 import { diagnosticError } from '../diagnostics.ts'
 import { isMessage, type Message } from '../messages.ts'
 import { catalogs, catalogLoading, copilotCheck, copilotRunFailure, effectiveEffort, effortModels, effortReasoning, enabledProfiles, privacy, message, say } from './state.ts'
@@ -24,14 +24,17 @@ export function connectionFailure(text: Message | null): Message | null {
 
 export function reasoningOptions(effort: Effort) {
   const assignment = read(effortModels)[effort]
+  const saved = read(effortReasoning)[effort]
   const options = [{ value: 'default', label: assignment === 'recommended' ? `Recommended (${RECOMMENDED[effort].reasoning})` : 'Model default' }]
   try {
     const catalog = read(catalogs).copilot
     const profile = resolveEffortModel(effort, assignment, read(enabledProfiles), catalog)
     const model = catalog?.models.find(model => model.id === profile.model)
     for (const value of model?.supportedReasoningEfforts ?? []) options.push({ value, label: value[0].toUpperCase() + value.slice(1) })
+    if (model && saved === 'highest' && !options.some(option => option.value === saved)) {
+      options.push({ value: saved, label: `Highest supported (${resolveReasoning(model, saved)})` })
+    }
   } catch { /* Keep the saved choice visible; connection status explains the failure. */ }
-  const saved = read(effortReasoning)[effort]
   if (!options.some(option => option.value === saved)) options.push({ value: saved, label: `${saved} (unavailable)` })
   return options
 }

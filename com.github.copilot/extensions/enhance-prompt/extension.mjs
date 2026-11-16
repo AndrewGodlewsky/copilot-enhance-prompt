@@ -3248,10 +3248,10 @@ var REASONING_ORDER = ["minimal", "low", "medium", "high", "xhigh", "max"];
 function resolveReasoning(model, choice) {
   if (choice === "default") return void 0;
   const supported = model.supportedReasoningEfforts ?? [];
+  if (validReasoning(choice) && supported.includes(choice)) return choice;
   if (choice === "highest" && supported.length && supported.every((value) => REASONING_ORDER.includes(value))) {
     return REASONING_ORDER.filter((value) => supported.includes(value)).at(-1);
   }
-  if (choice !== "highest" && validReasoning(choice) && supported.includes(choice)) return choice;
   throw new LlmError(msg("error.copilot_reasoning"), "invalid_params");
 }
 function resolveEffortModel(effort, assignment, profiles, catalog) {
@@ -4725,7 +4725,7 @@ function activate(host) {
 import { EventEmitter } from "node:events";
 
 // src/version.ts
-var VERSION = "0.10.0";
+var VERSION = "0.10.1";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([
@@ -5702,8 +5702,11 @@ function sameAccount(left, right) {
   return left.isAuthenticated === true && right.isAuthenticated === true && !!left.login && !!left.host && left.login.toLowerCase() === right.login?.toLowerCase() && left.host.toLowerCase() === right.host?.toLowerCase();
 }
 function reasoningMetadata(model) {
-  const choices = model.supportedReasoningEfforts;
-  const supportedReasoningEfforts = model.capabilities?.supports?.reasoningEffort === true && Array.isArray(choices) && choices.length <= 20 && choices.every(validReasoning) ? [...new Set(choices)] : [];
+  const supports = model.capabilities?.supports;
+  const normalized = supports?.reasoningEffort !== void 0 || model.supportedReasoningEfforts !== void 0;
+  const choices = normalized ? model.supportedReasoningEfforts : supports?.reasoning_effort;
+  const configurable = normalized ? supports?.reasoningEffort === true : Array.isArray(choices);
+  const supportedReasoningEfforts = configurable && Array.isArray(choices) && choices.length <= 20 && choices.every(validReasoning) ? [...new Set(choices)] : [];
   return { supportedReasoningEfforts, ...validReasoning(model.defaultReasoningEffort) && supportedReasoningEfforts.includes(model.defaultReasoningEffort) ? { defaultReasoningEffort: model.defaultReasoningEffort } : {} };
 }
 function checkReasoning(model, effort) {

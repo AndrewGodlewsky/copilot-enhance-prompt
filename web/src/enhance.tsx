@@ -5,7 +5,8 @@ import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent } from
 import { read, set, settings, update } from '#panel'
 import { useWordCrew } from './use-word-crew'
 import { EFFORTS, EFFORT_LABELS } from '../../src/effort.ts'
-import { CopilotConnection } from './copilot-connection'
+import { CopilotConnection, CopilotConnectionIndicator } from './copilot-connection'
+import { copilotStatus } from '../../src/panel/copilot-status.ts'
 import { CONTEXT_LEVEL_HINTS, isContextLevel } from '../../src/presets.ts'
 import { contextKey } from '../../src/panel/context-preview.ts'
 import {
@@ -30,6 +31,7 @@ import {
   contextFor,
   contextLoading,
   contextError,
+  copilotDetailsOpen,
   draft,
   effectiveEnter,
   effectiveEffort,
@@ -221,14 +223,17 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
         </Field>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-muted-foreground min-w-0 flex-1 break-words text-xs">Model: {effortModelLabel(read(effectiveEffort))}</p>
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+          <span className="text-muted-foreground break-words">Model: {effortModelLabel(read(effectiveEffort))}</span>
+          <CopilotConnectionIndicator />
+        </div>
         <Button size="sm" variant="ghost" onClick={() => openSection('models')}>Effort settings</Button>
         <Button size="sm" variant="outline" aria-expanded={read(optionsOpen)} aria-controls={read(optionsOpen) ? 'prompt-options' : undefined} onClick={() => update(optionsOpen, (open) => !open)}>
           <SlidersHorizontalIcon />
           {'Options'}
         </Button>
       </div>
-      <CopilotConnection />
+      {read(copilotDetailsOpen) || copilotStatus().kind === 'error' ? <div id="copilot-connection-details"><CopilotConnection onCheck={() => set(copilotDetailsOpen, true)} /></div> : null}
       <p className="text-muted-foreground text-xs">{CONTEXT_LEVEL_HINTS[isContextLevel(read(effectiveLevel)) ? read(effectiveLevel) as keyof typeof CONTEXT_LEVEL_HINTS : 'standard']}</p>
       {read(effectiveStyle) === 'custom' ? <CustomInstructions /> : null}
       <PromptOptions />

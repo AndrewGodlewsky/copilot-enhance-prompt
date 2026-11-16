@@ -3,13 +3,14 @@ import assert from 'node:assert/strict'
 import { access, rm } from 'node:fs/promises'
 import { createCopilotModels, hostRuntime, runtimeEnvironment, type DesktopSdk, type ModelSession } from './models.ts'
 import { createDiagnostics } from '../diagnostics.ts'
+import { resolveEffort } from '../effort.ts'
 
 function fixture() {
   const state = { helperLogin: 'person', parentLogin: 'person', host: 'https://github.com', tools: [] as unknown[], selected: 'model-a', provider: 'copilot', policy: 'enabled', currentDirectory: '', sent: [] as unknown[], stopped: 0, config: {} as Record<string, unknown>, options: {} as Record<string, unknown>, hold: false,
     prepared: '', recorded: [] as unknown[], flushed: false, prepareFails: false, flushFails: false, generateFails: false,
-    authenticated: true, supportsReasoning: true, efforts: ['low', 'medium', 'high', 'max'], appliedReasoning: 'high', helperEfforts: null as string[] | null }
+    authenticated: true, supportsReasoning: true, rawReasoning: false, efforts: ['low', 'medium', 'high', 'max'], appliedReasoning: 'high', helperEfforts: null as string[] | null }
   const emit = (event: unknown) => (state.config.onEvent as ((event: unknown) => void) | undefined)?.(event)
-  const model = () => ({ id: 'model-a', name: 'Model A', provider: { kind: state.provider }, policy: { state: state.policy }, capabilities: { supports: { vision: true, reasoningEffort: state.supportsReasoning } }, supportedReasoningEfforts: state.efforts, defaultReasoningEffort: 'medium' })
+  const model = (efforts = state.efforts) => ({ id: 'model-a', name: 'Model A', provider: { kind: state.provider }, policy: { state: state.policy }, capabilities: { supports: { vision: true, ...(state.rawReasoning ? { reasoning_effort: efforts } : { reasoningEffort: state.supportsReasoning }) } }, ...(state.rawReasoning ? {} : { supportedReasoningEfforts: efforts, defaultReasoningEffort: 'medium' }) })
   const parent: ModelSession = { rpc: {
     model: { list: async () => ({ list: [model()] }), getCurrent: async () => ({ modelId: 'model-a' }) },
     gitHubAuth: { getStatus: async () => ({ isAuthenticated: state.authenticated, login: state.parentLogin, host: state.host }) },
@@ -27,7 +28,7 @@ function fixture() {
         state.currentDirectory = config.workingDirectory as string
         return { sessionId: config.sessionId as string, rpc: {
           ...parent.rpc,
-          model: { list: async () => ({ list: [{ ...model(), supportedReasoningEfforts: state.helperEfforts ?? state.efforts }] }), getCurrent: async () => ({ modelId: state.selected, reasoningEffort: state.appliedReasoning }) },
+          model: { list: async () => ({ list: [model(state.helperEfforts ?? state.efforts)] }), getCurrent: async () => ({ modelId: state.selected, reasoningEffort: state.appliedReasoning }) },
           gitHubAuth: { getStatus: async () => ({ isAuthenticated: true, login: state.helperLogin, host: state.host }) },
           metadata: { snapshot: async () => ({ workingDirectory: state.currentDirectory, isRemote: false }) },
           tools: { initializeAndValidate: async () => ({}), getCurrentMetadata: async () => ({ tools: state.tools }) }
@@ -65,6 +66,37 @@ test('reasoning is passed to the helper and verified before sending the prompt',
   await provider.rewrite({ model: 'model-a', reasoningEffort: 'high', system: 'Rewrite', user: 'Draft' })
   assert.equal(state.config.reasoningEffort, 'high')
   assert.equal(state.sent.length, 1)
+})
+
+test('session RPC raw reasoning arrays populate the catalog and pass the same preflight checks', async () => {
+  const { provider, state, parent } = fixture()
+  state.appliedReasoning = 'max'
+  state.rawReasoning = true
+  parent.rpc.model.list = async () => ({ list: [{ id: 'model-a', name: 'Claude Haiku 5.5', provider: { kind: 'copilot' },
+    capabilities: { supports: { reasoning_effort: ['low', 'medium', 'high', 'xhigh', 'max'] } } }] })
+  const catalog = await provider.catalog()
+  assert.deepEqual(catalog.models[0].supportedReasoningEfforts, ['low', 'medium', 'high', 'xhigh', 'max'])
+  const selected = resolveEffort('low', 'recommended', 'default', [], catalog)
+  assert.equal(selected.reasoningEffort, 'max')
+  await provider.rewrite({ model: selected.profile.model, reasoningEffort: selected.reasoningEffort, system: 'Rewrite', user: 'Draft' })
+  assert.equal(state.config.reasoningEffort, 'max')
+  assert.equal(state.sent.length, 1)
+})
+
+test('raw reasoning metadata rejects malformed arrays and cannot override normalized unsupported metadata', async () => {
+  for (const supports of [
+    { reasoning_effort: true },
+    { reasoning_effort: ['max', 'invalid level'] },
+    { reasoning_effort: Array(21).fill('max') },
+    { reasoningEffort: false, reasoning_effort: ['max'] },
+    { reasoningEffort: true, reasoning_effort: ['max'] }
+  ]) {
+    const { provider, state, parent } = fixture()
+    parent.rpc.model.list = async () => ({ list: [{ id: 'model-a', provider: { kind: 'copilot' }, capabilities: { supports } }] })
+    assert.deepEqual((await provider.catalog()).models[0].supportedReasoningEfforts, [])
+    await assert.rejects(provider.rewrite({ model: 'model-a', reasoningEffort: 'max', system: 'Rewrite', user: 'Draft' }), /reasoning/)
+    assert.equal(state.sent.length, 0)
+  }
 })
 
 test('malformed reasoning metadata is not partially advertised as a complete list', async () => {
