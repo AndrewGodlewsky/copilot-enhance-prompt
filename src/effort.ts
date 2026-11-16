@@ -10,8 +10,8 @@ export const EFFORT_SETTINGS = { low: 'effortLowModel', medium: 'effortMediumMod
 export const REASONING_SETTINGS = { low: 'effortLowReasoning', medium: 'effortMediumReasoning', high: 'effortHighReasoning' } as const
 export const RECOMMENDED = {
   low: { name: 'Claude Haiku 5.5', aliases: ['claudehaiku55', 'haiku55'], reasoning: 'highest' },
-  medium: { name: 'GPT-6.1 Sol', aliases: ['gpt61sol'], reasoning: 'high' },
-  high: { name: 'Claude Opus 5.5', aliases: ['claudeopus55', 'opus55'], reasoning: 'medium' }
+  medium: { name: 'GPT-6.1 Terra', aliases: ['gpt61terra'], reasoning: 'high' },
+  high: { name: 'Claude Sonnet 5.5', aliases: ['claudesonnet55', 'sonnet55'], reasoning: 'medium' }
 } as const
 export const validReasoning = (value: unknown): value is string => typeof value === 'string' && /^[a-z][a-z0-9_-]{0,39}$/.test(value)
 const REASONING_ORDER = ['minimal', 'low', 'medium', 'high', 'xhigh', 'max']
@@ -38,6 +38,7 @@ export function resolveEffortModel(effort: Effort, assignment: string, profiles:
     const preset = RECOMMENDED[effort]
     const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '')
     const matches = catalog?.models.filter(model => preset.aliases.some(alias => alias === normalize(model.id) || alias === normalize(model.label))) ?? []
+    if (matches.length === 0) throw new LlmError(msg('error.copilot_recommended_missing', { model: preset.name }), 'invalid_params')
     if (matches.length !== 1) throw new LlmError(msg('error.copilot_recommended', { model: preset.name }), 'invalid_params')
     profile = { id: 'copilot-recommended', name: 'GitHub Copilot', preset: 'copilot', provider: 'copilot', model: matches[0].id, enabled: true }
   } else {

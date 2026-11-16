@@ -1,5 +1,11 @@
 var e=`# Changes
 
+## [0.10.2] - 2026-11-15
+
+### Fixed
+- Change the recommended Medium preset to GPT-6.1 Terra with High reasoning and High to Claude Sonnet 5.5 with Medium reasoning. Low stays on Claude Haiku 5.5 at its highest supported reasoning. Tiers set to Recommended follow the updated presets; explicit model and reasoning selections remain unchanged.
+- Distinguish an unavailable recommended model from multiple matching catalog entries. Explain that users need an available model or a change in Copilot account access; refreshing alone cannot grant access.
+
 ## [0.10.1] - 2026-11-15
 
 ### Fixed

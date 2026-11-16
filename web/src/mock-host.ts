@@ -173,8 +173,8 @@ const granted = new Set<string>()
 const sampleCatalog = () => ({ models: [
   { id: 'claude-sonnet-4.5', label: 'Claude Sonnet 4.5' }, { id: 'gpt-5-mini', label: 'GPT-5 mini' }, { id: 'gpt-5', label: 'GPT-5' },
   { id: 'claude-haiku-5.5', label: 'Claude Haiku 5.5', supportedReasoningEfforts: ['low', 'medium', 'high', 'max'] },
-  { id: 'gpt-6.1-sol', label: 'GPT-6.1 Sol', supportedReasoningEfforts: ['low', 'medium', 'high'] },
-  { id: 'claude-opus-5.5', label: 'Claude Opus 5.5', supportedReasoningEfforts: ['low', 'medium', 'high'] }
+  { id: 'gpt-6.1-terra', label: 'GPT-6.1 Terra', supportedReasoningEfforts: ['low', 'medium', 'high'] },
+  { id: 'claude-sonnet-5.5', label: 'Claude Sonnet 5.5', supportedReasoningEfforts: ['low', 'medium', 'high'] }
 ], source: 'Copilot preview data', fetchedAt: Date.now() })
 const handlers: Record<string, (input: Record<string, unknown>, signal?: AbortSignal) => unknown> = {
   'models.get': () => models,

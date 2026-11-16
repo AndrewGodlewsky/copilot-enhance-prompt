@@ -10,13 +10,13 @@ Privacy switches are checked by the worker on every preview and enhancement, inc
 
 The Enhance composer has **Context Level**, **Style**, and **Effort**. Effort offers **Low**, **Medium**, and **High**; Medium is initially selected and the selection is remembered for the session. In **Models > Effort models**, choose a model directly from Copilot's catalog and a separate supported reasoning level for each tier. Adding a profile is optional. **Effort settings** in Enhance opens this tab; Settings contains prompt preferences and privacy controls.
 
-New installations use the recommended presets below. Existing assignments and reasoning choices, including Auto, are preserved. Select **Use recommended presets** to replace all three pairs explicitly. Assignments are shared across sessions; drafts remain session-specific. Auto is labeled **First enabled advanced profile** and follows that profile's current model. Direct catalog selections stay pinned to their model ID and work without saved profiles.
+New installations use the recommended presets below. Tiers already set to Recommended follow the current presets, including the Medium and High replacements in 0.10.2. Explicit model assignments and reasoning choices, including Auto, are preserved. Select **Use recommended presets** to replace all three pairs explicitly. Assignments are shared across sessions; drafts remain session-specific. Auto is labeled **First enabled advanced profile** and follows that profile's current model. Direct catalog selections stay pinned to their model ID and work without saved profiles.
 
 | Effort | Recommended model | Reasoning |
 | --- | --- | --- |
 | Low | Claude Haiku 5.5 | Highest supported |
-| Medium | GPT-6.1 Sol | High |
-| High | Claude Opus 5.5 | Medium |
+| Medium | GPT-6.1 Terra | High |
+| High | Claude Sonnet 5.5 | Medium |
 
 Recommendations require a unique exact model name or ID match in Copilot's eligible catalog. A missing model is an actionable error, not an invitation to substitute another model. Highest uses the highest advertised value among minimal, low, medium, high, xhigh and max; an unfamiliar vocabulary requires an explicit selection. Copilot determines which levels are supported. Unsupported saved levels remain visible so you can replace them.
 

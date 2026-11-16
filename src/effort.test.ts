@@ -91,22 +91,29 @@ test('recommended effort works without saved profiles and ignores request reason
   const calls: { model: string; reasoningEffort?: string }[] = []
   const host = mockHost({ results: {
     'workspace.readContext': null,
-    'copilot.catalog': { models: [{ id: 'actual-sol', label: 'GPT-6.1 Sol', supportedReasoningEfforts: ['medium', 'high'] }], source: 'GitHub Copilot', fetchedAt: 1 },
+    'copilot.catalog': { models: [
+      { id: 'claude-haiku-5.5', label: 'Claude Haiku 5.5', supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max'] },
+      { id: 'gpt-6.1-terra', label: 'GPT-6.1 Terra', supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max'] },
+      { id: 'claude-sonnet-5.5', label: 'Claude Sonnet 5.5', supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max'] }
+    ], source: 'GitHub Copilot', fetchedAt: 1 },
     'copilot.rewrite': (input: { model: string; reasoningEffort?: string }) => { calls.push(input); return { text: 'English rewrite' } }
   } })
   const worker = await mountWorker(main, { host })
   try {
-    const answer = await worker.request('prompt.enhance', { prompt: 'Fix tests', effort: 'medium', level: 'off', model: 'untrusted', reasoningEffort: 'max' } as any)
-    assert.equal(answer.model, 'actual-sol')
-    assert.equal(answer.attempts[0].reasoningEffort, 'high')
-    assert.equal(calls[0].reasoningEffort, 'high')
+    for (const [effort, model, reasoning] of [['low', 'claude-haiku-5.5', 'max'], ['medium', 'gpt-6.1-terra', 'high'], ['high', 'claude-sonnet-5.5', 'medium']] as const) {
+      const answer = await worker.request('prompt.enhance', { prompt: 'Fix tests', effort, level: 'off', model: 'untrusted', reasoningEffort: 'low' } as any)
+      assert.equal(answer.model, model)
+      assert.equal(answer.attempts[0].reasoningEffort, reasoning)
+      assert.equal(calls.at(-1)?.model, model)
+      assert.equal(calls.at(-1)?.reasoningEffort, reasoning)
+    }
     assert.equal((await worker.request('models.get')).profiles.length, 0)
-    await host.settings.set('effortMediumReasoning', 'max')
+    await host.settings.set('effortMediumReasoning', 'minimal')
     await assert.rejects(worker.request('prompt.enhance', { prompt: 'Fix tests', effort: 'medium', level: 'off' }), /reasoning/)
-    assert.equal(calls.length, 1)
+    assert.equal(calls.length, 3)
     await host.settings.set('allowOnlineModelLists', false)
     await assert.rejects(worker.request('prompt.enhance', { prompt: 'Fix tests', effort: 'medium', level: 'off' }), /lists.*off/)
-    assert.equal(calls.length, 1)
+    assert.equal(calls.length, 3)
   } finally { await worker.deactivate() }
 })
 

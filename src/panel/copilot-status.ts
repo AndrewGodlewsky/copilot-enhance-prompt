@@ -71,7 +71,7 @@ export function copilotStatus() {
   const check = read(copilotCheck)
   const actionLabel = status.kind === 'checking' ? 'Checking…'
     : !catalog || catalog.error || status.code === 'error.lists_off' ? 'Retry connection'
-    : status.code === 'error.effort_model' || status.code === 'error.copilot_recommended' || status.code === 'error.copilot_reasoning' ? 'Refresh models'
+    : status.code === 'error.effort_model' || status.code === 'error.copilot_recommended' || status.code === 'error.copilot_recommended_missing' || status.code === 'error.copilot_reasoning' ? 'Refresh models'
     : 'Check connection'
   const checkedAt = check?.completedAt ? new Date(check.completedAt).toLocaleTimeString('en-US') : ''
   const feedback = !check ? '' : check.outcome === 'checking' ? `Connection check ${check.attempt} is running.`

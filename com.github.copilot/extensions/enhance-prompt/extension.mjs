@@ -1877,7 +1877,8 @@ var MESSAGES = {
   "error.copilot_model": "This model is not available through GitHub Copilot in both sessions. Refresh the model list and choose a Copilot model.",
   "error.copilot_images": "This Copilot model does not report image support. Choose a model with image support or remove the images.",
   "error.copilot_sign_in": "Sign in through GitHub Copilot\u2019s account menu, then select Retry here. The plugin uses that account and does not collect credentials.",
-  "error.copilot_recommended": "{model} could not be uniquely found in your Copilot model list. Refresh models or choose an available model in Models \u2192 Effort models.",
+  "error.copilot_recommended": "More than one Copilot model matches {model}. Choose the exact model in Models \u2192 Effort models.",
+  "error.copilot_recommended_missing": "{model} is not available in your Copilot model list. Choose an available model in Models \u2192 Effort models. Refresh models after your account access changes.",
   "error.copilot_reasoning": "Copilot does not advertise this reasoning level for the selected model. Select Retry or choose a supported level in Effort settings. No prompt was sent to this model.",
   "error.copilot_reasoning_applied": "The background runtime did not apply the requested reasoning level. No prompt was sent to this model. Select Retry, check Effort settings, or update Copilot. Show Logs includes the failure stage.",
   "error.copilot_usage": "Copilot usage could not be saved. Check free disk space and plugin data-folder permissions, then open Show Logs. Any remaining helper files have been kept for recovery.",
@@ -3240,8 +3241,8 @@ var EFFORT_SETTINGS = { low: "effortLowModel", medium: "effortMediumModel", high
 var REASONING_SETTINGS = { low: "effortLowReasoning", medium: "effortMediumReasoning", high: "effortHighReasoning" };
 var RECOMMENDED = {
   low: { name: "Claude Haiku 5.5", aliases: ["claudehaiku55", "haiku55"], reasoning: "highest" },
-  medium: { name: "GPT-6.1 Sol", aliases: ["gpt61sol"], reasoning: "high" },
-  high: { name: "Claude Opus 5.5", aliases: ["claudeopus55", "opus55"], reasoning: "medium" }
+  medium: { name: "GPT-6.1 Terra", aliases: ["gpt61terra"], reasoning: "high" },
+  high: { name: "Claude Sonnet 5.5", aliases: ["claudesonnet55", "sonnet55"], reasoning: "medium" }
 };
 var validReasoning = (value) => typeof value === "string" && /^[a-z][a-z0-9_-]{0,39}$/.test(value);
 var REASONING_ORDER = ["minimal", "low", "medium", "high", "xhigh", "max"];
@@ -3266,6 +3267,7 @@ function resolveEffortModel(effort, assignment, profiles, catalog) {
     const preset = RECOMMENDED[effort];
     const normalize = (value) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
     const matches = catalog?.models.filter((model2) => preset.aliases.some((alias) => alias === normalize(model2.id) || alias === normalize(model2.label))) ?? [];
+    if (matches.length === 0) throw new LlmError(msg("error.copilot_recommended_missing", { model: preset.name }), "invalid_params");
     if (matches.length !== 1) throw new LlmError(msg("error.copilot_recommended", { model: preset.name }), "invalid_params");
     profile = { id: "copilot-recommended", name: "GitHub Copilot", preset: "copilot", provider: "copilot", model: matches[0].id, enabled: true };
   } else {
@@ -4725,7 +4727,7 @@ function activate(host) {
 import { EventEmitter } from "node:events";
 
 // src/version.ts
-var VERSION = "0.10.1";
+var VERSION = "0.10.2";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([

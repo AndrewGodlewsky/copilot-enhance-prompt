@@ -10,6 +10,8 @@
 
 **Copilot account or model unavailable:** refresh the model list, check the existing sign-in and keep Fetch model lists online enabled. The helper must verify the same account and model access as the attached session. See [background rewriting](copilot-background-rewriting.md#if-it-is-unavailable).
 
+**Recommended model is missing:** Recommended is a plugin preset, not a promise that every Copilot account includes that model. Choose an available model in Models > Effort models. GitHub says availability depends on the [Copilot plan, client and organization policies](https://docs.github.com/en/copilot/how-tos/copilot-on-github/set-up-copilot/configure-access-to-ai-models). The catalog does not explain why an omitted model is unavailable. Refresh after account access changes; the plugin cannot unlock a model or infer your subscription from its absence. Version 0.10.2 recommends GPT-6.1 Terra / High for Medium and Claude Sonnet 5.5 / Medium for High; explicit selections remain yours.
+
 **Send refused:** finish the current turn or answer Copilot's pending question in Copilot itself. Then try Send again. The plugin cannot override a blocked session. A canvas stays bound to the session that opened it.
 
 **No project context:** confirm the session has a local working directory and that project/Git reads are enabled. Remote workspaces and inaccessible paths are omitted. Context level Off intentionally sends only your prompt and chosen instructions.
