@@ -1,5 +1,9 @@
 import { atom, derived, read, set } from '#panel'
 import { draft, result, resultFor, run, workspaceKey } from './state.ts'
+import type { ChatTextSize } from '../text-size.ts'
+
+// Loaded from shared settings by refreshDefaults, independent of session drafts.
+export const chatTextSize = atom<ChatTextSize>('medium')
 
 export type ColorTheme = 'light' | 'dark'
 // Shared storage is independent of session-scoped drafts and changing canvas URLs.

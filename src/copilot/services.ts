@@ -2,6 +2,7 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 import { DEFAULTS } from '../defaults.ts'
+import { isChatTextSize } from '../text-size.ts'
 import type { EnhanceWorker } from '../host.ts'
 import type { JsonValue, KeyValueStore, SettingsStore } from '../runtime.ts'
 import { persistentStore } from './storage.ts'
@@ -67,11 +68,13 @@ export function createServices(session: CopilotSession, directory = process.env.
       await prepareEfforts()
       const values: Record<string, JsonValue> = { ...DEFAULTS }
       for (const name of await prefs.keys()) if (Object.hasOwn(DEFAULTS, name)) values[name] = (await prefs.get(name))!
+      if (!isChatTextSize(values.chatTextSize)) values.chatTextSize = 'medium'
       for (const name of UNSUPPORTED_SETTINGS) values[name] = false
       return key === undefined ? values : values[key]
     }) as SettingsStore['get'],
     set: async (key, value) => {
       if (!Object.hasOwn(DEFAULTS, key) || typeof value !== typeof DEFAULTS[key]) throw new Error('Invalid setting.')
+      if (key === 'chatTextSize' && !isChatTextSize(value)) throw new Error('Invalid chat text size.')
       if (Object.values(EFFORT_SETTINGS).some(name => name === key) && value !== 'recommended' && !parseModelAssignment(value) && !parseCatalogAssignment(value)) throw new Error('Invalid effort model assignment.')
       if (Object.values(REASONING_SETTINGS).some(name => name === key) && !validReasoning(value)) throw new Error('Invalid reasoning level.')
       if (UNSUPPORTED_SETTINGS.has(key) && value) throw new Error('This setting is unavailable in the Copilot canvas.')

@@ -22,7 +22,7 @@ import { panelDiagnostics } from '../../src/panel/diagnostics.ts'
 import { diagnosticError } from '../../src/diagnostics.ts'
 import { QuietDesk } from './quiet-desk'
 import { followTheme } from './theme'
-import { colorTheme } from '../../src/panel/appearance.ts'
+import { chatTextSize, colorTheme } from '../../src/panel/appearance.ts'
 import { ready, usePanel } from './panel-runtime'
 import { EnhanceSection } from './enhance'
 import { connectCanvas } from './transport'
@@ -50,7 +50,7 @@ function App() {
   const current = SECTIONS.find((section) => section.value === read(tab)) ?? SECTIONS[0]
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="panel-shell mx-auto flex min-h-screen w-full flex-col gap-4 p-3 sm:p-4">
+      <div className="panel-shell mx-auto flex min-h-screen w-full flex-col gap-4 p-3 sm:p-4" data-chat-text-size={read(chatTextSize)}>
         <header className="flex flex-col gap-3">
           <QuietDesk />
           <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">

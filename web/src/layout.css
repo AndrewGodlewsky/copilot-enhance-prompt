@@ -1,4 +1,8 @@
 .panel-shell { max-width: 88rem; container: panel / inline-size; }
+.panel-shell[data-chat-text-size="small"] { --chat-text-scale: .875; }
+.panel-shell[data-chat-text-size="large"] { --chat-text-scale: 1.25; }
+.chat-text { font-size: calc(.875rem * var(--chat-text-scale, 1)); }
+.request-text { line-height: calc(1.25rem * var(--chat-text-scale, 1)); }
 .panel-section { width: 100%; min-width: 0; margin-inline: auto; }
 .panel-section[data-section="history"] { max-width: 72rem; }
 .panel-section[data-section="models"] { max-width: 64rem; }

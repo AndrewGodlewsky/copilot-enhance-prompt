@@ -1,9 +1,10 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { Run } from '../../src/panel/state.ts'
+import type { ChatTextSize } from '../../src/text-size.ts'
 import { measureWords, mountWordCrew } from './word-crew'
 
 /** Canvas-local artwork. It cannot write a draft, invoke a model or send a prompt. */
-export function useWordCrew(current: Run | null, text: string, workspace: string | null, percent = 0) {
+export function useWordCrew(current: Run | null, text: string, workspace: string | null, percent = 0, textSize: ChatTextSize = 'medium') {
   const input = useRef<HTMLTextAreaElement>(null)
   const scene = useRef<SVGSVGElement>(null)
   const controller = useRef<ReturnType<typeof mountWordCrew> | null>(null)
@@ -70,7 +71,7 @@ export function useWordCrew(current: Run | null, text: string, workspace: string
     }
     // Status changes finish/abort the existing scene below; they must not create another crew.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runId, text, workspace, reduced])
+  }, [runId, text, workspace, reduced, textSize])
 
   useLayoutEffect(() => {
     if (status === 'done' || (status === 'running' && reachedExit)) {
@@ -84,7 +85,7 @@ export function useWordCrew(current: Run | null, text: string, workspace: string
       controller.current = null
       setActive(null)
     }
-  }, [runId, status, reachedExit, reduced, text, workspace])
+  }, [runId, status, reachedExit, reduced, text, workspace, textSize])
 
   const visible = !!runId && active === runId && !reduced && (status === 'running' || status === 'done')
   return {

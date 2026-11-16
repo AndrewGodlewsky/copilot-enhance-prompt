@@ -21,6 +21,8 @@ export { knownWorkspaceId, showContext, previewContext } from './context-preview
 import { connectionFailure, effortConfiguration } from './copilot-status.ts'
 import { panelDiagnostics } from './diagnostics.ts'
 import { diagnosticError } from '../diagnostics.ts'
+import { chatTextSize } from './appearance.ts'
+import { isChatTextSize } from '../text-size.ts'
 
 let inFlight: AbortController | null = null
 /** The enhance-and-send in flight (enhanceAndSend), so that Cancel and a closing panel stop its send too. */
@@ -163,6 +165,7 @@ export function openSection(value: string): void {
 
 export async function refreshDefaults(): Promise<void> {
   const all = await settings.get().catch(() => ({}) as Record<string, JsonValue>)
+  set(chatTextSize, isChatTextSize(all.chatTextSize) ? all.chatTextSize : 'medium')
   set(defaults, {
     style: typeof all.defaultStyle === 'string' && isStyle(all.defaultStyle) ? all.defaultStyle : 'balanced',
     level: typeof all.contextLevel === 'string' && isContextLevel(all.contextLevel) ? all.contextLevel : 'standard',

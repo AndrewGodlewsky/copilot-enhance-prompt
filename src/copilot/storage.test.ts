@@ -40,6 +40,31 @@ test('the color theme survives new sessions without sharing their drafts', async
   } finally { await rm(dir, { recursive: true, force: true }) }
 })
 
+test('chat text size persists across sessions and rejects invalid writes, with a safe default for old data', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'enhance-text-size-test-'))
+  try {
+    const unused = async (): Promise<never> => { throw new Error('Appearance settings must not call the session RPC.') }
+    const session = (sessionId: string): CopilotSession => ({
+      sessionId, send: unused,
+      rpc: { metadata: { snapshot: unused, activity: unused, isProcessing: unused }, permissions: { pendingRequests: unused }, queue: { pendingItems: unused } }
+    })
+    const first = createServices(session('first'), dir)
+    assert.equal(await first.settings.get('chatTextSize'), 'medium')
+    await first.settings.set('timeoutSeconds', 42)
+    for (const size of ['small', 'medium', 'large']) {
+      await first.settings.set('chatTextSize', size)
+      assert.equal(await createServices(session('second'), dir).settings.get('chatTextSize'), size)
+    }
+    for (const invalid of ['huge', 'LARGE', '', 16, null, { size: 'large' }]) {
+      await assert.rejects(first.settings.set('chatTextSize', invalid), /Invalid/)
+      assert.equal(await first.settings.get('chatTextSize'), 'large')
+    }
+    await persistentStore(join(dir, 'preferences')).set('chatTextSize', 'unknown')
+    assert.equal(await first.settings.get('chatTextSize'), 'medium')
+    assert.equal(await first.settings.get('timeoutSeconds'), 42)
+  } finally { await rm(dir, { recursive: true, force: true }) }
+})
+
 test('legacy language cleanup preserves unrelated preferences, credentials and user data across sessions', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'enhance-english-test-'))
   try {

@@ -5,6 +5,7 @@ import { assert, mockHost, test, type MockRequests } from '#testing'
 import { beginRun, cancel, enhanceNow } from './actions.ts'
 import { consents, defaults, draft, notice, privacy, put, result, rulesState, run, targets } from './state.ts'
 import { mountPanel } from './testing.ts'
+import { chatTextSize } from './appearance.ts'
 
 const base: MockRequests = {
   'models.get': { profiles: [], selectorProfileId: null },
@@ -43,6 +44,31 @@ test("a setting changed outside the panel (Copilot's Settings) is followed at on
   assert.equal(read(defaults).style, 'bugfix')
   assert.equal(read(privacy).allowTerminalSend, false)
   await view.unmount()
+})
+
+test('chat text defaults to Medium, follows settings live and survives reopening without changing prompts', async () => {
+  const host = mockHost({ requests: base })
+  let view = await mountPanel(host)
+  try {
+    assert.equal(read(chatTextSize), 'medium')
+    put(draft, 'Keep this request 你好')
+    put(result, 'Keep this reviewed prompt')
+    for (const size of ['small', 'large', 'medium', 'large']) {
+      await settings.set('chatTextSize', size)
+      await view.settled()
+      assert.equal(read(chatTextSize), size)
+      assert.equal(read(draft), 'Keep this request 你好')
+      assert.equal(read(result), 'Keep this reviewed prompt')
+    }
+    await view.unmount()
+    view = await mountPanel(host)
+    assert.equal(read(chatTextSize), 'large')
+    assert.equal(read(draft), 'Keep this request 你好')
+    assert.equal(read(result), 'Keep this reviewed prompt')
+    await settings.set('chatTextSize', 'unexpected-legacy-value')
+    await view.settled()
+    assert.equal(read(chatTextSize), 'medium')
+  } finally { await view.unmount() }
 })
 
 /** A panel whose Enhance stays unanswered until the test ends it, the way Copilot ends a cancelled request: by rejecting it. */

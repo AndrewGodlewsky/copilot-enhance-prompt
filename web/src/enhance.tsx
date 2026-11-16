@@ -4,6 +4,7 @@ import { formatText } from '../../src/format.ts'
 import { useEffect, useRef, useState, type ClipboardEvent, type DragEvent } from 'react'
 import { read, set, settings, update } from '#panel'
 import { useWordCrew } from './use-word-crew'
+import { chatTextSize } from '../../src/panel/appearance.ts'
 import { EFFORTS, EFFORT_LABELS } from '../../src/effort.ts'
 import { CopilotConnection, CopilotConnectionIndicator } from './copilot-connection'
 import { copilotStatus } from '../../src/panel/copilot-status.ts'
@@ -201,7 +202,7 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
           onChange={(event) => { if (!locked) put(draft, event.target.value) }}
           onPaste={onPaste}
           style={crew.visible ? { color: 'transparent', caretColor: 'transparent', pointerEvents: 'none' } : undefined}
-          className="max-h-80 min-h-28 resize-y bg-background pt-5 shadow-none dark:bg-background"
+          className="chat-text request-text max-h-80 min-h-28 resize-y bg-background pt-5 shadow-none dark:bg-background"
         />
         <svg ref={crew.scene} aria-hidden="true" focusable="false" className="pointer-events-none absolute overflow-hidden text-foreground" style={{ visibility: crew.visible ? 'visible' : 'hidden' }} />
       </div>
@@ -498,7 +499,7 @@ function ResultCard({ output }: { output: string }) {
             void send(output)
           }
         }}
-        className="max-h-[60vh] min-h-48 text-sm leading-relaxed"
+        className="chat-text max-h-[60vh] min-h-48 text-sm leading-relaxed"
       />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Button size="sm" variant="outline" onClick={() => void copy(output)}><CopyIcon />{'Copy'}</Button>
@@ -559,7 +560,7 @@ export function WorkspacePicker() {
 export function EnhanceSection({ refresh }: { refresh: () => void }) {
   const current = read(run)
   const percent = current?.status === 'running' ? totalPercent(current.steps, read(tick)) : 0
-  const crew = useWordCrew(current, read(draft), read(workspaceKey), percent)
+  const crew = useWordCrew(current, read(draft), read(workspaceKey), percent, read(chatTextSize))
   const output = read(result)
   const warning = modelWarning()
   return (

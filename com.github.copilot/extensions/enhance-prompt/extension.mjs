@@ -5252,7 +5252,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.11.0";
+var VERSION = "0.11.1";
 
 // src/worker-host.ts
 import { EventEmitter as EventEmitter2 } from "node:events";
@@ -5544,6 +5544,7 @@ import { createHash as createHash2 } from "node:crypto";
 
 // src/defaults.ts
 var DEFAULTS = {
+  "chatTextSize": "medium",
   "defaultStyle": "balanced",
   "customInstructions": "",
   "contextLevel": "standard",
@@ -5576,6 +5577,11 @@ var DEFAULTS = {
   "saveHistory": true,
   "allowOnlineModelLists": true
 };
+
+// src/text-size.ts
+function isChatTextSize(value) {
+  return value === "small" || value === "medium" || value === "large";
+}
 
 // src/copilot/session.ts
 import { basename as basename4, isAbsolute as isAbsolute3 } from "node:path";
@@ -5711,11 +5717,13 @@ function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DI
       await prepareEfforts();
       const values = { ...DEFAULTS };
       for (const name of await prefs.keys()) if (Object.hasOwn(DEFAULTS, name)) values[name] = await prefs.get(name);
+      if (!isChatTextSize(values.chatTextSize)) values.chatTextSize = "medium";
       for (const name of UNSUPPORTED_SETTINGS) values[name] = false;
       return key === void 0 ? values : values[key];
     }),
     set: async (key, value) => {
       if (!Object.hasOwn(DEFAULTS, key) || typeof value !== typeof DEFAULTS[key]) throw new Error("Invalid setting.");
+      if (key === "chatTextSize" && !isChatTextSize(value)) throw new Error("Invalid chat text size.");
       if (Object.values(EFFORT_SETTINGS).some((name) => name === key) && value !== "recommended" && !parseModelAssignment(value) && !parseCatalogAssignment(value)) throw new Error("Invalid effort model assignment.");
       if (Object.values(REASONING_SETTINGS).some((name) => name === key) && !validReasoning(value)) throw new Error("Invalid reasoning level.");
       if (UNSUPPORTED_SETTINGS.has(key) && value) throw new Error("This setting is unavailable in the Copilot canvas.");

@@ -1,6 +1,7 @@
 // Default preferences for a new Enhance Prompt installation.
 import type { JsonValue } from './runtime.ts'
 export const DEFAULTS: Record<string, JsonValue> = {
+  "chatTextSize": "medium",
   "defaultStyle": "balanced",
   "customInstructions": "",
   "contextLevel": "standard",

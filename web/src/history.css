@@ -33,9 +33,9 @@
 .history-entry[aria-expanded="true"] { background: var(--accent); color: var(--accent-foreground); box-shadow: inset 3px 0 var(--foreground); }
 .history-entry-heading { display: flex; align-items: flex-start; gap: 8px; }
 .history-entry-heading > svg { flex: 0 0 16px; width: 16px; height: 16px; margin-top: 2px; color: var(--muted-foreground); }
-.history-entry-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; font-weight: 600; font-size: 13px; line-height: 1.45; }
+.history-entry-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; font-weight: 600; font-size: calc(13px * var(--chat-text-scale, 1)); line-height: 1.45; }
 .history-entry[aria-expanded="true"] .history-entry-title { display: block; }
-.history-entry-excerpt { display: block; margin: 5px 0 8px 24px; color: var(--muted-foreground); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-entry-excerpt { display: block; margin: 5px 0 8px 24px; color: var(--muted-foreground); font-size: calc(12px * var(--chat-text-scale, 1)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .history-entry-meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 8px 0 0 24px; color: var(--muted-foreground); font-size: 11px; }
 .history-entry-meta > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .history-entry-meta time { flex-shrink: 0; font-variant-numeric: tabular-nums; }
@@ -50,7 +50,7 @@
 .history-text-tabs { display: flex; gap: 16px; border-bottom: 1px solid var(--border); margin-top: 17px; }
 .history-text-tabs button { padding: 8px 0; min-height: 37px; color: var(--muted-foreground); font-size: 12px; cursor: pointer; }
 .history-text-tabs button[aria-pressed="true"] { color: var(--foreground); box-shadow: inset 0 -2px var(--foreground); }
-.history-prompt-text { padding-top: 15px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.65; }
+.history-prompt-text { padding-top: 15px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: calc(14px * var(--chat-text-scale, 1)); line-height: 1.65; }
 .history-screen mark { background: #f5e49b; color: #29200a; border-radius: 2px; }
 .dark .history-screen mark { background: #645728; color: #fff5cf; }
 .history-read-hint { color: var(--muted-foreground); font-size: 11px; margin-top: 16px; }

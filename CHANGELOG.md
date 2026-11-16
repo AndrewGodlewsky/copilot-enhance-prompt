@@ -1,5 +1,11 @@
 # Changes
 
+## [0.11.1] - 2026-11-15
+
+### Added
+- Settings → Appearance now offers Small, Medium and Large chat text. Medium preserves the existing sizing; Small is 12.5% smaller and Large is 25% larger. The choice applies to request and review editors and saved prompt text in History, including its previews, and is remembered across sessions.
+- The word animation measures the selected editor font and adjusts when the text-size preference changes.
+
 ## [0.11.0] - 2026-11-15
 
 ### Added

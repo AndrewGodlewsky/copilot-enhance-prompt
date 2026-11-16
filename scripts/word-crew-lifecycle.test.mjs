@@ -63,12 +63,14 @@ test('real run status governs success, cancellation, original content, reduced m
   globalThis.window = { matchMedia: () => media }
   globalThis.document = { hidden: false, addEventListener: (key, fn) => listeners.set(key, fn), removeEventListener: key => listeners.delete(key) }
   globalThis.ResizeObserver = class { constructor(fn) { observer = this; this.fn = fn } observe() {} disconnect() { this.disconnected = true } }
-  globalThis.getComputedStyle = () => ({ fontSize: '14px', fontFamily: 'sans-serif', fontWeight: '400', fontStyle: 'normal' })
+  let fontSize = '14px'
+  globalThis.getComputedStyle = () => ({ fontSize, fontFamily: 'sans-serif', fontWeight: '400', fontStyle: 'normal' })
   const source = '  Original café\n路径 <script> "quoted"  '
   const input = { value: source, clientWidth: 400, clientHeight: 112, clientLeft: 1, clientTop: 1, scrollTop: 200, scrollLeft: 0, addEventListener: (key, fn) => listeners.set(key, fn), removeEventListener: key => listeners.delete(key) }
   const base = { runId: 'one', prompt: source.trim(), workspace: { key: 'project' }, status: 'running' }
   try {
-    api.refs.push(input, { style: {} })
+    const scene = { style: {} }
+    api.refs.push(input, scene)
     let state = api.render(base, source, 'project')
     assert.equal(state.visible, true)
     assert.equal(state.finishing, false)
@@ -104,6 +106,19 @@ test('real run status governs success, cancellation, original content, reduced m
     assert.equal(state.finishing, true)
     api.render({ ...base, runId: 'already-95' }, source, 'project', 95)
     assert.equal(api.mounts.at(-1).retired, 1, 'a new run already past the threshold retires its own crew')
+    const resizingText = { ...base, runId: 'text-size' }
+    api.render(resizingText, source, 'project', 50, 'medium')
+    for (const [size, font, percent] of [['small', '12.25px', 50], ['large', '17.5px', 95]]) {
+      const oldCrew = api.mounts.at(-1)
+      fontSize = font
+      state = api.render(resizingText, source, 'project', percent, size)
+      assert.ok(oldCrew.disposed, 'a text-size change disposes the old word positions even without a viewport resize')
+      assert.notEqual(api.mounts.at(-1), oldCrew)
+      assert.match(scene.style.font, new RegExp(font.replace('.', '\\.')))
+      assert.equal(state.visible, true)
+      assert.equal(api.mounts.at(-1).retired, percent >= 95 ? 1 : 0)
+      assert.equal(input.value, source)
+    }
     for (const outcome of ['error', 'cancelled']) {
       const run = { ...base, runId: outcome }
       api.render(run, source, 'project', 95)
