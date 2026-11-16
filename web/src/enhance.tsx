@@ -184,10 +184,7 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
       }}
       onDrop={onDrop}
     >
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-base font-semibold">{'Write a request'}</h2>
-        <Button size="sm" variant="ghost" aria-label="Clear request" title={uploadingNames().length ? 'Wait for attachments to finish uploading' : 'Clear request text and attachments'} disabled={locked || working !== null || uploadingNames().length > 0 || (text.length === 0 && attachedCount === 0)} onClick={() => { if (!locked && uploadingNames().length === 0 && clearRequest()) crew.input.current?.focus() }}><XIcon />Clear</Button>
-      </div>
+      <h2 className="text-base font-semibold">{'Write a request'}</h2>
       <Attachments />
       <div className="relative overflow-hidden rounded-md">
         <Textarea
@@ -206,9 +203,12 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
         />
         <svg ref={crew.scene} aria-hidden="true" focusable="false" className="pointer-events-none absolute overflow-hidden text-foreground" style={{ visibility: crew.visible ? 'visible' : 'hidden' }} />
       </div>
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p id="composer-help" className="text-muted-foreground text-xs">{locked ? crew.finishing ? 'Prompt ready. Restoring your original request…' : 'Enhancing… Your original request is kept unchanged.' : 'Click Enhance to rewrite in English. Enter adds a new line.'}</p>
-        {crew.visible && !crew.retiring ? <Button size="sm" variant="ghost" onClick={crew.togglePause} aria-pressed={crew.paused}>{crew.paused ? 'Resume animation' : 'Pause animation'}</Button> : null}
+        <div className="ml-auto flex items-center gap-2">
+          {crew.visible && !crew.retiring ? <Button size="sm" variant="ghost" onClick={crew.togglePause} aria-pressed={crew.paused}>{crew.paused ? 'Resume animation' : 'Pause animation'}</Button> : null}
+          <Button size="sm" variant="outline" aria-label="Clear request" title={uploadingNames().length ? 'Wait for attachments to finish uploading' : 'Clear request text and attachments'} disabled={locked || working !== null || uploadingNames().length > 0 || (text.length === 0 && attachedCount === 0)} onClick={() => { if (!locked && uploadingNames().length === 0 && clearRequest()) crew.input.current?.focus() }}>Clear</Button>
+        </div>
       </div>
       {dragging ? (
         <div className="border-primary text-primary pointer-events-none absolute inset-1 grid place-items-center rounded-lg border-2 border-dashed text-sm font-medium">

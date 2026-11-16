@@ -1,5 +1,10 @@
 var e=`# Changes
 
+## [0.10.7] - 2026-11-15
+
+### Changed
+- Move Clear below the request text box on the right. Use an outlined text-only button so the action is easier to recognize.
+
 ## [0.10.6] - 2026-11-15
 
 ### Changed

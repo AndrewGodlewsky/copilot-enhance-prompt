@@ -55,7 +55,7 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
   new Function('require', 'module', 'exports', compiled.outputFiles[0].text)(createRequire(import.meta.url), module, module.exports)
   const clearButton = html => {
     const button = html.match(/<button\b[^>]*aria-label="Clear request"[^>]*>/)?.[0]
-    assert.ok(button, 'Clear request is available beside the composer heading')
+    assert.ok(button, 'Clear request button is available in the composer')
     return button
   }
   for (const open of [false, true]) {
