@@ -1,5 +1,10 @@
 var e=`# Changes
 
+## [0.10.8] - 2026-11-15
+
+### Changed
+- Remove the outer Write a request card's focus highlight. Keep focus indicators on the text box and individual controls.
+
 ## [0.10.7] - 2026-11-15
 
 ### Changed

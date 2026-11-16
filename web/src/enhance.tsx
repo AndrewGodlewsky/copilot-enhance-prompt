@@ -172,7 +172,7 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
 
   return (
     <div
-      className={cn('bg-card relative flex flex-col gap-3 rounded-xl border p-4 focus-within:border-ring', dragging && 'border-primary bg-primary/5')}
+      className={cn('bg-card relative flex flex-col gap-3 rounded-xl border p-4', dragging && 'border-primary bg-primary/5')}
       onDragOver={(event) => {
         if (!locked && Array.from(event.dataTransfer.types).includes('Files')) {
           event.preventDefault()
