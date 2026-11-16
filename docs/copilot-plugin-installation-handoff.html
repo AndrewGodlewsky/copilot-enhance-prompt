@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="A developer handoff for installing compatible GitHub Copilot plugins from another application using the local Copilot CLI.">
+<title>Installing GitHub Copilot plugins from another application</title>
+<style>
+*{box-sizing:border-box}html{scroll-behavior:auto}body{margin:0;background:var(--background,#f7f8f5);color:var(--foreground,#202824);font:16px/1.65 var(--font-sans,system-ui,-apple-system,"Segoe UI",sans-serif)}
+main{max-width:1120px;margin:auto;padding:48px 34px 64px}header{border-top:6px solid var(--primary,#24694d);padding:25px 0 28px}
+.meta,.caption,.source,.small{font-size:.86rem;color:var(--muted-foreground,#53645b)}.meta{margin:0 0 18px}h1{font-family:Georgia,"Times New Roman",serif;font-weight:500;font-size:clamp(2rem,4.6vw,3.5rem);line-height:1.12;max-width:900px;margin:0 0 22px;letter-spacing:-.025em}h2{font-size:1.48rem;line-height:1.3;margin:0 0 16px}h3{font-size:1.07rem;line-height:1.4;margin:23px 0 10px}p{margin:0 0 14px}p:last-child{margin-bottom:0}.lead{font-size:1.18rem;max-width:920px;line-height:1.55}
+a{color:var(--primary,#1e6649);text-underline-offset:3px;overflow-wrap:anywhere}a:hover{background:var(--accent,#e3eee6);color:var(--accent-foreground,#193e2c)}a:focus-visible,summary:focus-visible{outline:3px solid var(--ring,#4a8b6a);outline-offset:4px;border-radius:2px}
+.scope,.note{padding:16px 20px;border-left:4px solid var(--primary,#24694d);background:var(--muted,#eaf0e9);border-radius:0 5px 5px 0}.scope{margin:23px 0 0}.note{margin:20px 0}
+nav{border-block:1px solid var(--border,#d3dcd3);padding:15px 0;margin:15px 0 34px}nav ul{display:flex;flex-wrap:wrap;gap:9px 22px;list-style:none;padding:0;margin:0}nav a{font-size:.91rem;text-decoration-thickness:1px}
+section{padding:28px 0;border-top:1px solid var(--border,#d3dcd3);scroll-margin-top:20px}section:first-of-type{border-top:0;padding-top:0}
+.flow{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:25px;margin:24px 0 12px;padding:0}.flow li{position:relative;padding:20px 17px;border:1px solid var(--border,#c7d5ca);border-radius:7px;background:var(--card,#fff);color:var(--card-foreground,#202824)}.flow li:not(:last-child)::after{content:"→";position:absolute;right:-23px;top:48%;line-height:1;color:var(--muted-foreground,#53645b);font-size:1.3rem}.flow .num{display:block;font-size:.8rem;color:var(--muted-foreground,#53645b);margin-bottom:6px}.flow strong{display:block;line-height:1.35;margin-bottom:8px}.flow p{font-size:.9rem;line-height:1.5}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin:20px 0}.panel{padding:20px 22px;border:1px solid var(--border,#d3dcd3);border-radius:7px;background:var(--card,#fff);color:var(--card-foreground,#202824)}.panel h3{margin-top:0}.panel p,.panel li{font-size:.94rem}
+table{width:100%;border-collapse:collapse;margin:17px 0;font-size:.94rem}caption{text-align:left;font-weight:600;margin-bottom:8px}th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--border,#d3dcd3);padding:12px 13px;overflow-wrap:anywhere}th{background:var(--muted,#eaf0e9);font-size:.87rem;font-weight:650}tbody tr:last-child td{border-bottom:0}td:first-child{font-weight:550}th:first-child,td:first-child{padding-left:11px}
+code{font: .9em/1.5 var(--font-mono,ui-monospace,"Cascadia Code",Consolas,monospace);background:var(--muted,#eaf0e9);padding:.1em .3em;border-radius:3px;overflow-wrap:anywhere}pre{padding:19px 20px;margin:14px 0 20px;border:1px solid var(--border,#cdd7ce);border-radius:6px;background:var(--card,#fff);color:var(--card-foreground,#202824);white-space:pre-wrap;overflow-wrap:anywhere;font-size:.9rem;line-height:1.6;tab-size:2}pre code{background:none;padding:0;font-size:inherit}ul,ol{padding-left:24px;margin:12px 0 18px}li{padding-left:3px;margin:7px 0}.steps>li{padding-left:7px;margin:14px 0}.steps strong{font-weight:650}.source{margin-top:12px}
+details{border:1px solid var(--border,#d3dcd3);padding:0 18px;border-radius:6px;margin:18px 0;background:var(--card,#fff);color:var(--card-foreground,#202824)}summary{cursor:pointer;padding:15px 0;font-weight:650}details[open] summary{margin-bottom:4px}details>div{padding-bottom:17px}.checks{display:grid;grid-template-columns:1fr 1fr;gap:0 28px;padding-left:23px}.checks li{padding-left:4px}.sources{display:grid;grid-template-columns:1fr 1fr;gap:13px 30px;margin-top:18px;padding-left:23px}.sources li{margin:0}.sources small{display:block;color:var(--muted-foreground,#53645b);font-size:.82rem;line-height:1.5}
+footer{border-top:1px solid var(--border,#d3dcd3);padding-top:20px;margin-top:20px;color:var(--muted-foreground,#53645b);font-size:.84rem}.label{font-size:.82rem;font-weight:650;color:var(--muted-foreground,#53645b);margin-bottom:9px}
+@media(prefers-color-scheme:dark){body{background:var(--background,#151b18);color:var(--foreground,#e6ece7)}a{color:var(--primary,#88c6a3)}a:hover{background:var(--accent,#263f30);color:var(--accent-foreground,#eff8f1)}header{border-color:var(--primary,#88c6a3)}.meta,.caption,.source,.small,.label,footer,.sources small,.flow .num,.flow li:not(:last-child)::after{color:var(--muted-foreground,#b1c2b7)}.scope,.note,th,code{background:var(--muted,#24362a)}.scope,.note{border-left-color:var(--primary,#88c6a3)}.panel,.flow li,pre,details{background:var(--card,#1c2620);color:var(--card-foreground,#e6ece7)}nav,section,footer,th,td,.panel,.flow li,pre,details{border-color:var(--border,#3b4d40)}}
+@media(max-width:720px){main{padding:26px 19px 40px}.flow{grid-template-columns:1fr;gap:25px}.flow li{padding:15px 18px}.flow li:not(:last-child)::after{content:"↓";top:auto;bottom:-23px;left:50%;right:auto}.flow .num{display:inline;margin-right:8px}.flow strong{display:inline}.flow p{margin-top:8px}.split,.checks,.sources{grid-template-columns:1fr}.split{gap:14px}h2{font-size:1.3rem}th,td{padding:10px 8px}table{font-size:.85rem}.scope,.note{padding:14px 16px}pre{padding:14px;font-size:.8rem}nav ul{gap:8px 17px}}
+@media print{@page{margin:16mm}body{background:#fff!important;color:#111!important;font:10pt/1.5 system-ui,sans-serif}main{max-width:none;padding:0}header{padding-top:15px}h1{font-size:28pt}h2{font-size:17pt}h3{font-size:12pt}nav{display:none}section{padding:20px 0}a{color:#174a34!important}a:hover{background:none}.scope,.note,th,code{background:#f1f4ef!important;color:#111!important}.panel,.flow li,pre,details{background:#fff!important;color:#111!important}.meta,.caption,.source,.small,.label,footer,.sources small{color:#444!important}.flow{grid-template-columns:repeat(4,minmax(0,1fr))}.flow li,.panel,tr,pre{break-inside:avoid}.flow .num{display:block}.flow strong{display:block}.flow li:not(:last-child)::after{content:"→";left:auto;right:-23px;top:48%;bottom:auto}.split,.checks,.sources{grid-template-columns:1fr 1fr}h2,h3,summary{break-after:avoid}pre{font-size:9pt}details>div{display:block!important}details::details-content{display:contents;content-visibility:visible}.source{font-size:8pt}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<p class="meta">Developer handoff · Revision 1 · Research checked 15 November 2026</p>
+<h1>Install GitHub Copilot plugins from your application.</h1>
+<p class="lead">Build a local integration around Copilot’s plugin commands. Let Copilot fetch the package and maintain its installation records; your application selects the source, runs the operation, checks the result, and explains what the user needs to do next.</p>
+<div class="scope"><strong>Target product: the GitHub Copilot desktop app.</strong> This guide concerns Copilot’s plugin system. GitHub Desktop is the separate application for working with Git repositories. “Any plugin” here means a package compatible with the target Copilot runtime and its supported components. <a href="https://docs.github.com/en/copilot/how-tos/github-copilot-app/customize-github-copilot-app">Copilot app documentation</a> · <a href="https://docs.github.com/en/desktop/overview/about-github-desktop">GitHub Desktop documentation</a></div>
+</header>
+
+<section id="flow" aria-labelledby="flow-title">
+<h2 id="flow-title">The installer runs on the user’s computer.</h2>
+<p>The recommended architecture has four parts. The catalog or repository supplies the plugin; the local CLI performs the installation.</p>
+<ol class="flow" aria-label="Installation flow, in order">
+<li><span class="num">01</span><strong>Your application</strong><p>Shows the source, selected plugin, and target Copilot profile.</p></li>
+<li><span class="num">02</span><strong>Local Copilot CLI</strong><p>Fetches and registers the package using supported commands.</p></li>
+<li><span class="num">03</span><strong>User’s plugin state</strong><p>Holds the installed files and their activation settings.</p></li>
+<li><span class="num">04</span><strong>Copilot desktop session</strong><p>Loads compatible components after discovery or a session reload.</p></li>
+</ol>
+<p class="caption">Persistent plugins are discovered by sessions using the same user configuration. An isolated runtime can suppress that discovery. <a href="https://docs.github.com/en/copilot/how-tos/copilot-sdk/features/plugin-directories#plugin-dir-vs-marketplace-plugins">GitHub: persistent and process-scoped plugins</a></p>
+<div class="split">
+<div class="panel"><h3>If the application is a desktop app</h3><p>Use its local process API to invoke Copilot under the signed-in operating-system user. Keep installation operations behind a small, version-aware CLI adapter.</p></div>
+<div class="panel"><h3>If the application is a website</h3><p>Provide a local companion/helper or a command handoff. Running Copilot on your web server would install into the server’s profile. One browser integration option is an extension connected to an installed <a href="https://developer.chrome.com/docs/extensions/develop/concepts/native-messaging">native messaging host</a>; a normal webpage does not get that capability by itself.</p></div>
+</div>
+</section>
+
+<nav aria-label="Guide contents"><ul>
+<li><a href="#sources-and-names">Sources and names</a></li>
+<li><a href="#commands">Commands</a></li>
+<li><a href="#runtime">Runtime and profile</a></li>
+<li><a href="#files">Files on disk</a></li>
+<li><a href="#implementation">Application behavior</a></li>
+<li><a href="#validation">Release checks</a></li>
+<li><a href="#references">References</a></li>
+</ul></nav>
+
+<section id="sources-and-names">
+<h2>Keep the repository, marketplace, and plugin identities separate.</h2>
+<p>A marketplace is a catalog. Its repository can contain several plugins or point to other sources. The marketplace’s declared name is the registration key; it need not match the repository name. Read the catalog and CLI output rather than deriving names from the URL. <a href="https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/create-and-share-plugin-marketplaces">GitHub: marketplace structure</a></p>
+<table>
+<caption>Fictional example used throughout this guide</caption>
+<thead><tr><th scope="col">Value</th><th scope="col">Example</th><th scope="col">Purpose</th></tr></thead>
+<tbody>
+<tr><td>Marketplace source</td><td><code>acme/copilot-catalog</code></td><td>GitHub repository containing the catalog. Shorthand avoids a full URL.</td></tr>
+<tr><td>Marketplace name</td><td><code>team-tools</code></td><td>The catalog’s declared identity.</td></tr>
+<tr><td>Plugin name</td><td><code>review-helper</code></td><td>The plugin selected from that catalog.</td></tr>
+<tr><td>Qualified plugin identity</td><td><code>review-helper@team-tools</code></td><td>The marketplace installation target.</td></tr>
+</tbody>
+</table>
+<p class="small">All examples are placeholders. Substitute a real source and the identities it declares.</p>
+<p>For your application’s records, keep the source type, original source, declared names, installation mode, selected Copilot profile, and last verified state as distinct fields. Track the runtime version used for each operation. Treat plugin metadata as display data, never as executable instructions for your installer.</p>
+</section>
+
+<section id="commands">
+<h2>Use a marketplace when you want a catalog; install directly when you already have a plugin.</h2>
+<p>The marketplace route supports browsing and selecting among entries. A direct repository installation does not need a separate marketplace registration. GitHub supports both approaches. <a href="https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/plugins-finding-installing">GitHub: finding and installing plugins</a></p>
+
+<h3>Marketplace route</h3>
+<p class="small">Commands use <code>copilot</code> for readability. The application should invoke its resolved executable path. In PowerShell, a quoted executable path is invoked with <code>&amp;</code>.</p>
+<pre><code>copilot plugin marketplace list --json
+
+# Register only if this source is not already registered.
+copilot plugin marketplace add acme/copilot-catalog
+
+# Read the declared name; do not assume it is "copilot-catalog".
+copilot plugin marketplace list --json
+copilot plugin marketplace browse team-tools --json
+
+copilot plugin install review-helper@team-tools
+copilot plugin list --json</code></pre>
+<p>Execute one operation at a time and check its exit status before continuing. After registration, confirm that the declared marketplace name resolves to the intended source. If an existing name points elsewhere, report the conflict instead of replacing it.</p>
+<p class="source">The list and browse JSON options are documented in the <a href="https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference">CLI plugin reference</a>; confirm them against the selected executable’s help.</p>
+
+<h3>Direct plugin route</h3>
+<pre><code># Plugin at the repository root:
+copilot plugin install acme/review-helper
+
+# Plugin inside a larger repository:
+copilot plugin install acme/tool-collection:plugins/review-helper
+
+# A Git URL is also an accepted source:
+copilot plugin install https://github.com/acme/review-helper.git</code></pre>
+<p><code>OWNER/REPO</code> is sufficient for GitHub; a full Git URL is useful for other hosts. The target must contain an installable plugin. Pointing the direct route at a catalog-only repository does not select one of its entries. <a href="https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference#plugin-specification-for-install-command">Accepted source formats</a></p>
+
+<details>
+<summary>Local folders: distinguish a cached install from live development</summary>
+<div>
+<p>Where supported by the selected runtime, <code>copilot plugin install ./my-plugin</code> installs a cached copy; reinstall to pick up source changes. <a href="https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/plugins-creating#test-your-plugin-with-github-copilot-cli">Local plugin testing</a></p>
+<p>A path-sourced plugin in a local directory marketplace loads from its actual source directory. Keep that directory in place and reload the session after rebuilding. <a href="https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference#copilot-plugin-update-options">Live local marketplace behavior</a></p>
+<p>Expose this as an intentional development mode. For ordinary users, prefer a published package with all required runtime files already included. Do not run a repository’s build scripts merely because files are missing.</p>
+</div>
+</details>
+
+<h3>Update, disable, enable, and remove</h3>
+<pre><code>copilot plugin update review-helper@team-tools
+copilot plugin disable review-helper@team-tools
+copilot plugin enable review-helper@team-tools
+copilot plugin uninstall review-helper@team-tools</code></pre>
+<p>Use the identity appropriate to the installation mode. Re-read the installed inventory after every mutation. Keep “Update” separate from “Install,” and preserve an existing disabled state unless the user requests activation. These lifecycle operations are described in <a href="https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/plugins-finding-installing#manage-installed-plugins">GitHub’s management guide</a>.</p>
+</section>
+
+<section id="runtime">
+<h2>Find a supported executable and target the same profile as the desktop app.</h2>
+<p>The executable and configuration directory are part of the integration contract. A command can succeed against the wrong profile and leave the user’s desktop unchanged.</p>
+<ol class="steps">
+<li><strong>Resolve an executable.</strong> Support a user-configured absolute path, then discovery through PATH. Validate the executable’s identity, version, and plugin capabilities before accepting it. Revalidate when the selected executable changes.</li>
+<li><strong>Offer CLI setup if it is missing.</strong> GitHub publishes Windows, macOS, and Linux installation methods. On Windows, its documented WinGet command is <code>winget install GitHub.Copilot</code>. Do not assume installing the desktop app put <code>copilot</code> on PATH. <a href="https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli">Official CLI setup</a></li>
+<li><strong>Avoid depending on a bundled runtime’s versioned folder.</strong> A desktop-bundled executable may be usable, but its internal location is not a durable discovery contract established by the cited docs. Keep any such fallback in an explicitly tested adapter; never choose an arbitrary cached version.</li>
+<li><strong>Use the desktop user’s configuration.</strong> The default is <code>~/.copilot</code>; <code>COPILOT_HOME</code> overrides it. A different account, elevated service, or custom home can target another installation. Show the selected profile in the app. <a href="https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference#changing-the-location-of-the-configuration-directory">Configuration directory rules</a></li>
+<li><strong>Check compatibility with the desktop release.</strong> A CLI can accept a package whose desktop components need a different host version. Test the CLI/desktop combinations you support; successful installation alone does not establish component compatibility.</li>
+</ol>
+<pre><code># Read-only capability probes for the selected executable:
+copilot --version
+copilot plugin --help
+copilot plugin install --help
+copilot plugin marketplace --help
+copilot plugin list --json</code></pre>
+<p>Use a controlled working directory for global inventory operations. Repository-specific activation should be checked in the actual target repository and presented separately. Do not inherit an unrelated repository context from your application’s installation folder.</p>
+<div class="note"><strong>A process-only plugin mount is a different operation.</strong> <code>--plugin-dir</code> applies to the runtime process launched with that argument. Passing it to your own SDK client does not persistently install the plugin for a separately running desktop app. <a href="https://docs.github.com/en/copilot/how-tos/copilot-sdk/features/plugin-directories#plugin-dir-vs-marketplace-plugins">GitHub: plugin loading scope</a></div>
+</section>
+
+<section id="files">
+<h2>Use filesystem locations for diagnosis, and CLI commands for installation.</h2>
+<p>On Windows, the default Copilot home is <code>%USERPROFILE%\.copilot</code>. On macOS and Linux it is <code>~/.copilot</code>. A configured <code>COPILOT_HOME</code> replaces that root. The cache is separate and can be overridden by <code>COPILOT_CACHE_HOME</code>. <a href="https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference">GitHub: configuration and cache directories</a></p>
+<pre><code>&lt;Copilot home&gt;/
+├── installed-plugins/
+│   ├── &lt;marketplace&gt;/&lt;plugin&gt;/     marketplace install
+│   └── _direct/&lt;source-id&gt;/        direct install
+├── config.json                    Copilot-managed internal state
+├── settings.json                  user settings
+└── plugin-data/                    persistent plugin data</code></pre>
+<p class="source">Installed package layout: <a href="https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference#file-locations">CLI file locations</a>. State and settings roles: <a href="https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference#directory-overview">configuration directory reference</a>.</p>
+<p>The managed state includes installation records; user settings include activation and marketplace configuration. Your installer should let the CLI maintain them. Copying a package into the cache does not complete this managed workflow. Avoid treating today’s JSON structure or cache naming as a stable API.</p>
+<details>
+<summary>What belongs inside a package?</summary>
+<div>
+<p>Agent Plugins packages use a root <code>plugin.json</code>. Components can include <code>skills/</code>, <code>mcp.json</code>, and client-specific files under <code>com.github.copilot/</code>. Legacy plugins use other supported conventions. <a href="https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/plugins-creating#plugin-structure">GitHub: plugin authoring</a></p>
+<p>A canvas package must include the executable extension and the resources its interface needs. A skill-only package will have a different layout. Preserve the published package as a unit; do not manufacture a canvas directory or strip “unused” files from every plugin.</p>
+<p>Plugin authors may use additional storage locations or external services. Treat the package, cached catalog, and user data as separate things. Uninstalling is not a promise to erase every credential or data file a plugin has ever created.</p>
+</div>
+</details>
+</section>
+
+<section id="implementation">
+<h2>Make installation a verified state change.</h2>
+<p>The following is a proposed application design, not a GitHub SDK API. It keeps source selection, process execution, and result interpretation separate so each can adapt to runtime changes.</p>
+<pre><code>installPlugin(selection, targetProfile):
+    runtime = resolveAndProbeRuntime(targetProfile)
+    before = readPluginInventory(runtime, targetProfile)
+
+    if selection uses a marketplace:
+        ensure source is registered without a name/source conflict
+        resolve catalog identity and chosen plugin
+
+    if the same installation already exists:
+        report its current state; offer update or enable when appropriate
+        return
+
+    run install with validated arguments
+    require successful process completion
+    after = readPluginInventory(runtime, targetProfile)
+    verify the intended identity and available source metadata
+
+    report installed + activation state
+    explain reload and any remaining setup</code></pre>
+<h3>Process adapter requirements</h3>
+<table>
+<thead><tr><th scope="col">Concern</th><th scope="col">Implementation recommendation</th></tr></thead>
+<tbody>
+<tr><td>Arguments</td><td>Use the process API’s executable and argument array. Validate source types and reject option-like source strings. Avoid assembling shell commands from catalog metadata.</td></tr>
+<tr><td>Windows launchers</td><td>Handle native executables and package-manager wrappers deliberately. A <code>.cmd</code> shim has different launch requirements; do not silently enable a shell for arbitrary input.</td></tr>
+<tr><td>Completion</td><td>Collect the exit status and bounded output. Handle launch errors, cancellation, timeout, and process exit. A progress message is not a completion signal.</td></tr>
+<tr><td>Concurrency</td><td>Serialize mutations for each target profile within your app. Re-read state after completion or interruption; another app or the user may have changed it.</td></tr>
+<tr><td>Authentication</td><td>Use Copilot’s supported sign-in flow and the user’s repository access. Return an “Action required” state if interaction is needed; resume verification after the user completes it.</td></tr>
+<tr><td>Prompts and trust</td><td>Show the source and requested install action before starting. Preserve runtime confirmations. A generic, fully unattended install of every source type is not an assumption this design makes.</td></tr>
+<tr><td>Logs</td><td>Keep operation, runtime version, exit status, and a sanitized error excerpt. Avoid storing credentials, token-bearing URLs, or full configuration files.</td></tr>
+<tr><td>Parsing</td><td>Use version-tested JSON readers. Current plugin lists use an array; older output used an object with a <code>plugins</code> field. Validate fields and surface errors. Unknown output must not be interpreted as an empty inventory.</td></tr>
+</tbody>
+</table>
+<p class="source">Process API details: <a href="https://nodejs.org/api/child_process.html">Node.js child processes</a> (one implementation option). JSON evolution: <a href="https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference#cli-commands">Copilot CLI reference</a>. Authentication: <a href="https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli#authenticating-with-copilot-cli">GitHub CLI sign-in guidance</a>.</p>
+<p>If the front end uses a local helper, give that helper a narrow operation API such as “list” and “install validated source.” Authenticate the local channel and authorize each requesting origin. It should not expose a general-purpose “run this shell command” endpoint.</p>
+
+<h3>Tell the user which state was actually verified.</h3>
+<table>
+<thead><tr><th scope="col">App status</th><th scope="col">Evidence and next step</th></tr></thead>
+<tbody>
+<tr><td>Installed</td><td>The command succeeded and the expected plugin appears in inventory. Show its reported version and activation state.</td></tr>
+<tr><td>Installed, disabled</td><td>The plugin exists but is off. Offer enablement if permitted and requested; preserve intentional disablement.</td></tr>
+<tr><td>Reload needed</td><td>Inventory is correct but the existing desktop session may not have rediscovered it. Ask the user to start a new session or restart the app; do not terminate active work automatically.</td></tr>
+<tr><td>Setup required</td><td>Installation completed, but a component needs credentials, a runtime dependency, or other documented setup.</td></tr>
+<tr><td>Blocked or incompatible</td><td>Explain the reported policy, schema, component, or host-version constraint. Provide a relevant fix or supported-version requirement.</td></tr>
+<tr><td>Failed or interrupted</td><td>Show a useful cause. Reconcile inventory before offering retry; registration may already have succeeded even when a later step failed.</td></tr>
+</tbody>
+</table>
+<p>Repository settings can change effective activation, and managed settings can require or block plugins. Do not attempt to defeat those settings by editing internal state. <a href="https://docs.github.com/en/copilot/how-tos/github-copilot-app/customize-github-copilot-app#adding-plugins">GitHub: desktop plugin activation and policy</a></p>
+<p>For retry and recovery, keep a small operation journal in your own application: target profile, requested identity, sanitized source, steps completed, and last verification result. Do not delete a marketplace automatically after a failed install; other plugins may use it. Never use a forced marketplace removal as cleanup.</p>
+</section>
+
+<section id="validation">
+<h2>Ship against tested runtime and desktop combinations.</h2>
+<p>Use a disposable Copilot profile and a small, harmless test plugin for installer tests. Verify desktop loading separately with a test account/profile. The following is a proposed release test matrix for the integrating application.</p>
+<ul class="checks">
+<li>Fresh install, repeat install, update, disable, enable, and uninstall.</li>
+<li>Repository name differs from marketplace name; multiple plugins share one catalog.</li>
+<li>Same marketplace name points to a different source.</li>
+<li>CLI missing, outdated, moved, or updated while the app is open.</li>
+<li>Executable and profile paths contain spaces and non-ASCII characters.</li>
+<li>Private repository access, signed-out user, and interrupted authentication.</li>
+<li>Network loss, cancellation, and application crash between registration and install.</li>
+<li>JSON output variations and malformed or unknown output.</li>
+<li>Default profile versus custom home; global versus repository activation.</li>
+<li>Managed block, unsupported plugin format, and unsupported desktop component.</li>
+<li>A harmless skill, a canvas where supported, and a component with external setup.</li>
+<li>New-session discovery in each supported desktop/CLI version pair.</li>
+</ul>
+<p>Keep CLI-specific parsing and executable discovery in one adapter. Test that adapter before adding support for a new runtime release, and retain diagnostics that identify the desktop and CLI versions involved. Where no documented desktop inventory API is available to your app, keep desktop readiness as a separate manual acceptance check.</p>
+<div class="note"><strong>Recommended product promise:</strong> “Install compatible plugins into your selected GitHub Copilot profile and verify their installation status.” Claim a plugin is ready to use only after its component setup and desktop loading have been verified.</div>
+</section>
+
+<section id="references">
+<h2>Sources and maintenance notes</h2>
+<p>This guide combines current GitHub documentation with proposed integration design. The recommendations about adapters, retries, status labels, and testing are engineering guidance. Local inspection confirmed a persistent installation and CLI listing on one Windows desktop runtime; it did not establish compatibility across all releases or plugin types.</p>
+<ol class="sources">
+<li><a href="https://docs.github.com/en/copilot/how-tos/github-copilot-app/customize-github-copilot-app">Customize the GitHub Copilot app</a><small>Desktop plugin capabilities, activation, and management.</small></li>
+<li><a href="https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference">CLI plugin reference</a><small>Commands, input formats, JSON changes, and package locations.</small></li>
+<li><a href="https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/plugins-finding-installing">Find and install plugins</a><small>Marketplace and direct installation workflows.</small></li>
+<li><a href="https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-config-dir-reference">Configuration directory reference</a><small>User settings, internal state, profile and cache overrides.</small></li>
+<li><a href="https://docs.github.com/en/copilot/how-tos/copilot-sdk/features/plugin-directories">SDK plugin directories</a><small>Persistent discovery versus explicit runtime mounts.</small></li>
+<li><a href="https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli">Install and authenticate the CLI</a><small>Supported setup methods and user sign-in.</small></li>
+<li><a href="https://docs.github.com/en/copilot/how-tos/copilot-on-github/customize-copilot/create-and-share-plugin-marketplaces">Create a plugin marketplace</a><small>Catalog identities, sources, and repository access.</small></li>
+<li><a href="https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/plugins-creating">Create and test a plugin</a><small>Package conventions and local cached installations.</small></li>
+<li><a href="https://nodejs.org/api/child_process.html">Node.js process API</a><small>Argument-based execution and Windows launcher behavior.</small></li>
+<li><a href="https://docs.github.com/en/desktop/overview/about-github-desktop">About GitHub Desktop</a><small>Distinguishes the Git client from the Copilot app.</small></li>
+<li><a href="https://developer.chrome.com/docs/extensions/develop/concepts/native-messaging">Browser extension native messaging</a><small>One option for a browser extension to communicate with an installed local helper.</small></li>
+</ol>
+</section>
+<footer>
+<p>Standalone HTML handoff · No scripts, external fonts, images, or runtime dependencies · Contents are available offline; source links need internet access.</p>
+<p>Research date: 15 November 2026. Recheck linked documentation and the selected CLI’s help when implementing or updating the integration. This file explains an installation design; it does not execute installation commands.</p>
+</footer>
+</main>
+</body>
+</html>

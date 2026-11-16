@@ -118,6 +118,8 @@ Only reported model, timestamp, token and credit accounting is exported, without
 
 Building another plugin that needs background Copilot models? Use the [agent handoff](docs/copilot-sdk-agent-handoff.md) for the host SDK/runtime setup, account and model checks, isolation, cancellation, retained usage, Usage Insights integration and fixture tests.
 
+Building an application that installs Copilot plugins? Download and open the [plugin installation handoff](docs/copilot-plugin-installation-handoff.html) for a general integration guide covering CLI installation, runtime discovery, profiles, verification and recovery. The standalone HTML works offline; source links require internet access.
+
 | Capability | Copilot behavior |
 | --- | --- |
 | Prompt editor, rewrite models, fallback, rules, history, attachments | Retained in the canvas |
