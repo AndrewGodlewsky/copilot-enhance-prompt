@@ -435,13 +435,15 @@ export function removeFile(path: string): void {
   update(excluded, (list) => list.filter((entry) => entry !== id))
 }
 
-/** Clear this request through the same saved-state and attachment cleanup paths as editing. */
+/** Clear the request and reviewed prompt through the normal saved-state and attachment cleanup paths. */
 export function clearRequest(): boolean {
   if (read(busy) !== null) return false
   put(draft, '')
+  put(result, '')
+  put(lastRun, null)
   for (const file of read(files)) removeFile(file.path)
   set(resultFor, null)
-  set(notice, { tone: 'neutral', text: 'Request text and attachments cleared.' })
+  set(notice, { tone: 'neutral', text: 'Request, attachments, and reviewed prompt cleared.' })
   return true
 }
 

@@ -20,7 +20,7 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
       export const indicator = () => CopilotConnectionIndicator()?.props
       export const redraw = () => renderToStaticMarkup(React.createElement(TooltipProvider, null,
         React.createElement(EnhanceSection, { refresh() {} })))
-      export function render(open, working = false, finishing = false, request = 'A multiline request', connection = {}, attachments = [], uploading = []) {
+      export function render(open, working = false, finishing = false, request = 'A multiline request', connection = {}, attachments = [], uploading = [], output = 'An existing result') {
         testCrew.finishing = finishing
         testCrew.visible = finishing
         set(run, finishing ? { runId: 'test', status: 'done', startedAt: 0, finishedAt: 1000, endPercent: 100, steps: [] } : null)
@@ -34,7 +34,7 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
         set(catalogLoading, {copilot: connection.checking === true})
         set(copilotDetailsOpen, false)
         set(copilotCheck, connection.connected ? {attempt:4,startedAt:1,completedAt:2,outcome:'ok'} : null)
-        set(result, 'An existing result')
+        set(result, output)
         return { html: redraw(), inputs: captured }
       }
     `, resolveDir: fileURLToPath(new URL('../web/', import.meta.url)) },
@@ -54,7 +54,7 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
   const module = { exports: {} }
   new Function('require', 'module', 'exports', compiled.outputFiles[0].text)(createRequire(import.meta.url), module, module.exports)
   const clearButton = html => {
-    const button = html.match(/<button\b[^>]*aria-label="Clear request"[^>]*>/)?.[0]
+    const button = html.match(/<button\b[^>]*aria-label="Clear request and reviewed prompt"[^>]*>/)?.[0]
     assert.ok(button, 'Clear request button is available in the composer')
     return button
   }
@@ -96,9 +96,12 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
     assert.ok(inputs.some(input => input !== request && typeof input.onKeyDown === 'function'), 'reviewed-result send shortcut remains')
   }
   const connected = module.exports.render(false, false, false, '', {connected:true}).html
-  assert.match(clearButton(connected), / disabled=""/, 'there is nothing in the request to clear')
+  assert.doesNotMatch(clearButton(connected), / disabled=""/, 'Clear remains enabled when only the reviewed prompt has content')
+  const empty = module.exports.render(false, false, false, '', {connected:true}, [], [], '').html
+  assert.match(clearButton(empty), / disabled=""/, 'Clear is disabled only when both sections and attachments are empty')
+  assert.doesNotMatch(empty, /Review and send/, 'an empty result removes the review section')
   const file = { path: '/attachments/image.png', name: 'image.png', type: 'image/png', bytes: 20 }
-  assert.doesNotMatch(clearButton(module.exports.render(false, false, false, '', {}, [file]).html), / disabled=""/, 'attachments can be cleared without request text')
+  assert.doesNotMatch(clearButton(module.exports.render(false, false, false, '', {}, [file], [], '').html), / disabled=""/, 'attachments can be cleared when both text sections are empty')
   const uploading = clearButton(module.exports.render(false, false, false, 'Request', {}, [], ['image.png']).html)
   assert.match(uploading, / disabled=""/)
   assert.match(uploading, /Wait for attachments to finish uploading/)

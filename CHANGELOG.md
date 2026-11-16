@@ -1,5 +1,10 @@
 # Changes
 
+## [0.10.10] - 2026-11-15
+
+### Changed
+- Clear now empties both Write a request and Review and send, including attachments and saved result metadata. It remains available when only the reviewed prompt has content. Cleared content stays empty after reopening; saved history is preserved.
+
 ## [0.10.9] - 2026-11-15
 
 ### Changed

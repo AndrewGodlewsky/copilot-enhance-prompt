@@ -3,7 +3,7 @@ import { read, set } from '#panel'
 import { assert, mockHost, mountWorker, test, type MockRequests } from '#testing'
 import { capHistory, HISTORY_ENTRY_CHARS, HISTORY_TOTAL_CHARS, parseHistory, trimForHistory, type HistoryEntry } from './history.ts'
 import { clearData, clearHistory, clearRequest, removeEntry, reuse } from './panel/actions.ts'
-import { busy, confirmClearHistory, confirmWipe, contextShown, draft, excluded, files, filteredHistory, history, historyFilter, historyWindow, notice, put, result, resultFor, tab } from './panel/state.ts'
+import { busy, confirmClearHistory, confirmWipe, contextShown, draft, excluded, files, filteredHistory, history, historyFilter, historyWindow, lastRun, notice, put, result, resultFor, tab } from './panel/state.ts'
 import { attachmentItemId } from './image-limits.ts'
 import { mountPanel } from './panel/testing.ts'
 import * as main from './worker.ts'
@@ -116,7 +116,7 @@ test('the draft and last result are kept across panel runs while history is save
   await view.unmount()
 })
 
-test('clearing the request persists empty text and attachments without removing output, history or project exclusions', async () => {
+test('clearing the request also clears the saved result and its metadata, preserving history and project exclusions', async () => {
   const attachments = [
     { path: '/attachments/image.png', name: 'image.png', type: 'image/png', bytes: 20 },
     { path: '/attachments/notes.txt', name: 'notes.txt', type: 'text/plain', bytes: 12 }
@@ -134,9 +134,12 @@ test('clearing the request persists empty text and attachments without removing 
   assert.deepEqual(read(contextShown), projectContext)
   assert.deepEqual(read(excluded), ['file:src/private.ts'])
   assert.equal(read(resultFor), null)
-  assert.equal(read(result), persistedRun.result)
+  assert.equal(read(result), '')
+  assert.equal(read(lastRun), null)
   assert.deepEqual(read(history).map(item => item.id), ['saved'])
   assert.equal(view.persisted.plugin.draft, '')
+  assert.equal(view.persisted.plugin.result, '')
+  assert.equal(view.persisted.plugin.lastRun, null)
   assert.deepEqual(view.persisted.plugin.files, [])
   const persisted = structuredClone(view.persisted)
   assert.deepEqual(view.errors, [])
@@ -144,7 +147,8 @@ test('clearing the request persists empty text and attachments without removing 
   const reopened = await mountPanel(host, { persisted })
   assert.equal(read(draft), '')
   assert.deepEqual(read(files), [])
-  assert.equal(read(result), persistedRun.result)
+  assert.equal(read(result), '')
+  assert.equal(read(lastRun), null)
   assert.deepEqual(reopened.errors, [])
   await reopened.unmount()
 })

@@ -209,7 +209,7 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
         <p id="composer-help" className="text-muted-foreground text-xs">{locked ? crew.finishing ? 'Prompt ready. Restoring your original request…' : 'Enhancing… Your original request is kept unchanged.' : 'Click Enhance to rewrite in English. Enter adds a new line.'}</p>
         <div className="ml-auto flex items-center gap-2">
           {crew.visible && !crew.retiring ? <Button size="sm" variant="ghost" onClick={crew.togglePause} aria-pressed={crew.paused}>{crew.paused ? 'Resume animation' : 'Pause animation'}</Button> : null}
-          <Button size="sm" variant="outline" aria-label="Clear request" title={uploadingNames().length ? 'Wait for attachments to finish uploading' : 'Clear request text and attachments'} disabled={locked || working !== null || uploadingNames().length > 0 || (text.length === 0 && attachedCount === 0)} onClick={() => { if (!locked && uploadingNames().length === 0 && clearRequest()) crew.input.current?.focus() }}>Clear</Button>
+          <Button size="sm" variant="outline" aria-label="Clear request and reviewed prompt" title={uploadingNames().length ? 'Wait for attachments to finish uploading' : 'Clear request, attachments, and reviewed prompt'} disabled={locked || working !== null || uploadingNames().length > 0 || (text.length === 0 && attachedCount === 0 && read(result).length === 0)} onClick={() => { if (!locked && uploadingNames().length === 0 && clearRequest()) crew.input.current?.focus() }}>Clear</Button>
         </div>
       </div>
       {dragging ? (
