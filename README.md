@@ -12,7 +12,7 @@ The English-language React panel retains model chains and fallback, prompt style
 
 ## Download and install
 
-**Development preview, version 0.10.8.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
+**Development preview, version 0.11.0.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
 
 ### Requirements
 
@@ -35,6 +35,14 @@ copilot plugin list
 This installs a cached copy, matching the working Usage Insights setup. Copilot desktop 1.4.2 omitted Enhance Prompt's logo from session metadata when it was loaded through a local directory marketplace. Switching to the GitHub install restored the exact SVG in both affected sessions without changing the plugin version. After restarting Copilot, the owner confirmed that the top tab displays the logo. See [repair an existing local installation](#repair-an-existing-local-installation) if that marketplace name is already registered locally.
 
 To select a published branch or tag, use `"AndrewGodlewsky/copilot-enhance-prompt#COPILOT_REF"` as the marketplace source. Built extension and panel files are included; users do not need `npm install` or a build step.
+
+### Check for updates
+
+Opening the canvas checks its installed source quietly, at most once every 24 hours. **Settings → Plugin updates** offers a manual check and an **Automatically check for updates** switch. A newer version shows **View changes**, **Update**, and **Later**; Later hides that version’s notice, not future versions. Update asks the attached Copilot session to update only Enhance Prompt, then verifies its inventory and installed manifest.
+
+Finish active plugin work first. Saved drafts, settings, attachments and history stay in their existing storage. Once installation is verified, restart Copilot and reopen the **same session** and plugin to retain its saved draft. Opening a new session also loads the update, but drafts belong to their original session. Reopening just the canvas does not reload its backend on the tested runtime. Desktop restart/reopen presentation still needs manual verification.
+
+Public GitHub marketplace and direct-repository installs can be checked against their configured branch. Forks keep their own source. Tags, commits, local development, private repositories without public metadata, and ambiguous installations are never silently moved to `main`. Checks read only repository, branch, catalog and manifest metadata plus changelog availability; no prompts, project files, credentials or history are sent. There are no automatic installations, model calls or CLI fallback. See [update behavior, supported sources, recovery and integration](docs/plugin-updates.md).
 
 ### Download a local copy for development
 

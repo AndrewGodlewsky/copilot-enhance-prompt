@@ -26,6 +26,7 @@ import { colorTheme } from '../../src/panel/appearance.ts'
 import { ready, usePanel } from './panel-runtime'
 import { EnhanceSection } from './enhance'
 import { connectCanvas } from './transport'
+import { UpdateNotice } from './updates'
 
 // The Enhance section is drawn at once; the others load the first time they open (a smaller first load).
 const loadSections = () => import('./sections')
@@ -71,6 +72,7 @@ function App() {
             </nav>
           </div>
         </header>
+        <UpdateNotice />
         <main className="panel-section" data-section={current.value}>
         <Suspense fallback={null}>
           {current.value === 'history' ? (

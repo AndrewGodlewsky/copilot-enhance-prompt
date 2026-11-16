@@ -462,6 +462,7 @@ type LiveRun = {
   orphan: ReturnType<typeof setTimeout> | null
 }
 const liveRuns = new Map<string, LiveRun>()
+export function hasActiveRuns(): boolean { return liveRuns.size > 0 }
 let unnamedRuns = 0
 
 function startRun(host: EnhanceWorker, input: EnhanceInput, panelId: string, budgetMs: number): LiveRun {

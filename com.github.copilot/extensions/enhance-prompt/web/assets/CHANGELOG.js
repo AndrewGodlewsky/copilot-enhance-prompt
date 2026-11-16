@@ -1,5 +1,13 @@
 var e=`# Changes
 
+## [0.11.0] - 2026-11-15
+
+### Added
+- Quiet update checks after opening the canvas, at most once every 24 hours. Settings includes Check for updates and Automatically check for updates.
+- A compact update notice with View changes, Update and Later. Checks follow the installed public GitHub source and branch, including forks; pins, local development and uncertain sources are reported explicitly.
+- User-triggered updates through the attached Copilot session, with saved-draft checks, protection against simultaneous updates and active work, interruption recovery, and verification against both Copilot inventory and installed files.
+- Separate running, installed and available versions. After installation, restart Copilot and reopen the existing session to load the new code while retaining its saved draft. Reopening only the canvas keeps the old backend on the tested runtime.
+
 ## [0.10.10] - 2026-11-15
 
 ### Changed

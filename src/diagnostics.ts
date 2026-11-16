@@ -3,6 +3,7 @@ import { VERSION } from './version.ts'
 
 // Only these fields reach a support report. Never retain raw logs, inputs, results or error text.
 const OPERATIONS = new Set([
+  'updates.check', 'updates.install',
   'worker.ready', 'canvas.connection', 'canvas.request', 'panel.start', 'panel.persistence', 'clipboard',
   'context.research', 'context.research.round', 'context.research.read', 'context.research.search',
   'prompt.enhance', 'prompt.send', 'prompt.copy', 'context.preview', 'attachments.put',
@@ -13,6 +14,7 @@ const OPERATIONS = new Set([
   'copilot.reasoning', 'copilot.tools', 'copilot.images', 'copilot.account', 'copilot.generate', 'copilot.usage', 'copilot.cleanup'
 ])
 const CODES = new Set(['aborted', 'cancelled', 'timeout', 'unavailable', 'invalid_params', 'action_failed', 'rate_limited',
+  'pinned', 'source_changed', 'not_found',
   'disconnected', 'request_failed', 'unauthorized', 'forbidden', 'network', 'AbortError', 'TimeoutError', 'NotAllowedError',
   'ERR_MODULE_NOT_FOUND', 'ERR_PACKAGE_PATH_NOT_EXPORTED', 'ERR_REQUIRE_ESM', 'ENOENT', 'EACCES', 'EPERM',
   ...Object.keys(MESSAGES).filter(code => code.startsWith('error.'))])

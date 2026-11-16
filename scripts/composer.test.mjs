@@ -137,9 +137,10 @@ test('settings and model setup expose only supported Copilot controls', async ()
       import { renderToStaticMarkup } from 'react-dom/server'
       import { SettingsSection, ModelsSection, RulesSection } from './src/sections.tsx'
       import { TooltipProvider } from './src/components/ui/tooltip.tsx'
-      import { set } from '../src/runtime.ts'
+      import { set, bindPanel } from '../src/runtime.ts'
       import { models, form, catalogs, dataSummary } from '../src/panel/state.ts'
       export function render(editing = false, unavailableSelector = false, section = 'all') {
+        bindPanel({ updates: {} })
         set(models, { profiles: [], selectorProfileId: unavailableSelector ? 'retired' : null })
         set(dataSummary, { history: 0, profiles: 0, catalogs: 0 })
         set(catalogs, { form: { models: [{ id: 'gpt-5', label: 'GPT-5' }], source: 'copilot', fetchedAt: 1 } })
@@ -167,6 +168,8 @@ test('settings and model setup expose only supported Copilot controls', async ()
   assert.match(retired, /saved file picker model is unavailable/)
   assert.match(retired, /aria-label="File picker model/)
   const settings = module.exports.render(false, false, 'settings')
+  assert.match(settings, /Automatically check for updates/)
+  assert.match(settings, /Check for updates/)
   const models = module.exports.render(false, false, 'models')
   assert.doesNotMatch(settings, /Effort models|Low reasoning|Medium reasoning|High reasoning/)
   for (const tier of ['Low', 'Medium', 'High']) assert.match(models, new RegExp(`aria-label="${tier} reasoning"`))

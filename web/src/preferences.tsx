@@ -6,6 +6,7 @@ import { Group, Row, Pick } from './common'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { UpdateSettings } from './updates'
 
 export function Preferences() {
   const [values, setValues] = useState<Record<string, JsonValue>>({})
@@ -29,5 +30,6 @@ export function Preferences() {
     <Row title={'History limit'}><Input type="number" min={0} max={500} aria-label={'History limit'} value={Number(values.historyLimit ?? 50)} onChange={event => edit('historyLimit', Number(event.target.value))} onBlur={() => save('historyLimit')} /></Row>
     <Row title={'Adapt instructions to Copilot'} control={<Switch aria-label={'Adapt instructions to Copilot'} checked={values.adaptToAgent !== false} onCheckedChange={value => void setSetting('adaptToAgent', value)} />} />
   </Group>
+  <UpdateSettings />
   </>
 }

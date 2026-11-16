@@ -6,6 +6,7 @@ import type { AddressInfo } from 'node:net'
 import type { createWorkerHost } from '../worker-host.ts'
 import type { Disposable, JsonValue, RequestInput } from '../runtime.ts'
 import type { PluginRequests } from '../protocol.ts'
+import type { createUpdates } from '../updates/service.ts'
 
 type Worker = ReturnType<typeof createWorkerHost>
 type Canvas = { id: string; token: string; streams: Set<ServerResponse>; subscriptions: Disposable[] }
@@ -35,7 +36,7 @@ async function body(request: IncomingMessage): Promise<Record<string, any>> {
   return value as Record<string, any>
 }
 
-export async function createCanvasServer(options: { worker: Worker; assets: string; onClose?: (id: string) => void }) {
+export async function createCanvasServer(options: { worker: Worker; assets: string; onClose?: (id: string) => void; updates?: ReturnType<typeof createUpdates> }) {
   const { worker } = options
   const canvases = new Map<string, Canvas>()
   let origin = ''
@@ -88,16 +89,32 @@ export async function createCanvasServer(options: { worker: Worker; assets: stri
         if (!input || typeof input !== 'object' || Array.isArray(input)) throw invalid()
         let answer: unknown
         const client = worker.panel(canvas.id)
-        if (method === 'request') {
+        const work = <T>(run: () => Promise<T>) => options.updates ? options.updates.withWork(run) : run()
+        if (typeof method === 'string' && method.startsWith('updates.')) {
+          if (!options.updates) throw invalid('Updates are unavailable in this runtime.')
+          const action = method.slice(8)
+          const expected = action === 'check' ? ['manual'] : action === 'automatic' ? ['enabled'] : []
+          if (Object.keys(request).some(key => !['method', 'input'].includes(key)) || Object.keys(input).some(key => !expected.includes(key))) throw invalid()
+          if (action === 'check' && typeof input.manual === 'boolean') answer = await options.updates.check(input.manual)
+          else if (action === 'automatic' && typeof input.enabled === 'boolean') answer = await options.updates.automatic(input.enabled)
+          else if (action === 'state') answer = await options.updates.state()
+          else if (action === 'install') answer = await options.updates.install()
+          else if (action === 'later') answer = await options.updates.later()
+          else throw invalid()
+        } else if (method === 'request') {
           if (typeof request.name !== 'string') throw invalid()
           const name = request.name as keyof PluginRequests
           const run = () => worker.request(name, input as RequestInput<typeof name>, { signal: controller.signal, panelId: canvas.id, timeoutMs: 120_000 })
-          answer = MODEL_WRITES.has(name) && worker.api.storage.transaction ? await worker.api.storage.transaction(run) : await run()
-          if (name === 'data.clear' && input.what === 'all') {
-            for (const key of await client.storage.keys()) if (key.startsWith('panel:')) await client.storage.delete(key)
+          const guarded = async () => {
+            const result = MODEL_WRITES.has(name) && worker.api.storage.transaction ? await worker.api.storage.transaction(run) : await run()
+            if (name === 'data.clear' && input.what === 'all') {
+              for (const key of await client.storage.keys()) if (key.startsWith('panel:')) await client.storage.delete(key)
+            }
+            return result
           }
+          answer = ['logs.get', 'targets.list', 'models.get', 'rules.get', 'consents.get', 'data.summary', 'enhance.progress.get'].includes(name) ? await guarded() : await work(guarded)
         } else if (method === 'settings.get') answer = input.key === undefined ? await client.settings.get() : await client.settings.get(input.key)
-        else if (method === 'settings.set') { await client.settings.set(input.key, input.value); answer = true }
+        else if (method === 'settings.set') { await work(() => client.settings.set(input.key, input.value)); answer = true }
         else if (method === 'storage.keys') answer = (await client.storage.keys()).filter(readable)
         else if (method === 'storage.get') {
           if (typeof input.key !== 'string' || !readable(input.key)) throw invalid()
@@ -105,9 +122,11 @@ export async function createCanvasServer(options: { worker: Worker; assets: stri
         } else if (method === 'storage.set' || method === 'storage.delete') {
           if (typeof input.key !== 'string' || !writable(input.key)) throw invalid()
           if (method === 'storage.set' && input.key === 'colorTheme' && !['system', 'light', 'dark'].includes(input.value)) throw invalid()
-          if (method === 'storage.set' && PRIVATE_PANEL_KEYS.has(input.key.slice(6)) && await client.settings.get('saveHistory') === false) await client.storage.delete(input.key)
-          else if (method === 'storage.set') await client.storage.set(input.key, input.value as JsonValue)
-          else await client.storage.delete(input.key)
+          await work(async () => {
+            if (method === 'storage.set' && PRIVATE_PANEL_KEYS.has(input.key.slice(6)) && await client.settings.get('saveHistory') === false) await client.storage.delete(input.key)
+            else if (method === 'storage.set') await client.storage.set(input.key, input.value as JsonValue)
+            else await client.storage.delete(input.key)
+          })
           answer = true
         } else if (method === 'close') {
           worker.closePanel(canvas.id); options.onClose?.(canvas.id); answer = true

@@ -14,6 +14,7 @@ export function connectCanvas(): void {
   }
   let closing = false
   let writes: Promise<unknown> = Promise.resolve()
+  const failedWrites = new Set<string>()
   async function call(method: string, input: unknown = {}, options: RequestOptions = {}, name?: string): Promise<any> {
     const started = Date.now()
     try {
@@ -28,11 +29,17 @@ export function connectCanvas(): void {
     }
   }
   const write = (method: string, input: unknown): Promise<void> => {
-    const result = writes.catch(() => {}).then(() => call(method, input))
+    const key = `${method.startsWith('settings.') ? 'settings' : 'storage'}:${(input as { key?: string }).key}`
+    const result = writes.catch(() => {}).then(() => call(method, input)).then(value => { failedWrites.delete(key); return value }, error => { failedWrites.add(key); throw error })
     writes = result
     return result
   }
   const client: PanelClient = {
+    updates: {
+      state: () => call('updates.state'), check: manual => call('updates.check', { manual }),
+      install: async () => { await writes; if (failedWrites.size) throw new Error('Some changes could not be saved. Save them successfully before updating.'); return call('updates.install', {}, { timeoutMs: 180_000 }) },
+      later: () => call('updates.later'), automatic: enabled => call('updates.automatic', { enabled })
+    },
     plugin: { request: (name, input, options) => call('request', input ?? {}, options, name), on: (name, handler) => listen(`plugin:${name}`, handler) },
     settings: {
       get: ((key?: string) => call('settings.get', key ? { key } : {})) as PanelClient['settings']['get'],

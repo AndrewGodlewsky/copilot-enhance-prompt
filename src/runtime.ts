@@ -26,6 +26,7 @@ export type AppEvents = {
 }
 export type SaveOptions = { suggestedName?: string; mimeType?: string; data: string | ArrayBuffer }
 export type PanelClient = {
+  updates?: import('./updates/types.ts').UpdateClient
   plugin: {
     request<K extends keyof PluginRequests>(name: K, input?: RequestInput<K>, options?: RequestOptions): Promise<PluginRequests[K]['output']>
     on<K extends keyof PluginPanelEvents>(event: K, handler: (payload: PluginPanelEvents[K]) => void): Disposable

@@ -1,5 +1,11 @@
 import { fileURLToPath } from 'node:url'
-import activate, { cancelPanelRuns } from '../worker.ts'
+import activate, { cancelPanelRuns, hasActiveRuns } from '../worker.ts'
+import { join } from 'node:path'
+import { persistentStore } from './storage.ts'
+import { installationKey, installationReader } from './update-installation.ts'
+import { createUpdates } from '../updates/service.ts'
+import { remoteMetadata } from '../updates/metadata.ts'
+import { VERSION } from '../version.ts'
 import { createWorkerHost } from '../worker-host.ts'
 import { createServices } from './services.ts'
 import { createCanvasServer } from './server.ts'
@@ -39,7 +45,15 @@ services = createServices(session, undefined, copilot)
 process.stderr.write('[Enhance Prompt] Session connected.\n')
 worker = createWorkerHost(services, message => process.stderr.write(`[Enhance Prompt] ${message}\n`), diagnostics)
 activate(worker.api)
-server = await createCanvasServer({ worker, assets: fileURLToPath(new URL('./web/', import.meta.url)), onClose: cancelPanelRuns })
+const packageRoot = fileURLToPath(new URL('../../../', import.meta.url))
+const updates = createUpdates({
+  running: VERSION,
+  store: persistentStore(join(services.directory, 'updates', installationKey(packageRoot))),
+  installation: installationReader(session, packageRoot), metadata: remoteMetadata(), busy: hasActiveRuns,
+  update: target => session.rpc.plugins.update({ name: target }),
+  record: (operation, outcome, code) => diagnostics.record(operation, outcome, { code })
+})
+server = await createCanvasServer({ worker, updates, assets: fileURLToPath(new URL('./web/', import.meta.url)), onClose: cancelPanelRuns })
 ready()
 process.stderr.write('[Enhance Prompt] Canvas server ready.\n')
 

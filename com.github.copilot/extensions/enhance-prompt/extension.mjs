@@ -523,8 +523,8 @@ var require_graceful_fs = __commonJS({
       fs2.createReadStream = createReadStream2;
       fs2.createWriteStream = createWriteStream;
       var fs$readFile = fs2.readFile;
-      fs2.readFile = readFile5;
-      function readFile5(path, options, cb) {
+      fs2.readFile = readFile6;
+      function readFile6(path, options, cb) {
         if (typeof options === "function")
           cb = options, options = null;
         return go$readFile(path, options, cb);
@@ -1236,11 +1236,11 @@ var require_mtime_precision = __commonJS({
     function probe(file, fs, callback) {
       const cachedPrecision = fs[cacheSymbol];
       if (cachedPrecision) {
-        return fs.stat(file, (err, stat3) => {
+        return fs.stat(file, (err, stat4) => {
           if (err) {
             return callback(err);
           }
-          callback(null, stat3.mtime, cachedPrecision);
+          callback(null, stat4.mtime, cachedPrecision);
         });
       }
       const mtime = new Date(Math.ceil(Date.now() / 1e3) * 1e3 + 5);
@@ -1248,13 +1248,13 @@ var require_mtime_precision = __commonJS({
         if (err) {
           return callback(err);
         }
-        fs.stat(file, (err2, stat3) => {
+        fs.stat(file, (err2, stat4) => {
           if (err2) {
             return callback(err2);
           }
-          const precision = stat3.mtime.getTime() % 1e3 === 0 ? "s" : "ms";
+          const precision = stat4.mtime.getTime() % 1e3 === 0 ? "s" : "ms";
           Object.defineProperty(fs, cacheSymbol, { value: precision });
-          callback(null, stat3.mtime, precision);
+          callback(null, stat4.mtime, precision);
         });
       });
     }
@@ -1308,14 +1308,14 @@ var require_lockfile = __commonJS({
         if (options.stale <= 0) {
           return callback(Object.assign(new Error("Lock file is already being held"), { code: "ELOCKED", file }));
         }
-        options.fs.stat(lockfilePath, (err2, stat3) => {
+        options.fs.stat(lockfilePath, (err2, stat4) => {
           if (err2) {
             if (err2.code === "ENOENT") {
               return acquireLock(file, { ...options, stale: 0 }, callback);
             }
             return callback(err2);
           }
-          if (!isLockStale(stat3, options)) {
+          if (!isLockStale(stat4, options)) {
             return callback(Object.assign(new Error("Lock file is already being held"), { code: "ELOCKED", file }));
           }
           removeLock(file, options, (err3) => {
@@ -1327,8 +1327,8 @@ var require_lockfile = __commonJS({
         });
       });
     }
-    function isLockStale(stat3, options) {
-      return stat3.mtime.getTime() < Date.now() - options.stale;
+    function isLockStale(stat4, options) {
+      return stat4.mtime.getTime() < Date.now() - options.stale;
     }
     function removeLock(file, options, callback) {
       options.fs.rmdir(getLockFile(file, options), (err) => {
@@ -1346,7 +1346,7 @@ var require_lockfile = __commonJS({
       lock2.updateDelay = lock2.updateDelay || options.update;
       lock2.updateTimeout = setTimeout(() => {
         lock2.updateTimeout = null;
-        options.fs.stat(lock2.lockfilePath, (err, stat3) => {
+        options.fs.stat(lock2.lockfilePath, (err, stat4) => {
           const isOverThreshold = lock2.lastUpdate + options.stale < Date.now();
           if (err) {
             if (err.code === "ENOENT" || isOverThreshold) {
@@ -1355,7 +1355,7 @@ var require_lockfile = __commonJS({
             lock2.updateDelay = 1e3;
             return updateLock(file, options);
           }
-          const isMtimeOurs = lock2.mtime.getTime() === stat3.mtime.getTime();
+          const isMtimeOurs = lock2.mtime.getTime() === stat4.mtime.getTime();
           if (!isMtimeOurs) {
             return setLockAsCompromised(
               file,
@@ -1480,11 +1480,11 @@ var require_lockfile = __commonJS({
         if (err) {
           return callback(err);
         }
-        options.fs.stat(getLockFile(file2, options), (err2, stat3) => {
+        options.fs.stat(getLockFile(file2, options), (err2, stat4) => {
           if (err2) {
             return err2.code === "ENOENT" ? callback(null, false) : callback(err2);
           }
-          return callback(null, !isLockStale(stat3, options));
+          return callback(null, !isLockStale(stat4, options));
         });
       });
     }
@@ -2263,12 +2263,12 @@ async function gitDiff(root, maxChars, allow = () => true, signal) {
   }
   if (refused.size > MAX_DIFF_EXCLUSIONS) return null;
   const pathspecs = [...SAFE_PATHSPECS, ...[...refused].map((path) => `:(exclude,literal)${path}`)];
-  const stat3 = await git(root, ["diff", "HEAD", "-M", "--stat=100", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { signal });
-  if (stat3 === null || !stat3.trim()) {
+  const stat4 = await git(root, ["diff", "HEAD", "-M", "--stat=100", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { signal });
+  if (stat4 === null || !stat4.trim()) {
     return null;
   }
   const diff = await git(root, ["diff", "HEAD", "-M", "-U2", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { maxBytes: 4e6, signal }) ?? "";
-  return { stat: stat3.trim(), diff: diff.length > maxChars ? `${maskedStart(diff, maxChars)}
+  return { stat: stat4.trim(), diff: diff.length > maxChars ? `${maskedStart(diff, maxChars)}
 \u2026(diff truncated)` : redactCode(diff) };
 }
 function maskedStart(text, maxChars) {
@@ -4126,8 +4126,8 @@ function allowedLevel(requested, settings) {
 }
 var PROJECT_FILES_OFF = msg("note.project_files_off");
 async function enhance(host, input, signal, progress, budgetMs) {
-  const deadline = budgetMs === void 0 ? void 0 : Date.now() + budgetMs;
-  const left = () => deadline === void 0 ? void 0 : Math.max(0, deadline - Date.now());
+  const deadline2 = budgetMs === void 0 ? void 0 : Date.now() + budgetMs;
+  const left = () => deadline2 === void 0 ? void 0 : Math.max(0, deadline2 - Date.now());
   const prompt = input.prompt.trim();
   if (!prompt) throw hostError(msg("error.no_prompt"), "invalid_params");
   const settings = await readSettings(host);
@@ -4238,7 +4238,7 @@ ${otherFiles.map((path, index) => `${index + 1}. ${path}`).join("\n")}
       system,
       user,
       chainOptions(settings, signal, {
-        ...deadline === void 0 ? {} : { totalMs: left() },
+        ...deadline2 === void 0 ? {} : { totalMs: left() },
         images,
         reasoningEffort,
         onAttempt: (profile, model, attempt, total) => {
@@ -4294,6 +4294,9 @@ function progressOf(runId) {
   return latestProgress.get(runId) ?? null;
 }
 var liveRuns = /* @__PURE__ */ new Map();
+function hasActiveRuns() {
+  return liveRuns.size > 0;
+}
 var unnamedRuns = 0;
 function startRun(host, input, panelId, budgetMs) {
   const runId = typeof input.runId === "string" ? input.runId.slice(0, 64) : "";
@@ -4723,14 +4726,541 @@ function activate(host) {
   registerDataHandlers(host);
 }
 
-// src/worker-host.ts
+// src/copilot/extension.ts
+import { join as join8 } from "node:path";
+
+// src/copilot/storage.ts
+var import_proper_lockfile = __toESM(require_proper_lockfile(), 1);
+import { AsyncLocalStorage } from "node:async_hooks";
 import { EventEmitter } from "node:events";
+import { mkdir as mkdir2, readFile as readFile3, rename, writeFile } from "node:fs/promises";
+import { watchFile, unwatchFile } from "node:fs";
+import { join as join3, resolve as resolve2 } from "node:path";
+import { randomUUID } from "node:crypto";
+var held = new AsyncLocalStorage();
+var buses = /* @__PURE__ */ new Map();
+function persistentStore(directory) {
+  const root = resolve2(directory);
+  const file = join3(root, "state.json");
+  const bus = buses.get(root) ?? new EventEmitter();
+  bus.setMaxListeners(100);
+  buses.set(root, bus);
+  const read = async () => {
+    try {
+      const value = JSON.parse(await readFile3(file, "utf8"));
+      if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid Enhance Prompt storage.");
+      return value;
+    } catch (error) {
+      if (error.code === "ENOENT") return {};
+      throw error;
+    }
+  };
+  const transaction = async (fn) => {
+    if (held.getStore()?.has(root)) return fn();
+    await mkdir2(root, { recursive: true, mode: 448 });
+    const release = await import_proper_lockfile.default.lock(root, { realpath: false, stale: 3e4, retries: { retries: 80, minTimeout: 20, maxTimeout: 250, factor: 1.2 } });
+    try {
+      return await held.run(/* @__PURE__ */ new Set([...held.getStore() ?? [], root]), fn);
+    } finally {
+      await release();
+    }
+  };
+  const change = async (key, value) => transaction(async () => {
+    if (["__proto__", "constructor", "prototype"].includes(key) || key.length > 2e3) throw new Error("Invalid storage key.");
+    const data = await read();
+    if (value === void 0) delete data[key];
+    else data[key] = value;
+    const temporary = `${file}.${randomUUID()}.tmp`;
+    await writeFile(temporary, JSON.stringify(data), { encoding: "utf8", mode: 384 });
+    await rename(temporary, file);
+    bus.emit("change", { key });
+  });
+  return {
+    get: async (key) => {
+      const data = await read();
+      return Object.hasOwn(data, key) ? data[key] : null;
+    },
+    set: (key, value) => change(key, value),
+    delete: (key) => change(key),
+    keys: async () => Object.keys(await read()),
+    onDidChange: (listener) => {
+      bus.on("change", listener);
+      let active = true;
+      let previous = read().catch(() => ({}));
+      const refresh = () => {
+        const next = read().catch(() => ({}));
+        void Promise.all([previous, next]).then(([before, after]) => {
+          if (!active) return;
+          for (const key of /* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)])) {
+            if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) listener({ key });
+          }
+        }).catch(() => {
+        });
+        previous = next;
+      };
+      watchFile(file, { interval: 500, persistent: false }, refresh);
+      return { dispose: () => {
+        active = false;
+        bus.off("change", listener);
+        unwatchFile(file, refresh);
+      } };
+    },
+    transaction
+  };
+}
+
+// src/copilot/update-installation.ts
+import { readFile as readFile4, realpath as realpath2, stat as stat3 } from "node:fs/promises";
+import { basename as basename3, dirname as dirname2, join as join4 } from "node:path";
+import { createHash } from "node:crypto";
+
+// src/updates/version.ts
+function versionParts(value) {
+  if (typeof value !== "string" || value.length > 150) return null;
+  const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/.exec(value);
+  if (!match) return null;
+  const pre = match[4]?.split(".") ?? [];
+  if (pre.some((part) => /^\d+$/.test(part) && part.length > 1 && part.startsWith("0"))) return null;
+  return { core: match.slice(1, 4).map(BigInt), pre };
+}
+function compareVersions(left, right) {
+  const a = versionParts(left), b = versionParts(right);
+  if (!a || !b) return null;
+  const cmp = (x, y) => x < y ? -1 : x > y ? 1 : 0;
+  for (let i = 0; i < 3; i++) if (a.core[i] !== b.core[i]) return cmp(a.core[i], b.core[i]);
+  if (!a.pre.length || !b.pre.length) return a.pre.length === b.pre.length ? 0 : a.pre.length ? -1 : 1;
+  for (let i = 0; i < Math.max(a.pre.length, b.pre.length); i++) {
+    const x = a.pre[i], y = b.pre[i];
+    if (x === void 0 || y === void 0) return x === y ? 0 : x === void 0 ? -1 : 1;
+    if (x === y) continue;
+    const nx = /^\d+$/.test(x), ny = /^\d+$/.test(y);
+    return nx && ny ? cmp(BigInt(x), BigInt(y)) : nx !== ny ? nx ? -1 : 1 : cmp(x, y);
+  }
+  return 0;
+}
+
+// src/updates/metadata.ts
+var UpdateError = class extends Error {
+  code;
+  retryAfter;
+  constructor(message, code = "unavailable", retryAfter = 0) {
+    super(message);
+    this.code = code;
+    this.retryAfter = retryAfter;
+  }
+};
+function githubSource(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return;
+  const v = value;
+  let repo = v.repo;
+  if (v.source === "url" && typeof v.url === "string") {
+    const match = /^https:\/\/github\.com\/([\w.-]+\/[\w.-]+?)(?:\.git)?$/.exec(v.url);
+    repo = match?.[1];
+  } else if (v.source !== "github") return;
+  if (typeof repo !== "string" || !/^[\w-]+\/[\w.-]+$/.test(repo) || repo.includes("..")) return;
+  for (const key of ["ref", "sha", "path"]) if (v[key] !== void 0 && (typeof v[key] !== "string" || !v[key].length || v[key].length > 200)) return;
+  if (v.sha && !/^[0-9a-f]{40}$/i.test(String(v.sha))) return;
+  const path = String(v.path ?? "").replace(/^\.\//, "").replace(/\/$/, "");
+  if (path && (!/^[\w./-]+$/.test(path) || path.split("/").some((p) => !p || p === "." || p === ".."))) return;
+  return { repo: repo.toLowerCase(), ...v.ref ? { ref: String(v.ref) } : {}, ...v.sha ? { sha: String(v.sha).toLowerCase() } : {}, ...path ? { path } : {} };
+}
+var sameSource = (a, b) => !!a && !!b && a.repo === b.repo && a.ref === b.ref && a.sha === b.sha && (a.path ?? "") === (b.path ?? "");
+function metadataReader(fetcher = fetch, timeoutMs = 8e3) {
+  return async function read(url, head = false) {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" || !["api.github.com", "raw.githubusercontent.com"].includes(parsed.hostname) || parsed.username || parsed.password) throw new UpdateError("The update metadata address is not supported.");
+    const signal = AbortSignal.timeout(timeoutMs);
+    try {
+      const response = await fetcher(url, { method: head ? "HEAD" : "GET", signal, redirect: "error", credentials: "omit", headers: { Accept: "application/json" } });
+      if (response.status === 429 || response.status === 403) {
+        const seconds = Number(response.headers.get("retry-after"));
+        throw new UpdateError("GitHub limited the update check or the source is not public. Try again later.", "rate_limited", Math.min(864e5, Math.max(6e4, (Number.isFinite(seconds) ? seconds : 3600) * 1e3)));
+      }
+      if (response.status === 404) throw new UpdateError("The configured update metadata could not be found.", "not_found");
+      if (head && response.ok) {
+        await response.body?.cancel();
+        return true;
+      }
+      if (!response.ok || !response.body) throw new UpdateError("GitHub could not provide update metadata.", "network");
+      const reader = response.body.getReader();
+      let size = 0;
+      const chunks = [];
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          size += value.byteLength;
+          if (size > 128e3) throw new UpdateError("Update metadata exceeds the size limit.", "invalid_params");
+          chunks.push(value);
+        }
+      } finally {
+        await reader.cancel().catch(() => {
+        });
+      }
+      return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    } catch (error) {
+      if (error instanceof UpdateError) throw error;
+      throw new UpdateError(signal.aborted ? "The update check timed out. Try again when connected." : "Unable to read update metadata. Check your connection and try again.", signal.aborted ? "timeout" : "network");
+    }
+  };
+}
+function remoteMetadata(read = metadataReader(), identity = { name: "enhance-prompt", manifest: "plugin.json", catalog: ".github/plugin/marketplace.json", changelog: "CHANGELOG.md" }) {
+  const branch = async (source) => {
+    if (source.sha || source.ref && /^[0-9a-f]{7,40}$/i.test(source.ref)) throw new UpdateError("This installation is pinned to a commit. Change its source in Copilot to opt into updates.", "pinned");
+    const api = `https://api.github.com/repos/${source.repo}`;
+    const ref = source.ref ?? (await read(api)).default_branch;
+    if (typeof ref !== "string" || !ref || ref.length > 200) throw new UpdateError("The source branch could not be determined.", "invalid_params");
+    let head;
+    try {
+      head = await read(`${api}/git/ref/heads/${encodeURIComponent(ref)}`);
+    } catch (error) {
+      if (error.code === "not_found") throw new UpdateError("This source is pinned to a tag or its branch is unavailable. Manage its source in Copilot.", "pinned");
+      throw error;
+    }
+    if (source.ref) {
+      try {
+        await read(`${api}/git/ref/tags/${encodeURIComponent(ref)}`);
+        throw new UpdateError("The source name identifies both a branch and tag. Automatic updating is unavailable.", "pinned");
+      } catch (error) {
+        if (error.code !== "not_found") throw error;
+      }
+    }
+    if (!/^[0-9a-f]{40}$/i.test(head?.object?.sha ?? "") || head?.object?.type !== "commit") throw new UpdateError("The branch metadata is invalid.", "invalid_params");
+    return head.object.sha;
+  };
+  const raw2 = (source, sha, file) => `https://raw.githubusercontent.com/${source.repo}/${sha}/${source.path ? source.path + "/" : ""}${file}`;
+  return async (installation) => {
+    if (!installation.source) throw new UpdateError(installation.reason ?? "Installation source is unknown.");
+    let sha;
+    if (installation.marketplace) {
+      const market = installation.marketplace;
+      const marketSha = await branch(market);
+      const catalog = await read(raw2(market, marketSha, identity.catalog));
+      const entries = Array.isArray(catalog?.plugins) ? catalog.plugins.filter((p) => p?.name === identity.name) : [];
+      if (entries.length !== 1) throw new UpdateError("The marketplace no longer identifies this plugin uniquely.");
+      const entry = entries[0].source;
+      const selected = typeof entry === "string" && /^\.\/(?:[\w./-]*)$/.test(entry) ? githubSource({ source: "github", ...market, path: [market.path, entry.slice(2)].filter(Boolean).join("/") || void 0 }) : githubSource(entry);
+      if (!sameSource(selected, installation.source)) throw new UpdateError("The marketplace changed this plugin\u2019s source. Review it in Copilot before updating.", "source_changed");
+      sha = sameSource({ ...selected, path: void 0 }, { ...market, path: void 0 }) ? marketSha : await branch(installation.source);
+    } else sha = await branch(installation.source);
+    const manifest = await read(raw2(installation.source, sha, identity.manifest));
+    if (manifest?.name !== identity.name || compareVersions(manifest?.version, manifest?.version) !== 0) throw new UpdateError("The source plugin name or semantic version is invalid.", "invalid_params");
+    const hasChanges = await read(raw2(installation.source, sha, identity.changelog), true).catch(() => false);
+    return { version: manifest.version, ...hasChanges ? { changes: `https://github.com/${installation.source.repo}/blob/${sha}/${installation.source.path ? installation.source.path + "/" : ""}${identity.changelog}` } : {} };
+  };
+}
+
+// src/copilot/update-installation.ts
+function parseCommentedJson(text) {
+  let out = "", quoted = false, escaped = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i], next = text[i + 1];
+    if (!quoted && c === "/" && next === "/") {
+      while (i < text.length && text[i] !== "\n") i++;
+      out += "\n";
+      continue;
+    }
+    if (!quoted && c === "/" && next === "*") {
+      i += 2;
+      while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) i++;
+      i++;
+      out += " ";
+      continue;
+    }
+    out += c;
+    if (quoted) {
+      if (escaped) escaped = false;
+      else if (c === "\\") escaped = true;
+      else if (c === '"') quoted = false;
+    } else if (c === '"') quoted = true;
+  }
+  return JSON.parse(out.replace(/^\uFEFF/, ""));
+}
+async function json(file) {
+  if ((await stat3(file)).size > 2e6) throw new Error("Metadata too large");
+  return parseCommentedJson(await readFile4(file, "utf8"));
+}
+var installationKey = (root) => createHash("sha256").update(process.platform === "win32" ? root.toLowerCase() : root).digest("hex");
+function installationReader(session2, packageRoot2, name = "enhance-prompt") {
+  return async () => {
+    const scope = installationKey(packageRoot2);
+    const unsupported = (reason, installed) => ({ scope, installed, canUpdate: false, reason });
+    if (!session2.rpc.plugins?.list) return unsupported("This Copilot runtime does not expose plugin inventory. Update through Customize \u2192 Installed.");
+    try {
+      const root = await realpath2(packageRoot2);
+      const cache = dirname2(dirname2(root));
+      const disk = await json(join4(root, "plugin.json"));
+      if (basename3(cache) !== "installed-plugins" || root.startsWith("\\\\") || disk.name !== name) return unsupported("This is a local or development installation. Update its source files and start a new Copilot session.", disk.version);
+      const home = dirname2(cache);
+      const records = (await json(join4(home, "config.json"))).installedPlugins;
+      if (!Array.isArray(records)) return unsupported("Copilot installation provenance is unavailable.", disk.version);
+      const matches = [];
+      for (const row of records) if (row?.name === name && typeof row.cache_path === "string" && await realpath2(row.cache_path).catch(() => "") === root) matches.push(row);
+      if (matches.length !== 1) return unsupported("This package cannot be matched uniquely to Copilot\u2019s installation records.", disk.version);
+      const record = matches[0];
+      const inventory = await session2.rpc.plugins.list();
+      const eligible2 = inventory.plugins.filter((p) => p.name === name && (record.marketplace ? p.marketplace === record.marketplace : !p.marketplace));
+      if (!record.marketplace && inventory.plugins.filter((p) => p.name === name).length !== 1) return unsupported("Another installation shares this plugin name. Manage updates in Copilot.", disk.version);
+      if (eligible2.length !== 1 || eligible2[0].installed === false || eligible2[0].installedFrom || eligible2[0].source === "builtin") return unsupported("The attached session does not identify one updatable installation of this plugin.", disk.version);
+      const source = githubSource(record.installed_source);
+      if (!source) return unsupported("Automatic updating is unavailable for this local, private-host, or unrecognized source.", disk.version);
+      let marketplace;
+      if (record.marketplace) {
+        const settings = await json(join4(home, "settings.json"));
+        marketplace = githubSource(settings?.extraKnownMarketplaces?.[record.marketplace]?.source);
+        const markets = (await session2.rpc.plugins.marketplaces.list()).marketplaces.filter((m) => m.name === record.marketplace);
+        if (!marketplace || markets.length !== 1 || markets[0].managed || markets[0].team || markets[0].source.toLowerCase() !== `GitHub: ${marketplace.repo}`.toLowerCase()) return unsupported("The marketplace\u2019s current source cannot be verified. Manage updates in Copilot.", disk.version);
+      } else if (!githubSource(record.source) || JSON.stringify(githubSource(record.source)) !== JSON.stringify(source)) return unsupported("The direct installation source has changed. Review it in Copilot.", disk.version);
+      const target = record.marketplace ? `${name}@${record.marketplace}` : name;
+      if (!/^[\w.-]+(?:@[\w.-]+)?$/.test(target)) return unsupported("The installed plugin identity is invalid.", disk.version);
+      const fingerprint = installationKey(JSON.stringify([root, target, source, marketplace]));
+      if (record.version !== disk.version || eligible2[0].version !== disk.version) return { scope: fingerprint, installed: disk.version, canUpdate: false, reason: "The installed files and Copilot inventory disagree. Finish or repair the update in Copilot before retrying." };
+      return {
+        scope: fingerprint,
+        target,
+        installed: disk.version,
+        source,
+        marketplace,
+        canUpdate: typeof session2.rpc.plugins.update === "function",
+        ...!session2.rpc.plugins.update ? { reason: "This runtime cannot update from a canvas. Use Customize \u2192 Installed \u2192 Update." } : {}
+      };
+    } catch {
+      return unsupported("Unable to verify this installation\u2019s source. Check Copilot\u2019s installation state and try again.");
+    }
+  };
+}
+
+// src/updates/service.ts
+import { randomUUID as randomUUID2 } from "node:crypto";
+var DAY = 864e5;
+var RELOAD_MESSAGE = "Update installed. Restart Copilot, then reopen this session and Enhance Prompt to keep your saved draft. A new session also loads the update; reopening only this tab does not.";
+var alive = (pid) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return e.code === "EPERM";
+  }
+};
+function deadline(task, ms) {
+  let timer;
+  return Promise.race([task, new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new UpdateError("The update operation timed out.", "timeout")), ms);
+  })]).finally(() => clearTimeout(timer));
+}
+function createUpdates(options) {
+  const now = options.now ?? Date.now, pid = options.pid ?? process.pid, isAlive = options.alive ?? alive;
+  const get = async () => await options.store.get("state") ?? {};
+  const put = (state2) => options.store.set("state", state2);
+  const mutate = (fn) => options.store.transaction(async () => fn(await get()));
+  const inspect = () => deadline(options.installation(), 8e3);
+  const record = options.record ?? (() => {
+  });
+  let checking;
+  const view2 = (state2, installation) => {
+    const base = {
+      running: options.running,
+      installed: installation.installed,
+      available: state2.available?.version,
+      changes: state2.available?.changes,
+      automatic: state2.automatic !== false,
+      dismissed: !!state2.available && state2.dismissed === state2.available.version,
+      checkedAt: state2.checkedAt,
+      canUpdate: false
+    };
+    if (state2.pending) return { ...base, status: "updating", message: now() - state2.pending.started > 9e4 ? "Copilot has not confirmed the update yet. Inspect Customize \u2192 Installed and restart Copilot before retrying. Reopening will verify the installed version." : "Copilot is updating Enhance Prompt. If the connection closes, reopen the plugin to verify the result. Do not start another update." };
+    const running = compareVersions(installation.installed, options.running);
+    if (installation.source && installation.target && running !== null && running > 0) return { ...base, status: "reload", message: RELOAD_MESSAGE };
+    if (!installation.source || !installation.target || state2.unavailable) return { ...base, status: "unavailable", message: installation.reason ?? state2.error ?? "Automatic updating is unavailable for this installation." };
+    if (state2.check) return { ...base, status: "checking", message: "Checking for updates\u2026" };
+    if (state2.error) return { ...base, status: "failed", message: state2.error };
+    const available = compareVersions(state2.available?.version, installation.installed);
+    if (running === null || available === null) return { ...base, status: "unknown", message: "Unable to determine whether this installation is current." };
+    if (running < 0) return { ...base, status: "unknown", message: "The installed version is older than this running canvas. Review the installation in Copilot." };
+    if (available > 0) return { ...base, status: "available", message: `Enhance Prompt ${state2.available.version} is available.`, canUpdate: installation.canUpdate };
+    return { ...base, status: "current", message: "Running the current version for this source." };
+  };
+  async function reconcile(installation) {
+    return mutate(async (state2) => {
+      if (installation.source && installation.target && state2.scope !== installation.scope && !state2.pending) {
+        state2 = { automatic: state2.automatic, scope: installation.scope, work: state2.work };
+      }
+      if (state2.check && state2.check.until <= now()) delete state2.check;
+      if (state2.pending && !isAlive(state2.pending.pid)) {
+        const installed = compareVersions(installation.installed, state2.pending.version);
+        state2.error = installed !== null && installed >= 0 ? void 0 : "The previous update was interrupted or could not be verified. Review the installed version, then check again before retrying.";
+        delete state2.pending;
+      }
+      await put(state2);
+      return state2;
+    });
+  }
+  async function state() {
+    const installation = await inspect();
+    return view2(await reconcile(installation), installation);
+  }
+  async function performCheck(manual) {
+    const previous = await get();
+    const installation = await inspect();
+    await reconcile(installation);
+    const id2 = randomUUID2();
+    const reserved = await mutate(async (state2) => {
+      const changedSource = previous.scope !== void 0 && previous.scope !== installation.scope;
+      const sharedResult = !changedSource && state2.completedCheck !== previous.completedCheck || state2.checkedAt !== void 0 && now() - state2.checkedAt < 5e3;
+      const notDue = !manual && (state2.automatic === false || (state2.nextCheck ?? 0) > now()) || (state2.retryAt ?? 0) > now();
+      if (state2.pending || state2.check || sharedResult || notDue) return false;
+      if (!installation.source || compareVersions(installation.installed, options.running) === 1) return false;
+      state2.check = { id: id2, until: now() + 12e4 };
+      state2.nextCheck = now() + DAY;
+      state2.error = void 0;
+      state2.unavailable = false;
+      await put(state2);
+      return true;
+    });
+    if (!reserved) return view2(await get(), installation);
+    record("updates.check", "started");
+    try {
+      const available = await deadline(options.metadata(installation), 6e4);
+      await mutate(async (state2) => {
+        if (state2.check?.id !== id2 || state2.scope !== installation.scope) return;
+        state2.available = available;
+        state2.checkedAt = now();
+        state2.completedCheck = id2;
+        state2.failures = 0;
+        state2.retryAt = 0;
+        delete state2.check;
+        delete state2.error;
+        await put(state2);
+      });
+      record("updates.check", "ok");
+    } catch (error) {
+      const safe = error instanceof UpdateError ? error : new UpdateError("Unable to check for updates. Try again later.", "network");
+      await mutate(async (state2) => {
+        if (state2.check?.id !== id2) return;
+        state2.failures = Math.min(8, (state2.failures ?? 0) + 1);
+        state2.retryAt = now() + Math.max(safe.retryAfter, Math.min(DAY, 6e4 * 2 ** (state2.failures - 1)));
+        state2.error = safe.message;
+        state2.unavailable = ["pinned", "source_changed"].includes(safe.code);
+        delete state2.check;
+        await put(state2);
+      });
+      record("updates.check", "failed", safe.code);
+    }
+    return view2(await get(), installation);
+  }
+  async function verify(pending, installation, failed) {
+    let after;
+    try {
+      after = await inspect();
+    } catch {
+    }
+    await mutate(async (state2) => {
+      if (state2.pending?.id !== pending.id) return;
+      const comparison = compareVersions(after?.installed, pending.version);
+      const verified = !!after?.source && !!after.target && after.scope === installation.scope && comparison !== null && comparison >= 0;
+      state2.error = verified ? void 0 : failed ? "Copilot did not complete this update. A policy refusal or required confirmation must be resolved in Copilot. No alternate installation route was used." : "Copilot returned, but the installed version does not match the update. Review the installation in Copilot and check again.";
+      delete state2.pending;
+      await put(state2);
+      record("updates.install", verified ? "ok" : "failed", verified ? void 0 : "action_failed");
+    });
+  }
+  async function install() {
+    const installation = await inspect();
+    const current = await reconcile(installation);
+    if (current.pending) return view2(current, installation);
+    if (!installation.canUpdate || !installation.target || !installation.source) throw new UpdateError(installation.reason ?? "Updating is unavailable for this installation.");
+    if (compareVersions(installation.installed, options.running) === -1) throw new UpdateError("The installed version is older than this canvas. Review the installation in Copilot before updating.");
+    const available = await deadline(options.metadata(installation), 6e4);
+    const pending = { id: randomUUID2(), pid, started: now(), version: available.version };
+    const reserved = await mutate(async (state2) => {
+      if (state2.pending) return false;
+      if (state2.scope !== installation.scope) throw new UpdateError("The installation source changed. Check for updates again.");
+      if (options.busy?.() || Object.values(state2.work ?? {}).some(isAlive)) throw new UpdateError("Finish active plugin work in all open canvases, then retry Update.");
+      if (compareVersions(available.version, installation.installed) !== 1 || compareVersions(installation.installed, options.running) === 1) return false;
+      state2.pending = pending;
+      state2.available = available;
+      delete state2.error;
+      await put(state2);
+      return true;
+    });
+    if (!reserved) return state();
+    record("updates.install", "started");
+    const operation = Promise.resolve().then(async () => {
+      const fresh = await inspect();
+      if (fresh.scope !== installation.scope || fresh.installed !== installation.installed || !fresh.canUpdate) throw new UpdateError("Installation changed before update.");
+      await options.update(installation.target);
+    }).then(() => verify(pending, installation, false), () => verify(pending, installation, true));
+    try {
+      await deadline(operation, options.updateTimeoutMs ?? 9e4);
+    } catch {
+      record("updates.install", "pending", "timeout");
+    }
+    return state();
+  }
+  return {
+    state,
+    check(manual) {
+      if (!checking) checking = performCheck(manual).finally(() => {
+        checking = void 0;
+      });
+      return checking;
+    },
+    install,
+    async later() {
+      await mutate(async (state2) => {
+        state2.dismissed = state2.available?.version;
+        await put(state2);
+      });
+      return state();
+    },
+    async automatic(enabled) {
+      await mutate(async (state2) => {
+        state2.automatic = enabled;
+        await put(state2);
+      });
+      return state();
+    },
+    async withWork(run2) {
+      const id2 = randomUUID2();
+      await mutate(async (state2) => {
+        if (state2.pending) throw new UpdateError("An update is in progress. Wait for verification before starting more plugin work.");
+        state2.work = Object.fromEntries(Object.entries(state2.work ?? {}).filter(([, owner]) => isAlive(owner)));
+        state2.work[id2] = pid;
+        await put(state2);
+      });
+      const release = async () => {
+        if (options.busy?.()) {
+          const timer = setTimeout(() => {
+            void release().catch(() => {
+            });
+          }, 1e3);
+          timer.unref();
+          return;
+        }
+        await mutate(async (state2) => {
+          delete state2.work?.[id2];
+          await put(state2);
+        });
+      };
+      try {
+        return await run2();
+      } finally {
+        await release();
+      }
+    }
+  };
+}
 
 // src/version.ts
-var VERSION = "0.10.10";
+var VERSION = "0.11.0";
+
+// src/worker-host.ts
+import { EventEmitter as EventEmitter2 } from "node:events";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([
+  "updates.check",
+  "updates.install",
   "worker.ready",
   "canvas.connection",
   "canvas.request",
@@ -4787,6 +5317,9 @@ var CODES = /* @__PURE__ */ new Set([
   "invalid_params",
   "action_failed",
   "rate_limited",
+  "pinned",
+  "source_changed",
+  "not_found",
   "disconnected",
   "request_failed",
   "unauthorized",
@@ -4866,7 +5399,7 @@ function createDiagnostics() {
 // src/worker-host.ts
 function createWorkerHost(services2, log = (_message) => {
 }, diagnostics2 = createDiagnostics()) {
-  const events = new EventEmitter();
+  const events = new EventEmitter2();
   events.setMaxListeners(100);
   const handlers = /* @__PURE__ */ new Map();
   handlers.set("logs.get", () => ({ ...diagnostics2.snapshot(), platform: process.platform, architecture: process.arch, runtime: process.version }));
@@ -5006,8 +5539,8 @@ function createWorkerHost(services2, log = (_message) => {
 
 // src/copilot/services.ts
 import { homedir } from "node:os";
-import { join as join4 } from "node:path";
-import { createHash } from "node:crypto";
+import { join as join5 } from "node:path";
+import { createHash as createHash2 } from "node:crypto";
 
 // src/defaults.ts
 var DEFAULTS = {
@@ -5044,89 +5577,9 @@ var DEFAULTS = {
   "allowOnlineModelLists": true
 };
 
-// src/copilot/storage.ts
-var import_proper_lockfile = __toESM(require_proper_lockfile(), 1);
-import { AsyncLocalStorage } from "node:async_hooks";
-import { EventEmitter as EventEmitter2 } from "node:events";
-import { mkdir as mkdir2, readFile as readFile3, rename, writeFile } from "node:fs/promises";
-import { watchFile, unwatchFile } from "node:fs";
-import { join as join3, resolve as resolve2 } from "node:path";
-import { randomUUID } from "node:crypto";
-var held = new AsyncLocalStorage();
-var buses = /* @__PURE__ */ new Map();
-function persistentStore(directory) {
-  const root = resolve2(directory);
-  const file = join3(root, "state.json");
-  const bus = buses.get(root) ?? new EventEmitter2();
-  bus.setMaxListeners(100);
-  buses.set(root, bus);
-  const read = async () => {
-    try {
-      const value = JSON.parse(await readFile3(file, "utf8"));
-      if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid Enhance Prompt storage.");
-      return value;
-    } catch (error) {
-      if (error.code === "ENOENT") return {};
-      throw error;
-    }
-  };
-  const transaction = async (fn) => {
-    if (held.getStore()?.has(root)) return fn();
-    await mkdir2(root, { recursive: true, mode: 448 });
-    const release = await import_proper_lockfile.default.lock(root, { realpath: false, stale: 3e4, retries: { retries: 80, minTimeout: 20, maxTimeout: 250, factor: 1.2 } });
-    try {
-      return await held.run(/* @__PURE__ */ new Set([...held.getStore() ?? [], root]), fn);
-    } finally {
-      await release();
-    }
-  };
-  const change = async (key, value) => transaction(async () => {
-    if (["__proto__", "constructor", "prototype"].includes(key) || key.length > 2e3) throw new Error("Invalid storage key.");
-    const data = await read();
-    if (value === void 0) delete data[key];
-    else data[key] = value;
-    const temporary = `${file}.${randomUUID()}.tmp`;
-    await writeFile(temporary, JSON.stringify(data), { encoding: "utf8", mode: 384 });
-    await rename(temporary, file);
-    bus.emit("change", { key });
-  });
-  return {
-    get: async (key) => {
-      const data = await read();
-      return Object.hasOwn(data, key) ? data[key] : null;
-    },
-    set: (key, value) => change(key, value),
-    delete: (key) => change(key),
-    keys: async () => Object.keys(await read()),
-    onDidChange: (listener) => {
-      bus.on("change", listener);
-      let active = true;
-      let previous = read().catch(() => ({}));
-      const refresh = () => {
-        const next = read().catch(() => ({}));
-        void Promise.all([previous, next]).then(([before, after]) => {
-          if (!active) return;
-          for (const key of /* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)])) {
-            if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) listener({ key });
-          }
-        }).catch(() => {
-        });
-        previous = next;
-      };
-      watchFile(file, { interval: 500, persistent: false }, refresh);
-      return { dispose: () => {
-        active = false;
-        bus.off("change", listener);
-        unwatchFile(file, refresh);
-      } };
-    },
-    transaction
-  };
-}
-
 // src/copilot/session.ts
-import { basename as basename3, isAbsolute as isAbsolute3 } from "node:path";
-import { realpath as realpath2 } from "node:fs/promises";
+import { basename as basename4, isAbsolute as isAbsolute3 } from "node:path";
+import { realpath as realpath3 } from "node:fs/promises";
 var unavailable = (message) => Object.assign(new Error(message), { code: "unavailable" });
 async function bounded(request) {
   let timer;
@@ -5144,8 +5597,8 @@ function sessionAdapter(session2) {
   const project2 = async () => {
     const info = await bounded(session2.rpc.metadata.snapshot());
     if (info.isRemote || !isAbsolute3(info.workingDirectory)) return null;
-    const path = await realpath2(info.workingDirectory);
-    return { id: `copilot::${path}`, path, name: basename3(path) };
+    const path = await realpath3(info.workingDirectory);
+    return { id: `copilot::${path}`, path, name: basename4(path) };
   };
   const state = async () => {
     try {
@@ -5204,11 +5657,11 @@ function sessionAdapter(session2) {
 var UNSUPPORTED_SETTINGS = /* @__PURE__ */ new Set(["allowTerminalRead", "allowOtherAgents", "allowAgentActivity", "allowEditorSaves", "allowOpenFiles"]);
 
 // src/copilot/services.ts
-function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DIR || join4(process.env.LOCALAPPDATA || join4(homedir(), ".local", "share"), "copilot-enhance-prompt"), copilot2) {
-  const data = persistentStore(join4(directory, "data"));
-  const prefs = persistentStore(join4(directory, "preferences"));
-  const retiredCredentials = persistentStore(join4(directory, "credentials"));
-  const scope = createHash("sha256").update(session2.sessionId).digest("hex").slice(0, 24);
+function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DIR || join5(process.env.LOCALAPPDATA || join5(homedir(), ".local", "share"), "copilot-enhance-prompt"), copilot2) {
+  const data = persistentStore(join5(directory, "data"));
+  const prefs = persistentStore(join5(directory, "preferences"));
+  const retiredCredentials = persistentStore(join5(directory, "credentials"));
+  const scope = createHash2("sha256").update(session2.sessionId).digest("hex").slice(0, 24);
   let migration;
   const prepare = () => migration ??= (async () => {
     await prefs.transaction(async () => {
@@ -5307,7 +5760,7 @@ function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DI
 // src/copilot/server.ts
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
-import { readFile as readFile4, realpath as realpath3 } from "node:fs/promises";
+import { readFile as readFile5, realpath as realpath4 } from "node:fs/promises";
 import { extname, resolve as resolve3, sep as sep2 } from "node:path";
 var LIMIT = 25e5;
 var MODEL_WRITES = /* @__PURE__ */ new Set(["models.save", "models.delete", "models.move", "models.roles", "consent.set", "rules.save"]);
@@ -5337,8 +5790,8 @@ async function createCanvasServer(options) {
   const { worker: worker2 } = options;
   const canvases = /* @__PURE__ */ new Map();
   let origin = "";
-  const assets = await realpath3(options.assets);
-  const json = (res, status, value) => {
+  const assets = await realpath4(options.assets);
+  const json2 = (res, status, value) => {
     res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
     res.end(JSON.stringify(value ?? null));
   };
@@ -5367,20 +5820,20 @@ async function createCanvasServer(options) {
     res.setHeader("content-security-policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'");
     try {
       if (req.headers.host !== new URL(origin).host || req.headers.origin && req.headers.origin !== origin) {
-        json(res, 403, { error: "Forbidden" });
+        json2(res, 403, { error: "Forbidden" });
         return;
       }
       const path = new URL(req.url ?? "/", origin).pathname;
       const match = /^\/c\/([a-f0-9]{64})\/(.*)$/.exec(path);
       const canvas2 = match && [...canvases.values()].find((item2) => item2.token === match[1]);
       if (!canvas2 || !match) {
-        json(res, 403, { error: "Forbidden" });
+        json2(res, 403, { error: "Forbidden" });
         return;
       }
       const route = match[2];
       if (route === "api" || route === "events") {
         if (req.headers.authorization !== `Bearer ${canvas2.token}`) {
-          json(res, 403, { error: "Forbidden" });
+          json2(res, 403, { error: "Forbidden" });
           return;
         }
         if (route === "events") {
@@ -5405,17 +5858,33 @@ async function createCanvasServer(options) {
         if (!input || typeof input !== "object" || Array.isArray(input)) throw invalid();
         let answer;
         const client = worker2.panel(canvas2.id);
-        if (method === "request") {
+        const work = (run2) => options.updates ? options.updates.withWork(run2) : run2();
+        if (typeof method === "string" && method.startsWith("updates.")) {
+          if (!options.updates) throw invalid("Updates are unavailable in this runtime.");
+          const action = method.slice(8);
+          const expected = action === "check" ? ["manual"] : action === "automatic" ? ["enabled"] : [];
+          if (Object.keys(request).some((key) => !["method", "input"].includes(key)) || Object.keys(input).some((key) => !expected.includes(key))) throw invalid();
+          if (action === "check" && typeof input.manual === "boolean") answer = await options.updates.check(input.manual);
+          else if (action === "automatic" && typeof input.enabled === "boolean") answer = await options.updates.automatic(input.enabled);
+          else if (action === "state") answer = await options.updates.state();
+          else if (action === "install") answer = await options.updates.install();
+          else if (action === "later") answer = await options.updates.later();
+          else throw invalid();
+        } else if (method === "request") {
           if (typeof request.name !== "string") throw invalid();
           const name = request.name;
           const run2 = () => worker2.request(name, input, { signal: controller.signal, panelId: canvas2.id, timeoutMs: 12e4 });
-          answer = MODEL_WRITES.has(name) && worker2.api.storage.transaction ? await worker2.api.storage.transaction(run2) : await run2();
-          if (name === "data.clear" && input.what === "all") {
-            for (const key of await client.storage.keys()) if (key.startsWith("panel:")) await client.storage.delete(key);
-          }
+          const guarded = async () => {
+            const result = MODEL_WRITES.has(name) && worker2.api.storage.transaction ? await worker2.api.storage.transaction(run2) : await run2();
+            if (name === "data.clear" && input.what === "all") {
+              for (const key of await client.storage.keys()) if (key.startsWith("panel:")) await client.storage.delete(key);
+            }
+            return result;
+          };
+          answer = ["logs.get", "targets.list", "models.get", "rules.get", "consents.get", "data.summary", "enhance.progress.get"].includes(name) ? await guarded() : await work(guarded);
         } else if (method === "settings.get") answer = input.key === void 0 ? await client.settings.get() : await client.settings.get(input.key);
         else if (method === "settings.set") {
-          await client.settings.set(input.key, input.value);
+          await work(() => client.settings.set(input.key, input.value));
           answer = true;
         } else if (method === "storage.keys") answer = (await client.storage.keys()).filter(readable);
         else if (method === "storage.get") {
@@ -5424,36 +5893,38 @@ async function createCanvasServer(options) {
         } else if (method === "storage.set" || method === "storage.delete") {
           if (typeof input.key !== "string" || !writable(input.key)) throw invalid();
           if (method === "storage.set" && input.key === "colorTheme" && !["system", "light", "dark"].includes(input.value)) throw invalid();
-          if (method === "storage.set" && PRIVATE_PANEL_KEYS.has(input.key.slice(6)) && await client.settings.get("saveHistory") === false) await client.storage.delete(input.key);
-          else if (method === "storage.set") await client.storage.set(input.key, input.value);
-          else await client.storage.delete(input.key);
+          await work(async () => {
+            if (method === "storage.set" && PRIVATE_PANEL_KEYS.has(input.key.slice(6)) && await client.settings.get("saveHistory") === false) await client.storage.delete(input.key);
+            else if (method === "storage.set") await client.storage.set(input.key, input.value);
+            else await client.storage.delete(input.key);
+          });
           answer = true;
         } else if (method === "close") {
           worker2.closePanel(canvas2.id);
           options.onClose?.(canvas2.id);
           answer = true;
         } else throw invalid();
-        if (!res.destroyed) json(res, 200, { result: answer ?? null });
+        if (!res.destroyed) json2(res, 200, { result: answer ?? null });
         return;
       }
       if (req.method !== "GET" || route.includes("%") || route.includes("\\") || route.split("/").includes("..")) {
-        json(res, 404, { error: "Not found" });
+        json2(res, 404, { error: "Not found" });
         return;
       }
-      const file = await realpath3(resolve3(assets, route || "index.html")).catch(() => "");
+      const file = await realpath4(resolve3(assets, route || "index.html")).catch(() => "");
       if (!file.startsWith(assets + sep2)) {
-        json(res, 404, { error: "Not found" });
+        json2(res, 404, { error: "Not found" });
         return;
       }
       const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".png": "image/png", ".svg": "image/svg+xml", ".woff2": "font/woff2" };
       if (!mime[extname(file)]) {
-        json(res, 404, { error: "Not found" });
+        json2(res, 404, { error: "Not found" });
         return;
       }
       res.writeHead(200, { "content-type": mime[extname(file)] });
-      res.end(await readFile4(file));
+      res.end(await readFile5(file));
     } catch (error) {
-      if (!res.destroyed && !res.headersSent) json(res, error.status ?? 400, { error: { message: error instanceof Error ? error.message : "Canvas request failed.", code: error?.code ?? "request_failed" } });
+      if (!res.destroyed && !res.headersSent) json2(res, error.status ?? 400, { error: { message: error instanceof Error ? error.message : "Canvas request failed.", code: error?.code ?? "request_failed" } });
     }
   });
   await new Promise((resolve4, reject) => {
@@ -5490,17 +5961,17 @@ async function createCanvasServer(options) {
 }
 
 // src/copilot/models.ts
-import { mkdtemp, mkdir as mkdir4, realpath as realpath4, rm as rm2 } from "node:fs/promises";
-import { basename as basename4, isAbsolute as isAbsolute4, join as join6, relative as relative3 } from "node:path";
+import { mkdtemp, mkdir as mkdir4, realpath as realpath5, rm as rm2 } from "node:fs/promises";
+import { basename as basename5, isAbsolute as isAbsolute4, join as join7, relative as relative3 } from "node:path";
 import { tmpdir as tmpdir2 } from "node:os";
-import { randomUUID as randomUUID3 } from "node:crypto";
+import { randomUUID as randomUUID4 } from "node:crypto";
 
 // src/copilot/usage.ts
-import { randomUUID as randomUUID2 } from "node:crypto";
+import { randomUUID as randomUUID3 } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { homedir as homedir2 } from "node:os";
 import { mkdir as mkdir3, rename as rename2, writeFile as writeFile2 } from "node:fs/promises";
-import { join as join5 } from "node:path";
+import { join as join6 } from "node:path";
 import { StringDecoder } from "node:string_decoder";
 var uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 var identifier = /^[a-z0-9][a-z0-9._:+\/-]*$/i;
@@ -5599,22 +6070,22 @@ async function reconcileUsageJournal(path, recorder) {
   await recorder.flush();
 }
 async function replace(file, content) {
-  const temporary = `${file}.${randomUUID2()}.tmp`;
+  const temporary = `${file}.${randomUUID3()}.tmp`;
   await writeFile2(temporary, content, { encoding: "utf8", mode: 384 });
   await rename2(temporary, file);
 }
 function usageHome() {
-  return join5(process.env.ENHANCE_PROMPT_DATA_DIR || join5(process.env.LOCALAPPDATA || join5(homedir2(), ".local", "share"), "copilot-enhance-prompt"), "usage");
+  return join6(process.env.ENHANCE_PROMPT_DATA_DIR || join6(process.env.LOCALAPPDATA || join6(homedir2(), ".local", "share"), "copilot-enhance-prompt"), "usage");
 }
 async function createUsageRecorder(sessionId, root = usageHome()) {
   if (!uuid.test(sessionId)) throw new Error("Invalid usage session ID.");
-  const directory = join5(root, "session-state", sessionId);
-  const file = join5(directory, "events.jsonl");
+  const directory = join6(root, "session-state", sessionId);
+  const file = join6(directory, "events.jsonl");
   const started = (/* @__PURE__ */ new Date()).toISOString();
-  await mkdir3(join5(root, "session-state"), { recursive: true, mode: 448 });
+  await mkdir3(join6(root, "session-state"), { recursive: true, mode: 448 });
   await mkdir3(directory, { mode: 448 });
-  await replace(join5(directory, "workspace.yaml"), JSON.stringify({ id: sessionId, name: `Enhanced Prompt \xB7 ${started}` }) + "\n");
-  let lines = JSON.stringify({ type: "session.start", id: randomUUID2(), timestamp: started, data: { sessionId, context: { repository: "Enhanced Prompt" } } }) + "\n";
+  await replace(join6(directory, "workspace.yaml"), JSON.stringify({ id: sessionId, name: `Enhanced Prompt \xB7 ${started}` }) + "\n");
+  let lines = JSON.stringify({ type: "session.start", id: randomUUID3(), timestamp: started, data: { sessionId, context: { repository: "Enhanced Prompt" } } }) + "\n";
   await replace(file, lines);
   const seen = /* @__PURE__ */ new Set();
   let pending = Promise.resolve();
@@ -5656,9 +6127,9 @@ var cancelled = () => new LlmError(msg("error.cancelled"), "cancelled");
 var usageFailed = () => new LlmError(msg("error.copilot_usage"), "action_failed");
 function hostRuntime(executable = process.execPath, argv = process.argv, parentPid = process.ppid, environment = process.env, probe) {
   const checks = {
-    executableAllowed: isAbsolute4(executable) && ["copilot.exe", "copilot", "copilot-runtime.exe", "copilot-runtime"].includes(basename4(executable).toLowerCase()),
+    executableAllowed: isAbsolute4(executable) && ["copilot.exe", "copilot", "copilot-runtime.exe", "copilot-runtime"].includes(basename5(executable).toLowerCase()),
     // The packaged desktop uses a built-in entry name; SDK launches can use the preload's absolute path.
-    bootstrapPresent: argv.some((arg) => arg === "extension_bootstrap.mjs" || isAbsolute4(arg) && basename4(arg) === "extension_bootstrap.mjs"),
+    bootstrapPresent: argv.some((arg) => arg === "extension_bootstrap.mjs" || isAbsolute4(arg) && basename5(arg) === "extension_bootstrap.mjs"),
     sdkPathPresent: Boolean(environment.COPILOT_SDK_PATH),
     parentMatches: Number.isSafeInteger(parentPid) && parentPid > 0 && String(parentPid) === environment.COPILOT_EXTENSION_PARENT_PID
   };
@@ -5678,7 +6149,7 @@ async function desktopRuntime(probe) {
     probe?.stage("runtime_identity");
     const executable = hostRuntime(void 0, void 0, void 0, void 0, probe);
     probe?.stage("runtime_path");
-    const path = await realpath4(executable);
+    const path = await realpath5(executable);
     probe?.check("runtimePathResolved", true);
     loadingSdk = true;
     probe?.stage("sdk_import");
@@ -5772,7 +6243,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
     let directory;
     let stop2;
     let usage;
-    const sessionId = randomUUID3();
+    const sessionId = randomUUID4();
     const stopClient = () => {
       if (client) stop2 ??= withDeadline(client.forceStop(), 1e4).then(() => true, () => false);
       return stop2;
@@ -5802,14 +6273,14 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
         checkReasoning(requested, input.reasoningEffort);
         check();
       }
-      directory = await mkdtemp(join6(tmpdir2(), "enhance-copilot-"));
-      const workspace = join6(directory, "workspace");
+      directory = await mkdtemp(join7(tmpdir2(), "enhance-copilot-"));
+      const workspace = join7(directory, "workspace");
       await mkdir4(workspace);
       check();
       client = new sdk.CopilotClient({
         mode: "empty",
         workingDirectory: workspace,
-        baseDirectory: join6(directory, "home"),
+        baseDirectory: join7(directory, "home"),
         connection: sdk.RuntimeConnection.forStdio({ path, args: ["--no-auto-update"] }),
         env: runtimeEnvironment(),
         useLoggedInUser: true,
@@ -5831,7 +6302,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
         sessionId,
         onEvent: (event) => usage.record(event),
         workingDirectory: workspace,
-        configDirectory: join6(directory, "home"),
+        configDirectory: join7(directory, "home"),
         model: input.model,
         ...input.reasoningEffort !== void 0 ? { reasoningEffort: input.reasoningEffort } : {},
         systemMessage: { mode: "replace", content: input.system },
@@ -5877,7 +6348,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       checkReasoning(parentModel, input.reasoningEffort);
       checkReasoning(model, input.reasoningEffort);
       stage("copilot.workspace");
-      if (metadata.isRemote !== false || await realpath4(metadata.workingDirectory) !== await realpath4(workspace)) throw unavailable2();
+      if (metadata.isRemote !== false || await realpath5(metadata.workingDirectory) !== await realpath5(workspace)) throw unavailable2();
       stage("copilot.tools");
       await withDeadline(session2.rpc.tools.initializeAndValidate(), 15e3);
       const [tools, selected] = await withDeadline(Promise.all([session2.rpc.tools.getCurrentMetadata(), session2.rpc.model.getCurrent()]), 15e3);
@@ -5914,7 +6385,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       if (usage) {
         stage("copilot.usage");
         try {
-          if (stopped !== false && directory) await reconcileUsageJournal(join6(directory, "home", "session-state", sessionId, "events.jsonl"), usage);
+          if (stopped !== false && directory) await reconcileUsageJournal(join7(directory, "home", "session-state", sessionId, "events.jsonl"), usage);
           await usage.flush();
         } catch {
           diagnostics2?.record(phase, "failed", diagnosticError(usageFailed()));
@@ -5929,7 +6400,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       }
       if (directory) {
         const inside = relative3(tmpdir2(), directory);
-        if (inside && !isAbsolute4(inside) && !inside.startsWith("..") && basename4(directory).startsWith("enhance-copilot-")) {
+        if (inside && !isAbsolute4(inside) && !inside.startsWith("..") && basename5(directory).startsWith("enhance-copilot-")) {
           await rm2(directory, { recursive: true, force: true, maxRetries: 3 }).catch(() => {
             diagnostics2?.record(phase, "failed");
             throw unavailable2();
@@ -5991,7 +6462,17 @@ process.stderr.write("[Enhance Prompt] Session connected.\n");
 worker = createWorkerHost(services, (message) => process.stderr.write(`[Enhance Prompt] ${message}
 `), diagnostics);
 activate(worker.api);
-server = await createCanvasServer({ worker, assets: fileURLToPath(new URL("./web/", import.meta.url)), onClose: cancelPanelRuns });
+var packageRoot = fileURLToPath(new URL("../../../", import.meta.url));
+var updates = createUpdates({
+  running: VERSION,
+  store: persistentStore(join8(services.directory, "updates", installationKey(packageRoot))),
+  installation: installationReader(session, packageRoot),
+  metadata: remoteMetadata(),
+  busy: hasActiveRuns,
+  update: (target) => session.rpc.plugins.update({ name: target }),
+  record: (operation, outcome, code) => diagnostics.record(operation, outcome, { code })
+});
+server = await createCanvasServer({ worker, updates, assets: fileURLToPath(new URL("./web/", import.meta.url)), onClose: cancelPanelRuns });
 ready();
 process.stderr.write("[Enhance Prompt] Canvas server ready.\n");
 var stopping = false;
