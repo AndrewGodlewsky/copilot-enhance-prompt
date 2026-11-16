@@ -34,6 +34,14 @@ Rules contains reusable instructions and structures. Global rules apply everywhe
 
 ## History and settings
 
-History supports searching, reusing, removing with Undo and exporting visible entries. Settings controls saved drafts/history, project and Git reads, model catalogs and optional sending after enhancement. [Privacy](privacy.md) explains storage and reads.
+History uses a project sidebar, compact prompt list and reading pane. On narrow canvases the sidebar becomes a project dropdown; on small screens the reading pane sits beneath the list. Selecting a project filters saved history and does not switch your attached Copilot session.
+
+- **All projects** shows everything saved. Select another project to narrow the list. Folders with matching names show their parent paths, and **No project recorded** holds older entries without that information. Full paths remain in the project tooltips and the reader's **Project location** disclosure.
+- Search checks the original request and enhanced prompt. Matches are highlighted; entries found only in enhanced text are identified. Choose newest/oldest order and use Previous/Next to move through pages of twelve prompts.
+- Select a prompt to read it, then switch between **Enhanced prompt** and **Original request**. Reading does not change your current draft.
+- **Reuse** opens both texts and the saved style in Enhance. It offers Undo when replacing a draft and warns when the saved prompt came from another project. It never sends the prompt. **Copy** copies the enhanced text. **Delete** removes one entry and offers Undo.
+- **More > Save as a file** exports all entries matching the current search and project filter, including other pages. **More > Clear history** asks for confirmation and removes history from every project; it does not clear your current request or settings.
+
+Saved history is unchanged by the new layout, and older current-project filter preferences remain supported. Settings controls saved drafts/history, project and Git reads, model catalogs and optional sending after enhancement. [Privacy](privacy.md) explains storage and reads.
 
 Unavailable terminal and editor settings are disabled. They do not silently read chat transcripts or start another application.

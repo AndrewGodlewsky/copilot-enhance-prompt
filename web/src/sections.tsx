@@ -3,29 +3,19 @@ import { formatText } from '../../src/format.ts'
 // actions (src/panel/*), drawn with shadcn/ReUI.
 import { Fragment, useState } from 'react'
 import { read, set, update } from '#panel'
-import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, RotateCcwIcon, CheckIcon, CopyIcon, DownloadIcon, EllipsisVerticalIcon, ExternalLinkIcon, PencilIcon, PlugZapIcon, PlusIcon, RefreshCwIcon, Settings2Icon, Trash2Icon } from 'lucide-react'
+import { ArrowDownIcon, ArrowUpIcon, RotateCcwIcon, CheckIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, PencilIcon, PlugZapIcon, PlusIcon, RefreshCwIcon, Settings2Icon, Trash2Icon } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { type ProfileView } from '../../src/presets.ts'
-import { isStyle, STYLE_LABELS } from '../../src/prompts.ts'
 import { allStructures, BUILT_IN_STRUCTURES, MAX_RULES, MAX_STRUCTURES } from '../../src/rules.ts'
 import {
   busy,
   catalogLoading,
   catalogs,
   consents,
-  confirmClearHistory,
   confirmWipe,
   dataSummary,
   defaults,
-  filteredHistory,
   form,
-  history,
-  historyByProject,
-  historyFilter,
-  historyOpen,
-  historyScope,
-  HISTORY_PAGE,
-  historyShown,
   models,
   privacy,
   projectName,
@@ -43,18 +33,13 @@ import {
   clearData,
   confirmSwitch,
   turnSwitchOff,
-  clearHistory,
-  copy,
-  exportHistory,
   formCatalogInput,
   loadCatalog,
   modelAction,
   openForm,
   openIssues,
   patchForm,
-  removeEntry,
   removeStructure,
-  reuse,
   saveForm,
   saveRules,
   setRoles,
@@ -79,115 +64,6 @@ import { Field, Group, IconAction, Pick, Row, Section, Segmented } from './commo
 import { WorkspacePicker } from './enhance'
 import { UNSUPPORTED_SETTINGS } from '../../src/capabilities.ts'
 import { Preferences } from './preferences'
-
-const ago = (at: number) => {
-  const minutes = Math.round((Date.now() - at) / 60_000)
-  const format = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
-  if (minutes < 60) return format.format(-minutes, 'minute')
-  if (minutes < 1440) return format.format(-Math.round(minutes / 60), 'hour')
-  return format.format(-Math.round(minutes / 1440), 'day')
-}
-
-// ---------------------------------------------------------------- History
-
-export function HistorySection() {
-  const all = read(history)
-  const list = read(filteredHistory)
-  const shown = read(historyShown)
-  if (all.length === 0) {
-    return (
-      <div className="text-muted-foreground flex flex-col items-center gap-1 py-10 text-center">
-        <p className="text-foreground font-medium">{'No history yet'}</p>
-        <p className="text-sm">{'Enhanced prompts show up here.'}</p>
-      </div>
-    )
-  }
-  const here = read(projectName)
-  const byProject = read(historyByProject) && here !== null
-  const scope = byProject ? read(historyScope) : 'all'
-  const open = read(historyOpen)
-  return (
-    <div className="flex flex-col gap-2">
-      <Input type="search" aria-label={'Search history'} placeholder={'Search history'} value={read(historyFilter)} onChange={(event) => set(historyFilter, event.target.value)} className="h-8" />
-      {byProject ? (
-        <Segmented
-          label={'Which prompts to show'}
-          value={scope}
-          options={[
-            { value: 'all', label: 'Every project' },
-            { value: 'project', label: here }
-          ]}
-          onChange={(value) => set(historyScope, value === 'project' ? 'project' : 'all')}
-        />
-      ) : null}
-      {list.length === 0 ? <p className="text-muted-foreground py-4 text-center text-sm">{'Nothing here matches.'}</p> : null}
-      <div className="flex flex-col gap-1.5">
-        {list.slice(0, shown).map((entry) => (
-          <div key={entry.id} className="flex flex-col gap-3 rounded-lg border p-3">
-            {/* Read in place: opening an entry in the Enhance tab replaces what the composer holds. */}
-            <button
-              type="button"
-              aria-expanded={open === entry.id}
-              aria-label={open === entry.id ? 'Hide the enhanced prompt' : 'Show the enhanced prompt'}
-              onClick={() => set(historyOpen, open === entry.id ? null : entry.id)}
-              className="flex min-h-8 min-w-0 items-start gap-2 rounded-md py-1 text-left hover:bg-accent"
-            >
-              <ChevronRightIcon className={cn('text-muted-foreground mt-0.5 size-3.5 shrink-0 transition-transform', open === entry.id && 'rotate-90')} />
-              <span className={cn('min-w-0 text-sm font-medium', open === entry.id ? 'break-words whitespace-pre-wrap' : 'truncate')}>
-                {open === entry.id ? entry.original.slice(0, 600) : entry.original.split('\n')[0].slice(0, 160)}
-              </span>
-            </button>
-            {open === entry.id ? (
-              <div className="bg-muted/50 max-h-64 overflow-y-auto rounded-md border p-3 text-sm break-words whitespace-pre-wrap">{entry.enhanced}</div>
-            ) : null}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-muted-foreground min-w-0 text-xs break-words">
-                {`${STYLE_LABELS[isStyle(entry.style) ? entry.style : 'balanced']} · ${entry.model}${entry.source === 'hook' ? ` · ${'auto'}` : ''}${entry.project && scope === 'all' ? ` · ${entry.project}` : ''} · ${ago(entry.at)}`}
-              </span>
-              <div className="ml-auto flex shrink-0 gap-1">
-                <Button size="sm" variant="ghost" title={'Open in Enhance tab'} onClick={() => reuse(entry)}>
-                  <PencilIcon />
-                  {'Reuse'}
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => void copy(entry.enhanced)}>
-                  <CopyIcon />
-                  {'Copy'}
-                </Button>
-                <IconAction label={'Delete'} onClick={() => void removeEntry(entry.id)}>
-                  <Trash2Icon />
-                </IconAction>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-      {list.length > shown ? (
-        <Button variant="ghost" size="sm" onClick={() => update(historyShown, (count: number) => count + HISTORY_PAGE)}>
-          {'Show more'}
-        </Button>
-      ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-muted-foreground text-xs">{formatText('{shown} of {total}', { shown: Math.min(shown, list.length), total: all.length })}</span>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* What the list shows goes into the file: the search and the project filter apply. */}
-          <Button size="sm" variant="ghost" onClick={() => void exportHistory()} disabled={list.length === 0}>
-            <DownloadIcon />
-            {'Save as a file'}
-          </Button>
-          <Button
-            size="sm"
-            className="h-auto min-h-8 whitespace-normal py-1"
-            variant={read(confirmClearHistory) ? 'destructive' : 'ghost'}
-            onClick={() => (read(confirmClearHistory) ? void clearHistory() : set(confirmClearHistory, true))}
-          >
-            <Trash2Icon />
-            {read(confirmClearHistory) ? 'Press again to clear history' : 'Clear history'}
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 // ---------------------------------------------------------------- Models
 

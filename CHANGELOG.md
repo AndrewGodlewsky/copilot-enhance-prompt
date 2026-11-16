@@ -1,5 +1,13 @@
 # Changes
 
+## [0.8.0] - 2026-11-15
+
+### Changed
+- Replace tall history cards with the approved project library: project navigation, a compact prompt list and a separate reading pane that starts directly with the prompt title.
+- Browse any saved project, distinguish folders with the same name, and find older entries with no recorded project. Use the project dropdown on narrower canvases; the reader moves below the list on small screens.
+- Search original and enhanced text with highlighted matches, switch between both saved texts, sort newest or oldest first, and navigate pages of twelve prompts.
+- Preserve Reuse, Copy and Delete with Undo. Move filtered export and clear-history actions into More; clearing history explicitly confirms that it affects every project. Saved prompts, project identities, drafts and sending safeguards stay unchanged.
+
 ## [0.7.0] - 2026-11-15
 
 ### Changed

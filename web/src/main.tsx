@@ -27,7 +27,7 @@ import { connectCanvas } from './transport'
 
 // The Enhance section is drawn at once; the others load the first time they open (a smaller first load).
 const loadSections = () => import('./sections')
-const HistorySection = lazy(() => loadSections().then((module) => ({ default: module.HistorySection })))
+const HistorySection = lazy(() => import('./history').then((module) => ({ default: module.HistorySection })))
 const ModelsSection = lazy(() => loadSections().then((module) => ({ default: module.ModelsSection })))
 const RulesSection = lazy(() => loadSections().then((module) => ({ default: module.RulesSection })))
 const SettingsSection = lazy(() => loadSections().then((module) => ({ default: module.SettingsSection })))

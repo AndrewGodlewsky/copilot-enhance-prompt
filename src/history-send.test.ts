@@ -4,7 +4,7 @@
 import { read, set } from '#panel'
 import { assert, mockHost, test } from '#testing'
 import { enhanceNow, refreshTargets, removeEntry, reuse, runNoticeAction, send } from './panel/actions.ts'
-import { busy, contextShown, draft, filteredHistory, history, historyByProject, historyOpen, historyScope, lastRun, notice, put, result, resultFor, tab, targets } from './panel/state.ts'
+import { busy, contextShown, draft, filteredHistory, history, historyProject, historyOpen, historyScope, lastRun, notice, put, result, resultFor, tab, targets } from './panel/state.ts'
 import { mountPanel } from './panel/testing.ts'
 import { targetLabel } from './panel/view.ts'
 import { msg, withMessage } from './messages.ts'
@@ -177,7 +177,7 @@ test('the history shows every project, or only the one in focus', async () => {
   })
   const view = await mountPanel(host)
   assert.equal(read(history).length, 4)
-  assert.equal(read(historyByProject), true)
+  assert.equal(read(historyProject), null)
   assert.equal(read(filteredHistory).length, 4)
   set(historyScope, 'project')
   assert.deepEqual(read(filteredHistory).map((item) => item.id), ['h1', 'h3'])
@@ -188,7 +188,7 @@ test('the history shows every project, or only the one in focus', async () => {
   const unknown = mockHost({ storage: { history: stored }, requests: { 'models.get': models, 'targets.list': { targets: [], workspace: 'main', project: null } } })
   const second = await mountPanel(unknown)
   set(historyScope, 'project')
-  assert.equal(read(historyByProject), false)
+  assert.equal(read(historyProject), null)
   assert.equal(read(filteredHistory).length, 4)
   set(historyScope, 'all')
   await second.unmount()

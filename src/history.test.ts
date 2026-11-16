@@ -3,7 +3,7 @@ import { read, set } from '#panel'
 import { assert, mockHost, mountWorker, test, type MockRequests } from '#testing'
 import { capHistory, HISTORY_ENTRY_CHARS, HISTORY_TOTAL_CHARS, parseHistory, trimForHistory, type HistoryEntry } from './history.ts'
 import { clearData, clearHistory, removeEntry, reuse } from './panel/actions.ts'
-import { confirmClearHistory, confirmWipe, draft, filteredHistory, history, historyFilter, HISTORY_PAGE, historyShown, notice, put, result, tab } from './panel/state.ts'
+import { confirmClearHistory, confirmWipe, draft, filteredHistory, history, historyFilter, historyWindow, notice, put, result, tab } from './panel/state.ts'
 import { mountPanel } from './panel/testing.ts'
 import * as main from './worker.ts'
 
@@ -74,10 +74,10 @@ test('the History tab: edits go through the worker, the search filters, and long
     }
   })
   const view = await mountPanel(host)
-  // The list comes from the plugin's storage; the tab draws the first page and "Show more" adds one.
+  // The list comes from storage; the library draws a bounded page.
   assert.equal(read(history).length, 120)
-  assert.equal(read(historyShown), HISTORY_PAGE)
-  assert.equal(HISTORY_PAGE, 50)
+  assert.equal(read(historyWindow).entries.length, 12)
+  assert.equal(read(historyWindow).pages, 10)
   set(historyFilter, 'PROMPT 11')
   assert.deepEqual(read(filteredHistory).map((item) => item.original), ['prompt 11', ...Array.from({ length: 10 }, (_, index) => `prompt 11${index}`)])
   set(historyFilter, '')

@@ -4,6 +4,7 @@
 import { isEffort, type Effort } from '../effort.ts'
 import { atom, derived, read, set, type Atom, type JsonValue } from '#panel'
 import { HISTORY_KEY, parseHistory } from '../history.ts'
+import { filterHistory, historyProjects, pageHistory, resolveHistoryProject, type HistoryOrder } from './history.ts'
 import type { RulesConfig } from '../rules.ts'
 import { isMessage, messageIn, plainText, render, type Message } from '../messages.ts'
 import { type ContextItemView } from '../presets.ts'
@@ -64,9 +65,8 @@ export const workspaceName = atom<string | null>(null)
  */
 export const projectName = atom<string | null>(null)
 export const historyFilter = atom('historyFilter', '')
-/** History entries drawn at once; "Show more" adds a page. */
-export const HISTORY_PAGE = 50
-export const historyShown = atom(HISTORY_PAGE)
+export const historyPageNumber = atom(1)
+export const historyOrder = atom<HistoryOrder>('newest')
 export const confirmClearHistory = atom(false)
 export const form = atom<Form | null>('form', null)
 export type Catalog = { models: { id: string; label: string; description?: string; isDefault?: boolean }[]; source: string; fetchedAt: number; error?: string; errorText?: Message }
@@ -194,20 +194,14 @@ export const defaults = atom<Defaults>({
 })
 
 export const history = derived(() => parseHistory(read(historyRaw)))
-/** The History tab shows every project's entries, or only those written in the project in focus. */
-export const historyScope = atom<'all' | 'project'>('historyScope', 'all', { persist: 'plugin' })
-/** The entry whose enhanced prompt is shown in place. */
+/** Existing all/project values remain valid; new selections use path:<saved project> or unassigned. */
+export const historyScope = atom<string>('historyScope', 'all', { persist: 'plugin' })
+/** The entry selected for reading, without changing the composer. */
 export const historyOpen = atom<string | null>(null)
-/** Whether "this project only" can be offered: the project is known and some entry carries one. */
-export const historyByProject = derived(() => read(projectName) !== null && read(history).some((entry) => entry.project))
-export const filteredHistory = derived(() => {
-  const query = read(historyFilter).trim().toLowerCase()
-  const here = read(historyScope) === 'project' && read(historyByProject) ? read(projectName) : null
-  const list = here === null ? read(history) : read(history).filter((entry) => entry.project === here)
-  return query
-    ? list.filter((entry) => entry.original.toLowerCase().includes(query) || entry.enhanced.toLowerCase().includes(query))
-    : list
-})
+export const historyProject = derived(() => resolveHistoryProject(read(historyScope), read(history), read(projectName)))
+export const historyProjectChoices = derived(() => historyProjects(read(history), read(projectName), read(historyFilter)))
+export const filteredHistory = derived(() => filterHistory(read(history), read(historyFilter), read(historyProject), read(historyOrder)))
+export const historyWindow = derived(() => pageHistory(read(filteredHistory), read(historyPageNumber), read(historyOpen)))
 export const effectiveStyle = derived(() => read(style) ?? read(defaults).style)
 export const effectiveLevel = derived(() => read(level) ?? read(defaults).level)
 export const effectiveEnter = derived(() => read(pressEnter) ?? read(defaults).pressEnter)

@@ -2,7 +2,9 @@
 
 Open [the interactive comparison](history-prototypes.html) in a browser. It is a self-contained file: no server, dependencies, network requests, or access to plugin data. Choose A or B at the top. Search, project navigation, ordering, prompt previews, light/dark mode, a narrow layout, and sample Reuse/Copy/Delete actions work. Reset restores the illustrative history.
 
-**Status: awaiting the owner's design selection.** These are standalone prototypes; the plugin is unchanged at version 0.7.0.
+**Approved: option A, Project library.** The owner requested removal of the entire folder icon/project-name heading at the top of the reading pane. Start that pane with the prompt title and move the remaining content upward. The project-location disclosure remains available below the metadata. The standalone prototypes document the original comparison; implementation follows this amendment.
+
+Implemented in **0.8.0**. Production behavior lives in `src/panel/history.ts` and `web/src/history.tsx`, with responsive styles in `web/src/history.css`. The retained comparison file is a historical design artifact, including the now-removed project heading; use the plugin to review the finished layout.
 
 ## Two approaches
 
