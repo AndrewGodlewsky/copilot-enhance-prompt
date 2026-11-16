@@ -93,14 +93,14 @@ test('recommended effort works without saved profiles and ignores request reason
     'workspace.readContext': null,
     'copilot.catalog': { models: [
       { id: 'claude-haiku-5.5', label: 'Claude Haiku 5.5', supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max'] },
-      { id: 'gpt-6.1-terra', label: 'GPT-6.1 Terra', supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max'] },
-      { id: 'claude-sonnet-5.5', label: 'Claude Sonnet 5.5', supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max'] }
+      { id: 'gpt-6.1-sol', label: 'GPT-6.1 Sol', supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max'] },
+      { id: 'claude-opus-5.5', label: 'Claude Opus 5.5', supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh', 'max'] }
     ], source: 'GitHub Copilot', fetchedAt: 1 },
     'copilot.rewrite': (input: { model: string; reasoningEffort?: string }) => { calls.push(input); return { text: 'English rewrite' } }
   } })
   const worker = await mountWorker(main, { host })
   try {
-    for (const [effort, model, reasoning] of [['low', 'claude-haiku-5.5', 'max'], ['medium', 'gpt-6.1-terra', 'high'], ['high', 'claude-sonnet-5.5', 'medium']] as const) {
+    for (const [effort, model, reasoning] of [['low', 'claude-haiku-5.5', 'max'], ['medium', 'gpt-6.1-sol', 'high'], ['high', 'claude-opus-5.5', 'medium']] as const) {
       const answer = await worker.request('prompt.enhance', { prompt: 'Fix tests', effort, level: 'off', model: 'untrusted', reasoningEffort: 'low' } as any)
       assert.equal(answer.model, model)
       assert.equal(answer.attempts[0].reasoningEffort, reasoning)
@@ -114,6 +114,35 @@ test('recommended effort works without saved profiles and ignores request reason
     await host.settings.set('allowOnlineModelLists', false)
     await assert.rejects(worker.request('prompt.enhance', { prompt: 'Fix tests', effort: 'medium', level: 'off' }), /lists.*off/)
     assert.equal(calls.length, 3)
+  } finally { await worker.deactivate() }
+})
+
+test('accounts without premium recommendations can explicitly choose available alternatives', async () => {
+  const calls: { model: string; reasoningEffort?: string }[] = []
+  const host = mockHost({ results: {
+    'workspace.readContext': null,
+    'copilot.catalog': { models: [
+      { id: 'gpt-6.1-terra', label: 'GPT-6.1 Terra', supportedReasoningEfforts: ['medium', 'high'] },
+      { id: 'claude-sonnet-5.5', label: 'Claude Sonnet 5.5', supportedReasoningEfforts: ['medium', 'high'] }
+    ], source: 'GitHub Copilot', fetchedAt: 1 },
+    'copilot.rewrite': (input: { model: string; reasoningEffort?: string }) => { calls.push(input); return { text: 'English rewrite' } }
+  } })
+  const worker = await mountWorker(main, { host })
+  try {
+    for (const [effort, model] of [['medium', 'GPT-6.1 Sol'], ['high', 'Claude Opus 5.5']] as const) {
+      await assert.rejects(worker.request('prompt.enhance', { prompt: 'Fix tests', effort, level: 'off' }), { text: { code: 'error.copilot_recommended_missing', params: { model } } })
+    }
+    assert.equal(calls.length, 0, 'missing recommendations never fall through to another model')
+    await host.settings.set('effortMediumModel', 'catalog:gpt-6.1-terra')
+    await host.settings.set('effortMediumReasoning', 'high')
+    await host.settings.set('effortHighModel', 'catalog:claude-sonnet-5.5')
+    await host.settings.set('effortHighReasoning', 'medium')
+    for (const [effort, model, reasoning] of [['medium', 'gpt-6.1-terra', 'high'], ['high', 'claude-sonnet-5.5', 'medium']] as const) {
+      const answer = await worker.request('prompt.enhance', { prompt: 'Fix tests', effort, level: 'off' })
+      assert.equal(answer.model, model)
+      assert.equal(calls.at(-1)?.model, model)
+      assert.equal(calls.at(-1)?.reasoningEffort, reasoning)
+    }
   } finally { await worker.deactivate() }
 })
 

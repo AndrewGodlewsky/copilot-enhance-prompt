@@ -3241,8 +3241,8 @@ var EFFORT_SETTINGS = { low: "effortLowModel", medium: "effortMediumModel", high
 var REASONING_SETTINGS = { low: "effortLowReasoning", medium: "effortMediumReasoning", high: "effortHighReasoning" };
 var RECOMMENDED = {
   low: { name: "Claude Haiku 5.5", aliases: ["claudehaiku55", "haiku55"], reasoning: "highest" },
-  medium: { name: "GPT-6.1 Terra", aliases: ["gpt61terra"], reasoning: "high" },
-  high: { name: "Claude Sonnet 5.5", aliases: ["claudesonnet55", "sonnet55"], reasoning: "medium" }
+  medium: { name: "GPT-6.1 Sol", aliases: ["gpt61sol"], reasoning: "high" },
+  high: { name: "Claude Opus 5.5", aliases: ["claudeopus55", "opus55"], reasoning: "medium" }
 };
 var validReasoning = (value) => typeof value === "string" && /^[a-z][a-z0-9_-]{0,39}$/.test(value);
 var REASONING_ORDER = ["minimal", "low", "medium", "high", "xhigh", "max"];
@@ -4727,7 +4727,7 @@ function activate(host) {
 import { EventEmitter } from "node:events";
 
 // src/version.ts
-var VERSION = "0.10.2";
+var VERSION = "0.10.3";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([

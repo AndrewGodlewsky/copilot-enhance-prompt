@@ -27,7 +27,7 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
         captured.length = 0
         set(optionsOpen, open)
         set(draft, request)
-        set(catalogs, connection.connected ? { copilot: { models: [{id:'sol',label:'GPT-6.1 Terra',supportedReasoningEfforts:['high']}], source:'Copilot',fetchedAt:1, ...(connection.error ? {error:'Connection failed'} : {}) } } : {})
+        set(catalogs, connection.connected ? { copilot: { models: [{id:'sol',label:'GPT-6.1 Sol',supportedReasoningEfforts:['high']}], source:'Copilot',fetchedAt:1, ...(connection.error ? {error:'Connection failed'} : {}) } } : {})
         set(catalogLoading, {copilot: connection.checking === true})
         set(copilotDetailsOpen, false)
         set(copilotCheck, connection.connected ? {attempt:4,startedAt:1,completedAt:2,outcome:'ok'} : null)

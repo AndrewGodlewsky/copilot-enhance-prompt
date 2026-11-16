@@ -10,7 +10,7 @@ import type { Catalog } from '../catalog.ts'
 import type { ModelsView } from '../protocol.ts'
 import { effortModelOptions, modelWarning } from './view.ts'
 
-const ready: Catalog = { models: [{ id: 'sol', label: 'GPT-6.1 Terra', supportedReasoningEfforts: ['low', 'high'] }], source: 'GitHub Copilot', fetchedAt: 1 }
+const ready: Catalog = { models: [{ id: 'sol', label: 'GPT-6.1 Sol', supportedReasoningEfforts: ['low', 'high'] }], source: 'GitHub Copilot', fetchedAt: 1 }
 
 test('Enhance exposes sign-in failure, Retry checks metadata only, and logs omit private text', async () => {
   let connected = false

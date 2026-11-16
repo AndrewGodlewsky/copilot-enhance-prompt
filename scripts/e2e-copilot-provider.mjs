@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url'
 import { access, writeFile, mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
 import { createCopilotModels } from '../src/copilot/models.ts'
 import { createUsageRecorder } from '../src/copilot/usage.ts'
+import { resolveEffort } from '../src/effort.ts'
 
 assert.ok(process.env.COPILOT_SDK_DIR && process.env.COPILOT_CLI_PATH, 'Set installed desktop SDK/runtime paths.')
 const sdk = await import(pathToFileURL(join(process.env.COPILOT_SDK_DIR, 'index.js')).href)
@@ -25,6 +26,10 @@ await new Promise(resolve => fixture.listen(0, '127.0.0.1', resolve))
 const auth = { isAuthenticated: true, login: 'fixture', host: 'https://github.com' }
 const catalog = { list: [{ id: 'gpt-4.1', name: 'Fixture model', provider: { kind: 'copilot' }, policy: { state: 'enabled' }, capabilities: { supports: { vision: true } } }] }
 catalog.list.push({ id: 'gpt-5', name: 'Reasoning fixture', provider: { kind: 'copilot' }, policy: { state: 'enabled' }, capabilities: { supports: { vision: true, reasoningEffort: true } }, supportedReasoningEfforts: ['low', 'medium', 'high'] })
+// Synthetic entitlement and capabilities; these calls stay on the loopback fixture.
+for (const [id, name, reasoning] of [['gpt-6.1-sol', 'GPT-6.1 Sol', 'high'], ['claude-opus-5.5', 'Claude Opus 5.5', 'medium']]) {
+  catalog.list.push({ id, name, provider: { kind: 'copilot' }, policy: { state: 'enabled' }, capabilities: { supports: { reasoning_effort: [reasoning] } } })
+}
 const parent = { rpc: { model: { list: async () => catalog }, gitHubAuth: { getStatus: async () => auth } } }
 const homes = []
 const clients = []
@@ -84,13 +89,23 @@ try {
   assert.equal(requests.length, 4)
   assert.equal(requests[3].model, 'gpt-5')
   assert.equal(requests[3].reasoning_effort, 'high', 'the real runtime sends the requested reasoning level')
+  const available = await service.catalog()
+  for (const [effort, model, reasoning] of [['medium', 'gpt-6.1-sol', 'high'], ['high', 'claude-opus-5.5', 'medium']]) {
+    const selected = resolveEffort(effort, 'recommended', 'default', [], available)
+    assert.equal(selected.profile.model, model)
+    assert.equal(selected.reasoningEffort, reasoning)
+    await service.rewrite({ model: selected.profile.model, reasoningEffort: selected.reasoningEffort, system: 'Rewrite only.', user: 'Check the recommended preset.' })
+    assert.equal(requests.at(-1).model, model)
+    assert.equal(requests.at(-1).reasoning_effort, reasoning, 'recommended reasoning reaches the local fixture through the installed runtime')
+  }
+  assert.equal(requests.length, 6)
   for (const directory of homes) await assert.rejects(access(directory))
   const sessions = await readdir(join(retained, 'session-state'))
-  assert.equal(sessions.length, 4)
+  assert.equal(sessions.length, 6)
   const journals = await Promise.all(sessions.map(id => readFile(join(retained, 'session-state', id, 'events.jsonl'), 'utf8')))
   const events = journals.flatMap(text => text.trim().split('\n').map(line => JSON.parse(line)))
   const receipts = events.filter(event => event.type === 'session.usage_record')
-  assert.equal(receipts.length, 3, 'real runtime accounting survives helper cleanup')
+  assert.equal(receipts.length, 5, 'real runtime accounting survives helper cleanup')
   assert.ok(suppressedUsage > 0, 'a missing live event is recovered from the real runtime journal')
   assert.ok(receipts.every(event => event.data.usage.inputTokens === 1 && event.data.usage.outputTokens === 1))
   assert.ok(receipts.every(event => event.data.usage.isByok === true), 'local fixture is never relabeled as Copilot usage')

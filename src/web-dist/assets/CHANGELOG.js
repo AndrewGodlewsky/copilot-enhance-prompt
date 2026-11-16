@@ -1,5 +1,11 @@
 var e=`# Changes
 
+## [0.10.3] - 2026-11-15
+
+### Changed
+- Restore the recommended Medium preset to GPT-6.1 Sol with High reasoning and High to Claude Opus 5.5 with Medium reasoning. Low remains Claude Haiku 5.5 at its highest supported reasoning. Explicit model and reasoning selections remain unchanged.
+- Document provider reasoning support and Copilot access requirements. Keep account/catalog and applied-setting checks before inference; unavailable recommendations require a manual model choice and never silently switch to another model.
+
 ## [0.10.2] - 2026-11-15
 
 ### Fixed

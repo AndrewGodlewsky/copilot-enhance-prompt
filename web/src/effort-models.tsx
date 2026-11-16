@@ -23,7 +23,7 @@ export function EffortModels() {
       </div>
     </Row>})}
     <Row>
-      <p className="text-muted-foreground text-xs leading-relaxed">Recommended: Low uses Claude Haiku 5.5 at its highest supported reasoning; Medium uses GPT-6.1 Terra at High; High uses Claude Sonnet 5.5 at Medium. Availability depends on your Copilot account. Recommended selections follow these presets; custom selections are kept until you change them.</p>
+      <p className="text-muted-foreground text-xs leading-relaxed">Recommended: Low uses Claude Haiku 5.5 at its highest supported reasoning; Medium uses GPT-6.1 Sol at High; High uses Claude Opus 5.5 at Medium. Availability depends on your Copilot account. If a recommended model is unavailable, choose one from your model list. Recommended selections follow these presets; custom selections are kept until you change them.</p>
       <Button size="sm" variant="outline" className="self-start" disabled={working} onClick={() => void applyRecommendedEfforts()}>Use recommended presets</Button>
     </Row>
     <Row><p className="text-muted-foreground text-xs leading-relaxed">Only reasoning levels supported by the model are offered. A saved unsupported choice stays visible until you replace it; it never silently changes to another level. Advanced options below manage fallbacks, tests and a separate AI-assisted context model.</p></Row>

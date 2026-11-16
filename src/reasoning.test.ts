@@ -6,13 +6,15 @@ import type { Catalog } from './catalog.ts'
 
 const catalog: Catalog = { source: 'GitHub Copilot', fetchedAt: 1, models: [
   { id: 'claude-haiku-5.5', label: 'Claude Haiku 5.5', supportedReasoningEfforts: ['high', 'low', 'max', 'medium'] },
+  { id: 'gpt-6.1-sol', label: 'GPT-6.1 Sol', supportedReasoningEfforts: ['medium', 'high'] },
+  { id: 'claude-opus-5.5', label: 'Claude Opus 5.5', supportedReasoningEfforts: ['low', 'medium', 'high'] },
   { id: 'gpt-6.1-terra', label: 'GPT-6.1 Terra', supportedReasoningEfforts: ['medium', 'high'] },
   { id: 'claude-sonnet-5.5', label: 'Claude Sonnet 5.5', supportedReasoningEfforts: ['low', 'medium', 'high'] }
 ] }
 const custom = { id: 'custom', name: 'My model', preset: 'copilot' as const, provider: 'copilot' as const, enabled: true, model: 'gpt-6.1-terra' }
 
 test('recommended tiers resolve exact advertised models and reasoning, including unordered highest levels', () => {
-  for (const [effort, model, reasoning] of [['low', 'claude-haiku-5.5', 'max'], ['medium', 'gpt-6.1-terra', 'high'], ['high', 'claude-sonnet-5.5', 'medium']] as const) {
+  for (const [effort, model, reasoning] of [['low', 'claude-haiku-5.5', 'max'], ['medium', 'gpt-6.1-sol', 'high'], ['high', 'claude-opus-5.5', 'medium']] as const) {
     const resolved = resolveEffort(effort, 'recommended', 'default', [], catalog)
     assert.equal(resolved.profile.model, model)
     assert.equal(resolved.reasoningEffort, reasoning)
@@ -29,14 +31,9 @@ test('custom and Auto assignments preserve their models and default reasoning', 
   assert.equal(custom.model, 'gpt-6.1-terra')
 })
 
-test('updated recommendations do not change explicitly selected Sol or Opus models', () => {
-  const previous: Catalog = { ...catalog, models: [
-    ...catalog.models,
-    { id: 'gpt-6.1-sol', label: 'GPT-6.1 Sol', supportedReasoningEfforts: ['high'] },
-    { id: 'claude-opus-5.5', label: 'Claude Opus 5.5', supportedReasoningEfforts: ['medium'] }
-  ] }
-  for (const [effort, model, reasoning] of [['medium', 'gpt-6.1-sol', 'high'], ['high', 'claude-opus-5.5', 'medium']] as const) {
-    const result = resolveEffort(effort, `catalog:${model}`, reasoning, [], previous)
+test('updated recommendations preserve explicit model and reasoning choices', () => {
+  for (const [effort, model, reasoning] of [['medium', 'gpt-6.1-terra', 'medium'], ['high', 'claude-sonnet-5.5', 'high'], ['medium', 'gpt-6.1-sol', 'medium'], ['high', 'claude-opus-5.5', 'high']] as const) {
+    const result = resolveEffort(effort, `catalog:${model}`, reasoning, [], catalog)
     assert.equal(result.profile.model, model)
     assert.equal(result.reasoningEffort, reasoning)
   }
