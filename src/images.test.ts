@@ -14,7 +14,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
 
 /** Attaches the picture as the panel does (attachments.put) and answers with the path of its copy. */
 async function attach(id: string, name = 'login bug.png'): Promise<string> {
-  const done = await putChunk({ id, name, index: 0, total: 1, data: PNG.toString('base64') })
+  const done = await putChunk({ id, name, index: 0, total: 1, data: PNG.toString('base64') }, 'test-session')
   assert.ok('path' in done)
   return done.path
 }

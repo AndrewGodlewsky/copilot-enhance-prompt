@@ -36,6 +36,7 @@ export function mockHost(options: { settings?: Record<string, any>; storage?: Re
     return typeof result === 'function' ? await result(params, requestOptions) : structuredClone(result)
   }
   const services = {
+    attachmentOwner: 'test-session',
     settings, storage,
     host: { has: (name: string) => name in results, call: invoke }
   }

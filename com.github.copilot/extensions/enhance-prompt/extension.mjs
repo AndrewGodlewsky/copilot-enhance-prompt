@@ -34,7 +34,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 // node_modules/graceful-fs/polyfills.js
 var require_polyfills = __commonJS({
   "node_modules/graceful-fs/polyfills.js"(exports, module) {
-    var constants = __require("constants");
+    var constants2 = __require("constants");
     var origCwd = process.cwd;
     var cwd = null;
     var platform = process.env.GRACEFUL_FS_PLATFORM || process.platform;
@@ -58,7 +58,7 @@ var require_polyfills = __commonJS({
     var chdir;
     module.exports = patch;
     function patch(fs) {
-      if (constants.hasOwnProperty("O_SYMLINK") && process.version.match(/^v0\.6\.[0-2]|^v0\.5\./)) {
+      if (constants2.hasOwnProperty("O_SYMLINK") && process.version.match(/^v0\.6\.[0-2]|^v0\.5\./)) {
         patchLchmod(fs);
       }
       if (!fs.lutimes) {
@@ -98,7 +98,7 @@ var require_polyfills = __commonJS({
       }
       if (platform === "win32") {
         fs.rename = typeof fs.rename !== "function" ? fs.rename : (function(fs$rename) {
-          function rename3(from, to, cb) {
+          function rename4(from, to, cb) {
             var start = Date.now();
             var backoff = 0;
             fs$rename(from, to, function CB(er) {
@@ -118,8 +118,8 @@ var require_polyfills = __commonJS({
               if (cb) cb(er);
             });
           }
-          if (Object.setPrototypeOf) Object.setPrototypeOf(rename3, fs$rename);
-          return rename3;
+          if (Object.setPrototypeOf) Object.setPrototypeOf(rename4, fs$rename);
+          return rename4;
         })(fs.rename);
       }
       fs.read = typeof fs.read !== "function" ? fs.read : (function(fs$read) {
@@ -160,7 +160,7 @@ var require_polyfills = __commonJS({
         fs2.lchmod = function(path, mode, callback) {
           fs2.open(
             path,
-            constants.O_WRONLY | constants.O_SYMLINK,
+            constants2.O_WRONLY | constants2.O_SYMLINK,
             mode,
             function(err, fd) {
               if (err) {
@@ -176,7 +176,7 @@ var require_polyfills = __commonJS({
           );
         };
         fs2.lchmodSync = function(path, mode) {
-          var fd = fs2.openSync(path, constants.O_WRONLY | constants.O_SYMLINK, mode);
+          var fd = fs2.openSync(path, constants2.O_WRONLY | constants2.O_SYMLINK, mode);
           var threw = true;
           var ret;
           try {
@@ -196,9 +196,9 @@ var require_polyfills = __commonJS({
         };
       }
       function patchLutimes(fs2) {
-        if (constants.hasOwnProperty("O_SYMLINK") && fs2.futimes) {
+        if (constants2.hasOwnProperty("O_SYMLINK") && fs2.futimes) {
           fs2.lutimes = function(path, at, mt, cb) {
-            fs2.open(path, constants.O_SYMLINK, function(er, fd) {
+            fs2.open(path, constants2.O_SYMLINK, function(er, fd) {
               if (er) {
                 if (cb) cb(er);
                 return;
@@ -211,7 +211,7 @@ var require_polyfills = __commonJS({
             });
           };
           fs2.lutimesSync = function(path, at, mt) {
-            var fd = fs2.openSync(path, constants.O_SYMLINK);
+            var fd = fs2.openSync(path, constants2.O_SYMLINK);
             var ret;
             var threw = true;
             try {
@@ -523,8 +523,8 @@ var require_graceful_fs = __commonJS({
       fs2.createReadStream = createReadStream2;
       fs2.createWriteStream = createWriteStream;
       var fs$readFile = fs2.readFile;
-      fs2.readFile = readFile6;
-      function readFile6(path, options, cb) {
+      fs2.readFile = readFile5;
+      function readFile5(path, options, cb) {
         if (typeof options === "function")
           cb = options, options = null;
         return go$readFile(path, options, cb);
@@ -558,8 +558,8 @@ var require_graceful_fs = __commonJS({
       }
       var fs$appendFile = fs2.appendFile;
       if (fs$appendFile)
-        fs2.appendFile = appendFile2;
-      function appendFile2(path, data, options, cb) {
+        fs2.appendFile = appendFile;
+      function appendFile(path, data, options, cb) {
         if (typeof options === "function")
           cb = options, options = null;
         return go$appendFile(path, data, options, cb);
@@ -700,7 +700,7 @@ var require_graceful_fs = __commonJS({
       }
       function ReadStream$open() {
         var that = this;
-        open(that.path, that.flags, that.mode, function(err, fd) {
+        open2(that.path, that.flags, that.mode, function(err, fd) {
           if (err) {
             if (that.autoClose)
               that.destroy();
@@ -720,7 +720,7 @@ var require_graceful_fs = __commonJS({
       }
       function WriteStream$open() {
         var that = this;
-        open(that.path, that.flags, that.mode, function(err, fd) {
+        open2(that.path, that.flags, that.mode, function(err, fd) {
           if (err) {
             that.destroy();
             that.emit("error", err);
@@ -737,8 +737,8 @@ var require_graceful_fs = __commonJS({
         return new fs2.WriteStream(path, options);
       }
       var fs$open = fs2.open;
-      fs2.open = open;
-      function open(path, flags, mode, cb) {
+      fs2.open = open2;
+      function open2(path, flags, mode, cb) {
         if (typeof mode === "function")
           cb = mode, mode = null;
         return go$open(path, flags, mode, cb);
@@ -1236,11 +1236,11 @@ var require_mtime_precision = __commonJS({
     function probe(file, fs, callback) {
       const cachedPrecision = fs[cacheSymbol];
       if (cachedPrecision) {
-        return fs.stat(file, (err, stat5) => {
+        return fs.stat(file, (err, stat4) => {
           if (err) {
             return callback(err);
           }
-          callback(null, stat5.mtime, cachedPrecision);
+          callback(null, stat4.mtime, cachedPrecision);
         });
       }
       const mtime = new Date(Math.ceil(Date.now() / 1e3) * 1e3 + 5);
@@ -1248,13 +1248,13 @@ var require_mtime_precision = __commonJS({
         if (err) {
           return callback(err);
         }
-        fs.stat(file, (err2, stat5) => {
+        fs.stat(file, (err2, stat4) => {
           if (err2) {
             return callback(err2);
           }
-          const precision = stat5.mtime.getTime() % 1e3 === 0 ? "s" : "ms";
+          const precision = stat4.mtime.getTime() % 1e3 === 0 ? "s" : "ms";
           Object.defineProperty(fs, cacheSymbol, { value: precision });
-          callback(null, stat5.mtime, precision);
+          callback(null, stat4.mtime, precision);
         });
       });
     }
@@ -1308,14 +1308,14 @@ var require_lockfile = __commonJS({
         if (options.stale <= 0) {
           return callback(Object.assign(new Error("Lock file is already being held"), { code: "ELOCKED", file }));
         }
-        options.fs.stat(lockfilePath, (err2, stat5) => {
+        options.fs.stat(lockfilePath, (err2, stat4) => {
           if (err2) {
             if (err2.code === "ENOENT") {
               return acquireLock(file, { ...options, stale: 0 }, callback);
             }
             return callback(err2);
           }
-          if (!isLockStale(stat5, options)) {
+          if (!isLockStale(stat4, options)) {
             return callback(Object.assign(new Error("Lock file is already being held"), { code: "ELOCKED", file }));
           }
           removeLock(file, options, (err3) => {
@@ -1327,8 +1327,8 @@ var require_lockfile = __commonJS({
         });
       });
     }
-    function isLockStale(stat5, options) {
-      return stat5.mtime.getTime() < Date.now() - options.stale;
+    function isLockStale(stat4, options) {
+      return stat4.mtime.getTime() < Date.now() - options.stale;
     }
     function removeLock(file, options, callback) {
       options.fs.rmdir(getLockFile(file, options), (err) => {
@@ -1346,7 +1346,7 @@ var require_lockfile = __commonJS({
       lock2.updateDelay = lock2.updateDelay || options.update;
       lock2.updateTimeout = setTimeout(() => {
         lock2.updateTimeout = null;
-        options.fs.stat(lock2.lockfilePath, (err, stat5) => {
+        options.fs.stat(lock2.lockfilePath, (err, stat4) => {
           const isOverThreshold = lock2.lastUpdate + options.stale < Date.now();
           if (err) {
             if (err.code === "ENOENT" || isOverThreshold) {
@@ -1355,7 +1355,7 @@ var require_lockfile = __commonJS({
             lock2.updateDelay = 1e3;
             return updateLock(file, options);
           }
-          const isMtimeOurs = lock2.mtime.getTime() === stat5.mtime.getTime();
+          const isMtimeOurs = lock2.mtime.getTime() === stat4.mtime.getTime();
           if (!isMtimeOurs) {
             return setLockAsCompromised(
               file,
@@ -1480,11 +1480,11 @@ var require_lockfile = __commonJS({
         if (err) {
           return callback(err);
         }
-        options.fs.stat(getLockFile(file2, options), (err2, stat5) => {
+        options.fs.stat(getLockFile(file2, options), (err2, stat4) => {
           if (err2) {
             return err2.code === "ENOENT" ? callback(null, false) : callback(err2);
           }
-          return callback(null, !isLockStale(stat5, options));
+          return callback(null, !isLockStale(stat4, options));
         });
       });
     }
@@ -1576,27 +1576,27 @@ var require_adapter = __commonJS({
 var require_proper_lockfile = __commonJS({
   "node_modules/proper-lockfile/index.js"(exports, module) {
     "use strict";
-    var lockfile2 = require_lockfile();
+    var lockfile3 = require_lockfile();
     var { toPromise, toSync, toSyncOptions } = require_adapter();
     async function lock(file, options) {
-      const release = await toPromise(lockfile2.lock)(file, options);
+      const release = await toPromise(lockfile3.lock)(file, options);
       return toPromise(release);
     }
     function lockSync(file, options) {
-      const release = toSync(lockfile2.lock)(file, toSyncOptions(options));
+      const release = toSync(lockfile3.lock)(file, toSyncOptions(options));
       return toSync(release);
     }
     function unlock(file, options) {
-      return toPromise(lockfile2.unlock)(file, options);
+      return toPromise(lockfile3.unlock)(file, options);
     }
     function unlockSync(file, options) {
-      return toSync(lockfile2.unlock)(file, toSyncOptions(options));
+      return toSync(lockfile3.unlock)(file, toSyncOptions(options));
     }
     function check(file, options) {
-      return toPromise(lockfile2.check)(file, options);
+      return toPromise(lockfile3.check)(file, options);
     }
     function checkSync(file, options) {
-      return toSync(lockfile2.check)(file, toSyncOptions(options));
+      return toSync(lockfile3.check)(file, toSyncOptions(options));
     }
     module.exports = lock;
     module.exports.lock = lock;
@@ -2296,12 +2296,12 @@ async function gitDiff(root, maxChars, allow = () => true, signal) {
   }
   if (refused.size > MAX_DIFF_EXCLUSIONS) return null;
   const pathspecs = [...SAFE_PATHSPECS, ...[...refused].map((path) => `:(exclude,literal)${path}`)];
-  const stat5 = await git(root, ["diff", "HEAD", "-M", "--stat=100", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { signal, ensureAccess });
-  if (stat5 === null || !stat5.trim()) {
+  const stat4 = await git(root, ["diff", "HEAD", "-M", "--stat=100", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { signal, ensureAccess });
+  if (stat4 === null || !stat4.trim()) {
     return null;
   }
   const diff = await git(root, ["diff", "HEAD", "-M", "-U2", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { maxBytes: 4e6, signal, ensureAccess }) ?? "";
-  return { stat: stat5.trim(), diff: diff.length > maxChars ? `${maskedStart(diff, maxChars)}
+  return { stat: stat4.trim(), diff: diff.length > maxChars ? `${maskedStart(diff, maxChars)}
 \u2026(diff truncated)` : redactCode(diff) };
 }
 function maskedStart(text, maxChars) {
@@ -3311,10 +3311,10 @@ function resolveEffortModel(effort, assignment, profiles, catalog) {
   } else if (assignment === "recommended") {
     const preset = RECOMMENDED[effort];
     const normalize = (value) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const matches = catalog?.models.filter((model2) => preset.aliases.some((alias) => alias === normalize(model2.id) || alias === normalize(model2.label))) ?? [];
-    if (matches.length === 0) throw new LlmError(msg("error.copilot_recommended_missing", { model: preset.name }), "invalid_params");
-    if (matches.length !== 1) throw new LlmError(msg("error.copilot_recommended", { model: preset.name }), "invalid_params");
-    profile = { id: "copilot-recommended", name: "GitHub Copilot", preset: "copilot", provider: "copilot", model: matches[0].id, enabled: true };
+    const matches2 = catalog?.models.filter((model2) => preset.aliases.some((alias) => alias === normalize(model2.id) || alias === normalize(model2.label))) ?? [];
+    if (matches2.length === 0) throw new LlmError(msg("error.copilot_recommended_missing", { model: preset.name }), "invalid_params");
+    if (matches2.length !== 1) throw new LlmError(msg("error.copilot_recommended", { model: preset.name }), "invalid_params");
+    profile = { id: "copilot-recommended", name: "GitHub Copilot", preset: "copilot", provider: "copilot", model: matches2[0].id, enabled: true };
   } else {
     const parsed = parseModelAssignment(assignment);
     const selected = parsed?.profileId ? enabled.find((profile2) => profile2.id === parsed.profileId) : parsed ? enabled[0] : void 0;
@@ -3374,9 +3374,12 @@ ${missing.map((image) => `- ${image.path}`).join("\n")}`;
 }
 
 // src/attachments.ts
-import { appendFile, mkdir, readdir as readdir2, readFile as readFile2, rm, stat as stat2 } from "node:fs/promises";
+var import_proper_lockfile = __toESM(require_proper_lockfile(), 1);
+import { lstat, mkdir, open, readdir as readdir2, realpath as realpath2, rename, rmdir, unlink } from "node:fs/promises";
+import { constants } from "node:fs";
+import { createHash, randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
-import { basename as basename2, isAbsolute as isAbsolute2, join as join2, relative as relative2, resolve } from "node:path";
+import { basename as basename2, dirname as dirname2, join as join2, relative as relative2, resolve } from "node:path";
 
 // src/image-limits.ts
 var MAX_IMAGES = 4;
@@ -3396,50 +3399,220 @@ function sizeOver(size, max) {
 var ATTACHMENTS_DIR = join2(tmpdir(), `enhance-prompt-attachments${process.env.NODE_TEST_CONTEXT ? `-test-${process.pid}` : ""}`);
 var TEXT_MAX = 2e4;
 var DAY_MS = 24 * 36e5;
-function safeName(name) {
-  const cleaned = basename2(name).replace(/[^\p{L}\p{N}._ -]+/gu, "_").replace(/^\.+/, "").trim().slice(0, 120);
-  return cleaned || "file";
+var RECEIPT = ".upload.json";
+var bad = () => new LlmError(msg("error.attachment_bad"), "invalid_params");
+var ownerKey = (owner) => {
+  if (!owner) throw bad();
+  return createHash("sha256").update(owner).digest("hex");
+};
+var validId = (id2) => /^[a-z0-9-]{6,40}$/.test(id2);
+async function directory(path) {
+  const info = await lstat(path);
+  if (!info.isDirectory() || info.isSymbolicLink()) throw bad();
+  const expected = join2(await realpath2(tmpdir()), relative2(tmpdir(), path));
+  if (await realpath2(path) !== expected) throw bad();
 }
-async function putChunk(input) {
+async function uploadDirectory(id2) {
+  if (!validId(id2)) throw bad();
+  await directory(ATTACHMENTS_DIR);
+  const dir = join2(ATTACHMENTS_DIR, id2);
+  await directory(dir);
+  return dir;
+}
+async function verifiedFile(path, writable2 = false) {
+  const before = await lstat(path, { bigint: true });
+  const expected = join2(await realpath2(tmpdir()), relative2(tmpdir(), path));
+  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || await realpath2(path) !== expected) throw bad();
+  const file = await open(path, (writable2 ? constants.O_RDWR : constants.O_RDONLY) | (constants.O_NOFOLLOW ?? 0));
+  try {
+    const info = await file.stat({ bigint: true });
+    if (!info.isFile() || info.nlink !== 1n || info.dev !== before.dev || info.ino !== before.ino) throw bad();
+    await directory(dirname2(path));
+    return { file, info };
+  } catch (error) {
+    await file.close();
+    throw error;
+  }
+}
+async function receipt(dir) {
+  const { file, info } = await verifiedFile(join2(dir, RECEIPT));
+  try {
+    if (info.size > 4096) throw bad();
+    const bytes = Buffer.alloc(4097);
+    const { bytesRead } = await file.read(bytes, 0, bytes.length, 0);
+    if (BigInt(bytesRead) !== info.size) throw bad();
+    const value = JSON.parse(bytes.subarray(0, bytesRead).toString("utf8"));
+    if (!value || !/^[a-f0-9]{64}$/.test(value.owner) || typeof value.name !== "string" || value.name !== safeName(value.name) || value.name === RECEIPT || !Number.isSafeInteger(value.next) || !Number.isSafeInteger(value.total) || value.next < 0 || value.next > value.total || value.total < 1 || !Number.isSafeInteger(value.bytes) || value.bytes < 0 || value.bytes > MAX_ATTACHMENT_BYTES || !/^\d{1,40}$/.test(value.dev) || !/^\d{1,40}$/.test(value.ino)) throw bad();
+    return value;
+  } finally {
+    await file.close();
+  }
+}
+async function saveReceipt(dir, value) {
+  await directory(dir);
+  const temporary = join2(dir, `.upload-${randomUUID()}.tmp`);
+  const file = await open(temporary, "wx", 384);
+  try {
+    await file.writeFile(JSON.stringify(value));
+    await file.sync();
+  } finally {
+    await file.close();
+  }
+  try {
+    await directory(dir);
+    await rename(temporary, join2(dir, RECEIPT));
+  } finally {
+    await unlink(temporary).catch(() => {
+    });
+  }
+}
+async function locked(id2, operation) {
+  const dir = await uploadDirectory(id2);
+  const release = await import_proper_lockfile.default.lock(dir, { realpath: false, retries: { retries: 20, minTimeout: 10, maxTimeout: 100 } });
+  try {
+    await uploadDirectory(id2);
+    return await operation(dir);
+  } finally {
+    await release();
+  }
+}
+function pathParts(path) {
+  if (typeof path !== "string" || resolve(path) !== path) throw bad();
+  const parts = relative2(ATTACHMENTS_DIR, path).split(/[\\/]/);
+  if (parts.length !== 2 || !validId(parts[0]) || parts[1] !== safeName(parts[1]) || parts[1] === RECEIPT) throw bad();
+  return { id: parts[0], name: parts[1] };
+}
+function matches(info, upload) {
+  return info.dev.toString() === upload.dev && info.ino.toString() === upload.ino && info.size === BigInt(upload.bytes);
+}
+function safeName(name) {
+  const cleaned = basename2(name).replace(/[^\p{L}\p{N}._ -]+/gu, "_").replace(/^[. ]+/, "").trim().slice(0, 120).trim();
+  return cleaned === RECEIPT || cleaned.startsWith(".upload-") ? `file-${cleaned}` : cleaned || "file";
+}
+async function putChunk(input, owner) {
+  const key = ownerKey(owner);
   if (!/^[a-z0-9-]{6,40}$/.test(input.id)) throw new LlmError(msg("error.attachment_bad"), "invalid_params");
   if (typeof input.data !== "string" || input.data.length > MAX_CHUNK_BASE64) throw new LlmError(msg("error.attachment_bad"), "invalid_params");
   if (input.index === 0 && typeof input.size === "number" && input.size > MAX_ATTACHMENT_BYTES) {
     throw new LlmError(msg("error.file_too_large", { name: safeName(input.name), size: sizeOver(input.size, MAX_ATTACHMENT_BYTES), max: megabytes(MAX_ATTACHMENT_BYTES) }), "too_large");
   }
-  if (!Number.isInteger(input.index) || !Number.isInteger(input.total) || input.index < 0 || input.index >= input.total) {
+  if (!Number.isSafeInteger(input.index) || !Number.isSafeInteger(input.total) || input.index < 0 || input.index >= input.total) {
     throw new LlmError(msg("error.attachment_bad"), "invalid_params");
   }
   const dir = join2(ATTACHMENTS_DIR, input.id);
   const path = join2(dir, safeName(input.name));
-  if (input.index === 0) {
-    await rm(dir, { recursive: true, force: true });
-    await mkdir(dir, { recursive: true });
-  }
   const bytes = Buffer.from(input.data, "base64");
-  const written = await stat2(path).then((info) => info.size).catch(() => null);
-  if (input.index > 0 && written === null) throw new LlmError(msg("error.attachment_bad"), "invalid_params");
-  const before = written ?? 0;
-  if (before + bytes.length > MAX_ATTACHMENT_BYTES) {
-    await rm(dir, { recursive: true, force: true });
-    throw new LlmError(msg("error.file_too_large", { name: safeName(input.name), size: sizeOver(before + bytes.length, MAX_ATTACHMENT_BYTES), max: megabytes(MAX_ATTACHMENT_BYTES) }), "too_large");
+  if (bytes.toString("base64") !== input.data || input.size !== void 0 && (!Number.isSafeInteger(input.size) || input.size < 0)) throw bad();
+  if (input.index === 0) {
+    await mkdir(ATTACHMENTS_DIR, { recursive: true, mode: 448 });
+    await directory(ATTACHMENTS_DIR);
+    try {
+      await mkdir(dir, { mode: 448 });
+    } catch {
+      throw bad();
+    }
+    await uploadDirectory(input.id);
+    const file = await open(path, "wx", 384);
+    try {
+      const info = await file.stat({ bigint: true });
+      await saveReceipt(dir, {
+        owner: key,
+        name: safeName(input.name),
+        next: 0,
+        total: input.total,
+        bytes: 0,
+        ...input.size !== void 0 ? { size: input.size } : {},
+        dev: info.dev.toString(),
+        ino: info.ino.toString()
+      });
+    } finally {
+      await file.close();
+    }
   }
-  await appendFile(path, bytes);
-  if (input.index < input.total - 1) return { received: before + bytes.length };
-  return { path, bytes: before + bytes.length };
+  return locked(input.id, async (dir2) => {
+    const upload = await receipt(dir2);
+    if (upload.owner !== key || upload.name !== safeName(input.name) || upload.total !== input.total || upload.next !== input.index) throw bad();
+    const after = upload.bytes + bytes.length;
+    if (after > MAX_ATTACHMENT_BYTES) throw new LlmError(msg("error.file_too_large", { name: upload.name, size: sizeOver(after, MAX_ATTACHMENT_BYTES), max: megabytes(MAX_ATTACHMENT_BYTES) }), "too_large");
+    if (upload.size !== void 0 && (after > upload.size || input.index === input.total - 1 && after !== upload.size)) throw bad();
+    const { file, info } = await verifiedFile(path, true);
+    try {
+      if (!matches(info, upload)) throw bad();
+      let written = 0;
+      while (written < bytes.length) {
+        const result = await file.write(bytes, written, bytes.length - written, upload.bytes + written);
+        if (!result.bytesWritten) throw bad();
+        written += result.bytesWritten;
+      }
+      await file.sync();
+    } finally {
+      await file.close();
+    }
+    await saveReceipt(dir2, { ...upload, next: input.index + 1, bytes: after });
+    return input.index < input.total - 1 ? { received: after } : { path, bytes: after };
+  }).catch((error) => {
+    if (error instanceof LlmError) throw error;
+    throw bad();
+  });
 }
 async function cleanAttachments(now = Date.now()) {
+  try {
+    await directory(ATTACHMENTS_DIR);
+  } catch {
+    return;
+  }
   const entries = await readdir2(ATTACHMENTS_DIR).catch(() => []);
   for (const entry of entries) {
-    const info = await stat2(join2(ATTACHMENTS_DIR, entry)).catch(() => null);
-    if (info && now - info.mtimeMs > DAY_MS) await rm(join2(ATTACHMENTS_DIR, entry), { recursive: true, force: true }).catch(() => void 0);
+    if (!validId(entry)) continue;
+    const removed = await locked(entry, async (dir) => {
+      const info = await lstat(dir);
+      if (now - info.mtimeMs <= DAY_MS) return false;
+      await removeOwned(dir);
+      return true;
+    }).catch(() => false);
+    if (removed) await rmdir(join2(ATTACHMENTS_DIR, entry)).catch(() => {
+    });
   }
 }
-async function clearAttachments() {
-  await rm(ATTACHMENTS_DIR, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+async function removeOwned(dir) {
+  const upload = await receipt(dir);
+  const path = join2(dir, upload.name);
+  const { file, info } = await verifiedFile(path);
+  try {
+    if (info.dev.toString() !== upload.dev || info.ino.toString() !== upload.ino) throw bad();
+  } finally {
+    await file.close();
+  }
+  await uploadDirectory(basename2(dir));
+  await unlink(path);
+  await unlink(join2(dir, RECEIPT));
 }
-function isAttachment(path) {
-  const inside = relative2(ATTACHMENTS_DIR, resolve(path));
-  return inside !== "" && !inside.startsWith("..") && !isAbsolute2(inside);
+async function clearAttachments() {
+  await cleanAttachments(Number.MAX_SAFE_INTEGER);
+  try {
+    await directory(ATTACHMENTS_DIR);
+    await rmdir(ATTACHMENTS_DIR);
+  } catch {
+  }
+}
+async function restoreAttachments(paths, owner) {
+  const key = ownerKey(owner);
+  for (const path of paths) {
+    try {
+      const { id: id2, name } = pathParts(path);
+      await locked(id2, async (dir) => {
+        if (await lstat(join2(dir, RECEIPT)).catch(() => null)) return;
+        const { file, info } = await verifiedFile(path);
+        try {
+          if (info.size > MAX_ATTACHMENT_BYTES) throw bad();
+          await saveReceipt(dir, { owner: key, name, next: 1, total: 1, bytes: Number(info.size), dev: info.dev.toString(), ino: info.ino.toString() });
+        } finally {
+          await file.close();
+        }
+      });
+    } catch {
+    }
+  }
 }
 function excerpt(text, max = TEXT_MAX) {
   if (text.length <= max) return { text, cut: 0 };
@@ -3457,20 +3630,38 @@ function excerpt(text, max = TEXT_MAX) {
 \u2026(${cut.toLocaleString("en-US")} characters left out)\u2026
 ${tail}`, cut };
 }
-async function loadFiles(paths) {
+async function loadFiles(paths, owner) {
+  const key = ownerKey(owner);
   const out = { images: [], texts: [], paths: [] };
   for (const path of paths) {
-    if (!isAttachment(path)) throw new LlmError(msg("error.attachment_bad"), "invalid_params");
-    const info = await stat2(path).catch(() => null);
-    if (!info || !info.isFile()) throw new LlmError(msg("error.attachment_missing", { name: basename2(path) }), "invalid_params");
-    if (info.size > MAX_ATTACHMENT_BYTES) {
-      throw new LlmError(msg("error.file_too_large", { name: basename2(path), size: sizeOver(info.size, MAX_ATTACHMENT_BYTES), max: megabytes(MAX_ATTACHMENT_BYTES) }), "too_large");
-    }
-    const bytes = await readFile2(path);
+    const { id: id2, name } = pathParts(path);
+    const bytes = await locked(id2, async (dir) => {
+      const upload = await receipt(dir);
+      if (upload.owner !== key || upload.name !== name || upload.next !== upload.total) throw bad();
+      const { file, info } = await verifiedFile(path);
+      try {
+        if (!matches(info, upload)) throw bad();
+        const buffer = Buffer.alloc(Number(info.size) + 1);
+        let used = 0;
+        while (used < buffer.length) {
+          const result = await file.read(buffer, used, buffer.length - used, used);
+          if (!result.bytesRead) break;
+          used += result.bytesRead;
+        }
+        if (BigInt(used) !== info.size) throw bad();
+        return buffer.subarray(0, used);
+      } finally {
+        await file.close();
+      }
+    }).catch((error) => {
+      if (error.code === "ENOENT") throw new LlmError(msg("error.attachment_missing", { name }), "invalid_params");
+      if (error instanceof LlmError) throw error;
+      throw bad();
+    });
     out.paths.push(path);
     const type = sniffImage(bytes.subarray(0, 16));
-    if (type && info.size <= MAX_IMAGE_BYTES && out.images.length < MAX_IMAGES) {
-      out.images.push({ path, name: basename2(path), bytes: info.size, type, base64: bytes.toString("base64") });
+    if (type && bytes.length <= MAX_IMAGE_BYTES && out.images.length < MAX_IMAGES) {
+      out.images.push({ path, name: basename2(path), bytes: bytes.length, type, base64: bytes.toString("base64") });
       continue;
     }
     if (type || bytes.includes(0)) continue;
@@ -4149,6 +4340,24 @@ var RUN_LIMITS = { budgetMs: PANEL_REQUEST_LIMIT_MS - 5e3, pickerMs: 25e3, slice
 var str3 = (value, fallback = "") => typeof value === "string" ? value : fallback;
 var num = (value, fallback) => typeof value === "number" && Number.isFinite(value) ? value : fallback;
 var bool = (value, fallback) => typeof value === "boolean" ? value : fallback;
+var attachmentRestores = /* @__PURE__ */ new WeakMap();
+function restoreSavedAttachments(host) {
+  let pending = attachmentRestores.get(host);
+  if (!pending) {
+    pending = (async () => {
+      const saved = await host.storage.get("panel:files");
+      const parked = await host.storage.get("panel:parked");
+      const lists = [saved];
+      if (parked && typeof parked === "object" && !Array.isArray(parked)) {
+        for (const slot of Object.values(parked)) if (slot && typeof slot === "object" && !Array.isArray(slot)) lists.push(slot.files);
+      }
+      const paths = lists.flatMap((list) => Array.isArray(list) ? list.flatMap((file) => file && typeof file === "object" && !Array.isArray(file) && typeof file.path === "string" ? [file.path] : []) : []);
+      await restoreAttachments(paths, host.attachmentOwner);
+    })();
+    attachmentRestores.set(host, pending);
+  }
+  return pending;
+}
 var extraFiles = (value) => str3(value).split("\n").map((line) => line.trim().replace(/\\/g, "/").replace(/^\.\//, "")).filter((line) => line && !line.startsWith("/") && !line.includes("..")).slice(0, 10);
 async function readSettings(host) {
   const [all, consents] = await Promise.all([host.settings.get(), host.storage.get(CONSENTS_KEY).catch(() => null)]);
@@ -4368,7 +4577,8 @@ async function enhance(host, input, signal, progress, budgetMs) {
     rules: own.rules,
     structure: structureById(own.config, input.structureId)
   }, settings.useEnhancedPrompts);
-  const files = await loadFiles((input.files ?? []).filter((path) => typeof path === "string" && path.trim())).catch((error) => {
+  await restoreSavedAttachments(host);
+  const files = await loadFiles((input.files ?? []).filter((path) => typeof path === "string" && path.trim()), host.attachmentOwner).catch((error) => {
     if (error instanceof LlmError) throw hostError(error.text, error.code);
     throw error;
   });
@@ -4605,11 +4815,13 @@ function registerRunHandlers(host) {
     return { accepted: result.accepted };
   });
   host.panels.handle("prompt.copy", async ({ text }) => copyToClipboard(text));
-  void cleanAttachments();
+  void restoreSavedAttachments(host).then(() => cleanAttachments()).catch(() => {
+  });
   host.panels.handle("attachments.put", async (input) => {
     if (input.index === 0) void cleanAttachments();
     try {
-      return await putChunk(input);
+      await restoreSavedAttachments(host);
+      return await putChunk(input, host.attachmentOwner);
     } catch (error) {
       if (error instanceof LlmError) throw hostError(error.text, error.code);
       throw error;
@@ -4886,24 +5098,24 @@ function activate(host) {
 import { join as join8 } from "node:path";
 
 // src/copilot/storage.ts
-var import_proper_lockfile = __toESM(require_proper_lockfile(), 1);
+var import_proper_lockfile2 = __toESM(require_proper_lockfile(), 1);
 import { AsyncLocalStorage } from "node:async_hooks";
 import { EventEmitter } from "node:events";
-import { mkdir as mkdir2, readFile as readFile3, rename, writeFile } from "node:fs/promises";
+import { mkdir as mkdir2, readFile as readFile2, rename as rename2, writeFile } from "node:fs/promises";
 import { watchFile, unwatchFile } from "node:fs";
 import { join as join3, resolve as resolve2 } from "node:path";
-import { randomUUID } from "node:crypto";
+import { randomUUID as randomUUID2 } from "node:crypto";
 var held = new AsyncLocalStorage();
 var buses = /* @__PURE__ */ new Map();
-function persistentStore(directory) {
-  const root = resolve2(directory);
+function persistentStore(directory2) {
+  const root = resolve2(directory2);
   const file = join3(root, "state.json");
   const bus = buses.get(root) ?? new EventEmitter();
   bus.setMaxListeners(100);
   buses.set(root, bus);
   const read = async () => {
     try {
-      const value = JSON.parse(await readFile3(file, "utf8"));
+      const value = JSON.parse(await readFile2(file, "utf8"));
       if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid Enhance Prompt storage.");
       return value;
     } catch (error) {
@@ -4914,7 +5126,7 @@ function persistentStore(directory) {
   const transaction = async (fn) => {
     if (held.getStore()?.has(root)) return fn();
     await mkdir2(root, { recursive: true, mode: 448 });
-    const release = await import_proper_lockfile.default.lock(root, { realpath: false, stale: 3e4, retries: { retries: 80, minTimeout: 20, maxTimeout: 250, factor: 1.2 } });
+    const release = await import_proper_lockfile2.default.lock(root, { realpath: false, stale: 3e4, retries: { retries: 80, minTimeout: 20, maxTimeout: 250, factor: 1.2 } });
     try {
       return await held.run(/* @__PURE__ */ new Set([...held.getStore() ?? [], root]), fn);
     } finally {
@@ -4926,9 +5138,9 @@ function persistentStore(directory) {
     const data = await read();
     if (value === void 0) delete data[key];
     else data[key] = value;
-    const temporary = `${file}.${randomUUID()}.tmp`;
+    const temporary = `${file}.${randomUUID2()}.tmp`;
     await writeFile(temporary, JSON.stringify(data), { encoding: "utf8", mode: 384 });
-    await rename(temporary, file);
+    await rename2(temporary, file);
     bus.emit("change", { key });
   });
   return {
@@ -4967,9 +5179,9 @@ function persistentStore(directory) {
 }
 
 // src/copilot/update-installation.ts
-import { readFile as readFile4, realpath as realpath2, stat as stat3 } from "node:fs/promises";
-import { basename as basename3, dirname as dirname2, join as join4 } from "node:path";
-import { createHash } from "node:crypto";
+import { readFile as readFile3, realpath as realpath3, stat as stat2 } from "node:fs/promises";
+import { basename as basename3, dirname as dirname3, join as join4 } from "node:path";
+import { createHash as createHash2 } from "node:crypto";
 
 // src/updates/version.ts
 function versionParts(value) {
@@ -5134,27 +5346,27 @@ function parseCommentedJson(text) {
   return JSON.parse(out.replace(/^\uFEFF/, ""));
 }
 async function json(file) {
-  if ((await stat3(file)).size > 2e6) throw new Error("Metadata too large");
-  return parseCommentedJson(await readFile4(file, "utf8"));
+  if ((await stat2(file)).size > 2e6) throw new Error("Metadata too large");
+  return parseCommentedJson(await readFile3(file, "utf8"));
 }
-var installationKey = (root) => createHash("sha256").update(process.platform === "win32" ? root.toLowerCase() : root).digest("hex");
+var installationKey = (root) => createHash2("sha256").update(process.platform === "win32" ? root.toLowerCase() : root).digest("hex");
 function installationReader(session2, packageRoot2, name = "enhance-prompt") {
   return async () => {
     const scope = installationKey(packageRoot2);
     const unsupported = (reason, installed) => ({ scope, installed, canUpdate: false, reason });
     if (!session2.rpc.plugins?.list) return unsupported("This Copilot runtime does not expose plugin inventory. Update through Customize \u2192 Installed.");
     try {
-      const root = await realpath2(packageRoot2);
-      const cache = dirname2(dirname2(root));
+      const root = await realpath3(packageRoot2);
+      const cache = dirname3(dirname3(root));
       const disk = await json(join4(root, "plugin.json"));
       if (basename3(cache) !== "installed-plugins" || root.startsWith("\\\\") || disk.name !== name) return unsupported("This is a local or development installation. Update its source files and start a new Copilot session.", disk.version);
-      const home = dirname2(cache);
+      const home = dirname3(cache);
       const records = (await json(join4(home, "config.json"))).installedPlugins;
       if (!Array.isArray(records)) return unsupported("Copilot installation provenance is unavailable.", disk.version);
-      const matches = [];
-      for (const row of records) if (row?.name === name && typeof row.cache_path === "string" && await realpath2(row.cache_path).catch(() => "") === root) matches.push(row);
-      if (matches.length !== 1) return unsupported("This package cannot be matched uniquely to Copilot\u2019s installation records.", disk.version);
-      const record = matches[0];
+      const matches2 = [];
+      for (const row of records) if (row?.name === name && typeof row.cache_path === "string" && await realpath3(row.cache_path).catch(() => "") === root) matches2.push(row);
+      if (matches2.length !== 1) return unsupported("This package cannot be matched uniquely to Copilot\u2019s installation records.", disk.version);
+      const record = matches2[0];
       const inventory = await session2.rpc.plugins.list();
       const eligible2 = inventory.plugins.filter((p) => p.name === name && (record.marketplace ? p.marketplace === record.marketplace : !p.marketplace));
       if (!record.marketplace && inventory.plugins.filter((p) => p.name === name).length !== 1) return unsupported("Another installation shares this plugin name. Manage updates in Copilot.", disk.version);
@@ -5188,7 +5400,7 @@ function installationReader(session2, packageRoot2, name = "enhance-prompt") {
 }
 
 // src/updates/service.ts
-import { randomUUID as randomUUID2 } from "node:crypto";
+import { randomUUID as randomUUID3 } from "node:crypto";
 var DAY = 864e5;
 var RELOAD_MESSAGE = "Update installed. Restart Copilot, then reopen this session and Enhance Prompt to keep your saved draft. A new session also loads the update; reopening only this tab does not.";
 var alive = (pid) => {
@@ -5260,7 +5472,7 @@ function createUpdates(options) {
     const previous = await get();
     const installation = await inspect();
     await reconcile(installation);
-    const id2 = randomUUID2();
+    const id2 = randomUUID3();
     const reserved = await mutate(async (state2) => {
       const changedSource = previous.scope !== void 0 && previous.scope !== installation.scope;
       const sharedResult = !changedSource && state2.completedCheck !== previous.completedCheck || state2.checkedAt !== void 0 && now() - state2.checkedAt < 5e3;
@@ -5328,7 +5540,7 @@ function createUpdates(options) {
     if (!installation.canUpdate || !installation.target || !installation.source) throw new UpdateError(installation.reason ?? "Updating is unavailable for this installation.");
     if (compareVersions(installation.installed, options.running) === -1) throw new UpdateError("The installed version is older than this canvas. Review the installation in Copilot before updating.");
     const available = await deadline(options.metadata(installation), 6e4);
-    const pending = { id: randomUUID2(), pid, started: now(), version: available.version };
+    const pending = { id: randomUUID3(), pid, started: now(), version: available.version };
     const reserved = await mutate(async (state2) => {
       if (state2.pending) return false;
       if (state2.scope !== installation.scope) throw new UpdateError("The installation source changed. Check for updates again.");
@@ -5378,7 +5590,7 @@ function createUpdates(options) {
       return state();
     },
     async withWork(run2) {
-      const id2 = randomUUID2();
+      const id2 = randomUUID3();
       await mutate(async (state2) => {
         if (state2.pending) throw new UpdateError("An update is in progress. Wait for verification before starting more plugin work.");
         state2.work = Object.fromEntries(Object.entries(state2.work ?? {}).filter(([, owner]) => isAlive(owner)));
@@ -5409,7 +5621,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.2";
+var VERSION = "0.12.3";
 
 // src/worker-host.ts
 import { EventEmitter as EventEmitter2 } from "node:events";
@@ -5697,7 +5909,7 @@ function createWorkerHost(services2, log = (_message) => {
 // src/copilot/services.ts
 import { homedir } from "node:os";
 import { join as join5 } from "node:path";
-import { createHash as createHash2 } from "node:crypto";
+import { createHash as createHash3 } from "node:crypto";
 
 // src/defaults.ts
 var DEFAULTS = {
@@ -5742,8 +5954,8 @@ function isChatTextSize(value) {
 }
 
 // src/copilot/session.ts
-import { basename as basename4, isAbsolute as isAbsolute3 } from "node:path";
-import { realpath as realpath3, stat as stat4 } from "node:fs/promises";
+import { basename as basename4, isAbsolute as isAbsolute2 } from "node:path";
+import { realpath as realpath4, stat as stat3 } from "node:fs/promises";
 var unavailable = (message) => Object.assign(new Error(message), { code: "unavailable" });
 async function bounded(request) {
   let timer;
@@ -5761,9 +5973,9 @@ function sessionAdapter(session2) {
   const project2 = async () => {
     try {
       const info = await bounded(session2.rpc.metadata.snapshot());
-      if (!info || info.isRemote !== false || typeof info.workingDirectory !== "string" || !isAbsolute3(info.workingDirectory)) return null;
-      const path = await realpath3(info.workingDirectory);
-      if (!(await stat4(path)).isDirectory()) return null;
+      if (!info || info.isRemote !== false || typeof info.workingDirectory !== "string" || !isAbsolute2(info.workingDirectory)) return null;
+      const path = await realpath4(info.workingDirectory);
+      if (!(await stat3(path)).isDirectory()) return null;
       return { id: `copilot::${path}`, path, name: basename4(path) };
     } catch {
       return null;
@@ -5828,11 +6040,11 @@ function sessionAdapter(session2) {
 var UNSUPPORTED_SETTINGS = /* @__PURE__ */ new Set(["allowTerminalRead", "allowOtherAgents", "allowAgentActivity", "allowEditorSaves", "allowOpenFiles"]);
 
 // src/copilot/services.ts
-function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DIR || join5(process.env.LOCALAPPDATA || join5(homedir(), ".local", "share"), "copilot-enhance-prompt"), copilot2) {
-  const data = persistentStore(join5(directory, "data"));
-  const prefs = persistentStore(join5(directory, "preferences"));
-  const retiredCredentials = persistentStore(join5(directory, "credentials"));
-  const scope = createHash2("sha256").update(session2.sessionId).digest("hex").slice(0, 24);
+function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_DIR || join5(process.env.LOCALAPPDATA || join5(homedir(), ".local", "share"), "copilot-enhance-prompt"), copilot2) {
+  const data = persistentStore(join5(directory2, "data"));
+  const prefs = persistentStore(join5(directory2, "preferences"));
+  const retiredCredentials = persistentStore(join5(directory2, "credentials"));
+  const scope = createHash3("sha256").update(session2.sessionId).digest("hex").slice(0, 24);
   let migration;
   const prepare = () => migration ??= (async () => {
     await prefs.transaction(async () => {
@@ -5929,13 +6141,13 @@ function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DI
     has: (name) => Boolean(copilot2) && ["copilot.catalog", "copilot.rewrite"].includes(name) || adapter.has(name),
     call: async (name, input, options) => name === "copilot.catalog" && copilot2 ? await copilot2.catalog() : name === "copilot.rewrite" && copilot2 ? { text: await copilot2.rewrite(input, options?.signal, options?.ensureAccess) } : adapter.call(name, input, options)
   };
-  return { storage, settings, host, adapter, directory, data };
+  return { storage, settings, host, adapter, directory: directory2, data, attachmentOwner: `${directory2}\0${session2.sessionId}` };
 }
 
 // src/copilot/server.ts
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
-import { readFile as readFile5, realpath as realpath4 } from "node:fs/promises";
+import { readFile as readFile4, realpath as realpath5 } from "node:fs/promises";
 import { extname, resolve as resolve3, sep as sep2 } from "node:path";
 var LIMIT = 25e5;
 var MODEL_WRITES = /* @__PURE__ */ new Set(["models.save", "models.delete", "models.move", "models.roles", "consent.set", "rules.save"]);
@@ -5965,7 +6177,7 @@ async function createCanvasServer(options) {
   const { worker: worker2 } = options;
   const canvases = /* @__PURE__ */ new Map();
   let origin = "";
-  const assets = await realpath4(options.assets);
+  const assets = await realpath5(options.assets);
   const json2 = (res, status, value) => {
     res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
     res.end(JSON.stringify(value ?? null));
@@ -6086,7 +6298,7 @@ async function createCanvasServer(options) {
         json2(res, 404, { error: "Not found" });
         return;
       }
-      const file = await realpath4(resolve3(assets, route || "index.html")).catch(() => "");
+      const file = await realpath5(resolve3(assets, route || "index.html")).catch(() => "");
       if (!file.startsWith(assets + sep2)) {
         json2(res, 404, { error: "Not found" });
         return;
@@ -6097,7 +6309,7 @@ async function createCanvasServer(options) {
         return;
       }
       res.writeHead(200, { "content-type": mime[extname(file)] });
-      res.end(await readFile5(file));
+      res.end(await readFile4(file));
     } catch (error) {
       if (!res.destroyed && !res.headersSent) json2(res, error.status ?? 400, { error: { message: error instanceof Error ? error.message : "Canvas request failed.", code: error?.code ?? "request_failed" } });
     }
@@ -6136,16 +6348,16 @@ async function createCanvasServer(options) {
 }
 
 // src/copilot/models.ts
-import { mkdtemp, mkdir as mkdir4, realpath as realpath5, rm as rm2 } from "node:fs/promises";
-import { basename as basename5, isAbsolute as isAbsolute4, join as join7, relative as relative3 } from "node:path";
+import { mkdtemp, mkdir as mkdir4, realpath as realpath6, rm } from "node:fs/promises";
+import { basename as basename5, isAbsolute as isAbsolute3, join as join7, relative as relative3 } from "node:path";
 import { tmpdir as tmpdir2 } from "node:os";
-import { randomUUID as randomUUID4 } from "node:crypto";
+import { randomUUID as randomUUID5 } from "node:crypto";
 
 // src/copilot/usage.ts
-import { randomUUID as randomUUID3 } from "node:crypto";
+import { randomUUID as randomUUID4 } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { homedir as homedir2 } from "node:os";
-import { mkdir as mkdir3, rename as rename2, writeFile as writeFile2 } from "node:fs/promises";
+import { mkdir as mkdir3, rename as rename3, writeFile as writeFile2 } from "node:fs/promises";
 import { join as join6 } from "node:path";
 import { StringDecoder } from "node:string_decoder";
 var uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -6245,22 +6457,22 @@ async function reconcileUsageJournal(path, recorder) {
   await recorder.flush();
 }
 async function replace(file, content) {
-  const temporary = `${file}.${randomUUID3()}.tmp`;
+  const temporary = `${file}.${randomUUID4()}.tmp`;
   await writeFile2(temporary, content, { encoding: "utf8", mode: 384 });
-  await rename2(temporary, file);
+  await rename3(temporary, file);
 }
 function usageHome() {
   return join6(process.env.ENHANCE_PROMPT_DATA_DIR || join6(process.env.LOCALAPPDATA || join6(homedir2(), ".local", "share"), "copilot-enhance-prompt"), "usage");
 }
 async function createUsageRecorder(sessionId, root = usageHome()) {
   if (!uuid.test(sessionId)) throw new Error("Invalid usage session ID.");
-  const directory = join6(root, "session-state", sessionId);
-  const file = join6(directory, "events.jsonl");
+  const directory2 = join6(root, "session-state", sessionId);
+  const file = join6(directory2, "events.jsonl");
   const started = (/* @__PURE__ */ new Date()).toISOString();
   await mkdir3(join6(root, "session-state"), { recursive: true, mode: 448 });
-  await mkdir3(directory, { mode: 448 });
-  await replace(join6(directory, "workspace.yaml"), JSON.stringify({ id: sessionId, name: `Enhanced Prompt \xB7 ${started}` }) + "\n");
-  let lines = JSON.stringify({ type: "session.start", id: randomUUID3(), timestamp: started, data: { sessionId, context: { repository: "Enhanced Prompt" } } }) + "\n";
+  await mkdir3(directory2, { mode: 448 });
+  await replace(join6(directory2, "workspace.yaml"), JSON.stringify({ id: sessionId, name: `Enhanced Prompt \xB7 ${started}` }) + "\n");
+  let lines = JSON.stringify({ type: "session.start", id: randomUUID4(), timestamp: started, data: { sessionId, context: { repository: "Enhanced Prompt" } } }) + "\n";
   await replace(file, lines);
   const seen = /* @__PURE__ */ new Set();
   let pending = Promise.resolve();
@@ -6268,21 +6480,21 @@ async function createUsageRecorder(sessionId, root = usageHome()) {
   return {
     record(event) {
       if (failure) return;
-      let receipt;
+      let receipt2;
       try {
-        receipt = project(event, sessionId);
+        receipt2 = project(event, sessionId);
       } catch {
         failure = true;
         return;
       }
-      if (!receipt) return;
-      const usage = object(object(receipt.data)?.usage);
+      if (!receipt2) return;
+      const usage = object(object(receipt2.data)?.usage);
       const accounting = object(usage?.accounting);
-      const key = accounting ? `${sessionId}:${accounting.usageId}` : `event:${receipt.id}`;
+      const key = accounting ? `${sessionId}:${accounting.usageId}` : `event:${receipt2.id}`;
       if (seen.has(key)) return;
       seen.add(key);
       pending = pending.then(async () => {
-        const next = lines + JSON.stringify(receipt) + "\n";
+        const next = lines + JSON.stringify(receipt2) + "\n";
         await replace(file, next);
         lines = next;
       }).catch(() => {
@@ -6302,9 +6514,9 @@ var cancelled = () => new LlmError(msg("error.cancelled"), "cancelled");
 var usageFailed = () => new LlmError(msg("error.copilot_usage"), "action_failed");
 function hostRuntime(executable = process.execPath, argv = process.argv, parentPid = process.ppid, environment = process.env, probe) {
   const checks = {
-    executableAllowed: isAbsolute4(executable) && ["copilot.exe", "copilot", "copilot-runtime.exe", "copilot-runtime"].includes(basename5(executable).toLowerCase()),
+    executableAllowed: isAbsolute3(executable) && ["copilot.exe", "copilot", "copilot-runtime.exe", "copilot-runtime"].includes(basename5(executable).toLowerCase()),
     // The packaged desktop uses a built-in entry name; SDK launches can use the preload's absolute path.
-    bootstrapPresent: argv.some((arg) => arg === "extension_bootstrap.mjs" || isAbsolute4(arg) && basename5(arg) === "extension_bootstrap.mjs"),
+    bootstrapPresent: argv.some((arg) => arg === "extension_bootstrap.mjs" || isAbsolute3(arg) && basename5(arg) === "extension_bootstrap.mjs"),
     sdkPathPresent: Boolean(environment.COPILOT_SDK_PATH),
     parentMatches: Number.isSafeInteger(parentPid) && parentPid > 0 && String(parentPid) === environment.COPILOT_EXTENSION_PARENT_PID
   };
@@ -6324,7 +6536,7 @@ async function desktopRuntime(probe) {
     probe?.stage("runtime_identity");
     const executable = hostRuntime(void 0, void 0, void 0, void 0, probe);
     probe?.stage("runtime_path");
-    const path = await realpath5(executable);
+    const path = await realpath6(executable);
     probe?.check("runtimePathResolved", true);
     loadingSdk = true;
     probe?.stage("sdk_import");
@@ -6415,10 +6627,10 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
     signal?.addEventListener("abort", abort, { once: true });
     const timeout = setTimeout(abort, 18e4);
     let client;
-    let directory;
+    let directory2;
     let stop2;
     let usage;
-    const sessionId = randomUUID4();
+    const sessionId = randomUUID5();
     const stopClient = () => {
       if (client) stop2 ??= withDeadline(client.forceStop(), 1e4).then(() => true, () => false);
       return stop2;
@@ -6448,14 +6660,14 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
         checkReasoning(requested, input.reasoningEffort);
         check();
       }
-      directory = await mkdtemp(join7(tmpdir2(), "enhance-copilot-"));
-      const workspace = join7(directory, "workspace");
+      directory2 = await mkdtemp(join7(tmpdir2(), "enhance-copilot-"));
+      const workspace = join7(directory2, "workspace");
       await mkdir4(workspace);
       check();
       client = new sdk.CopilotClient({
         mode: "empty",
         workingDirectory: workspace,
-        baseDirectory: join7(directory, "home"),
+        baseDirectory: join7(directory2, "home"),
         connection: sdk.RuntimeConnection.forStdio({ path, args: ["--no-auto-update"] }),
         env: runtimeEnvironment(),
         useLoggedInUser: true,
@@ -6479,7 +6691,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
         sessionId,
         onEvent: (event) => usage.record(event),
         workingDirectory: workspace,
-        configDirectory: join7(directory, "home"),
+        configDirectory: join7(directory2, "home"),
         model: input.model,
         ...input.reasoningEffort !== void 0 ? { reasoningEffort: input.reasoningEffort } : {},
         systemMessage: { mode: "replace", content: input.system },
@@ -6525,7 +6737,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       checkReasoning(parentModel, input.reasoningEffort);
       checkReasoning(model, input.reasoningEffort);
       stage("copilot.workspace");
-      if (metadata.isRemote !== false || await realpath5(metadata.workingDirectory) !== await realpath5(workspace)) throw unavailable2();
+      if (metadata.isRemote !== false || await realpath6(metadata.workingDirectory) !== await realpath6(workspace)) throw unavailable2();
       stage("copilot.tools");
       await withDeadline(session2.rpc.tools.initializeAndValidate(), 15e3);
       const [tools, selected] = await withDeadline(Promise.all([session2.rpc.tools.getCurrentMetadata(), session2.rpc.model.getCurrent()]), 15e3);
@@ -6563,7 +6775,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       if (usage) {
         stage("copilot.usage");
         try {
-          if (stopped !== false && directory) await reconcileUsageJournal(join7(directory, "home", "session-state", sessionId, "events.jsonl"), usage);
+          if (stopped !== false && directory2) await reconcileUsageJournal(join7(directory2, "home", "session-state", sessionId, "events.jsonl"), usage);
           await usage.flush();
         } catch {
           diagnostics2?.record(phase, "failed", diagnosticError(usageFailed()));
@@ -6576,10 +6788,10 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
         diagnostics2?.record(phase, "failed");
         throw unavailable2();
       }
-      if (directory) {
-        const inside = relative3(tmpdir2(), directory);
-        if (inside && !isAbsolute4(inside) && !inside.startsWith("..") && basename5(directory).startsWith("enhance-copilot-")) {
-          await rm2(directory, { recursive: true, force: true, maxRetries: 3 }).catch(() => {
+      if (directory2) {
+        const inside = relative3(tmpdir2(), directory2);
+        if (inside && !isAbsolute3(inside) && !inside.startsWith("..") && basename5(directory2).startsWith("enhance-copilot-")) {
+          await rm(directory2, { recursive: true, force: true, maxRetries: 3 }).catch(() => {
             diagnostics2?.record(phase, "failed");
             throw unavailable2();
           });

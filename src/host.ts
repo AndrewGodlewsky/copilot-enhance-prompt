@@ -20,6 +20,8 @@ export type SaveEvent = { workspaceId: string | null; path: string; text?: strin
 export type WorkerHooks = { 'agent.tool.after': ToolEvent; 'editor.save.before': SaveEvent }
 export type RequestContext = { signal: AbortSignal; panel: { id: string } }
 export type EnhanceWorker = {
+  /** Stable session identity supplied by the backend, never by panel input. */
+  attachmentOwner: string
   storage: KeyValueStore
   settings: SettingsStore
   host: {

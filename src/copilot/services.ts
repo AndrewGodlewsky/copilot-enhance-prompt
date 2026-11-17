@@ -101,5 +101,5 @@ export function createServices(session: CopilotSession, directory = process.env.
       : name === 'copilot.rewrite' && copilot ? { text: await copilot.rewrite(input as import('./models.ts').CopilotRewrite, options?.signal, options?.ensureAccess) } as never
       : adapter.call(name, input, options)
   }
-  return { storage, settings, host, adapter, directory, data }
+  return { storage, settings, host, adapter, directory, data, attachmentOwner: `${directory}\0${session.sessionId}` }
 }

@@ -1,5 +1,11 @@
 # Changes
 
+## [0.12.3] - 2026-11-17
+
+### Fixed
+- Attachments now belong to the Copilot session that uploaded them. Uploads reject missing, repeated or out-of-order chunks and refuse links or files substituted outside the upload process.
+- Safe attachments in saved drafts are preserved when upgrading. If an attachment is missing, incomplete or unsafe, attach it again. Cleanup removes registered copies and leaves unrelated files alone.
+
 ## [0.12.2] - 2026-11-17
 
 ### Fixed

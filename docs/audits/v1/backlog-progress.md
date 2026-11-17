@@ -8,7 +8,7 @@ Current baseline: 0.12.1 / 4104c29. Tracking issue: [#40](https://github.com/And
 
 ## Queue
 
-Security and correctness: #5, #6, #7, #16, #17, #18, #36, #37, #39.
+Security and correctness: #6, #7, #16, #17, #18, #36, #37, #39.
 
 Distribution/maintenance: #9, #10, #11, #33.
 
@@ -20,7 +20,7 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- Next: #5, attachment confinement and upload ownership.
+- Next: #6, retain update reservations through cancelled work and helper cleanup.
 
 ## Delivered versions
 
@@ -31,3 +31,11 @@ Context permissions/exclusions are rechecked at file, Git, selection, research, 
 Verified: typecheck, build, 394 final tests, package checks and clean diff. New regressions first reproduced stale preview/selection/fallback payloads and model sends during helper preflight; all now pass. Independent review ran 81 focused tests. Installed SDK/CLI `1.0.106-8.unstable.r43566476370.g869eef3` passed the production helper's local HTTP fixture (isolation, output, reasoning, images, cancellation, accounting and cleanup), with no paid inference. Node 24.22.1, Windows x64.
 
 Limits: already-sent content cannot be recalled. No desktop UI control or owner account tests. The file-symlink fixture needs Windows privilege; junction confinement tests run normally. Issue #2 records the exact pushed commit and preview release link.
+
+### 0.12.3 — #5, attachment ownership and confinement
+
+Uploads have durable session-owned receipts, strict chunk sequence/size checks and cross-process locking. File operations validate canonical boundaries and hold verified regular single-link handles; BigInt file identities preserve Windows inode precision. Existing directories are never overwritten. Saved draft/parked attachments are adopted only after safe validation. Cleanup removes only registered original files, including writes interrupted before receipt commit; unknown/replaced files and links stay untouched.
+
+Verified: typecheck, build, 401 final tests and package checks; built extension smoke test with the same installed SDK/CLI and disposable local fixture. Outside junction and forged later-chunk regressions failed before the fix. Coverage includes root junctions, hard links, replacements, duplicate/out-of-order chunks, other sessions, legacy draft restoration, Unicode names, byte-sniffed images, limits and interrupted writes. Independent review passed 25 focused tests and injected a failed receipt rename to check recovery. No paid inference or UI automation.
+
+Limits: a malicious process sharing the OS account can still race parent directories or modify receipt files; this is not an OS sandbox. Unregistered legacy data is intentionally not recursively deleted. Manual desktop attachment/reopen checks remain in #29. Issue #5 records the pushed commit and preview release.

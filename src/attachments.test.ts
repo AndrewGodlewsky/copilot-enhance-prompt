@@ -1,12 +1,14 @@
 // Files pasted, dropped or picked in the web panel: received in chunks, kept on disk, used in the prompt.
-import { existsSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { after } from 'node:test'
 import { assert, mockHost, mountWorker, test } from '#testing'
-import { ATTACHMENTS_DIR, excerpt, loadFiles, MAX_ATTACHMENT_BYTES, putChunk, safeName, TEXT_MAX } from './attachments.ts'
+import { ATTACHMENTS_DIR, excerpt, loadFiles as loadOwnedFiles, MAX_ATTACHMENT_BYTES, putChunk as putOwnedChunk, restoreAttachments, clearAttachments, safeName, TEXT_MAX } from './attachments.ts'
 import { ATTACHMENT_CHUNK_BYTES, attachmentItemId, MAX_CHUNK_BASE64, MAX_IMAGE_BYTES, REQUEST_INPUT_LIMIT } from './image-limits.ts'
 import * as main from './worker.ts'
+const putChunk = (input: Parameters<typeof putOwnedChunk>[0]) => putOwnedChunk(input, 'test-session')
+const loadFiles = (paths: readonly string[]) => loadOwnedFiles(paths, 'test-session')
 
 // The tests' own folder (see ATTACHMENTS_DIR) goes when they are done.
 after(() => rmSync(ATTACHMENTS_DIR, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }))
@@ -15,10 +17,138 @@ test('tests keep their attachments apart from the real panel\'s', () => {
   assert.notEqual(ATTACHMENTS_DIR, join(tmpdir(), 'enhance-prompt-attachments'))
   assert.equal(dirname(ATTACHMENTS_DIR), tmpdir())
 })
+
+test('an unregistered later chunk and an arbitrary existing file are never treated as an upload', async () => {
+  const dir = join(ATTACHMENTS_DIR, 'att-forged')
+  mkdirSync(dir, { recursive: true })
+  const path = join(dir, 'private.txt')
+  writeFileSync(path, 'UNCHANGED')
+  await assert.rejects(putChunk({ id: 'att-forged', name: 'private.txt', index: 1, total: 2, data: 'WA==' }))
+  await assert.rejects(loadFiles([path]))
+  assert.equal(readFileSync(path, 'utf8'), 'UNCHANGED')
+  rmSync(dir, { recursive: true })
+})
+
+test('attachment junctions cannot read, append, overwrite or clean outside files', async () => {
+  const outside = mkdtempSync(join(tmpdir(), 'enhance-attachment-outside-'))
+  const link = join(ATTACHMENTS_DIR, 'att-junction')
+  mkdirSync(ATTACHMENTS_DIR, { recursive: true })
+  writeFileSync(join(outside, 'private.txt'), 'UNCHANGED')
+  symlinkSync(outside, link, 'junction')
+  try {
+    await assert.rejects(loadFiles([join(link, 'private.txt')]))
+    for (const index of [1, 0]) await assert.rejects(putChunk({ id: 'att-junction', name: 'private.txt', index, total: 2, data: 'WA==' }))
+    await clearAttachments()
+    assert.equal(readFileSync(join(outside, 'private.txt'), 'utf8'), 'UNCHANGED')
+  } finally { rmSync(link); rmSync(outside, { recursive: true }) }
+})
+
+test('uploads require their session, exact sequence and complete receipt, including after reopening', async () => {
+  const first = { id: 'att-owned', name: '日本語.txt', index: 0, total: 3, data: 'YQ==', size: 3 }
+  await putChunk(first)
+  const path = join(ATTACHMENTS_DIR, first.id, first.name)
+  await assert.rejects(loadFiles([path]), /could not be received/)
+  await assert.rejects(putOwnedChunk({ ...first, index: 1 }, 'other-session'), /could not be received/)
+  await assert.rejects(putChunk({ ...first, index: 2 }), /could not be received/)
+  await assert.rejects(putChunk({ ...first, index: 1, name: 'different.txt' }), /could not be received/)
+  const middle = { ...first, index: 1 }
+  const results = await Promise.allSettled([putChunk(middle), putChunk(middle)])
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1)
+  await putChunk({ ...first, index: 2 })
+  assert.equal(readFileSync(path, 'utf8'), 'aaa')
+  await assert.rejects(loadOwnedFiles([path], 'other-session'), /could not be received/)
+  // No process-local registration is needed to restore a completed upload.
+  assert.equal((await loadOwnedFiles([path], 'test-session')).texts[0].content, 'aaa')
+  await assert.rejects(putChunk(first), /could not be received/)
+  assert.equal(readFileSync(path, 'utf8'), 'aaa')
+})
+
+test('only safe files restored from a saved draft are adopted during upgrade', async () => {
+  const dir = join(ATTACHMENTS_DIR, 'att-legacy')
+  mkdirSync(dir, { recursive: true })
+  const path = join(dir, 'saved.txt')
+  const other = join(dir, 'other.txt')
+  writeFileSync(path, 'Saved draft attachment')
+  writeFileSync(other, 'Unregistered')
+  await restoreAttachments([path], 'test-session')
+  assert.equal((await loadFiles([path])).texts[0].content, 'Saved draft attachment')
+  await restoreAttachments([path], 'other-session')
+  await assert.rejects(loadOwnedFiles([path], 'other-session'))
+  await assert.rejects(loadFiles([other]))
+  await clearAttachments()
+  assert.equal(existsSync(path), false)
+  assert.equal(readFileSync(other, 'utf8'), 'Unregistered', 'cleanup leaves unrelated files alone')
+  rmSync(dir, { recursive: true })
+})
+
+test('hard links, substituted completed files and substituted upload roots fail closed', async () => {
+  const dir = join(ATTACHMENTS_DIR, 'att-hardlink')
+  const outside = mkdtempSync(join(tmpdir(), 'enhance-attachment-hardlink-'))
+  const privateFile = join(outside, 'private.txt')
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(privateFile, 'PRIVATE')
+  const linked = join(dir, 'linked.txt')
+  linkSync(privateFile, linked)
+  await restoreAttachments([linked], 'test-session')
+  await assert.rejects(loadFiles([linked]))
+  await clearAttachments()
+  assert.equal(readFileSync(privateFile, 'utf8'), 'PRIVATE')
+  rmSync(dir, { recursive: true })
+  const uploaded = await putChunk({ id: 'att-replaced', name: 'file.txt', index: 0, total: 1, data: 'QUJD' })
+  assert.ok('path' in uploaded)
+  renameSync(uploaded.path, join(outside, 'original.txt'))
+  writeFileSync(uploaded.path, 'XYZ')
+  await assert.rejects(loadFiles([uploaded.path]))
+  await clearAttachments()
+  assert.equal(readFileSync(uploaded.path, 'utf8'), 'XYZ')
+  rmSync(dirname(uploaded.path), { recursive: true })
+  // Root itself may not be a junction either. Preserve the existing fixture root.
+  const backup = `${ATTACHMENTS_DIR}-backup`
+  renameSync(ATTACHMENTS_DIR, backup)
+  symlinkSync(outside, ATTACHMENTS_DIR, 'junction')
+  try {
+    await assert.rejects(putChunk({ id: 'att-root-link', name: 'file.txt', index: 0, total: 1, data: '' }))
+    await clearAttachments()
+    assert.equal(readFileSync(privateFile, 'utf8'), 'PRIVATE')
+  } finally {
+    rmSync(ATTACHMENTS_DIR, { force: true })
+    renameSync(backup, ATTACHMENTS_DIR)
+    rmSync(outside, { recursive: true })
+  }
+})
+
+test('worker restores only its saved legacy draft attachments before enhancement', async () => {
+  const dir = join(ATTACHMENTS_DIR, 'att-worker-legacy')
+  mkdirSync(dir, { recursive: true })
+  const path = join(dir, 'saved.txt')
+  writeFileSync(path, 'Saved legacy text')
+  const profile = { id: 'gpt', name: 'Copilot', preset: 'copilot', provider: 'copilot', model: 'test', enabled: true }
+  const host = mockHost({ storage: { 'panel:files': [{ path, name: 'saved.txt' }], models: { profiles: [profile] } }, results: {
+    'copilot.rewrite': (input: { user: string }) => { assert.match(input.user, /Saved legacy text/); return { text: 'A prompt' } }
+  } })
+  const worker = await mountWorker(main, { host })
+  try { await worker.request('prompt.enhance', { prompt: 'Use the attachment', level: 'off', files: [path] }) }
+  finally { await worker.deactivate() }
+})
+
+test('cleanup removes an owned incomplete write whose receipt has not caught up', async () => {
+  const input = { id: 'att-interrupted', name: 'partial.txt', index: 0, total: 2, data: 'YQ==' }
+  await putChunk(input)
+  const path = join(ATTACHMENTS_DIR, input.id, input.name)
+  appendFileSync(path, 'bytes written before receipt commit')
+  await assert.rejects(loadFiles([path]))
+  await assert.rejects(putChunk({ ...input, index: 1 }))
+  await clearAttachments()
+  assert.equal(existsSync(path), false)
+})
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64')
 
 test('attachments arrive in chunks and are kept under a safe name; bad ids and huge files are refused', async () => {
   assert.equal(safeName('../../etc/passwd'), 'passwd')
+  for (const name of [' .notes.txt', '. .notes.txt', ' '.repeat(4), 'x'.repeat(119) + ' more.txt']) assert.equal(safeName(safeName(name)), safeName(name))
+  const spaced = await putChunk({ id: 'att-space-dot', name: ' .notes.txt', index: 0, total: 1, data: 'YQ==' })
+  assert.ok('path' in spaced)
+  assert.equal((await loadFiles([spaced.path])).texts[0].content, 'a')
   assert.equal(safeName('ảnh chụp màn hình (1).png'), 'ảnh chụp màn hình _1_.png')
   const text = Buffer.from('line one\nline two\n')
   const first = await putChunk({ id: 'att-test-1', name: 'notes.txt', index: 0, total: 2, data: text.subarray(0, 5).toString('base64') })

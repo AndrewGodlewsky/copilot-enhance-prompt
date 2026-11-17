@@ -10,7 +10,7 @@ import { EFFORT_SETTINGS, REASONING_SETTINGS, isEffort, resolveEffort, parseCata
 import { atLeast, contextItem, findFocusedWorkspace, focusedCandidates, focusedProject, gatherContext, projectNameOf, type ContextItem } from './context/index.ts'
 import { forgetTerminals, learnTerminal, loadTerminals } from './context/terminals.ts'
 import { imagesBlock, withImagePaths } from './images.ts'
-import { cleanAttachments, clearAttachments, loadFiles, putChunk } from './attachments.ts'
+import { cleanAttachments, clearAttachments, loadFiles, putChunk, restoreAttachments } from './attachments.ts'
 import { attachmentItemId } from './image-limits.ts'
 import { parseRulesConfig, RULES_KEY, rulesFor, rulesToJson, structureById, type RulesConfig, type RuleWhere } from './rules.ts'
 import { capHistory, HISTORY_KEY, parseHistory, toJson, trimForHistory, type HistoryEntry } from './history.ts'
@@ -74,6 +74,24 @@ const str = (value: JsonValue | undefined, fallback = '') => (typeof value === '
 const num = (value: JsonValue | undefined, fallback: number) =>
   typeof value === 'number' && Number.isFinite(value) ? value : fallback
 const bool = (value: JsonValue | undefined, fallback: boolean) => (typeof value === 'boolean' ? value : fallback)
+const attachmentRestores = new WeakMap<EnhanceWorker, Promise<void>>()
+function restoreSavedAttachments(host: EnhanceWorker): Promise<void> {
+  let pending = attachmentRestores.get(host)
+  if (!pending) {
+    pending = (async () => {
+      const saved = await host.storage.get('panel:files')
+      const parked = await host.storage.get('panel:parked')
+      const lists: JsonValue[] = [saved]
+      if (parked && typeof parked === 'object' && !Array.isArray(parked)) {
+        for (const slot of Object.values(parked)) if (slot && typeof slot === 'object' && !Array.isArray(slot)) lists.push(slot.files)
+      }
+      const paths = lists.flatMap(list => Array.isArray(list) ? list.flatMap(file => file && typeof file === 'object' && !Array.isArray(file) && typeof file.path === 'string' ? [file.path] : []) : [])
+      await restoreAttachments(paths, host.attachmentOwner)
+    })()
+    attachmentRestores.set(host, pending)
+  }
+  return pending
+}
 const extraFiles = (value: JsonValue | undefined) => str(value).split('\n')
   .map(line => line.trim().replace(/\\/g, '/').replace(/^\.\//, ''))
   .filter(line => line && !line.startsWith('/') && !line.includes('..')).slice(0, 10)
@@ -364,7 +382,8 @@ export async function enhance(
   }, settings.useEnhancedPrompts)
   // Attached files, read before any model is called: images are shown to models that read images,
   // text goes in the context, and the user message lists every file by its path.
-  const files = await loadFiles((input.files ?? []).filter((path) => typeof path === 'string' && path.trim())).catch((error: unknown) => {
+  await restoreSavedAttachments(host)
+  const files = await loadFiles((input.files ?? []).filter((path) => typeof path === 'string' && path.trim()), host.attachmentOwner).catch((error: unknown) => {
     if (error instanceof LlmError) throw hostError(error.text, error.code)
     throw error
   })
@@ -678,12 +697,13 @@ function registerRunHandlers(host: EnhanceWorker): void {
   host.panels.handle('prompt.copy', async ({ text }) => copyToClipboard(text))
 
   // The web panel's pasted, dropped or picked files arrive in chunks (no path on disk in a frame).
-  void cleanAttachments()
+  void restoreSavedAttachments(host).then(() => cleanAttachments()).catch(() => {})
   host.panels.handle('attachments.put', async (input) => {
     // A new file: the ones kept for more than a day go now (this worker may have started days ago).
     if (input.index === 0) void cleanAttachments()
     try {
-      return await putChunk(input)
+      await restoreSavedAttachments(host)
+      return await putChunk(input, host.attachmentOwner)
     } catch (error) {
       if (error instanceof LlmError) throw hostError(error.text, error.code)
       throw error

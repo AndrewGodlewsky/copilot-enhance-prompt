@@ -5,7 +5,7 @@ import type { PluginPanelEvents, PluginRequests } from './protocol.ts'
 import { createDiagnostics, diagnosticError } from './diagnostics.ts'
 
 type Handler = (input: any, context: RequestContext) => unknown
-export function createWorkerHost(services: Pick<EnhanceWorker, 'storage' | 'settings' | 'host'>, log = (_message: string) => {}, diagnostics = createDiagnostics()) {
+export function createWorkerHost(services: Pick<EnhanceWorker, 'storage' | 'settings' | 'host' | 'attachmentOwner'>, log = (_message: string) => {}, diagnostics = createDiagnostics()) {
   const events = new EventEmitter()
   events.setMaxListeners(100)
   const handlers = new Map<string, Handler>()
