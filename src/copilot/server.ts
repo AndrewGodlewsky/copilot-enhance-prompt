@@ -1,13 +1,14 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { randomBytes } from 'node:crypto'
-import { readFile, realpath } from 'node:fs/promises'
-import { extname, resolve, sep } from 'node:path'
+import { realpath } from 'node:fs/promises'
+import { extname } from 'node:path'
 import type { AddressInfo } from 'node:net'
 import type { createWorkerHost } from '../worker-host.ts'
 import type { Disposable, JsonValue, RequestInput } from '../runtime.ts'
 import type { PluginRequests } from '../protocol.ts'
 import type { createUpdates } from '../updates/service.ts'
 import { REQUEST_BYTES, busyError, validateJson } from '../limits.ts'
+import { readConfinedFile } from '../confined-read.ts'
 
 type Worker = ReturnType<typeof createWorkerHost>
 type Canvas = { id: string; token: string; streams: Set<ServerResponse>; subscriptions: Disposable[]; pending: number }
@@ -153,11 +154,10 @@ export async function createCanvasServer(options: { worker: Worker; assets: stri
         return
       }
       if (req.method !== 'GET' || route.includes('%') || route.includes('\\') || route.split('/').includes('..')) { json(res, 404, { error: 'Not found' }); return }
-      const file = await realpath(resolve(assets, route || 'index.html')).catch(() => '')
-      if (!file.startsWith(assets + sep)) { json(res, 404, { error: 'Not found' }); return }
       const mime: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' }
-      if (!mime[extname(file)]) { json(res, 404, { error: 'Not found' }); return }
-      res.writeHead(200, { 'content-type': mime[extname(file)] }); res.end(await readFile(file))
+      const file = await readConfinedFile(assets, route || 'index.html', 8 * 1024 * 1024, path => !!mime[extname(path)])
+      if (!file) { json(res, 404, { error: 'Not found' }); return }
+      res.writeHead(200, { 'content-type': mime[extname(file.path)] }); res.end(file.data)
     } catch (error) {
       if (!res.destroyed && !res.headersSent) {
         if (!req.complete) { res.shouldKeepAlive = false; res.once('finish', () => req.destroy()) }

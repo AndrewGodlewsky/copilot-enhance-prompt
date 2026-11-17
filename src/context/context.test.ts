@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { assert, test } from '#testing'
@@ -47,6 +47,24 @@ test('readText propagates access revocation immediately before opening file cont
     await assert.rejects(readText(root, 'file.txt', undefined, allow), /Access revoked/)
     assert.equal(checks, 2)
   } finally { rmSync(root, { recursive: true, force: true }) }
+})
+
+test('readText refuses a parent replaced by an outside junction after the path check', async () => {
+  const fixture = mkdtempSync(join(tmpdir(), 'enhance-context-swap-'))
+  const root = join(fixture, 'project'), outside = join(fixture, 'outside')
+  try {
+    mkdirSync(join(root, 'src'), { recursive: true }); mkdirSync(outside)
+    writeFileSync(join(root, 'src', 'notes.md'), 'Project text')
+    writeFileSync(join(outside, 'notes.md'), 'PRIVATE OUTSIDE CONTENT')
+    let checks = 0
+    const allow = Object.assign(() => true, { beforeRead: async () => {
+      if (++checks === 2) {
+        renameSync(join(root, 'src'), join(root, 'original'))
+        symlinkSync(outside, join(root, 'src'), 'junction')
+      }
+    } })
+    assert.equal(await readText(root, 'src/notes.md', undefined, allow), null)
+  } finally { rmSync(fixture, { recursive: true, force: true }) }
 })
 
 test('readmeDigest keeps intro and setup/test sections', () => {

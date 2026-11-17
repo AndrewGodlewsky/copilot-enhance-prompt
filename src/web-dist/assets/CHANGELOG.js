@@ -1,5 +1,11 @@
 var e=`# Changes
 
+## [0.12.10] - 2026-11-17
+
+### Fixed
+- Project context and panel assets now reject detected file or folder replacements during reading. Files that change mid-read are omitted safely; refresh context after saving a file.
+- Automatic project context skips hard-linked files because they can share content with files outside the project. Ordinary files and permitted links within the project continue to work.
+
 ## [0.12.9] - 2026-11-17
 
 ### Fixed

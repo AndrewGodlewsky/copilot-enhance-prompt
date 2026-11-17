@@ -8,7 +8,7 @@ Current baseline: 0.12.1 / 4104c29. Tracking issue: [#40](https://github.com/And
 
 ## Queue
 
-Security and correctness: #37, #39.
+Security and correctness: #39.
 
 Distribution/maintenance: #9, #10, #11, #33.
 
@@ -20,9 +20,17 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- Next: #37, project/static-file check-to-open races.
+- Next: #39, moving-source update verification.
 
 ## Delivered versions
+
+### 0.12.10 ? #37, confined file reads
+
+Project and static reads share a bounded verified-handle reader. Fresh canonical checks, BigInt identities and before/after metadata reject detected replacements; hard links are omitted, privacy errors propagate, and static responses preserve MIME/CSP with generic 404 failures. See [file-read boundary](../../file-read-boundary.md).
+
+Verified: a failing owned-junction fixture first exposed outside project text; it now returns null. Typecheck, build, 446 final tests, package checks, clean diff and installed-runtime built-extension fixture pass. Independent review passed 19 focused tests with no blockers. Coverage includes growth/replacement, held handles, access revocation, hard links, Unicode, bounds and HTTP safeguards. No paid calls, owner data or UI automation.
+
+Ruling: hard links are refused because their other names cannot be confined. Detected edits require refreshing context. This is defense in depth against path races, not an OS sandbox against a malicious same-user process. Windows may itself refuse parent renames while a child handle is open. Linux and privileged file-symlink behavior were not exercised. Issue #37 records the commit/release.
 
 ### 0.12.9 — #36, update reservation process identity
 

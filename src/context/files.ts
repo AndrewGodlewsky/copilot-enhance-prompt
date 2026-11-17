@@ -1,6 +1,7 @@
 // File listing (git or a bounded walk), path filters, tree summaries and snippets.
-import { readdir, readFile, realpath, stat } from 'node:fs/promises'
+import { readdir, realpath } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, relative, sep } from 'node:path'
+import { readConfinedFile } from '../confined-read.ts'
 
 const WALK_SKIP = new Set([
   '.git', 'node_modules', '.copilot', 'dist', 'build', 'out', 'target', '.next', '.nuxt', '.venv', 'venv',
@@ -178,26 +179,12 @@ export async function readText(root: string, path: string, maxBytes = 200_000, a
   if (!await allow(path) || isSensitive(path) || isBinaryPath(path) || path.includes('..')) {
     return null
   }
-  const full = join(root, path)
-  let actual: string
-  try {
-    const info = await stat(full)
-    if (!info.isFile() || info.size > maxBytes) {
-      return null
-    }
-    // A link is read as the file it leads to: one that leaves the workspace, or leads to a file
-    // whose own name says it holds secrets (README.md -> .env), is not read.
-    actual = relative(await realpath(root), await realpath(full)).split(sep).join('/')
-  } catch { return null }
-  if (actual.startsWith('..') || isAbsolute(actual) || isSensitive(actual) || !await allow(actual)) return null
-  // Policy errors must propagate; they are not ordinary unreadable-file failures.
-  await allow.beforeRead?.()
-  try {
-    const text = await readFile(full, 'utf8')
-    return text.includes('\u0000') ? null : text
-  } catch {
-    return null
-  }
+  const result = await readConfinedFile(root, path, maxBytes, async actual => {
+    await allow.beforeRead?.()
+    return !isSensitive(actual) && !isBinaryPath(actual) && await allow(path) && await allow(actual)
+  })
+  const text = result?.data.toString('utf8')
+  return text === undefined || text.includes('\u0000') ? null : text
 }
 
 /** Lines around each hit (or the head of the file), numbered, within `maxChars`. */

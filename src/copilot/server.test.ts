@@ -1,11 +1,38 @@
 import { test, assert, mockHost, mountWorker } from '#testing'
 import { createCanvasServer } from './server.ts'
-import { mkdtemp, writeFile, rm } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, rm, symlink, link } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createUpdates } from '../updates/service.ts'
 import { persistentStore } from './storage.ts'
 import { request as httpRequest } from 'node:http'
+
+test('static assets use confined bounded reads and preserve MIME and CSP protections', async () => {
+  const fixture = await mkdtemp(join(tmpdir(), 'enhance-static-'))
+  const assets = join(fixture, 'assets'), outside = join(fixture, 'outside')
+  await mkdir(assets); await mkdir(outside)
+  await writeFile(join(assets, 'index.html'), '<html>safe</html>')
+  await writeFile(join(assets, 'state.json'), '{"private":true}')
+  await writeFile(join(outside, 'private.js'), 'PRIVATE')
+  await writeFile(join(assets, 'large.js'), Buffer.alloc(8 * 1024 * 1024 + 1))
+  await symlink(outside, join(assets, 'escape'), 'junction')
+  await link(join(outside, 'private.js'), join(assets, 'hard.js'))
+  const worker = await mountWorker({ default: () => {} }, { host: mockHost() })
+  const server = await createCanvasServer({ worker, assets })
+  try {
+    const url = server.open('static')
+    const response = await fetch(url)
+    assert.equal(response.status, 200); assert.equal(await response.text(), '<html>safe</html>')
+    assert.match(response.headers.get('content-type')!, /^text\/html/)
+    assert.equal(response.headers.get('x-content-type-options'), 'nosniff')
+    assert.match(response.headers.get('content-security-policy')!, /script-src 'self'/)
+    for (const path of ['escape/private.js', 'hard.js', 'large.js', 'state.json', 'missing.js']) {
+      const denied = await fetch(url + path)
+      assert.equal(denied.status, 404, path)
+      assert.deepEqual(await denied.json(), { error: 'Not found' })
+    }
+  } finally { await server.close(); await worker.deactivate(); await rm(fixture, { recursive: true, force: true }) }
+})
 
 test('the canvas rejects unauthenticated, cross-origin and oversized requests, and confines storage writes', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'enhance-http-'))

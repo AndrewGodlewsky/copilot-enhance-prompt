@@ -34,7 +34,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 // node_modules/graceful-fs/polyfills.js
 var require_polyfills = __commonJS({
   "node_modules/graceful-fs/polyfills.js"(exports, module) {
-    var constants2 = __require("constants");
+    var constants3 = __require("constants");
     var origCwd = process.cwd;
     var cwd = null;
     var platform = process.env.GRACEFUL_FS_PLATFORM || process.platform;
@@ -58,7 +58,7 @@ var require_polyfills = __commonJS({
     var chdir;
     module.exports = patch;
     function patch(fs) {
-      if (constants2.hasOwnProperty("O_SYMLINK") && process.version.match(/^v0\.6\.[0-2]|^v0\.5\./)) {
+      if (constants3.hasOwnProperty("O_SYMLINK") && process.version.match(/^v0\.6\.[0-2]|^v0\.5\./)) {
         patchLchmod(fs);
       }
       if (!fs.lutimes) {
@@ -160,7 +160,7 @@ var require_polyfills = __commonJS({
         fs2.lchmod = function(path, mode, callback) {
           fs2.open(
             path,
-            constants2.O_WRONLY | constants2.O_SYMLINK,
+            constants3.O_WRONLY | constants3.O_SYMLINK,
             mode,
             function(err, fd) {
               if (err) {
@@ -176,7 +176,7 @@ var require_polyfills = __commonJS({
           );
         };
         fs2.lchmodSync = function(path, mode) {
-          var fd = fs2.openSync(path, constants2.O_WRONLY | constants2.O_SYMLINK, mode);
+          var fd = fs2.openSync(path, constants3.O_WRONLY | constants3.O_SYMLINK, mode);
           var threw = true;
           var ret;
           try {
@@ -196,9 +196,9 @@ var require_polyfills = __commonJS({
         };
       }
       function patchLutimes(fs2) {
-        if (constants2.hasOwnProperty("O_SYMLINK") && fs2.futimes) {
+        if (constants3.hasOwnProperty("O_SYMLINK") && fs2.futimes) {
           fs2.lutimes = function(path, at, mt, cb) {
-            fs2.open(path, constants2.O_SYMLINK, function(er, fd) {
+            fs2.open(path, constants3.O_SYMLINK, function(er, fd) {
               if (er) {
                 if (cb) cb(er);
                 return;
@@ -211,7 +211,7 @@ var require_polyfills = __commonJS({
             });
           };
           fs2.lutimesSync = function(path, at, mt) {
-            var fd = fs2.openSync(path, constants2.O_SYMLINK);
+            var fd = fs2.openSync(path, constants3.O_SYMLINK);
             var ret;
             var threw = true;
             try {
@@ -523,8 +523,8 @@ var require_graceful_fs = __commonJS({
       fs2.createReadStream = createReadStream2;
       fs2.createWriteStream = createWriteStream;
       var fs$readFile = fs2.readFile;
-      fs2.readFile = readFile6;
-      function readFile6(path, options, cb) {
+      fs2.readFile = readFile4;
+      function readFile4(path, options, cb) {
         if (typeof options === "function")
           cb = options, options = null;
         return go$readFile(path, options, cb);
@@ -700,7 +700,7 @@ var require_graceful_fs = __commonJS({
       }
       function ReadStream$open() {
         var that = this;
-        open4(that.path, that.flags, that.mode, function(err, fd) {
+        open5(that.path, that.flags, that.mode, function(err, fd) {
           if (err) {
             if (that.autoClose)
               that.destroy();
@@ -720,7 +720,7 @@ var require_graceful_fs = __commonJS({
       }
       function WriteStream$open() {
         var that = this;
-        open4(that.path, that.flags, that.mode, function(err, fd) {
+        open5(that.path, that.flags, that.mode, function(err, fd) {
           if (err) {
             that.destroy();
             that.emit("error", err);
@@ -737,8 +737,8 @@ var require_graceful_fs = __commonJS({
         return new fs2.WriteStream(path, options);
       }
       var fs$open = fs2.open;
-      fs2.open = open4;
-      function open4(path, flags, mode, cb) {
+      fs2.open = open5;
+      function open5(path, flags, mode, cb) {
         if (typeof mode === "function")
           cb = mode, mode = null;
         return go$open(path, flags, mode, cb);
@@ -1236,11 +1236,11 @@ var require_mtime_precision = __commonJS({
     function probe(file, fs, callback) {
       const cachedPrecision = fs[cacheSymbol];
       if (cachedPrecision) {
-        return fs.stat(file, (err, stat4) => {
+        return fs.stat(file, (err, stat3) => {
           if (err) {
             return callback(err);
           }
-          callback(null, stat4.mtime, cachedPrecision);
+          callback(null, stat3.mtime, cachedPrecision);
         });
       }
       const mtime = new Date(Math.ceil(Date.now() / 1e3) * 1e3 + 5);
@@ -1248,13 +1248,13 @@ var require_mtime_precision = __commonJS({
         if (err) {
           return callback(err);
         }
-        fs.stat(file, (err2, stat4) => {
+        fs.stat(file, (err2, stat3) => {
           if (err2) {
             return callback(err2);
           }
-          const precision = stat4.mtime.getTime() % 1e3 === 0 ? "s" : "ms";
+          const precision = stat3.mtime.getTime() % 1e3 === 0 ? "s" : "ms";
           Object.defineProperty(fs, cacheSymbol, { value: precision });
-          callback(null, stat4.mtime, precision);
+          callback(null, stat3.mtime, precision);
         });
       });
     }
@@ -1308,14 +1308,14 @@ var require_lockfile = __commonJS({
         if (options.stale <= 0) {
           return callback(Object.assign(new Error("Lock file is already being held"), { code: "ELOCKED", file }));
         }
-        options.fs.stat(lockfilePath, (err2, stat4) => {
+        options.fs.stat(lockfilePath, (err2, stat3) => {
           if (err2) {
             if (err2.code === "ENOENT") {
               return acquireLock(file, { ...options, stale: 0 }, callback);
             }
             return callback(err2);
           }
-          if (!isLockStale(stat4, options)) {
+          if (!isLockStale(stat3, options)) {
             return callback(Object.assign(new Error("Lock file is already being held"), { code: "ELOCKED", file }));
           }
           removeLock(file, options, (err3) => {
@@ -1327,8 +1327,8 @@ var require_lockfile = __commonJS({
         });
       });
     }
-    function isLockStale(stat4, options) {
-      return stat4.mtime.getTime() < Date.now() - options.stale;
+    function isLockStale(stat3, options) {
+      return stat3.mtime.getTime() < Date.now() - options.stale;
     }
     function removeLock(file, options, callback) {
       options.fs.rmdir(getLockFile(file, options), (err) => {
@@ -1346,7 +1346,7 @@ var require_lockfile = __commonJS({
       lock2.updateDelay = lock2.updateDelay || options.update;
       lock2.updateTimeout = setTimeout(() => {
         lock2.updateTimeout = null;
-        options.fs.stat(lock2.lockfilePath, (err, stat4) => {
+        options.fs.stat(lock2.lockfilePath, (err, stat3) => {
           const isOverThreshold = lock2.lastUpdate + options.stale < Date.now();
           if (err) {
             if (err.code === "ENOENT" || isOverThreshold) {
@@ -1355,7 +1355,7 @@ var require_lockfile = __commonJS({
             lock2.updateDelay = 1e3;
             return updateLock(file, options);
           }
-          const isMtimeOurs = lock2.mtime.getTime() === stat4.mtime.getTime();
+          const isMtimeOurs = lock2.mtime.getTime() === stat3.mtime.getTime();
           if (!isMtimeOurs) {
             return setLockAsCompromised(
               file,
@@ -1480,11 +1480,11 @@ var require_lockfile = __commonJS({
         if (err) {
           return callback(err);
         }
-        options.fs.stat(getLockFile(file2, options), (err2, stat4) => {
+        options.fs.stat(getLockFile(file2, options), (err2, stat3) => {
           if (err2) {
             return err2.code === "ENOENT" ? callback(null, false) : callback(err2);
           }
-          return callback(null, !isLockStale(stat4, options));
+          return callback(null, !isLockStale(stat3, options));
         });
       });
     }
@@ -2105,8 +2105,62 @@ function isTransient(error) {
 }
 
 // src/context/files.ts
-import { readdir, readFile, realpath, stat } from "node:fs/promises";
-import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
+import { readdir, realpath as realpath2 } from "node:fs/promises";
+import { basename, dirname, isAbsolute as isAbsolute2, join, relative as relative2, sep as sep2 } from "node:path";
+
+// src/confined-read.ts
+import { constants } from "node:fs";
+import { lstat, open, realpath } from "node:fs/promises";
+import { isAbsolute, relative, resolve, sep } from "node:path";
+var sameFile = (a, b) => a.dev === b.dev && a.ino === b.ino;
+var unchangedFile = (a, b) => sameFile(a, b) && b.isFile() && b.nlink === 1n && a.size === b.size && a.mtimeNs === b.mtimeNs && a.ctimeNs === b.ctimeNs;
+async function readConfinedFile(root, path, maxBytes, authorize = () => true) {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 0 || maxBytes > 64 * 1024 * 1024 || isAbsolute(path) || path.split(/[\\/]/).includes("..")) return null;
+  const base = await realpath(root).catch(() => null);
+  if (!base) return null;
+  const full = resolve(base, path);
+  const file = await realpath(full).catch(() => null);
+  if (!file) return null;
+  const local = relative(base, file).split(sep).join("/");
+  if (!local || local === ".." || local.startsWith("../") || isAbsolute(local)) return null;
+  const [rootInfo, before] = await Promise.all([
+    lstat(base, { bigint: true }).catch(() => null),
+    lstat(file, { bigint: true }).catch(() => null)
+  ]);
+  if (!rootInfo?.isDirectory() || !before?.isFile() || before.nlink !== 1n || before.size > BigInt(maxBytes)) return null;
+  if (!await authorize(local)) return null;
+  const handle = await open(file, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0)).catch(() => null);
+  if (!handle) return null;
+  try {
+    const stable = async () => {
+      const [currentRoot, currentPath, currentFile, directory2, entry, held2] = await Promise.all([
+        realpath(root).catch(() => null),
+        realpath(full).catch(() => null),
+        realpath(file).catch(() => null),
+        lstat(base, { bigint: true }).catch(() => null),
+        lstat(file, { bigint: true }).catch(() => null),
+        handle.stat({ bigint: true }).catch(() => null)
+      ]);
+      return currentRoot === base && currentPath === file && currentFile === file && directory2?.isDirectory() && sameFile(rootInfo, directory2) && entry && held2 && unchangedFile(before, entry) && unchangedFile(before, held2);
+    };
+    if (!await stable() || !await authorize(local)) return null;
+    const bytes = Buffer.alloc(Number(before.size) + 1);
+    let length = 0;
+    while (length < bytes.length) {
+      const read = await handle.read(bytes, length, bytes.length - length, length).catch(() => null);
+      if (!read) return null;
+      if (!read.bytesRead) break;
+      length += read.bytesRead;
+    }
+    if (length !== Number(before.size) || !await stable() || !await authorize(local)) return null;
+    return { data: bytes.subarray(0, length), path: local };
+  } finally {
+    await handle.close().catch(() => {
+    });
+  }
+}
+
+// src/context/files.ts
 var WALK_SKIP = /* @__PURE__ */ new Set([
   ".git",
   "node_modules",
@@ -2163,15 +2217,15 @@ function fileAllowed(policy = {}) {
 async function projectFileAllowed(root, policy = {}) {
   await policy.ensureAccess?.();
   const exclude = new Set(policy.exclude);
-  const base = await realpath(root).catch(() => null);
+  const base = await realpath2(root).catch(() => null);
   if (!base) return () => false;
   const resolved = /* @__PURE__ */ new Map();
   const canonical = (full) => {
     let value = resolved.get(full);
     if (!value) {
-      value = realpath(full).catch(async (error) => {
+      value = realpath2(full).catch(async (error) => {
         if (error.code !== "ENOENT" || full === base || dirname(full) === full) return null;
-        const parent = await realpath(dirname(full)).catch(() => null);
+        const parent = await realpath2(dirname(full)).catch(() => null);
         return parent ? join(parent, basename(full)) : null;
       });
       resolved.set(full, value);
@@ -2179,11 +2233,11 @@ async function projectFileAllowed(root, policy = {}) {
     return value;
   };
   const localPath = async (path) => {
-    if (isAbsolute(path) || path.split(/[\\/]/).includes("..")) return null;
+    if (isAbsolute2(path) || path.split(/[\\/]/).includes("..")) return null;
     const actual = await canonical(join(base, path));
     if (!actual) return null;
-    const local = relative(base, actual).split(sep).join("/");
-    return local.startsWith("..") || isAbsolute(local) ? null : local;
+    const local = relative2(base, actual).split(sep2).join("/");
+    return local.startsWith("..") || isAbsolute2(local) ? null : local;
   };
   for (const id2 of policy.exclude ?? []) {
     if (!/^(file|rules):/.test(id2)) continue;
@@ -2225,7 +2279,7 @@ async function walkFiles(root, maxFiles = 8e3, maxDepth = 6, signal, allow = () 
       if (out.length >= maxFiles) {
         return;
       }
-      const path = relative(root, join(dir, entry.name)).split(sep).join("/");
+      const path = relative2(root, join(dir, entry.name)).split(sep2).join("/");
       if (entry.isDirectory()) {
         if (await allow(`${path}/`) && !WALK_SKIP.has(entry.name) && (!entry.name.startsWith(".") || path === ".github" || path === ".cursor")) {
           await visit(join(dir, entry.name), depth + 1);
@@ -2263,25 +2317,12 @@ async function readText(root, path, maxBytes = 2e5, allow = () => true) {
   if (!await allow(path) || isSensitive(path) || isBinaryPath(path) || path.includes("..")) {
     return null;
   }
-  const full = join(root, path);
-  let actual;
-  try {
-    const info = await stat(full);
-    if (!info.isFile() || info.size > maxBytes) {
-      return null;
-    }
-    actual = relative(await realpath(root), await realpath(full)).split(sep).join("/");
-  } catch {
-    return null;
-  }
-  if (actual.startsWith("..") || isAbsolute(actual) || isSensitive(actual) || !await allow(actual)) return null;
-  await allow.beforeRead?.();
-  try {
-    const text = await readFile(full, "utf8");
-    return text.includes("\0") ? null : text;
-  } catch {
-    return null;
-  }
+  const result = await readConfinedFile(root, path, maxBytes, async (actual) => {
+    await allow.beforeRead?.();
+    return !isSensitive(actual) && !isBinaryPath(actual) && await allow(path) && await allow(actual);
+  });
+  const text = result?.data.toString("utf8");
+  return text === void 0 || text.includes("\0") ? null : text;
 }
 function snippet(text, hits, maxChars) {
   const lines = text.split(/\r?\n/);
@@ -2426,12 +2467,12 @@ async function gitDiff(root, maxChars, allow = () => true, signal) {
   }
   if (refused.size > MAX_DIFF_EXCLUSIONS) return null;
   const pathspecs = [...SAFE_PATHSPECS, ...[...refused].map((path) => `:(exclude,literal)${path}`)];
-  const stat4 = await git(root, ["diff", "HEAD", "-M", "--stat=100", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { signal, ensureAccess });
-  if (stat4 === null || !stat4.trim()) {
+  const stat3 = await git(root, ["diff", "HEAD", "-M", "--stat=100", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { signal, ensureAccess });
+  if (stat3 === null || !stat3.trim()) {
     return null;
   }
   const diff = await git(root, ["diff", "HEAD", "-M", "-U2", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { maxBytes: 4e6, signal, ensureAccess }) ?? "";
-  return { stat: stat4.trim(), diff: diff.length > maxChars ? `${maskedStart(diff, maxChars)}
+  return { stat: stat3.trim(), diff: diff.length > maxChars ? `${maskedStart(diff, maxChars)}
 \u2026(diff truncated)` : redactCode(diff) };
 }
 function maskedStart(text, maxChars) {
@@ -3505,11 +3546,11 @@ ${missing2.map((image) => `- ${image.path}`).join("\n")}`;
 
 // src/attachments.ts
 var import_proper_lockfile = __toESM(require_proper_lockfile(), 1);
-import { lstat, mkdir, open, readdir as readdir2, realpath as realpath2, rename, rmdir, unlink } from "node:fs/promises";
-import { constants } from "node:fs";
+import { lstat as lstat2, mkdir, open as open2, readdir as readdir2, realpath as realpath3, rename, rmdir, unlink } from "node:fs/promises";
+import { constants as constants2 } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
-import { basename as basename2, dirname as dirname2, join as join2, relative as relative2, resolve } from "node:path";
+import { basename as basename2, dirname as dirname2, join as join2, relative as relative3, resolve as resolve2 } from "node:path";
 var ATTACHMENTS_DIR = join2(tmpdir(), `enhance-prompt-attachments${process.env.NODE_TEST_CONTEXT ? `-test-${process.pid}` : ""}`);
 var TEXT_MAX = 2e4;
 var DAY_MS = 24 * 36e5;
@@ -3521,10 +3562,10 @@ var ownerKey = (owner2) => {
 };
 var validId = (id2) => /^[a-z0-9-]{6,40}$/.test(id2);
 async function directory(path) {
-  const info = await lstat(path);
+  const info = await lstat2(path);
   if (!info.isDirectory() || info.isSymbolicLink()) throw bad();
-  const expected = join2(await realpath2(tmpdir()), relative2(tmpdir(), path));
-  if (await realpath2(path) !== expected) throw bad();
+  const expected = join2(await realpath3(tmpdir()), relative3(tmpdir(), path));
+  if (await realpath3(path) !== expected) throw bad();
 }
 async function uploadDirectory(id2) {
   if (!validId(id2)) throw bad();
@@ -3534,10 +3575,10 @@ async function uploadDirectory(id2) {
   return dir;
 }
 async function verifiedFile(path, writable2 = false) {
-  const before = await lstat(path, { bigint: true });
-  const expected = join2(await realpath2(tmpdir()), relative2(tmpdir(), path));
-  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || await realpath2(path) !== expected) throw bad();
-  const file = await open(path, (writable2 ? constants.O_RDWR : constants.O_RDONLY) | (constants.O_NOFOLLOW ?? 0));
+  const before = await lstat2(path, { bigint: true });
+  const expected = join2(await realpath3(tmpdir()), relative3(tmpdir(), path));
+  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || await realpath3(path) !== expected) throw bad();
+  const file = await open2(path, (writable2 ? constants2.O_RDWR : constants2.O_RDONLY) | (constants2.O_NOFOLLOW ?? 0));
   try {
     const info = await file.stat({ bigint: true });
     if (!info.isFile() || info.nlink !== 1n || info.dev !== before.dev || info.ino !== before.ino) throw bad();
@@ -3565,7 +3606,7 @@ async function receipt(dir) {
 async function saveReceipt(dir, value) {
   await directory(dir);
   const temporary = join2(dir, `.upload-${randomUUID()}.tmp`);
-  const file = await open(temporary, "wx", 384);
+  const file = await open2(temporary, "wx", 384);
   try {
     await file.writeFile(JSON.stringify(value));
     await file.sync();
@@ -3591,8 +3632,8 @@ async function locked(id2, operation) {
   }
 }
 function pathParts(path) {
-  if (typeof path !== "string" || resolve(path) !== path) throw bad();
-  const parts = relative2(ATTACHMENTS_DIR, path).split(/[\\/]/);
+  if (typeof path !== "string" || resolve2(path) !== path) throw bad();
+  const parts = relative3(ATTACHMENTS_DIR, path).split(/[\\/]/);
   if (parts.length !== 2 || !validId(parts[0]) || parts[1] !== safeName(parts[1]) || parts[1] === RECEIPT) throw bad();
   return { id: parts[0], name: parts[1] };
 }
@@ -3627,7 +3668,7 @@ async function putChunk(input, owner2) {
       throw bad();
     }
     await uploadDirectory(input.id);
-    const file = await open(path, "wx", 384);
+    const file = await open2(path, "wx", 384);
     try {
       const info = await file.stat({ bigint: true });
       await saveReceipt(dir, {
@@ -3680,7 +3721,7 @@ async function cleanAttachments(now = Date.now()) {
   for (const entry of entries) {
     if (!validId(entry)) continue;
     const removed = await locked(entry, async (dir) => {
-      const info = await lstat(dir);
+      const info = await lstat2(dir);
       if (now - info.mtimeMs <= DAY_MS) return false;
       await removeOwned(dir);
       return true;
@@ -3716,7 +3757,7 @@ async function restoreAttachments(paths, owner2) {
     try {
       const { id: id2, name } = pathParts(path);
       await locked(id2, async (dir) => {
-        if (await lstat(join2(dir, RECEIPT)).catch(() => null)) return;
+        if (await lstat2(join2(dir, RECEIPT)).catch(() => null)) return;
         const { file, info } = await verifiedFile(path);
         try {
           if (info.size > MAX_ATTACHMENT_BYTES) throw bad();
@@ -5240,21 +5281,21 @@ import { join as join10 } from "node:path";
 var import_proper_lockfile2 = __toESM(require_proper_lockfile(), 1);
 import { AsyncLocalStorage } from "node:async_hooks";
 import { EventEmitter } from "node:events";
-import { mkdir as mkdir2, readFile as readFile2, rename as rename2, writeFile } from "node:fs/promises";
+import { mkdir as mkdir2, readFile, rename as rename2, writeFile } from "node:fs/promises";
 import { watchFile, unwatchFile } from "node:fs";
-import { join as join3, resolve as resolve2 } from "node:path";
+import { join as join3, resolve as resolve3 } from "node:path";
 import { randomUUID as randomUUID2 } from "node:crypto";
 var held = new AsyncLocalStorage();
 var buses = /* @__PURE__ */ new Map();
 function persistentStore(directory2) {
-  const root = resolve2(directory2);
+  const root = resolve3(directory2);
   const file = join3(root, "state.json");
   const bus = buses.get(root) ?? new EventEmitter();
   bus.setMaxListeners(100);
   buses.set(root, bus);
   const read = async () => {
     try {
-      const value = JSON.parse(await readFile2(file, "utf8"));
+      const value = JSON.parse(await readFile(file, "utf8"));
       if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid Enhance Prompt storage.");
       return value;
     } catch (error) {
@@ -5318,7 +5359,7 @@ function persistentStore(directory2) {
 }
 
 // src/copilot/update-installation.ts
-import { readFile as readFile3, realpath as realpath3, stat as stat2 } from "node:fs/promises";
+import { readFile as readFile2, realpath as realpath4, stat } from "node:fs/promises";
 import { basename as basename3, dirname as dirname3, join as join4 } from "node:path";
 import { createHash as createHash2 } from "node:crypto";
 
@@ -5485,8 +5526,8 @@ function parseCommentedJson(text) {
   return JSON.parse(out.replace(/^\uFEFF/, ""));
 }
 async function json(file) {
-  if ((await stat2(file)).size > 2e6) throw new Error("Metadata too large");
-  return parseCommentedJson(await readFile3(file, "utf8"));
+  if ((await stat(file)).size > 2e6) throw new Error("Metadata too large");
+  return parseCommentedJson(await readFile2(file, "utf8"));
 }
 var installationKey = (root) => createHash2("sha256").update(process.platform === "win32" ? root.toLowerCase() : root).digest("hex");
 function installationReader(session2, packageRoot2, name = "enhance-prompt") {
@@ -5495,7 +5536,7 @@ function installationReader(session2, packageRoot2, name = "enhance-prompt") {
     const unsupported = (reason, installed) => ({ scope, installed, canUpdate: false, reason });
     if (!session2.rpc.plugins?.list) return unsupported("This Copilot runtime does not expose plugin inventory. Update through Customize \u2192 Installed.");
     try {
-      const root = await realpath3(packageRoot2);
+      const root = await realpath4(packageRoot2);
       const cache = dirname3(dirname3(root));
       const disk = await json(join4(root, "plugin.json"));
       if (basename3(cache) !== "installed-plugins" || root.startsWith("\\\\") || disk.name !== name) return unsupported("This is a local or development installation. Update its source files and start a new Copilot session.", disk.version);
@@ -5503,7 +5544,7 @@ function installationReader(session2, packageRoot2, name = "enhance-prompt") {
       const records = (await json(join4(home, "config.json"))).installedPlugins;
       if (!Array.isArray(records)) return unsupported("Copilot installation provenance is unavailable.", disk.version);
       const matches2 = [];
-      for (const row of records) if (row?.name === name && typeof row.cache_path === "string" && await realpath3(row.cache_path).catch(() => "") === root) matches2.push(row);
+      for (const row of records) if (row?.name === name && typeof row.cache_path === "string" && await realpath4(row.cache_path).catch(() => "") === root) matches2.push(row);
       if (matches2.length !== 1) return unsupported("This package cannot be matched uniquely to Copilot\u2019s installation records.", disk.version);
       const record = matches2[0];
       const inventory = await session2.rpc.plugins.list();
@@ -5543,7 +5584,7 @@ import { randomUUID as randomUUID3 } from "node:crypto";
 
 // src/updates/process-owner.ts
 import { execFile as execFile2 } from "node:child_process";
-import { readFile as readFile4 } from "node:fs/promises";
+import { readFile as readFile3 } from "node:fs/promises";
 import { join as join5 } from "node:path";
 import { promisify } from "node:util";
 var execute = promisify(execFile2);
@@ -5569,8 +5610,8 @@ async function inspect(pid) {
       return /^\d{16,20}$/.test(ticks) ? `win:${ticks}` : void 0;
     }
     if (process.platform === "linux") {
-      const [stat4, boot] = await Promise.all([readFile4(`/proc/${pid}/stat`, "utf8"), readFile4("/proc/sys/kernel/random/boot_id", "utf8")]);
-      const started = stat4.slice(stat4.lastIndexOf(")") + 2).trim().split(/\s+/)[19];
+      const [stat3, boot] = await Promise.all([readFile3(`/proc/${pid}/stat`, "utf8"), readFile3("/proc/sys/kernel/random/boot_id", "utf8")]);
+      const started = stat3.slice(stat3.lastIndexOf(")") + 2).trim().split(/\s+/)[19];
       return /^\d+$/.test(started) && /^[0-9a-f-]{36}$/i.test(boot.trim()) ? `linux:${boot.trim()}:${started}` : void 0;
     }
   } catch {
@@ -5827,7 +5868,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.9";
+var VERSION = "0.12.10";
 
 // src/worker-host.ts
 import { EventEmitter as EventEmitter2 } from "node:events";
@@ -6139,8 +6180,8 @@ function isChatTextSize(value) {
 }
 
 // src/copilot/session.ts
-import { basename as basename4, isAbsolute as isAbsolute2 } from "node:path";
-import { realpath as realpath4, stat as stat3 } from "node:fs/promises";
+import { basename as basename4, isAbsolute as isAbsolute3 } from "node:path";
+import { realpath as realpath5, stat as stat2 } from "node:fs/promises";
 var unavailable = (message) => Object.assign(new Error(message), { code: "unavailable" });
 async function bounded(request) {
   let timer;
@@ -6158,9 +6199,9 @@ function sessionAdapter(session2) {
   const project2 = async () => {
     try {
       const info = await bounded(session2.rpc.metadata.snapshot());
-      if (!info || info.isRemote !== false || typeof info.workingDirectory !== "string" || !isAbsolute2(info.workingDirectory)) return null;
-      const path = await realpath4(info.workingDirectory);
-      if (!(await stat3(path)).isDirectory()) return null;
+      if (!info || info.isRemote !== false || typeof info.workingDirectory !== "string" || !isAbsolute3(info.workingDirectory)) return null;
+      const path = await realpath5(info.workingDirectory);
+      if (!(await stat2(path)).isDirectory()) return null;
       return { id: `copilot::${path}`, path, name: basename4(path) };
     } catch {
       return null;
@@ -6333,8 +6374,8 @@ function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_D
 // src/copilot/server.ts
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
-import { readFile as readFile5, realpath as realpath5 } from "node:fs/promises";
-import { extname, resolve as resolve3, sep as sep2 } from "node:path";
+import { realpath as realpath6 } from "node:fs/promises";
+import { extname } from "node:path";
 var MODEL_WRITES = /* @__PURE__ */ new Set(["models.save", "models.delete", "models.move", "models.roles", "consent.set", "rules.save"]);
 var PANEL_KEYS = /* @__PURE__ */ new Set(["tab", "style", "level", "effort", "structureChoice", "terminalWorkspaces", "optionsOpen", "draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked", "sendAfterEnhance", "historyScope"]);
 var readable = (key) => key === "history" || key === "colorTheme" || key.startsWith("panel:") && PANEL_KEYS.has(key.slice(6));
@@ -6385,7 +6426,7 @@ async function createCanvasServer(options) {
   const canvases = /* @__PURE__ */ new Map();
   let pending = 0, streams = 0;
   let origin = "";
-  const assets = await realpath5(options.assets);
+  const assets = await realpath6(options.assets);
   const json3 = (res, status, value) => {
     res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
     res.end(JSON.stringify(value ?? null));
@@ -6516,18 +6557,14 @@ async function createCanvasServer(options) {
         json3(res, 404, { error: "Not found" });
         return;
       }
-      const file = await realpath5(resolve3(assets, route || "index.html")).catch(() => "");
-      if (!file.startsWith(assets + sep2)) {
-        json3(res, 404, { error: "Not found" });
-        return;
-      }
       const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".png": "image/png", ".svg": "image/svg+xml", ".woff2": "font/woff2" };
-      if (!mime[extname(file)]) {
+      const file = await readConfinedFile(assets, route || "index.html", 8 * 1024 * 1024, (path2) => !!mime[extname(path2)]);
+      if (!file) {
         json3(res, 404, { error: "Not found" });
         return;
       }
-      res.writeHead(200, { "content-type": mime[extname(file)] });
-      res.end(await readFile5(file));
+      res.writeHead(200, { "content-type": mime[extname(file.path)] });
+      res.end(file.data);
     } catch (error) {
       if (!res.destroyed && !res.headersSent) {
         if (!req.complete) {
@@ -6580,8 +6617,8 @@ async function createCanvasServer(options) {
 }
 
 // src/copilot/models.ts
-import { mkdtemp, mkdir as mkdir5, realpath as realpath8, rm as rm2 } from "node:fs/promises";
-import { basename as basename6, isAbsolute as isAbsolute4, join as join9, relative as relative4 } from "node:path";
+import { mkdtemp, mkdir as mkdir5, realpath as realpath9, rm as rm2 } from "node:fs/promises";
+import { basename as basename6, isAbsolute as isAbsolute5, join as join9, relative as relative5 } from "node:path";
 import { tmpdir as tmpdir3 } from "node:os";
 import { randomUUID as randomUUID6 } from "node:crypto";
 
@@ -6589,22 +6626,22 @@ import { randomUUID as randomUUID6 } from "node:crypto";
 import { randomUUID as randomUUID5 } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { homedir as homedir2 } from "node:os";
-import { lstat as lstat3, mkdir as mkdir4, open as open3, realpath as realpath7, rename as rename4, writeFile as writeFile3 } from "node:fs/promises";
+import { lstat as lstat4, mkdir as mkdir4, open as open4, realpath as realpath8, rename as rename4, writeFile as writeFile3 } from "node:fs/promises";
 import { join as join8 } from "node:path";
 import { StringDecoder } from "node:string_decoder";
 
 // src/copilot/usage-recovery.ts
 var import_proper_lockfile3 = __toESM(require_proper_lockfile(), 1);
 import { randomUUID as randomUUID4 } from "node:crypto";
-import { lstat as lstat2, mkdir as mkdir3, open as open2, readdir as readdir3, realpath as realpath6, rename as rename3, rm, rmdir as rmdir2, unlink as unlink2, writeFile as writeFile2 } from "node:fs/promises";
-import { basename as basename5, isAbsolute as isAbsolute3, join as join7, relative as relative3, resolve as resolve4 } from "node:path";
+import { lstat as lstat3, mkdir as mkdir3, open as open3, readdir as readdir3, realpath as realpath7, rename as rename3, rm, rmdir as rmdir2, unlink as unlink2, writeFile as writeFile2 } from "node:fs/promises";
+import { basename as basename5, isAbsolute as isAbsolute4, join as join7, relative as relative4, resolve as resolve4 } from "node:path";
 import { tmpdir as tmpdir2 } from "node:os";
 var uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 var ownerFile = ".enhance-usage-owner.json";
 var generic = () => new Error("Unable to recover usage accounting. Raw helper data was left untouched.");
 var within = (root, path) => {
-  const part = relative3(root, path);
-  return !!part && !isAbsolute3(part) && !part.startsWith("..");
+  const part = relative4(root, path);
+  return !!part && !isAbsolute4(part) && !part.startsWith("..");
 };
 var missing = (error) => error.code === "ENOENT";
 async function save2(file, value) {
@@ -6613,9 +6650,9 @@ async function save2(file, value) {
   await rename3(temporary, file);
 }
 async function json2(file) {
-  const before = await lstat2(file, { bigint: true });
+  const before = await lstat3(file, { bigint: true });
   if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size > 16384n) throw generic();
-  const handle = await open2(file, "r");
+  const handle = await open3(file, "r");
   try {
     const actual = await handle.stat({ bigint: true });
     if (before.dev !== actual.dev || before.ino !== actual.ino || actual.nlink !== 1n || !actual.isFile()) throw generic();
@@ -6625,9 +6662,9 @@ async function json2(file) {
   }
 }
 async function identity(directory2) {
-  const info = await lstat2(directory2, { bigint: true });
-  const canonical = await realpath6(directory2);
-  const temp = await realpath6(tmpdir2());
+  const info = await lstat3(directory2, { bigint: true });
+  const canonical = await realpath7(directory2);
+  const temp = await realpath7(tmpdir2());
   if (!info.isDirectory() || info.isSymbolicLink() || canonical !== resolve4(directory2) || !within(temp, canonical) || !basename5(canonical).startsWith("enhance-copilot-")) throw generic();
   return { directory: canonical, dev: String(info.dev), ino: String(info.ino) };
 }
@@ -6659,7 +6696,7 @@ async function cleanup(record) {
 }
 async function registerUsageJournal(root, sessionId, directory2) {
   if (!uuid.test(sessionId)) throw generic();
-  const record = { sessionId, ...await identity(await realpath6(directory2)), token: randomUUID4() };
+  const record = { sessionId, ...await identity(await realpath7(directory2)), token: randomUUID4() };
   const registry = join7(root, "recovery"), file = join7(registry, `${sessionId}.json`);
   await mkdir3(registry, { recursive: true, mode: 448 });
   await writeFile2(join7(record.directory, ownerFile), JSON.stringify({ token: record.token, sessionId, state: "running" }), { flag: "wx", mode: 384 });
@@ -6693,8 +6730,8 @@ async function journal(record) {
   let path = record.directory;
   for (const component of ["home", "session-state", record.sessionId, "events.jsonl"]) {
     path = join7(path, component);
-    const info = await lstat2(path);
-    if (info.isSymbolicLink() || await realpath6(path) !== path || (component === "events.jsonl" ? !info.isFile() || info.nlink !== 1 : !info.isDirectory())) throw generic();
+    const info = await lstat3(path);
+    if (info.isSymbolicLink() || await realpath7(path) !== path || (component === "events.jsonl" ? !info.isFile() || info.nlink !== 1 : !info.isDirectory())) throw generic();
   }
   return path;
 }
@@ -6702,7 +6739,7 @@ async function recoverUsageJournals(root, consume, options = {}) {
   const status = { pending: 0, unconfirmed: 0, recovered: 0, failed: 0, deferred: 0 };
   const registry = join7(root, "recovery");
   try {
-    if (!(await lstat2(registry)).isDirectory() || await realpath6(registry) !== resolve4(registry)) throw generic();
+    if (!(await lstat3(registry)).isDirectory() || await realpath7(registry) !== resolve4(registry)) throw generic();
   } catch (error) {
     if (missing(error)) return status;
     throw generic();
@@ -6722,7 +6759,7 @@ async function recoverUsageJournals(root, consume, options = {}) {
         } catch (error) {
           if (record.committed && missing(error)) {
             try {
-              await lstat2(record.directory);
+              await lstat3(record.directory);
             } catch (error2) {
               if (missing(error2)) {
                 if (!options.inspect) await unlink2(file);
@@ -6902,11 +6939,11 @@ async function createUsageRecorder(sessionId, root = usageHome(), options = {}) 
     return accounting ? `${sessionId}:${accounting.usageId}` : `event:${receipt2.id}`;
   };
   if (options.resume) {
-    const canonical = await realpath7(root);
-    if (await realpath7(directory2) !== join8(canonical, "session-state", sessionId)) throw new Error("Unable to reopen usage accounting.");
-    const before = await lstat3(file, { bigint: true });
+    const canonical = await realpath8(root);
+    if (await realpath8(directory2) !== join8(canonical, "session-state", sessionId)) throw new Error("Unable to reopen usage accounting.");
+    const before = await lstat4(file, { bigint: true });
     if (!before.isFile() || before.nlink !== 1n || before.size > 64n * 1024n * 1024n) throw new Error("Unable to reopen usage accounting.");
-    const handle = await open3(file, "r");
+    const handle = await open4(file, "r");
     let content;
     try {
       const actual = await handle.stat({ bigint: true });
@@ -6979,9 +7016,9 @@ var cancelled = () => new LlmError(msg("error.cancelled"), "cancelled");
 var usageFailed = () => new LlmError(msg("error.copilot_usage"), "action_failed");
 function hostRuntime(executable = process.execPath, argv = process.argv, parentPid = process.ppid, environment = process.env, probe) {
   const checks = {
-    executableAllowed: isAbsolute4(executable) && ["copilot.exe", "copilot", "copilot-runtime.exe", "copilot-runtime"].includes(basename6(executable).toLowerCase()),
+    executableAllowed: isAbsolute5(executable) && ["copilot.exe", "copilot", "copilot-runtime.exe", "copilot-runtime"].includes(basename6(executable).toLowerCase()),
     // The packaged desktop uses a built-in entry name; SDK launches can use the preload's absolute path.
-    bootstrapPresent: argv.some((arg) => arg === "extension_bootstrap.mjs" || isAbsolute4(arg) && basename6(arg) === "extension_bootstrap.mjs"),
+    bootstrapPresent: argv.some((arg) => arg === "extension_bootstrap.mjs" || isAbsolute5(arg) && basename6(arg) === "extension_bootstrap.mjs"),
     sdkPathPresent: Boolean(environment.COPILOT_SDK_PATH),
     parentMatches: Number.isSafeInteger(parentPid) && parentPid > 0 && String(parentPid) === environment.COPILOT_EXTENSION_PARENT_PID
   };
@@ -7001,7 +7038,7 @@ async function desktopRuntime(probe) {
     probe?.stage("runtime_identity");
     const executable = hostRuntime(void 0, void 0, void 0, void 0, probe);
     probe?.stage("runtime_path");
-    const path = await realpath8(executable);
+    const path = await realpath9(executable);
     probe?.check("runtimePathResolved", true);
     loadingSdk = true;
     probe?.stage("sdk_import");
@@ -7202,7 +7239,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       checkReasoning(parentModel, input.reasoningEffort);
       checkReasoning(model, input.reasoningEffort);
       stage("copilot.workspace");
-      if (metadata.isRemote !== false || await realpath8(metadata.workingDirectory) !== await realpath8(workspace)) throw unavailable2();
+      if (metadata.isRemote !== false || await realpath9(metadata.workingDirectory) !== await realpath9(workspace)) throw unavailable2();
       stage("copilot.tools");
       await withDeadline(session2.rpc.tools.initializeAndValidate(), 15e3);
       const [tools, selected] = await withDeadline(Promise.all([session2.rpc.tools.getCurrentMetadata(), session2.rpc.model.getCurrent()]), 15e3);
@@ -7262,8 +7299,8 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
             throw usageFailed();
           }
         } else if (directory2) {
-          const inside = relative4(tmpdir3(), directory2);
-          if (inside && !isAbsolute4(inside) && !inside.startsWith("..") && basename6(directory2).startsWith("enhance-copilot-")) {
+          const inside = relative5(tmpdir3(), directory2);
+          if (inside && !isAbsolute5(inside) && !inside.startsWith("..") && basename6(directory2).startsWith("enhance-copilot-")) {
             await rm2(directory2, { recursive: true, force: true, maxRetries: 3 }).catch(() => {
               diagnostics2?.record(phase, "failed");
               throw unavailable2();
