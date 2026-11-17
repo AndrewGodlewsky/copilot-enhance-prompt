@@ -24,7 +24,8 @@ export type EnhanceWorker = {
   settings: SettingsStore
   host: {
     has(name: string): boolean
-    call<K extends keyof PlatformOperations>(name: K, input: PlatformOperations[K]['input'], options?: RequestOptions): Promise<PlatformOperations[K]['output']>
+    // Internal callback only: never accepted as panel JSON or exposed as an agent action.
+    call<K extends keyof PlatformOperations>(name: K, input: PlatformOperations[K]['input'], options?: RequestOptions & { ensureAccess?: () => Promise<void> }): Promise<PlatformOperations[K]['output']>
   }
   panels: {
     handle<K extends keyof PluginRequests>(name: K, handler: (input: RequestInput<K>, ctx: RequestContext) => Promise<PluginRequests[K]['output']> | PluginRequests[K]['output']): Disposable

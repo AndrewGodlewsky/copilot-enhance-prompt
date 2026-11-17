@@ -68,11 +68,8 @@ export function createServices(session: CopilotSession, directory = process.env.
       await prepareEfforts()
       const values: Record<string, JsonValue> = { ...DEFAULTS }
       // A final privacy check must not read its value and then wait on unrelated preferences.
-      for (const name of key === undefined ? await prefs.keys() : [key]) {
-        if (!Object.hasOwn(DEFAULTS, name)) continue
-        const saved = await prefs.get(name)
-        if (saved !== null || key === undefined) values[name] = saved
-      }
+      const saved = key === undefined ? await prefs.snapshot() : { [key]: await prefs.get(key) }
+      for (const [name, value] of Object.entries(saved)) if (Object.hasOwn(DEFAULTS, name) && (value !== null || key === undefined)) values[name] = value
       if (!isChatTextSize(values.chatTextSize)) values.chatTextSize = 'medium'
       if (typeof values.useEnhancedPrompts !== 'boolean') values.useEnhancedPrompts = true
       for (const name of UNSUPPORTED_SETTINGS) values[name] = false
@@ -101,7 +98,7 @@ export function createServices(session: CopilotSession, directory = process.env.
   const host: EnhanceWorker['host'] = {
     has: name => (Boolean(copilot) && ['copilot.catalog', 'copilot.rewrite'].includes(name)) || adapter.has(name),
     call: async (name, input, options) => name === 'copilot.catalog' && copilot ? await copilot.catalog() as never
-      : name === 'copilot.rewrite' && copilot ? { text: await copilot.rewrite(input as import('./models.ts').CopilotRewrite, options?.signal) } as never
+      : name === 'copilot.rewrite' && copilot ? { text: await copilot.rewrite(input as import('./models.ts').CopilotRewrite, options?.signal, options?.ensureAccess) } as never
       : adapter.call(name, input, options)
   }
   return { storage, settings, host, adapter, directory, data }

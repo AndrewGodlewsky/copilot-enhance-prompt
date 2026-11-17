@@ -50,9 +50,9 @@ export function isExcluded(path: string, patterns: RegExp[]): boolean {
   return patterns.some((pattern) => pattern.test(path))
 }
 
-export type FileFilter = (path: string) => boolean | Promise<boolean>
+export type FileFilter = ((path: string) => boolean | Promise<boolean>) & { beforeRead?: () => Promise<void> }
 
-export type FilePolicy = { excludePatterns?: string; exclude?: ReadonlySet<string> }
+export type FilePolicy = { excludePatterns?: string; exclude?: ReadonlySet<string>; ensureAccess?: () => Promise<void> }
 
 /** The same file decision applies to every representation, including resolved link targets. */
 export function fileAllowed(policy: FilePolicy = {}): (path: string) => boolean {
@@ -67,6 +67,7 @@ export function fileAllowed(policy: FilePolicy = {}): (path: string) => boolean 
 
 /** Resolve both unchecked paths and candidates before any context route uses them. */
 export async function projectFileAllowed(root: string, policy: FilePolicy = {}): Promise<FileFilter> {
+  await policy.ensureAccess?.()
   const exclude = new Set(policy.exclude)
   const base = await realpath(root).catch(() => null)
   if (!base) return () => false
@@ -98,11 +99,11 @@ export async function projectFileAllowed(root: string, policy: FilePolicy = {}):
     if (local !== null) exclude.add(`file:${local}`)
   }
   const lexical = fileAllowed({ ...policy, exclude })
-  return async path => {
+  return Object.assign(async (path: string) => {
     if (!lexical(path)) return false
     const local = await localPath(path)
     return local !== null && lexical(local + (path.endsWith('/') ? '/' : ''))
-  }
+  }, { beforeRead: policy.ensureAccess })
 }
 
 /** Bound filesystem concurrency while preserving the original file order. */
@@ -110,6 +111,7 @@ export async function filterAllowed(paths: string[], allow: FileFilter, signal?:
   const result: string[] = []
   for (let i = 0; i < paths.length; i += 64) {
     signal?.throwIfAborted()
+    await allow.beforeRead?.()
     const batch = paths.slice(i, i + 64)
     const allowed = await Promise.all(batch.map(allow))
     result.push(...batch.filter((_, index) => allowed[index]))
@@ -124,6 +126,7 @@ export async function walkFiles(root: string, maxFiles = 8000, maxDepth = 6, sig
       return
     }
     let entries
+    await allow.beforeRead?.()
     try {
       entries = await readdir(dir, { withFileTypes: true })
     } catch {
@@ -171,21 +174,25 @@ export function treeSummary(files: string[], maxLines = 70): string {
 }
 
 export async function readText(root: string, path: string, maxBytes = 200_000, allow: FileFilter = () => true): Promise<string | null> {
+  await allow.beforeRead?.()
   if (!await allow(path) || isSensitive(path) || isBinaryPath(path) || path.includes('..')) {
     return null
   }
+  const full = join(root, path)
+  let actual: string
   try {
-    const full = join(root, path)
     const info = await stat(full)
     if (!info.isFile() || info.size > maxBytes) {
       return null
     }
     // A link is read as the file it leads to: one that leaves the workspace, or leads to a file
     // whose own name says it holds secrets (README.md -> .env), is not read.
-    const actual = relative(await realpath(root), await realpath(full)).split(sep).join('/')
-    if (actual.startsWith('..') || isAbsolute(actual) || isSensitive(actual) || !await allow(actual)) {
-      return null
-    }
+    actual = relative(await realpath(root), await realpath(full)).split(sep).join('/')
+  } catch { return null }
+  if (actual.startsWith('..') || isAbsolute(actual) || isSensitive(actual) || !await allow(actual)) return null
+  // Policy errors must propagate; they are not ordinary unreadable-file failures.
+  await allow.beforeRead?.()
+  try {
     const text = await readFile(full, 'utf8')
     return text.includes('\u0000') ? null : text
   } catch {

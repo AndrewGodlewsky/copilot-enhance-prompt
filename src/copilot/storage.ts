@@ -9,7 +9,7 @@ import type { JsonValue, KeyValueStore } from '../runtime.ts'
 
 const held = new AsyncLocalStorage<Set<string>>()
 const buses = new Map<string, EventEmitter>()
-export type PersistentStore = KeyValueStore & { transaction<T>(fn: () => Promise<T>): Promise<T> }
+export type PersistentStore = KeyValueStore & { snapshot(): Promise<Record<string, JsonValue>>; transaction<T>(fn: () => Promise<T>): Promise<T> }
 
 /** Atomic replacement plus a renewable cross-process lock. Never hold it during model/network calls. */
 export function persistentStore(directory: string): PersistentStore {
@@ -46,6 +46,7 @@ export function persistentStore(directory: string): PersistentStore {
     bus.emit('change', { key })
   })
   return {
+    snapshot: read,
     get: async key => { const data = await read(); return Object.hasOwn(data, key) ? data[key] : null },
     set: (key, value) => change(key, value), delete: key => change(key), keys: async () => Object.keys(await read()),
     onDidChange: listener => {

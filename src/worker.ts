@@ -74,6 +74,9 @@ const str = (value: JsonValue | undefined, fallback = '') => (typeof value === '
 const num = (value: JsonValue | undefined, fallback: number) =>
   typeof value === 'number' && Number.isFinite(value) ? value : fallback
 const bool = (value: JsonValue | undefined, fallback: boolean) => (typeof value === 'boolean' ? value : fallback)
+const extraFiles = (value: JsonValue | undefined) => str(value).split('\n')
+  .map(line => line.trim().replace(/\\/g, '/').replace(/^\.\//, ''))
+  .filter(line => line && !line.startsWith('/') && !line.includes('..')).slice(0, 10)
 
 export async function readSettings(host: EnhanceWorker): Promise<Settings> {
   const [all, consents] = await Promise.all([host.settings.get(), host.storage.get(CONSENTS_KEY).catch(() => null)])
@@ -85,11 +88,7 @@ export async function readSettings(host: EnhanceWorker): Promise<Settings> {
     customInstructions: str(all.customInstructions),
     contextLevel: isContextLevel(level) ? level : 'standard',
     terminalLines: num(all.terminalLines, 100),
-    extraContextFiles: str(all.extraContextFiles)
-      .split('\n')
-      .map((line) => line.trim().replace(/\\/g, '/').replace(/^\.\//, ''))
-      .filter((line) => line && !line.startsWith('/') && !line.includes('..'))
-      .slice(0, 10),
+    extraContextFiles: extraFiles(all.extraContextFiles),
     excludePatterns: str(all.excludePatterns),
     adaptToAgent: bool(all.adaptToAgent, true),
     fallbackEnabled: bool(all.fallbackEnabled, true),
@@ -179,13 +178,14 @@ async function pickFilesWithModel(
   prompt: string,
   signal?: AbortSignal,
   totalMs: number = RUN_LIMITS.pickerMs,
-  reasoningEffort?: string
+  reasoningEffort?: string,
+  ensureAccess?: () => Promise<void>
 ): Promise<string[]> {
   const system =
     'You pick source files relevant to a coding task. Answer ONLY a JSON array of up to 8 file paths copied exactly from the list, most relevant first. No prose.'
   const user = `<task>\n${prompt}\n</task>\n<files>\n${tree.join('\n')}\n</files>`
   const list = candidates(config.profiles, config.selectorProfileId, settings.fallbackEnabled)
-  const { text } = await runChain(host, list, system, user, chainOptions(settings, signal, { timeoutMs: RUN_LIMITS.pickerMs, totalMs, reasoningEffort }))
+  const { text } = await runChain(host, list, system, user, chainOptions(settings, signal, { timeoutMs: RUN_LIMITS.pickerMs, totalMs, reasoningEffort, ensureAccess }))
   const match = /\[[\s\S]*\]/.exec(text)
   if (!match) return []
   let parsed: unknown
@@ -245,6 +245,22 @@ export function allowedLevel(requested: ContextLevel, settings: Settings): Conte
 
 const PROJECT_FILES_OFF = msg('note.project_files_off')
 
+function contextAccess(host: EnhanceWorker, settings: Settings, signal?: AbortSignal): () => Promise<void> {
+  return async () => {
+    signal?.throwIfAborted()
+    const current = await host.settings.get()
+    const consents = settings.privacy.allowOtherAgents || settings.privacy.allowAgentActivity
+      ? parseConsents(await host.storage.get(CONSENTS_KEY)) : undefined
+    const privacy = parsePrivacy(current, consents)
+    const keys = ['allowProjectFiles', 'allowGit', 'allowTerminalRead', 'allowOtherAgents', 'allowAgentActivity', 'allowEditorSaves'] as const
+    if (keys.some(key => settings.privacy[key] && !privacy[key]) || str(current.excludePatterns) !== settings.excludePatterns ||
+        extraFiles(current.extraContextFiles).join('\n') !== settings.extraContextFiles.join('\n')) {
+      throw new LlmError(msg('error.research_privacy_changed'), 'cancelled')
+    }
+    signal?.throwIfAborted()
+  }
+}
+
 export async function enhance(
   host: EnhanceWorker,
   input: {
@@ -272,6 +288,7 @@ export async function enhance(
   const prompt = input.prompt.trim()
   if (!prompt) throw hostError(msg('error.no_prompt'), 'invalid_params')
   const settings = await readSettings(host)
+  const ensureAccess = contextAccess(host, settings, signal)
   const config = await loadModels(host)
   let list: ModelProfile[]
   let reasoningEffort: string | undefined
@@ -317,29 +334,22 @@ export async function enhance(
     extraFiles: settings.extraContextFiles,
     excludePatterns: settings.excludePatterns,
     // The picker gets its own share, so the rewrite itself always has time left.
-    pickFiles: (tree, task) => pickFilesWithModel(host, pickerConfig, settings, tree, task, signal, Math.min(RUN_LIMITS.pickerMs, (left() ?? Infinity) / 2), pickerReasoning),
+    pickFiles: (tree, task) => pickFilesWithModel(host, pickerConfig, settings, tree, task, signal, Math.min(RUN_LIMITS.pickerMs, (left() ?? Infinity) / 2), pickerReasoning, ensureAccess),
+    ensureAccess,
     ...privacy,
     onStep: step,
     signal,
     workspaceId: typeof input.workspaceId === 'string' ? input.workspaceId : null
   })
   if (level !== requested) gathered.notes.push(PROJECT_FILES_OFF)
-  let checkResearchAccess: (() => Promise<void>) | undefined
   if (level === 'ai-test') {
-    checkResearchAccess = async () => {
-      const current = await readSettings(host)
-      if (JSON.stringify(current.privacy) !== JSON.stringify(settings.privacy) || current.excludePatterns !== settings.excludePatterns ||
-          JSON.stringify(current.extraContextFiles) !== JSON.stringify(settings.extraContextFiles)) {
-        throw new LlmError(msg('error.research_privacy_changed'), 'cancelled')
-      }
-    }
     const researched = await researchContext({
       root: gathered.root, files: gathered.files ?? [], items: gathered.items, prompt, signal,
       exclude: new Set(input.exclude ?? []), excludePatterns: settings.excludePatterns,
       budgetMs: Math.min(RESEARCH_LIMITS.ms, (left() ?? RUN_LIMITS.totalMs) / 2),
-      ensureAccess: checkResearchAccess, onStep: step, diagnostics: host.diagnostics,
+      ensureAccess, onStep: step, diagnostics: host.diagnostics,
       ask: async (system, user, researchSignal, remainingMs) => (await runChain(host, list.slice(0, 1), system, user,
-        chainOptions(settings, researchSignal, { fallback: false, totalMs: remainingMs, timeoutMs: remainingMs, reasoningEffort }))).text
+        chainOptions(settings, researchSignal, { fallback: false, totalMs: remainingMs, timeoutMs: remainingMs, reasoningEffort, ensureAccess }))).text
     })
     gathered.items = researched.items
     gathered.notes.push(researched.note)
@@ -373,7 +383,7 @@ export async function enhance(
   /** The model being tried, as the progress card names it. */
   let tried = ''
   try {
-    await checkResearchAccess?.()
+    await ensureAccess()
     const result = await runChain(
       host,
       list,
@@ -383,6 +393,7 @@ export async function enhance(
         ...(deadline === undefined ? {} : { totalMs: left() }),
         images,
         reasoningEffort,
+        ensureAccess,
         onAttempt: (profile, model, attempt, total) => {
           tried = `${profile.name} · ${model || 'default'}${attempt > 1 ? ` · ${attempt}/${total}` : ''}`
           step('model', 'running', tried)
@@ -610,6 +621,7 @@ function registerRunHandlers(host: EnhanceWorker): void {
 
   host.panels.handle('context.preview', async ({ prompt, terminalId, level, exclude, workspaceId }, { signal }) => {
     const settings = await readSettings(host)
+    const ensureAccess = contextAccess(host, settings, signal)
     const requested: ContextLevel = isContextLevel(level) ? level : settings.contextLevel
     // Preview reads exactly what a run would: the same Privacy switches apply.
     const allowed = allowedLevel(requested, settings)
@@ -623,9 +635,11 @@ function registerRunHandlers(host: EnhanceWorker): void {
       excludePatterns: settings.excludePatterns,
       ...gatherPrivacy(settings),
       signal,
+      ensureAccess,
       workspaceId: workspaceId ?? null
     })
     const notes = [...gathered.notes]
+    await ensureAccess()
     if (allowed !== requested) notes.push(PROJECT_FILES_OFF)
     if (allowed === 'max') notes.push(msg('note.preview_no_picker'))
     if (allowed === 'ai-test') notes.push(msg('note.preview_no_research'))

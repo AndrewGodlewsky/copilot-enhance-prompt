@@ -36,6 +36,19 @@ test('sensitive files and exclude patterns', () => {
   assert.ok(!isExcluded('src/distance.ts', patterns))
 })
 
+test('readText propagates access revocation immediately before opening file contents', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'enhance-context-revoked-'))
+  try {
+    writeFileSync(join(root, 'file.txt'), 'Private contents')
+    let checks = 0
+    const allow = Object.assign(() => true, { beforeRead: async () => {
+      if (++checks === 2) throw new Error('Access revoked')
+    } })
+    await assert.rejects(readText(root, 'file.txt', undefined, allow), /Access revoked/)
+    assert.equal(checks, 2)
+  } finally { rmSync(root, { recursive: true, force: true }) }
+})
+
 test('readmeDigest keeps intro and setup/test sections', () => {
   const readme = '# App\nA tool.\n## Screenshots\nimg\n## Installation\nnpm i\n## License\nMIT\n## Running tests\nnpm test'
   const digest = readmeDigest(readme, 2000)

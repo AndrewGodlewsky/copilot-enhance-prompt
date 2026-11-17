@@ -145,6 +145,8 @@ Unavailable settings are disabled and explained. Switching the visible desktop t
 
 ## Data and privacy
 
+Changing context access or file exclusions stops work that was using the previous settings. Retry to collect context under the new settings. Checks also run before background model session creation and inference; they cannot recall content already sent to Copilot.
+
 The worker reads the project directory from Copilot session metadata, never from its session-artifact directory. Remote workspaces expose no local project files. Project reads obey privacy switches and reject sensitive filenames and escaping symlinks. Recognized secrets in automatically collected project instructions, README/extra context, stack information, source excerpts and Git metadata/diffs are masked before trimming. Explicit attachments, your request and custom instructions are not automatically secret-masked. Preview and exclude context before enhancing. Fallback and AI-assisted file selection may make additional Copilot requests. AI Test can add up to two research requests. [Exact data flow](docs/prompt-workflow.md).
 
 Preferences, profiles, rules and history are local. Saved prompt history is not encrypted; drafts and results are scoped to the Copilot session. Upgrade removes legacy encrypted API-key entries while preserving unrelated local data. The default data directory is `%LOCALAPPDATA%/copilot-enhance-prompt` on Windows and `~/.local/share/copilot-enhance-prompt` elsewhere. `ENHANCE_PROMPT_DATA_DIR` overrides it for tests or a separate installation.

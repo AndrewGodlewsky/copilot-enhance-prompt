@@ -3,9 +3,10 @@ import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { isSensitive, filterAllowed, type FileFilter } from './files.ts'
 import { redactCode } from './secrets.ts'
 
-type GitOptions = { timeoutMs?: number; maxBytes?: number; signal?: AbortSignal }
+type GitOptions = { timeoutMs?: number; maxBytes?: number; signal?: AbortSignal; ensureAccess?: () => Promise<void> }
 
 export async function git(cwd: string, args: string[], options: GitOptions = {}): Promise<string | null> {
+  await options.ensureAccess?.()
   const overrides: string[] = []
   if (args[0] === 'diff' || args[0] === 'status') {
     // Even a read-only diff can invoke clean/process filters. Inspect effective names
@@ -31,6 +32,7 @@ export async function git(cwd: string, args: string[], options: GitOptions = {})
     overrides.push('-c', 'diff.submodule=short')
     args = [args[0], '--ignore-submodules=dirty', ...args.slice(1)]
   }
+  await options.ensureAccess?.()
   return gitRaw(cwd, [...overrides, ...args], options)
 }
 
@@ -78,8 +80,8 @@ function gitRaw(
   })
 }
 
-export async function isGitRepo(root: string, signal?: AbortSignal): Promise<boolean> {
-  return (await git(root, ['rev-parse', '--is-inside-work-tree'], { timeoutMs: 2000, signal }))?.trim() === 'true'
+export async function isGitRepo(root: string, signal?: AbortSignal, ensureAccess?: () => Promise<void>): Promise<boolean> {
+  return (await git(root, ['rev-parse', '--is-inside-work-tree'], { timeoutMs: 2000, signal, ensureAccess }))?.trim() === 'true'
 }
 
 /** Pathspecs that keep secrets and noise out of diffs and greps. */
@@ -93,8 +95,8 @@ export const SAFE_PATHSPECS = [
   ':(exclude,glob)**/*.map'
 ]
 
-export async function gitStatus(root: string, signal?: AbortSignal): Promise<{ branchLine: string; changed: string[] } | null> {
-  const out = await git(root, ['status', '--porcelain=v1', '-b', '--untracked-files=normal'], { signal })
+export async function gitStatus(root: string, signal?: AbortSignal, ensureAccess?: () => Promise<void>): Promise<{ branchLine: string; changed: string[] } | null> {
+  const out = await git(root, ['status', '--porcelain=v1', '-b', '--untracked-files=normal'], { signal, ensureAccess })
   if (out === null) {
     return null
   }
@@ -118,8 +120,8 @@ export function changedPaths(statusLines: string[]): string[] {
     .filter(Boolean)
 }
 
-export async function gitLog(root: string, count: number, signal?: AbortSignal): Promise<string | null> {
-  return git(root, ['log', `-n${count}`, '--no-merges', '--pretty=format:%h %s (%cr)'], { signal })
+export async function gitLog(root: string, count: number, signal?: AbortSignal, ensureAccess?: () => Promise<void>): Promise<string | null> {
+  return git(root, ['log', `-n${count}`, '--no-merges', '--pretty=format:%h %s (%cr)'], { signal, ensureAccess })
 }
 
 /** Most files a diff may leave out by name; past this the diff is skipped rather than risk a leak. */
@@ -153,7 +155,8 @@ export async function gitDiff(
   allow: FileFilter = () => true,
   signal?: AbortSignal
 ): Promise<{ stat: string; diff: string } | null> {
-  const names = await git(root, ['diff', 'HEAD', '--name-status', '-z', '-M', '--no-ext-diff', '--no-textconv', '--', ...SAFE_PATHSPECS], { signal })
+  const ensureAccess = allow.beforeRead
+  const names = await git(root, ['diff', 'HEAD', '--name-status', '-z', '-M', '--no-ext-diff', '--no-textconv', '--', ...SAFE_PATHSPECS], { signal, ensureAccess })
   if (names === null) return null
   const refused = new Set<string>()
   for (const paths of parseNameStatus(names)) {
@@ -161,11 +164,11 @@ export async function gitDiff(
   }
   if (refused.size > MAX_DIFF_EXCLUSIONS) return null
   const pathspecs = [...SAFE_PATHSPECS, ...[...refused].map((path) => `:(exclude,literal)${path}`)]
-  const stat = await git(root, ['diff', 'HEAD', '-M', '--stat=100', '--no-ext-diff', '--no-textconv', '--', ...pathspecs], { signal })
+  const stat = await git(root, ['diff', 'HEAD', '-M', '--stat=100', '--no-ext-diff', '--no-textconv', '--', ...pathspecs], { signal, ensureAccess })
   if (stat === null || !stat.trim()) {
     return null
   }
-  const diff = (await git(root, ['diff', 'HEAD', '-M', '-U2', '--no-ext-diff', '--no-textconv', '--', ...pathspecs], { maxBytes: 4_000_000, signal })) ?? ''
+  const diff = (await git(root, ['diff', 'HEAD', '-M', '-U2', '--no-ext-diff', '--no-textconv', '--', ...pathspecs], { maxBytes: 4_000_000, signal, ensureAccess })) ?? ''
   // A key pasted into a source file is in the diff too: masked where it is certainly one.
   return { stat: stat.trim(), diff: diff.length > maxChars ? `${maskedStart(diff, maxChars)}\n…(diff truncated)` : redactCode(diff) }
 }
@@ -189,18 +192,18 @@ export function maskedStart(text: string, maxChars: number): string {
   return redactCode(spare.slice(0, end)).slice(0, maxChars)
 }
 
-export async function gitFiles(root: string, signal?: AbortSignal): Promise<string[] | null> {
-  const out = await git(root, ['ls-files', '-co', '--exclude-standard'], { maxBytes: 16_000_000, timeoutMs: 6000, signal })
+export async function gitFiles(root: string, signal?: AbortSignal, ensureAccess?: () => Promise<void>): Promise<string[] | null> {
+  const out = await git(root, ['ls-files', '-co', '--exclude-standard'], { maxBytes: 16_000_000, timeoutMs: 6000, signal, ensureAccess })
   return out === null ? null : out.split('\n').filter(Boolean).slice(0, 50_000)
 }
 
 /** Per file, how many lines contain `word` (case-insensitive, fixed string). */
-export async function gitGrepCount(root: string, word: string, signal?: AbortSignal, refused: string[] = []): Promise<Map<string, number>> {
+export async function gitGrepCount(root: string, word: string, signal?: AbortSignal, refused: string[] = [], ensureAccess?: () => Promise<void>): Promise<Map<string, number>> {
   const counts = new Map<string, number>()
   const out = await git(root, ['grep', '-c', '-I', '-i', '-F', '--untracked', '--exclude-standard', '-e', word, '--', ...SAFE_PATHSPECS, ...refused.map(path => `:(exclude,literal)${path}`)], {
     maxBytes: 4_000_000,
     timeoutMs: 5000,
-    signal
+    signal, ensureAccess
   })
   for (const line of (out ?? '').split('\n')) {
     const match = /^(.+):(\d+)$/.exec(line)
@@ -215,7 +218,8 @@ export async function gitGrep(
   keywords: string[],
   paths: string[],
   maxLines = 600,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  ensureAccess?: () => Promise<void>
 ): Promise<Map<string, number[]>> {
   const hits = new Map<string, number[]>()
   if (keywords.length === 0 || paths.length === 0) {
@@ -226,7 +230,7 @@ export async function gitGrep(
     args.push('-e', word)
   }
   args.push('--', ...paths.map((path) => `:(literal)${path}`))
-  const out = await git(root, args, { maxBytes: 3_000_000, timeoutMs: 5000, signal })
+  const out = await git(root, args, { maxBytes: 3_000_000, timeoutMs: 5000, signal, ensureAccess })
   if (!out) {
     return hits
   }

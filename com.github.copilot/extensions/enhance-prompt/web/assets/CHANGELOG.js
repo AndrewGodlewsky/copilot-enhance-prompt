@@ -1,5 +1,11 @@
 var e=`# Changes
 
+## [0.12.2] - 2026-11-17
+
+### Fixed
+- Turning off context access or changing file exclusions in Settings now stops an enhancement or context preview that was using the old settings, including AI selection, research and fallback models. Try again to use your updated settings.
+- Privacy is checked again while the background model starts, before project instructions or request context are sent. Content already sent to Copilot cannot be recalled.
+
 ## [0.12.1] - 2026-11-16
 
 ### Fixed

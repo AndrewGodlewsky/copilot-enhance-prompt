@@ -31,6 +31,11 @@ test('a keyed privacy read uses one current preference snapshot without enumerat
     assert.equal(reads, 1, 'privacy must not be sampled before later unrelated preference reads')
     assert.equal(await services.settings.get('chatTextSize'), 'medium')
     assert.equal(await services.settings.get('customInstructions'), 'Keep user rules')
+    reads = 0
+    const all = await services.settings.get()
+    assert.equal(all.saveHistory, false)
+    assert.equal(all.customInstructions, 'Keep user rules')
+    assert.equal(reads, 1, 'a policy snapshot must come from one atomic preference read')
   } finally {
     fs.readFile = original
     syncBuiltinESMExports()

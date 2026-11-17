@@ -54,4 +54,6 @@ Starting with 0.11.2, every version bump must prepend a dated `## [X.Y.Z] - YYYY
 
 Commit and push completed, verified work to `main` unless the owner requests otherwise. Never force-push. Tagging and creating releases remain separate owner decisions; the build/check scripts publish nothing.
 
+For the remaining v1 audit backlog (#40), the owner explicitly authorized one version and GitHub release per completed issue. Publish these as preview releases after verification and pushing main; record user-oriented notes and evidence in the issue and `docs/audits/v1/backlog-progress.md`. This authorization does not authorize paid Copilot tests, desktop automation, user-data expiry, or marking manual/product gates complete without evidence.
+
 For this project, every completion report must state the plugin version, whether changes were pushed, the destination branch and commit, and any verification still pending.

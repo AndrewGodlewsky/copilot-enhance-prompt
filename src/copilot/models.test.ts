@@ -4,10 +4,13 @@ import { access, rm } from 'node:fs/promises'
 import { createCopilotModels, hostRuntime, runtimeEnvironment, type DesktopSdk, type ModelSession } from './models.ts'
 import { createDiagnostics } from '../diagnostics.ts'
 import { resolveEffort } from '../effort.ts'
+import { LlmError } from '../llm.ts'
+import { msg } from '../messages.ts'
 
 function fixture() {
   const state = { helperLogin: 'person', parentLogin: 'person', host: 'https://github.com', tools: [] as unknown[], selected: 'model-a', provider: 'copilot', policy: 'enabled', currentDirectory: '', sent: [] as unknown[], stopped: 0, config: {} as Record<string, unknown>, options: {} as Record<string, unknown>, hold: false,
     prepared: '', recorded: [] as unknown[], flushed: false, prepareFails: false, flushFails: false, generateFails: false,
+    preflight: async (_phase: string) => {},
     authenticated: true, supportsReasoning: true, rawReasoning: false, efforts: ['low', 'medium', 'high', 'max'], appliedReasoning: 'high', helperEfforts: null as string[] | null }
   const emit = (event: unknown) => (state.config.onEvent as ((event: unknown) => void) | undefined)?.(event)
   const model = (efforts = state.efforts) => ({ id: 'model-a', name: 'Model A', provider: { kind: state.provider }, policy: { state: state.policy }, capabilities: { supports: { vision: true, ...(state.rawReasoning ? { reasoning_effort: efforts } : { reasoningEffort: state.supportsReasoning }) } }, ...(state.rawReasoning ? {} : { supportedReasoningEfforts: efforts, defaultReasoningEffort: 'medium' }) })
@@ -21,7 +24,7 @@ function fixture() {
     RuntimeConnection: { forStdio: options => options },
     CopilotClient: class {
       constructor(options: Record<string, unknown>) { state.options = options }
-      async start() {}
+      async start() { await state.preflight('start') }
       async forceStop() { state.stopped++; emit({ type: 'assistant.usage', data: { inputTokens: 11, outputTokens: 3 } }); release?.() }
       async createSession(config: Record<string, unknown>) {
         state.config = config
@@ -31,7 +34,7 @@ function fixture() {
           model: { list: async () => ({ list: [model(state.helperEfforts ?? state.efforts)] }), getCurrent: async () => ({ modelId: state.selected, reasoningEffort: state.appliedReasoning }) },
           gitHubAuth: { getStatus: async () => ({ isAuthenticated: true, login: state.helperLogin, host: state.host }) },
           metadata: { snapshot: async () => ({ workingDirectory: state.currentDirectory, isRemote: false }) },
-          tools: { initializeAndValidate: async () => ({}), getCurrentMetadata: async () => ({ tools: state.tools }) }
+          tools: { initializeAndValidate: async () => { await state.preflight('tools'); return {} }, getCurrentMetadata: async () => ({ tools: state.tools }) }
         },
         sendAndWait: async (input: unknown) => { state.sent.push(input); if (state.hold) await new Promise<void>(resolve => { release = resolve }); if (state.generateFails) throw new Error('PRIVATE provider failure'); return { data: { content: 'Rewritten request' } } }
       }
@@ -66,6 +69,21 @@ test('reasoning is passed to the helper and verified before sending the prompt',
   await provider.rewrite({ model: 'model-a', reasoningEffort: 'high', system: 'Rewrite', user: 'Draft' })
   assert.equal(state.config.reasoningEffort, 'high')
   assert.equal(state.sent.length, 1)
+})
+
+test('privacy revoked during helper preflight prevents session instructions or inference from being sent', async () => {
+  for (const phase of ['start', 'tools']) {
+    const { provider, state } = fixture()
+    let allowed = true
+    state.preflight = async current => { if (current === phase) allowed = false }
+    const ensureAccess = async () => { if (!allowed) throw new LlmError(msg('error.research_privacy_changed'), 'cancelled') }
+    await assert.rejects(provider.rewrite({ model: 'model-a', system: 'PRIVATE project rules', user: 'PRIVATE source' }, undefined, ensureAccess),
+      { text: { code: 'error.research_privacy_changed' } })
+    assert.equal(state.sent.length, 0)
+    if (phase === 'start') assert.deepEqual(state.config, {})
+    assert.equal(state.stopped, 1)
+    await assert.rejects(access(state.options.baseDirectory as string))
+  }
 })
 
 test('session RPC raw reasoning arrays populate the catalog and pass the same preflight checks', async () => {

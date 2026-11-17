@@ -6,6 +6,18 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { gitDiff, gitStatus } from './git.ts'
 
+test('Git rechecks access after reading configuration and propagates revocation', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'enhance-git-revoked-'))
+  try {
+    execFileSync('git', ['init', '-q'], { cwd: root, windowsHide: true })
+    let checks = 0
+    await assert.rejects(gitStatus(root, undefined, async () => {
+      if (++checks === 2) throw new Error('Access revoked')
+    }), /Access revoked/)
+    assert.equal(checks, 2)
+  } finally { rmSync(root, { recursive: true, force: true }) }
+})
+
 test('context Git reads disable included clean/process filters without changing repository config', async () => {
   for (const kind of ['clean', 'process']) {
     const root = mkdtempSync(join(tmpdir(), 'enhance-git-filter-'))

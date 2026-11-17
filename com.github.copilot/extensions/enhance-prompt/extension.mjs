@@ -1839,7 +1839,7 @@ var MESSAGES = {
   "note.project_files_off": "Project files are off in Settings: workspace and agent only.",
   "note.preview_no_research": "Preview shows initial local context. AI Test research runs only when you click Enhance.",
   "note.research_summary": "AI Test: {rounds} research rounds, {searches} search terms, {excerpts} added excerpts; {reason}. The rewrite uses the available evidence, which may be incomplete.",
-  "error.research_privacy_changed": "Privacy or file exclusions changed during AI Test. Enhance again to use the updated settings.",
+  "error.research_privacy_changed": "Privacy or file exclusions changed. Try again to use the updated settings.",
   "why.research": "read during AI Test research (excerpt)",
   "note.preview_no_picker": "Preview skips the AI file picker.",
   "note.picker_skipped": "AI file picker skipped: {reason}",
@@ -2031,6 +2031,7 @@ function fileAllowed(policy = {}) {
   };
 }
 async function projectFileAllowed(root, policy = {}) {
+  await policy.ensureAccess?.();
   const exclude = new Set(policy.exclude);
   const base = await realpath(root).catch(() => null);
   if (!base) return () => false;
@@ -2060,16 +2061,17 @@ async function projectFileAllowed(root, policy = {}) {
     if (local !== null) exclude.add(`file:${local}`);
   }
   const lexical = fileAllowed({ ...policy, exclude });
-  return async (path) => {
+  return Object.assign(async (path) => {
     if (!lexical(path)) return false;
     const local = await localPath(path);
     return local !== null && lexical(local + (path.endsWith("/") ? "/" : ""));
-  };
+  }, { beforeRead: policy.ensureAccess });
 }
 async function filterAllowed(paths, allow, signal) {
   const result = [];
   for (let i = 0; i < paths.length; i += 64) {
     signal?.throwIfAborted();
+    await allow.beforeRead?.();
     const batch = paths.slice(i, i + 64);
     const allowed = await Promise.all(batch.map(allow));
     result.push(...batch.filter((_, index) => allowed[index]));
@@ -2083,6 +2085,7 @@ async function walkFiles(root, maxFiles = 8e3, maxDepth = 6, signal, allow = () 
       return;
     }
     let entries;
+    await allow.beforeRead?.();
     try {
       entries = await readdir(dir, { withFileTypes: true });
     } catch {
@@ -2126,19 +2129,24 @@ function treeSummary(files, maxLines = 70) {
 \u2026(${all.length - maxLines} more)` : all.join("\n");
 }
 async function readText(root, path, maxBytes = 2e5, allow = () => true) {
+  await allow.beforeRead?.();
   if (!await allow(path) || isSensitive(path) || isBinaryPath(path) || path.includes("..")) {
     return null;
   }
+  const full = join(root, path);
+  let actual;
   try {
-    const full = join(root, path);
     const info = await stat(full);
     if (!info.isFile() || info.size > maxBytes) {
       return null;
     }
-    const actual = relative(await realpath(root), await realpath(full)).split(sep).join("/");
-    if (actual.startsWith("..") || isAbsolute(actual) || isSensitive(actual) || !await allow(actual)) {
-      return null;
-    }
+    actual = relative(await realpath(root), await realpath(full)).split(sep).join("/");
+  } catch {
+    return null;
+  }
+  if (actual.startsWith("..") || isAbsolute(actual) || isSensitive(actual) || !await allow(actual)) return null;
+  await allow.beforeRead?.();
+  try {
     const text = await readFile(full, "utf8");
     return text.includes("\0") ? null : text;
   } catch {
@@ -2177,6 +2185,7 @@ function snippet(text, hits, maxChars) {
 // src/context/git.ts
 import { execFile, spawn as spawn2 } from "node:child_process";
 async function git(cwd, args, options = {}) {
+  await options.ensureAccess?.();
   const overrides = [];
   if (args[0] === "diff" || args[0] === "status") {
     const names = await gitRaw(cwd, ["config", "--null", "--name-only", "--list"], { ...options, maxBytes: 128e3 }, true);
@@ -2196,6 +2205,7 @@ async function git(cwd, args, options = {}) {
     overrides.push("-c", "diff.submodule=short");
     args = [args[0], "--ignore-submodules=dirty", ...args.slice(1)];
   }
+  await options.ensureAccess?.();
   return gitRaw(cwd, [...overrides, ...args], options);
 }
 function gitRaw(cwd, args, options, requireComplete = false) {
@@ -2234,8 +2244,8 @@ function gitRaw(cwd, args, options, requireComplete = false) {
     signal?.addEventListener("abort", onAbort, { once: true });
   });
 }
-async function isGitRepo(root, signal) {
-  return (await git(root, ["rev-parse", "--is-inside-work-tree"], { timeoutMs: 2e3, signal }))?.trim() === "true";
+async function isGitRepo(root, signal, ensureAccess) {
+  return (await git(root, ["rev-parse", "--is-inside-work-tree"], { timeoutMs: 2e3, signal, ensureAccess }))?.trim() === "true";
 }
 var SAFE_PATHSPECS = [
   ".",
@@ -2246,8 +2256,8 @@ var SAFE_PATHSPECS = [
   ":(exclude,glob)**/*.min.*",
   ":(exclude,glob)**/*.map"
 ];
-async function gitStatus(root, signal) {
-  const out = await git(root, ["status", "--porcelain=v1", "-b", "--untracked-files=normal"], { signal });
+async function gitStatus(root, signal, ensureAccess) {
+  const out = await git(root, ["status", "--porcelain=v1", "-b", "--untracked-files=normal"], { signal, ensureAccess });
   if (out === null) {
     return null;
   }
@@ -2261,8 +2271,8 @@ function statusLinePaths(line) {
 function changedPaths(statusLines) {
   return statusLines.map((line) => (line.slice(3).split(" -> ").pop() ?? "").replace(/^"|"$/g, "")).filter(Boolean);
 }
-async function gitLog(root, count2, signal) {
-  return git(root, ["log", `-n${count2}`, "--no-merges", "--pretty=format:%h %s (%cr)"], { signal });
+async function gitLog(root, count2, signal, ensureAccess) {
+  return git(root, ["log", `-n${count2}`, "--no-merges", "--pretty=format:%h %s (%cr)"], { signal, ensureAccess });
 }
 var MAX_DIFF_EXCLUSIONS = 300;
 function parseNameStatus(out) {
@@ -2277,7 +2287,8 @@ function parseNameStatus(out) {
   return entries;
 }
 async function gitDiff(root, maxChars, allow = () => true, signal) {
-  const names = await git(root, ["diff", "HEAD", "--name-status", "-z", "-M", "--no-ext-diff", "--no-textconv", "--", ...SAFE_PATHSPECS], { signal });
+  const ensureAccess = allow.beforeRead;
+  const names = await git(root, ["diff", "HEAD", "--name-status", "-z", "-M", "--no-ext-diff", "--no-textconv", "--", ...SAFE_PATHSPECS], { signal, ensureAccess });
   if (names === null) return null;
   const refused = /* @__PURE__ */ new Set();
   for (const paths of parseNameStatus(names)) {
@@ -2285,11 +2296,11 @@ async function gitDiff(root, maxChars, allow = () => true, signal) {
   }
   if (refused.size > MAX_DIFF_EXCLUSIONS) return null;
   const pathspecs = [...SAFE_PATHSPECS, ...[...refused].map((path) => `:(exclude,literal)${path}`)];
-  const stat5 = await git(root, ["diff", "HEAD", "-M", "--stat=100", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { signal });
+  const stat5 = await git(root, ["diff", "HEAD", "-M", "--stat=100", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { signal, ensureAccess });
   if (stat5 === null || !stat5.trim()) {
     return null;
   }
-  const diff = await git(root, ["diff", "HEAD", "-M", "-U2", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { maxBytes: 4e6, signal }) ?? "";
+  const diff = await git(root, ["diff", "HEAD", "-M", "-U2", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { maxBytes: 4e6, signal, ensureAccess }) ?? "";
   return { stat: stat5.trim(), diff: diff.length > maxChars ? `${maskedStart(diff, maxChars)}
 \u2026(diff truncated)` : redactCode(diff) };
 }
@@ -2303,16 +2314,17 @@ function maskedStart(text, maxChars) {
   }
   return redactCode(spare.slice(0, end)).slice(0, maxChars);
 }
-async function gitFiles(root, signal) {
-  const out = await git(root, ["ls-files", "-co", "--exclude-standard"], { maxBytes: 16e6, timeoutMs: 6e3, signal });
+async function gitFiles(root, signal, ensureAccess) {
+  const out = await git(root, ["ls-files", "-co", "--exclude-standard"], { maxBytes: 16e6, timeoutMs: 6e3, signal, ensureAccess });
   return out === null ? null : out.split("\n").filter(Boolean).slice(0, 5e4);
 }
-async function gitGrepCount(root, word, signal, refused = []) {
+async function gitGrepCount(root, word, signal, refused = [], ensureAccess) {
   const counts = /* @__PURE__ */ new Map();
   const out = await git(root, ["grep", "-c", "-I", "-i", "-F", "--untracked", "--exclude-standard", "-e", word, "--", ...SAFE_PATHSPECS, ...refused.map((path) => `:(exclude,literal)${path}`)], {
     maxBytes: 4e6,
     timeoutMs: 5e3,
-    signal
+    signal,
+    ensureAccess
   });
   for (const line of (out ?? "").split("\n")) {
     const match = /^(.+):(\d+)$/.exec(line);
@@ -2320,7 +2332,7 @@ async function gitGrepCount(root, word, signal, refused = []) {
   }
   return counts;
 }
-async function gitGrep(root, keywords, paths, maxLines = 600, signal) {
+async function gitGrep(root, keywords, paths, maxLines = 600, signal, ensureAccess) {
   const hits = /* @__PURE__ */ new Map();
   if (keywords.length === 0 || paths.length === 0) {
     return hits;
@@ -2330,7 +2342,7 @@ async function gitGrep(root, keywords, paths, maxLines = 600, signal) {
     args.push("-e", word);
   }
   args.push("--", ...paths.map((path) => `:(literal)${path}`));
-  const out = await git(root, args, { maxBytes: 3e6, timeoutMs: 5e3, signal });
+  const out = await git(root, args, { maxBytes: 3e6, timeoutMs: 5e3, signal, ensureAccess });
   if (!out) {
     return hits;
   }
@@ -2766,22 +2778,23 @@ async function focusedProject(host, hint) {
 }
 var staticCache = /* @__PURE__ */ new Map();
 var STATIC_TTL_MS = 9e4;
-var staticKey = (extraFiles, allowGit, policy) => JSON.stringify([extraFiles, allowGit, policy.excludePatterns ?? "", [...policy.exclude ?? []].sort()]);
-async function staticParts(root, extraFiles, fresh = false, allowGit = true, signal, onProgress = () => void 0, policy = {}) {
-  const key = staticKey(extraFiles, allowGit, policy);
+var staticKey = (extraFiles2, allowGit, policy) => JSON.stringify([extraFiles2, allowGit, policy.excludePatterns ?? "", [...policy.exclude ?? []].sort()]);
+async function staticParts(root, extraFiles2, fresh = false, allowGit = true, signal, onProgress = () => void 0, policy = {}) {
+  await policy.ensureAccess?.();
+  const key = staticKey(extraFiles2, allowGit, policy);
   const hit = staticCache.get(root);
   if (hit?.key === key && !fresh && Date.now() - hit.at < STATIC_TTL_MS) return hit;
   const allow = await projectFileAllowed(root, policy);
-  const isGit = allowGit && await isGitRepo(root, signal);
+  const isGit = allowGit && await isGitRepo(root, signal, policy.ensureAccess);
   onProgress(0.15);
-  const listed = (isGit ? await gitFiles(root, signal) : null) ?? await walkFiles(root, void 0, void 0, signal, allow);
+  const listed = (isGit ? await gitFiles(root, signal, policy.ensureAccess) : null) ?? await walkFiles(root, void 0, void 0, signal, allow);
   stopIfCancelled(signal);
   onProgress(0.5);
   const files = await filterAllowed([...new Set(listed)], allow, signal);
   const permitted = new Set(files);
   const refused = listed.filter((path) => !permitted.has(path));
   const items = [];
-  for (const rule of await readRuleFiles(root, files, extraFiles, 9e3, allow)) {
+  for (const rule of await readRuleFiles(root, files, extraFiles2, 9e3, allow)) {
     items.push(item(`rules:${rule.name}`, "rules", raw(rule.name), rule.content));
   }
   onProgress(0.8);
@@ -2789,11 +2802,13 @@ async function staticParts(root, extraFiles, fresh = false, allowGit = true, sig
   if (stack) items.push(item("stack", "stack", msg("label.stack"), stack));
   if (files.length > 0 && !policy.exclude?.has("tree")) items.push(item("tree", "tree", msg("label.tree", { count: files.length }), redactSecrets(treeSummary(files))));
   stopIfCancelled(signal);
+  await policy.ensureAccess?.();
   const parts = { at: Date.now(), key, files, refused, isGit, items };
   staticCache.set(root, parts);
   return parts;
 }
 async function gatherContext(host, options) {
+  await options.ensureAccess?.();
   const { level } = options;
   const step = options.onStep ?? (() => void 0);
   const items = [];
@@ -2855,7 +2870,9 @@ async function gatherContext(host, options) {
   if (readTerminal && options.terminalId) {
     step("terminal", "running");
     stopIfCancelled(signal);
+    await options.ensureAccess?.();
     const read = await host.host.call("terminal.read", { terminalId: options.terminalId, maxLines: options.terminalLines }, signal ? { signal } : void 0).catch(() => null);
+    await options.ensureAccess?.();
     stopIfCancelled(signal);
     const lines = (read?.lines ?? []).map((line) => line.trimEnd()).filter(Boolean);
     if (lines.length > 0) {
@@ -2868,6 +2885,7 @@ async function gatherContext(host, options) {
     items.push(...await otherAgentItems(host, options, step));
   }
   stopIfCancelled(signal);
+  await options.ensureAccess?.();
   return { items: fitBudget(items.filter((entry) => !options.exclude.has(entry.id)), BUDGET[level]), notes, root, ...researchFiles ? { files: researchFiles } : {} };
 }
 function relativeTo(root, path) {
@@ -2902,8 +2920,8 @@ async function dynamicParts(root, parts, options, notes, saved = []) {
       return value;
     });
     const [status, log, diff] = await Promise.all([
-      counted(gitStatus(root, signal)),
-      counted(skip("git:log") ? null : gitLog(root, 6, signal)),
+      counted(gitStatus(root, signal, options.ensureAccess)),
+      counted(skip("git:log") ? null : gitLog(root, 6, signal, options.ensureAccess)),
       counted(skip("git:diff") ? null : gitDiff(root, diffChars, allow, signal))
     ]);
     stopIfCancelled(signal);
@@ -2945,7 +2963,7 @@ ${diff.diff}`));
   if (local?.limited) notes.push(msg("note.search_limited"));
   const perWord = useGitSearch ? await Promise.all(
     grepWords.map(
-      (word) => gitGrepCount(root, word, signal, parts.refused).then((counts) => {
+      (word) => gitGrepCount(root, word, signal, parts.refused, options.ensureAccess).then((counts) => {
         searched++;
         step("search", "running", void 0, searched / grepWords.length * 0.9);
         return counts;
@@ -2969,13 +2987,14 @@ ${diff.diff}`));
       step("pick", "done", String(picked.length));
     } catch (error) {
       stopIfCancelled(signal);
-      if (["error.copilot_usage", "error.copilot_reasoning", "error.copilot_reasoning_applied"].includes(messageOf(error).code)) throw error;
+      if (["error.research_privacy_changed", "error.copilot_usage", "error.copilot_reasoning", "error.copilot_reasoning_applied"].includes(messageOf(error).code)) throw error;
       notes.push(msg("note.picker_skipped", { reason: messageOf(error) }));
       step("pick", "skipped");
     }
   }
   stopIfCancelled(signal);
-  const lines = useGitSearch ? await gitGrep(root, grepWords, picked.map((entry) => entry.path), void 0, signal) : local?.hits ?? /* @__PURE__ */ new Map();
+  await options.ensureAccess?.();
+  const lines = useGitSearch ? await gitGrep(root, grepWords, picked.map((entry) => entry.path), void 0, signal, options.ensureAccess) : local?.hits ?? /* @__PURE__ */ new Map();
   stopIfCancelled(signal);
   for (const entry of picked) entry.hits = lines.get(entry.path) ?? [];
   const perFile = options.level === "max" ? 1800 : 1400;
@@ -2999,7 +3018,9 @@ async function otherAgentItems(host, options, step) {
   step("agents", "running");
   stopIfCancelled(signal);
   const limits = options.otherAgentsLimits ?? { agents: MAX_SESSIONS, lines: SESSION_LINES };
+  await options.ensureAccess?.();
   const agents = (await otherAgents(host, options.terminalId, signal)).slice(0, limits.agents);
+  await options.ensureAccess?.();
   stopIfCancelled(signal);
   if (agents.length === 0) {
     step("agents", "done", "0");
@@ -3009,7 +3030,9 @@ async function otherAgentItems(host, options, step) {
   for (const [index, agent] of agents.entries()) {
     const id2 = `session:${agent.terminalId}`;
     if (options.exclude.has(id2)) continue;
+    await options.ensureAccess?.();
     const text = await readSession(host, agent.terminalId, signal, limits.lines);
+    await options.ensureAccess?.();
     stopIfCancelled(signal);
     step("agents", "running", void 0, (index + 1) / agents.length);
     if (text) out.push(item(id2, "session", msg("label.session", { name: agent.title ?? agent.agent ?? agent.terminalId }), text));
@@ -3177,10 +3200,10 @@ ${extra.content}`, chars: item2.chars + extra.chars + 2, why: extra.why, note: e
         }
         feedback = [];
         const policy = await projectFileAllowed(root, options);
-        const allow = async (path) => {
+        const allow = Object.assign(async (path) => {
           await check();
           return policy(path);
-        };
+        }, { beforeRead: check });
         const before = windows;
         const readWindow = async (read) => {
           await check();
@@ -3670,7 +3693,10 @@ async function runChain(host, list, system, user, options) {
       if (await host.settings.get("allowOnlineModelLists") === false) {
         throw new LlmError(msg("error.lists_off"), "unavailable");
       }
-      const { text: text2 } = await host.host.call("copilot.rewrite", { model, ...reasoningEffort ? { reasoningEffort } : {}, system, user, images: (options.images ?? []).map((image) => ({ type: image.type, base64: image.base64 })) }, { signal: controller.signal });
+      await options.ensureAccess?.();
+      options.signal?.throwIfAborted();
+      const { text: text2 } = await host.host.call("copilot.rewrite", { model, ...reasoningEffort ? { reasoningEffort } : {}, system, user, images: (options.images ?? []).map((image) => ({ type: image.type, base64: image.base64 })) }, { signal: controller.signal, ensureAccess: options.ensureAccess });
+      await options.ensureAccess?.();
       attempts.push({ profileId: profile.id, name: profile.name, model, ...reasoningEffort ? { reasoningEffort } : {}, ok: true, ms: Date.now() - attemptStart });
       return { text: text2, profile, attempts };
     } catch (caught) {
@@ -3687,6 +3713,7 @@ async function runChain(host, list, system, user, options) {
         errorText: messageOf(error),
         ms: Date.now() - attemptStart
       });
+      if (messageOf(error).code === "error.research_privacy_changed") throw new ChainError(messageOf(error), "cancelled", attempts);
       if (accountingFailed || ["error.copilot_reasoning", "error.copilot_reasoning_applied"].includes(messageOf(error).code)) throw new ChainError(messageOf(error), "action_failed", attempts);
       if (options.signal?.aborted) {
         break;
@@ -4122,6 +4149,7 @@ var RUN_LIMITS = { budgetMs: PANEL_REQUEST_LIMIT_MS - 5e3, pickerMs: 25e3, slice
 var str3 = (value, fallback = "") => typeof value === "string" ? value : fallback;
 var num = (value, fallback) => typeof value === "number" && Number.isFinite(value) ? value : fallback;
 var bool = (value, fallback) => typeof value === "boolean" ? value : fallback;
+var extraFiles = (value) => str3(value).split("\n").map((line) => line.trim().replace(/\\/g, "/").replace(/^\.\//, "")).filter((line) => line && !line.startsWith("/") && !line.includes("..")).slice(0, 10);
 async function readSettings(host) {
   const [all, consents] = await Promise.all([host.settings.get(), host.storage.get(CONSENTS_KEY).catch(() => null)]);
   const style = str3(all.defaultStyle, "balanced");
@@ -4132,7 +4160,7 @@ async function readSettings(host) {
     customInstructions: str3(all.customInstructions),
     contextLevel: isContextLevel(level) ? level : "standard",
     terminalLines: num(all.terminalLines, 100),
-    extraContextFiles: str3(all.extraContextFiles).split("\n").map((line) => line.trim().replace(/\\/g, "/").replace(/^\.\//, "")).filter((line) => line && !line.startsWith("/") && !line.includes("..")).slice(0, 10),
+    extraContextFiles: extraFiles(all.extraContextFiles),
     excludePatterns: str3(all.excludePatterns),
     adaptToAgent: bool(all.adaptToAgent, true),
     fallbackEnabled: bool(all.fallbackEnabled, true),
@@ -4192,7 +4220,7 @@ async function addHistory(host, settings, entry) {
     await host.storage.set(HISTORY_KEY, next.map(toJson));
   });
 }
-async function pickFilesWithModel(host, config, settings, tree, prompt, signal, totalMs = RUN_LIMITS.pickerMs, reasoningEffort) {
+async function pickFilesWithModel(host, config, settings, tree, prompt, signal, totalMs = RUN_LIMITS.pickerMs, reasoningEffort, ensureAccess) {
   const system = "You pick source files relevant to a coding task. Answer ONLY a JSON array of up to 8 file paths copied exactly from the list, most relevant first. No prose.";
   const user = `<task>
 ${prompt}
@@ -4201,7 +4229,7 @@ ${prompt}
 ${tree.join("\n")}
 </files>`;
   const list = candidates(config.profiles, config.selectorProfileId, settings.fallbackEnabled);
-  const { text } = await runChain(host, list, system, user, chainOptions(settings, signal, { timeoutMs: RUN_LIMITS.pickerMs, totalMs, reasoningEffort }));
+  const { text } = await runChain(host, list, system, user, chainOptions(settings, signal, { timeoutMs: RUN_LIMITS.pickerMs, totalMs, reasoningEffort, ensureAccess }));
   const match = /\[[\s\S]*\]/.exec(text);
   if (!match) return [];
   let parsed;
@@ -4240,12 +4268,26 @@ function allowedLevel(requested, settings) {
   return !settings.privacy.allowProjectFiles && atLeast(requested, "standard") ? "basic" : requested;
 }
 var PROJECT_FILES_OFF = msg("note.project_files_off");
+function contextAccess(host, settings, signal) {
+  return async () => {
+    signal?.throwIfAborted();
+    const current = await host.settings.get();
+    const consents = settings.privacy.allowOtherAgents || settings.privacy.allowAgentActivity ? parseConsents(await host.storage.get(CONSENTS_KEY)) : void 0;
+    const privacy = parsePrivacy(current, consents);
+    const keys = ["allowProjectFiles", "allowGit", "allowTerminalRead", "allowOtherAgents", "allowAgentActivity", "allowEditorSaves"];
+    if (keys.some((key) => settings.privacy[key] && !privacy[key]) || str3(current.excludePatterns) !== settings.excludePatterns || extraFiles(current.extraContextFiles).join("\n") !== settings.extraContextFiles.join("\n")) {
+      throw new LlmError(msg("error.research_privacy_changed"), "cancelled");
+    }
+    signal?.throwIfAborted();
+  };
+}
 async function enhance(host, input, signal, progress, budgetMs) {
   const deadline2 = budgetMs === void 0 ? void 0 : Date.now() + budgetMs;
   const left = () => deadline2 === void 0 ? void 0 : Math.max(0, deadline2 - Date.now());
   const prompt = input.prompt.trim();
   if (!prompt) throw hostError(msg("error.no_prompt"), "invalid_params");
   const settings = await readSettings(host);
+  const ensureAccess = contextAccess(host, settings, signal);
   const config = await loadModels(host);
   let list;
   let reasoningEffort;
@@ -4286,21 +4328,15 @@ async function enhance(host, input, signal, progress, budgetMs) {
     extraFiles: settings.extraContextFiles,
     excludePatterns: settings.excludePatterns,
     // The picker gets its own share, so the rewrite itself always has time left.
-    pickFiles: (tree, task) => pickFilesWithModel(host, pickerConfig, settings, tree, task, signal, Math.min(RUN_LIMITS.pickerMs, (left() ?? Infinity) / 2), pickerReasoning),
+    pickFiles: (tree, task) => pickFilesWithModel(host, pickerConfig, settings, tree, task, signal, Math.min(RUN_LIMITS.pickerMs, (left() ?? Infinity) / 2), pickerReasoning, ensureAccess),
+    ensureAccess,
     ...privacy,
     onStep: step,
     signal,
     workspaceId: typeof input.workspaceId === "string" ? input.workspaceId : null
   });
   if (level !== requested) gathered.notes.push(PROJECT_FILES_OFF);
-  let checkResearchAccess;
   if (level === "ai-test") {
-    checkResearchAccess = async () => {
-      const current = await readSettings(host);
-      if (JSON.stringify(current.privacy) !== JSON.stringify(settings.privacy) || current.excludePatterns !== settings.excludePatterns || JSON.stringify(current.extraContextFiles) !== JSON.stringify(settings.extraContextFiles)) {
-        throw new LlmError(msg("error.research_privacy_changed"), "cancelled");
-      }
-    };
     const researched = await researchContext({
       root: gathered.root,
       files: gathered.files ?? [],
@@ -4310,7 +4346,7 @@ async function enhance(host, input, signal, progress, budgetMs) {
       exclude: new Set(input.exclude ?? []),
       excludePatterns: settings.excludePatterns,
       budgetMs: Math.min(RESEARCH_LIMITS.ms, (left() ?? RUN_LIMITS.totalMs) / 2),
-      ensureAccess: checkResearchAccess,
+      ensureAccess,
       onStep: step,
       diagnostics: host.diagnostics,
       ask: async (system2, user2, researchSignal, remainingMs) => (await runChain(
@@ -4318,7 +4354,7 @@ async function enhance(host, input, signal, progress, budgetMs) {
         list.slice(0, 1),
         system2,
         user2,
-        chainOptions(settings, researchSignal, { fallback: false, totalMs: remainingMs, timeoutMs: remainingMs, reasoningEffort })
+        chainOptions(settings, researchSignal, { fallback: false, totalMs: remainingMs, timeoutMs: remainingMs, reasoningEffort, ensureAccess })
       )).text
     });
     gathered.items = researched.items;
@@ -4346,7 +4382,7 @@ ${otherFiles.map((path, index) => `${index + 1}. ${path}`).join("\n")}
 </attached_files>` : ""].filter(Boolean).join("\n\n");
   let tried = "";
   try {
-    await checkResearchAccess?.();
+    await ensureAccess();
     const result = await runChain(
       host,
       list,
@@ -4356,6 +4392,7 @@ ${otherFiles.map((path, index) => `${index + 1}. ${path}`).join("\n")}
         ...deadline2 === void 0 ? {} : { totalMs: left() },
         images,
         reasoningEffort,
+        ensureAccess,
         onAttempt: (profile, model, attempt, total) => {
           tried = `${profile.name} \xB7 ${model || "default"}${attempt > 1 ? ` \xB7 ${attempt}/${total}` : ""}`;
           step("model", "running", tried);
@@ -4524,6 +4561,7 @@ function registerRunHandlers(host) {
   host.panels.handle("enhance.progress.get", async ({ runId }, { panel }) => progressOf(runId, panel.id));
   host.panels.handle("context.preview", async ({ prompt, terminalId, level, exclude, workspaceId }, { signal }) => {
     const settings = await readSettings(host);
+    const ensureAccess = contextAccess(host, settings, signal);
     const requested = isContextLevel(level) ? level : settings.contextLevel;
     const allowed = allowedLevel(requested, settings);
     const gathered = await gatherContext(host, {
@@ -4536,9 +4574,11 @@ function registerRunHandlers(host) {
       excludePatterns: settings.excludePatterns,
       ...gatherPrivacy(settings),
       signal,
+      ensureAccess,
       workspaceId: workspaceId ?? null
     });
     const notes = [...gathered.notes];
+    await ensureAccess();
     if (allowed !== requested) notes.push(PROJECT_FILES_OFF);
     if (allowed === "max") notes.push(msg("note.preview_no_picker"));
     if (allowed === "ai-test") notes.push(msg("note.preview_no_research"));
@@ -4892,6 +4932,7 @@ function persistentStore(directory) {
     bus.emit("change", { key });
   });
   return {
+    snapshot: read,
     get: async (key) => {
       const data = await read();
       return Object.hasOwn(data, key) ? data[key] : null;
@@ -5368,7 +5409,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.1";
+var VERSION = "0.12.2";
 
 // src/worker-host.ts
 import { EventEmitter as EventEmitter2 } from "node:events";
@@ -5840,11 +5881,8 @@ function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DI
       await prepare();
       await prepareEfforts();
       const values = { ...DEFAULTS };
-      for (const name of key === void 0 ? await prefs.keys() : [key]) {
-        if (!Object.hasOwn(DEFAULTS, name)) continue;
-        const saved = await prefs.get(name);
-        if (saved !== null || key === void 0) values[name] = saved;
-      }
+      const saved = key === void 0 ? await prefs.snapshot() : { [key]: await prefs.get(key) };
+      for (const [name, value] of Object.entries(saved)) if (Object.hasOwn(DEFAULTS, name) && (value !== null || key === void 0)) values[name] = value;
       if (!isChatTextSize(values.chatTextSize)) values.chatTextSize = "medium";
       if (typeof values.useEnhancedPrompts !== "boolean") values.useEnhancedPrompts = true;
       for (const name of UNSUPPORTED_SETTINGS) values[name] = false;
@@ -5889,7 +5927,7 @@ function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DI
   };
   const host = {
     has: (name) => Boolean(copilot2) && ["copilot.catalog", "copilot.rewrite"].includes(name) || adapter.has(name),
-    call: async (name, input, options) => name === "copilot.catalog" && copilot2 ? await copilot2.catalog() : name === "copilot.rewrite" && copilot2 ? { text: await copilot2.rewrite(input, options?.signal) } : adapter.call(name, input, options)
+    call: async (name, input, options) => name === "copilot.catalog" && copilot2 ? await copilot2.catalog() : name === "copilot.rewrite" && copilot2 ? { text: await copilot2.rewrite(input, options?.signal, options?.ensureAccess) } : adapter.call(name, input, options)
   };
   return { storage, settings, host, adapter, directory, data };
 }
@@ -6369,7 +6407,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       throw new LlmError(msg("error.copilot_catalog"), "unavailable");
     }
   }
-  async function rewrite(input, signal) {
+  async function rewrite(input, signal, ensureAccess) {
     if (signal?.aborted) throw cancelled();
     const controller = new AbortController();
     active.add(controller);
@@ -6435,6 +6473,8 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       }
       check();
       stage("copilot.session");
+      await ensureAccess?.();
+      check();
       const session2 = await withDeadline(client.createSession({
         sessionId,
         onEvent: (event) => usage.record(event),
@@ -6501,6 +6541,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       stage("copilot.account");
       const [currentParent, currentHelper] = await withDeadline(Promise.all([parent.rpc.gitHubAuth.getStatus(), session2.rpc.gitHubAuth.getStatus()]), 1e4);
       if (!sameAccount(parentAuth, currentParent) || !sameAccount(parentAuth, currentHelper)) throw new LlmError(msg("error.copilot_account"), "unavailable");
+      await ensureAccess?.();
       check();
       stage("copilot.generate");
       const result = await session2.sendAndWait({ prompt: input.user, attachments: images.map((image) => ({ type: "blob", data: image.base64, mimeType: image.type })) }, 18e4);

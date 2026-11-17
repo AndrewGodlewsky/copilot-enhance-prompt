@@ -44,6 +44,7 @@ export type Focused = { displayName: string; branch: string; terminals?: readonl
 export const isLocalWorkspace = (workspace: { hostId: string | null }) => workspace.hostId === null || workspace.hostId === 'local'
 
 export type GatherOptions = {
+  ensureAccess?: () => Promise<void>
   level: ContextLevel
   prompt: string
   terminalId?: string | null
@@ -259,13 +260,14 @@ export async function staticParts(
   onProgress: (fraction: number) => void = () => undefined,
   policy: FilePolicy = {}
 ): Promise<StaticParts> {
+  await policy.ensureAccess?.()
   const key = staticKey(extraFiles, allowGit, policy)
   const hit = staticCache.get(root)
   if (hit?.key === key && !fresh && Date.now() - hit.at < STATIC_TTL_MS) return hit
   const allow = await projectFileAllowed(root, policy)
-  const isGit = allowGit && (await isGitRepo(root, signal))
+  const isGit = allowGit && (await isGitRepo(root, signal, policy.ensureAccess))
   onProgress(0.15)
-  const listed = (isGit ? await gitFiles(root, signal) : null) ?? (await walkFiles(root, undefined, undefined, signal, allow))
+  const listed = (isGit ? await gitFiles(root, signal, policy.ensureAccess) : null) ?? (await walkFiles(root, undefined, undefined, signal, allow))
   // A cancelled read is incomplete: never cache it.
   stopIfCancelled(signal)
   onProgress(0.5)
@@ -281,6 +283,7 @@ export async function staticParts(
   if (stack) items.push(item('stack', 'stack', msg('label.stack'), stack))
   if (files.length > 0 && !policy.exclude?.has('tree')) items.push(item('tree', 'tree', msg('label.tree', { count: files.length }), redactSecrets(treeSummary(files))))
   stopIfCancelled(signal)
+  await policy.ensureAccess?.()
   const parts = { at: Date.now(), key, files, refused, isGit, items }
   staticCache.set(root, parts)
   return parts
@@ -289,6 +292,7 @@ export async function staticParts(
 // ---- the full gather ----
 
 export async function gatherContext(host: EnhanceWorker, options: GatherOptions): Promise<GatherResult> {
+  await options.ensureAccess?.()
   const { level } = options
   const step: StepReporter = options.onStep ?? (() => undefined)
   const items: ContextItem[] = []
@@ -363,9 +367,11 @@ export async function gatherContext(host: EnhanceWorker, options: GatherOptions)
   if (readTerminal && options.terminalId) {
     step('terminal', 'running')
     stopIfCancelled(signal)
+    await options.ensureAccess?.()
     const read = await host.host
       .call('terminal.read', { terminalId: options.terminalId, maxLines: options.terminalLines }, signal ? { signal } : undefined)
       .catch(() => null)
+    await options.ensureAccess?.()
     stopIfCancelled(signal)
     const lines = (read?.lines ?? []).map((line) => line.trimEnd()).filter(Boolean)
     if (lines.length > 0) {
@@ -381,6 +387,7 @@ export async function gatherContext(host: EnhanceWorker, options: GatherOptions)
   }
 
   stopIfCancelled(signal)
+  await options.ensureAccess?.()
   return { items: fitBudget(items.filter((entry) => !options.exclude.has(entry.id)), BUDGET[level]), notes, root, ...(researchFiles ? { files: researchFiles } : {}) }
 }
 
@@ -431,8 +438,8 @@ async function dynamicParts(
         return value
       })
     const [status, log, diff] = await Promise.all([
-      counted(gitStatus(root, signal)),
-      counted(skip('git:log') ? null : gitLog(root, 6, signal)),
+      counted(gitStatus(root, signal, options.ensureAccess)),
+      counted(skip('git:log') ? null : gitLog(root, 6, signal, options.ensureAccess)),
       counted(skip('git:diff') ? null : gitDiff(root, diffChars, allow, signal))
     ])
     stopIfCancelled(signal)
@@ -476,7 +483,7 @@ async function dynamicParts(
   const perWord = useGitSearch
     ? await Promise.all(
         grepWords.map((word) =>
-          gitGrepCount(root, word, signal, parts.refused).then((counts) => {
+          gitGrepCount(root, word, signal, parts.refused, options.ensureAccess).then((counts) => {
             searched++
             step('search', 'running', undefined, (searched / grepWords.length) * 0.9)
             return counts
@@ -504,7 +511,7 @@ async function dynamicParts(
       step('pick', 'done', String(picked.length))
     } catch (error) {
       stopIfCancelled(signal)
-      if (['error.copilot_usage', 'error.copilot_reasoning', 'error.copilot_reasoning_applied'].includes(messageOf(error).code)) throw error
+      if (['error.research_privacy_changed', 'error.copilot_usage', 'error.copilot_reasoning', 'error.copilot_reasoning_applied'].includes(messageOf(error).code)) throw error
       notes.push(msg('note.picker_skipped', { reason: messageOf(error) }))
       step('pick', 'skipped')
     }
@@ -512,7 +519,8 @@ async function dynamicParts(
 
   // Line numbers of the keywords inside the chosen files, for focused snippets.
   stopIfCancelled(signal)
-  const lines = useGitSearch ? await gitGrep(root, grepWords, picked.map((entry) => entry.path), undefined, signal) : local?.hits ?? new Map<string, number[]>()
+  await options.ensureAccess?.()
+  const lines = useGitSearch ? await gitGrep(root, grepWords, picked.map((entry) => entry.path), undefined, signal, options.ensureAccess) : local?.hits ?? new Map<string, number[]>()
   stopIfCancelled(signal)
   for (const entry of picked) entry.hits = lines.get(entry.path) ?? []
 
@@ -546,7 +554,9 @@ async function otherAgentItems(host: EnhanceWorker, options: GatherOptions, step
   step('agents', 'running')
   stopIfCancelled(signal)
   const limits = options.otherAgentsLimits ?? { agents: MAX_SESSIONS, lines: SESSION_LINES }
+  await options.ensureAccess?.()
   const agents = (await otherAgents(host, options.terminalId, signal)).slice(0, limits.agents)
+  await options.ensureAccess?.()
   stopIfCancelled(signal)
   if (agents.length === 0) {
     step('agents', 'done', '0')
@@ -556,7 +566,9 @@ async function otherAgentItems(host: EnhanceWorker, options: GatherOptions, step
   for (const [index, agent] of agents.entries()) {
     const id = `session:${agent.terminalId}`
     if (options.exclude.has(id)) continue
+    await options.ensureAccess?.()
     const text = await readSession(host, agent.terminalId, signal, limits.lines)
+    await options.ensureAccess?.()
     stopIfCancelled(signal)
     step('agents', 'running', undefined, (index + 1) / agents.length)
     if (text) out.push(item(id, 'session', msg('label.session', { name: agent.title ?? agent.agent ?? agent.terminalId }), text))

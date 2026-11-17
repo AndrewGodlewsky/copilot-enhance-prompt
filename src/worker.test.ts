@@ -71,6 +71,47 @@ function deferred<T>() {
   return { promise, resolve }
 }
 
+test('context revocation during AI selection prevents later reads and every rewrite fallback', async () => {
+  for (const [key, value] of [['allowProjectFiles', false], ['allowGit', false], ['excludePatterns', '*.ts'], ['extraContextFiles', 'NEW.md']] as const) {
+    const root = project()
+    const host = mockHost({ storage: { models: { profiles: [profile('first'), profile('second')] } }, results: hostFor(root) })
+    let calls = 0
+    setRewrite(async () => {
+      calls++
+      await host.settings.set(key, value)
+      writeFileSync(join(root, 'src/index.ts'), 'NEW_PRIVATE_MARKER')
+      return '["src/index.ts"]'
+    })
+    const worker = await mountWorker(main, { host })
+    try {
+      await assert.rejects(worker.request('prompt.enhance', { prompt: 'Explain src/index.ts', level: 'max', terminalId: 't1' }), /Privacy or file exclusions changed/)
+      assert.equal(calls, 1, key)
+      assert.equal(host.data().storage.history, undefined)
+    } finally { await worker.deactivate() }
+  }
+})
+
+test('a context permission change between rewrite attempts prevents stale fallback dispatch', async () => {
+  const host = mockHost({ storage: { models: { profiles: [profile('first'), profile('second')] } }, results: hostFor(project()) })
+  let calls = 0
+  setRewrite(async () => { calls++; await host.settings.set('allowProjectFiles', false); throw new Error('Fixture model failed') })
+  const worker = await mountWorker(main, { host })
+  try {
+    await assert.rejects(worker.request('prompt.enhance', { prompt: 'Explain src/index.ts', level: 'standard' }), /Privacy or file exclusions changed/)
+    assert.equal(calls, 1)
+  } finally { await worker.deactivate() }
+})
+
+test('preview refuses stale context after another canvas changes project access during workspace discovery', async () => {
+  const root = project()
+  const host = mockHost({ results: hostFor(root) })
+  host.respond('workspace.list', async () => { await host.settings.set('allowProjectFiles', false); return hostFor(root)['workspace.list'] })
+  const worker = await mountWorker(main, { host })
+  try {
+    await assert.rejects(worker.request('context.preview', { prompt: 'Explain src/index.ts', level: 'standard' }), /Privacy or file exclusions changed/)
+  } finally { await worker.deactivate() }
+})
+
 test('disabling history while rewriting, history storage or final preferences wait prevents retention', async () => {
   for (const phase of ['model', 'storage', 'settings']) {
     const reached = deferred<void>()

@@ -130,7 +130,7 @@ export async function researchContext(options: ResearchOptions): Promise<{ items
         feedback = []
         // Re-resolve link aliases every round. readText also verifies confinement on each read.
         const policy = await projectFileAllowed(root, options)
-        const allow = async (path: string) => { await check(); return policy(path) }
+        const allow = Object.assign(async (path: string) => { await check(); return policy(path) }, { beforeRead: check })
         const before = windows
         const readWindow = async (read: Read) => {
           await check()

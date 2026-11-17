@@ -149,7 +149,7 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
       throw new LlmError(msg('error.copilot_catalog'), 'unavailable')
     }
   }
-  async function rewrite(input: CopilotRewrite, signal?: AbortSignal): Promise<string> {
+  async function rewrite(input: CopilotRewrite, signal?: AbortSignal, ensureAccess?: () => Promise<void>): Promise<string> {
     if (signal?.aborted) throw cancelled()
     const controller = new AbortController()
     active.add(controller)
@@ -193,6 +193,8 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
       try { usage = await usageRecorder(sessionId) } catch { throw usageFailed() }
       check()
       stage('copilot.session')
+      await ensureAccess?.()
+      check()
       const session = await withDeadline(client.createSession({
         sessionId, onEvent: (event: unknown) => usage!.record(event),
         workingDirectory: workspace, configDirectory: join(directory, 'home'), model: input.model,
@@ -236,6 +238,7 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
       stage('copilot.account')
       const [currentParent, currentHelper] = await withDeadline(Promise.all([parent.rpc.gitHubAuth.getStatus(), session.rpc.gitHubAuth.getStatus()]), 10_000)
       if (!sameAccount(parentAuth, currentParent) || !sameAccount(parentAuth, currentHelper)) throw new LlmError(msg('error.copilot_account'), 'unavailable')
+      await ensureAccess?.()
       check()
       stage('copilot.generate')
       const result = await session.sendAndWait({ prompt: input.user, attachments: images.map(image => ({ type: 'blob', data: image.base64, mimeType: image.type })) }, 180_000)

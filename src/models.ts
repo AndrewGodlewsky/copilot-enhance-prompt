@@ -23,6 +23,8 @@ export function viewProfiles(profiles: ModelProfile[]): ProfileView[] {
 export type Attempt = { profileId: string; name: string; model: string; reasoningEffort?: string; ok: boolean; error?: string; errorText?: Message; ms: number }
 
 export type ChainOptions = {
+  /** Revalidate prepared context before every dispatch, including fallback attempts. */
+  ensureAccess?: () => Promise<void>
   /** Applies to the first candidate only; fallback profiles retain their model defaults. */
   reasoningEffort?: string
   /** The person's cancel. */
@@ -110,7 +112,10 @@ export async function runChain(
       if ((await host.settings.get('allowOnlineModelLists')) === false) {
         throw new LlmError(msg('error.lists_off'), 'unavailable')
       }
-      const { text } = await host.host.call('copilot.rewrite', { model, ...(reasoningEffort ? { reasoningEffort } : {}), system, user, images: (options.images ?? []).map(image => ({ type: image.type, base64: image.base64 })) }, { signal: controller.signal })
+      await options.ensureAccess?.()
+      options.signal?.throwIfAborted()
+      const { text } = await host.host.call('copilot.rewrite', { model, ...(reasoningEffort ? { reasoningEffort } : {}), system, user, images: (options.images ?? []).map(image => ({ type: image.type, base64: image.base64 })) }, { signal: controller.signal, ensureAccess: options.ensureAccess })
+      await options.ensureAccess?.()
       attempts.push({ profileId: profile.id, name: profile.name, model, ...(reasoningEffort ? { reasoningEffort } : {}), ok: true, ms: Date.now() - attemptStart })
       return { text, profile, attempts }
     } catch (caught) {
@@ -130,6 +135,7 @@ export async function runChain(
         ms: Date.now() - attemptStart
       })
       // A charged request may already have completed. Keep the recording failure visible.
+      if (messageOf(error).code === 'error.research_privacy_changed') throw new ChainError(messageOf(error), 'cancelled', attempts)
       if (accountingFailed || ['error.copilot_reasoning', 'error.copilot_reasoning_applied'].includes(messageOf(error).code)) throw new ChainError(messageOf(error), 'action_failed', attempts)
       if (options.signal?.aborted) {
         break
