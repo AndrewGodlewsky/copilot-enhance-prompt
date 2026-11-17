@@ -9,7 +9,7 @@ import { msg } from '../messages.ts'
 
 function fixture() {
   const state = { helperLogin: 'person', parentLogin: 'person', host: 'https://github.com', tools: [] as unknown[], selected: 'model-a', provider: 'copilot', policy: 'enabled', currentDirectory: '', sent: [] as unknown[], stopped: 0, config: {} as Record<string, unknown>, options: {} as Record<string, unknown>, hold: false,
-    prepared: '', recorded: [] as unknown[], flushed: false, prepareFails: false, flushFails: false, generateFails: false,
+    prepared: '', recorded: [] as unknown[], flushed: false, prepareFails: false, flushFails: false, stopFails: false, generateFails: false,
     preflight: async (_phase: string) => {},
     authenticated: true, supportsReasoning: true, rawReasoning: false, efforts: ['low', 'medium', 'high', 'max'], appliedReasoning: 'high', helperEfforts: null as string[] | null }
   const emit = (event: unknown) => (state.config.onEvent as ((event: unknown) => void) | undefined)?.(event)
@@ -25,7 +25,7 @@ function fixture() {
     CopilotClient: class {
       constructor(options: Record<string, unknown>) { state.options = options }
       async start() { await state.preflight('start') }
-      async forceStop() { state.stopped++; emit({ type: 'assistant.usage', data: { inputTokens: 11, outputTokens: 3 } }); release?.() }
+      async forceStop() { state.stopped++; await state.preflight('stop'); if (state.stopFails) throw new Error('Fixture stop failed'); emit({ type: 'assistant.usage', data: { inputTokens: 11, outputTokens: 3 } }); release?.() }
       async createSession(config: Record<string, unknown>) {
         state.config = config
         state.currentDirectory = config.workingDirectory as string
@@ -46,6 +46,7 @@ function fixture() {
     if (state.prepareFails) throw new Error('PRIVATE disk failure')
     state.prepared = sessionId
     return { record(event: unknown) { state.recorded.push(event) }, async flush() {
+      await state.preflight('flush')
       assert.equal(state.stopped, 1, 'flush waits for the helper to stop')
       if (state.flushFails) throw new Error('PRIVATE disk failure')
       state.flushed = true
@@ -142,6 +143,32 @@ test('helper usage is prepared before inference and flushed after late shutdown 
   assert.equal(state.prepared, state.config.sessionId)
   assert.equal(state.flushed, true)
   assert.equal(state.recorded.length, 1)
+})
+
+test('helper work stays active through shutdown and usage flush, including failed shutdown', async () => {
+  for (const phase of ['stop', 'flush']) {
+    const { provider, state } = fixture()
+    let release!: () => void, entered!: () => void
+    const gate = new Promise<void>(resolve => { release = resolve })
+    const reached = new Promise<void>(resolve => { entered = resolve })
+    state.preflight = async current => { if (current === phase) { entered(); await gate } }
+    const rewriting = provider.rewrite({ model: 'model-a', system: 'Rewrite', user: 'Fixture' })
+    await reached
+    assert.equal(provider.hasActiveWork(), true, phase)
+    release(); await rewriting
+    assert.equal(provider.hasActiveWork(), false, phase)
+  }
+  const { provider, state } = fixture()
+  state.stopFails = true
+  try {
+    await assert.rejects(provider.rewrite({ model: 'model-a', system: 'Rewrite', user: 'Fixture' }))
+    assert.equal(provider.hasActiveWork(), true, 'unknown helper shutdown must keep updates blocked')
+  } finally {
+    const { dirname, basename } = await import('node:path')
+    const dir = dirname(state.currentDirectory)
+    assert.ok(basename(dir).startsWith('enhance-copilot-'))
+    await rm(dir, { recursive: true, force: true })
+  }
 })
 
 test('a usage storage preparation failure prevents inference and exposes only a safe error', async () => {

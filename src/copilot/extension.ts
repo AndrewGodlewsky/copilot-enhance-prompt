@@ -49,7 +49,8 @@ const packageRoot = fileURLToPath(new URL('../../../', import.meta.url))
 const updates = createUpdates({
   running: VERSION,
   store: persistentStore(join(services.directory, 'updates', installationKey(packageRoot))),
-  installation: installationReader(session, packageRoot), metadata: remoteMetadata(), busy: hasActiveRuns,
+  installation: installationReader(session, packageRoot), metadata: remoteMetadata(),
+  busy: () => hasActiveRuns() || worker.hasActiveWork() || copilot.hasActiveWork(),
   update: target => session.rpc.plugins.update({ name: target }),
   record: (operation, outcome, code) => diagnostics.record(operation, outcome, { code })
 })

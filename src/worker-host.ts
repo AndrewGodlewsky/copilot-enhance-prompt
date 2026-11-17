@@ -14,6 +14,8 @@ export function createWorkerHost(services: Pick<EnhanceWorker, 'storage' | 'sett
   const hooks = new Map<string, ((event: any, next: (event: any) => unknown) => unknown)[]>()
   const commands = new Map<string, () => unknown>()
   const requests = new Map<AbortController, string>()
+  // Caller cancellation is prompt; the actual handler may still be stopping a helper or writing usage.
+  const operations = new Set<Promise<unknown>>()
   const listen = (name: string, handler: (...args: any[]) => void): Disposable => {
     events.on(name, handler)
     return { dispose: () => { events.off(name, handler) } }
@@ -51,7 +53,11 @@ export function createWorkerHost(services: Pick<EnhanceWorker, 'storage' | 'sett
         if (controller.signal.aborted) onAbort()
         else controller.signal.addEventListener('abort', onAbort, { once: true })
       })
-      const answer = await Promise.race([Promise.resolve().then(() => handler(input ?? {}, { signal: controller.signal, panel: { id: panelId } })), stopped])
+      const operation = Promise.resolve().then(() => handler(input ?? {}, { signal: controller.signal, panel: { id: panelId } }))
+      operations.add(operation)
+      const settled = () => { operations.delete(operation) }
+      void operation.then(settled, settled)
+      const answer = await Promise.race([operation, stopped])
       const result = answer as { ok?: boolean; copied?: boolean; accepted?: boolean; restored?: boolean; pending?: boolean; error?: unknown; errorText?: unknown; text?: unknown } | null
       const failed = result?.ok === false || result?.copied === false || result?.accepted === false || result?.restored === false || !!result?.error
       if (name === 'models.catalog' && (input as { preset?: string })?.preset === 'copilot' && diagnosticError({ text: result?.errorText }).code === 'error.lists_off') {
@@ -90,6 +96,7 @@ export function createWorkerHost(services: Pick<EnhanceWorker, 'storage' | 'sett
   }
   return {
     api, request, hooks: { fire }, panel,
+    hasActiveWork: () => operations.size > 0,
     emit<K extends keyof AppEvents>(name: K, payload: AppEvents[K]) { events.emit(name, payload) },
     onPost: (handler: (post: { event: keyof PluginPanelEvents; payload: unknown; panel?: string }) => void) => listen('post', handler),
     async command(name: string) { const handler = commands.get(name); if (!handler) throw new Error(`Unknown command: ${name}`); return await handler() },

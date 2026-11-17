@@ -257,34 +257,38 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
       signal?.removeEventListener('abort', abort)
       stage('copilot.cleanup')
       const stopped = await stopClient()
-      active.delete(controller)
-      if (usage) {
-        stage('copilot.usage')
-        // forceStop can detach live listeners before the last durable receipt is delivered.
-        // Reconcile only this stopped helper's journal, retaining it if accounting cannot be saved.
-        try {
-          if (stopped !== false && directory) await reconcileUsageJournal(join(directory, 'home', 'session-state', sessionId, 'events.jsonl'), usage)
-          await usage.flush()
+      try {
+        if (usage) {
+          stage('copilot.usage')
+          // forceStop can detach live listeners before the last durable receipt is delivered.
+          // Reconcile only this stopped helper's journal, retaining it if accounting cannot be saved.
+          try {
+            if (stopped !== false && directory) await reconcileUsageJournal(join(directory, 'home', 'session-state', sessionId, 'events.jsonl'), usage)
+            await usage.flush()
+          }
+          catch {
+            diagnostics?.record(phase, 'failed', diagnosticError(usageFailed()))
+            throw usageFailed()
+          }
+          diagnostics?.record(phase, 'ok', { ms: Date.now() - phaseStarted })
+          stage('copilot.cleanup')
         }
-        catch {
-          diagnostics?.record(phase, 'failed', diagnosticError(usageFailed()))
-          throw usageFailed()
+        // Do not remove state while a helper might still be using it, or report success after a failed stop.
+        if (stopped === false) { diagnostics?.record(phase, 'failed'); throw unavailable() }
+        if (directory) {
+          const inside = relative(tmpdir(), directory)
+          if (inside && !isAbsolute(inside) && !inside.startsWith('..') && basename(directory).startsWith('enhance-copilot-')) {
+            await rm(directory, { recursive: true, force: true, maxRetries: 3 }).catch(() => { diagnostics?.record(phase, 'failed'); throw unavailable() })
+          }
         }
         diagnostics?.record(phase, 'ok', { ms: Date.now() - phaseStarted })
-        stage('copilot.cleanup')
+      } finally {
+        // Unknown shutdown leaves a conservative update blocker until this worker restarts.
+        if (stopped !== false) active.delete(controller)
       }
-      // Do not remove state while a helper might still be using it, or report success after a failed stop.
-      if (stopped === false) { diagnostics?.record(phase, 'failed'); throw unavailable() }
-      if (directory) {
-        const inside = relative(tmpdir(), directory)
-        if (inside && !isAbsolute(inside) && !inside.startsWith('..') && basename(directory).startsWith('enhance-copilot-')) {
-          await rm(directory, { recursive: true, force: true, maxRetries: 3 }).catch(() => { diagnostics?.record(phase, 'failed'); throw unavailable() })
-        }
-      }
-      diagnostics?.record(phase, 'ok', { ms: Date.now() - phaseStarted })
     }
   }
-  return { catalog, rewrite, close() { for (const controller of active) controller.abort() } }
+  return { catalog, rewrite, hasActiveWork: () => active.size > 0, close() { for (const controller of active) controller.abort() } }
 }
 
 async function withDeadline<T>(promise: Promise<T>, ms: number, timeout = unavailable): Promise<T> {

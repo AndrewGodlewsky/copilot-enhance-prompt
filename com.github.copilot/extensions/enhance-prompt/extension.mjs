@@ -4656,8 +4656,9 @@ function progressOf(runId, panelId) {
   return latestProgress.get(JSON.stringify([panelId, runId])) ?? null;
 }
 var liveRuns = /* @__PURE__ */ new Map();
+var pendingRuns = /* @__PURE__ */ new Set();
 function hasActiveRuns() {
-  return liveRuns.size > 0;
+  return liveRuns.size > 0 || pendingRuns.size > 0;
 }
 var unnamedRuns = 0;
 function startRun(host, input, panelId, budgetMs) {
@@ -4686,6 +4687,10 @@ function startRun(host, input, panelId, budgetMs) {
   };
   liveRuns.get(run2.key)?.stop.abort();
   liveRuns.set(run2.key, run2);
+  pendingRuns.add(run2.outcome);
+  void run2.outcome.then(() => {
+    pendingRuns.delete(run2.outcome);
+  });
   return run2;
 }
 function endRun(run2) {
@@ -5621,7 +5626,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.3";
+var VERSION = "0.12.4";
 
 // src/worker-host.ts
 import { EventEmitter as EventEmitter2 } from "node:events";
@@ -5776,6 +5781,7 @@ function createWorkerHost(services2, log = (_message) => {
   const hooks = /* @__PURE__ */ new Map();
   const commands = /* @__PURE__ */ new Map();
   const requests = /* @__PURE__ */ new Map();
+  const operations = /* @__PURE__ */ new Set();
   const listen = (name, handler) => {
     events.on(name, handler);
     return { dispose: () => {
@@ -5835,7 +5841,13 @@ function createWorkerHost(services2, log = (_message) => {
         if (controller.signal.aborted) onAbort();
         else controller.signal.addEventListener("abort", onAbort, { once: true });
       });
-      const answer = await Promise.race([Promise.resolve().then(() => handler(input ?? {}, { signal: controller.signal, panel: { id: panelId } })), stopped]);
+      const operation = Promise.resolve().then(() => handler(input ?? {}, { signal: controller.signal, panel: { id: panelId } }));
+      operations.add(operation);
+      const settled = () => {
+        operations.delete(operation);
+      };
+      void operation.then(settled, settled);
+      const answer = await Promise.race([operation, stopped]);
       const result = answer;
       const failed = result?.ok === false || result?.copied === false || result?.accepted === false || result?.restored === false || !!result?.error;
       if (name === "models.catalog" && input?.preset === "copilot" && diagnosticError({ text: result?.errorText }).code === "error.lists_off") {
@@ -5883,6 +5895,7 @@ function createWorkerHost(services2, log = (_message) => {
     request,
     hooks: { fire },
     panel,
+    hasActiveWork: () => operations.size > 0,
     emit(name, payload) {
       events.emit(name, payload);
     },
@@ -6771,36 +6784,39 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       signal?.removeEventListener("abort", abort);
       stage("copilot.cleanup");
       const stopped = await stopClient();
-      active.delete(controller);
-      if (usage) {
-        stage("copilot.usage");
-        try {
-          if (stopped !== false && directory2) await reconcileUsageJournal(join7(directory2, "home", "session-state", sessionId, "events.jsonl"), usage);
-          await usage.flush();
-        } catch {
-          diagnostics2?.record(phase, "failed", diagnosticError(usageFailed()));
-          throw usageFailed();
+      try {
+        if (usage) {
+          stage("copilot.usage");
+          try {
+            if (stopped !== false && directory2) await reconcileUsageJournal(join7(directory2, "home", "session-state", sessionId, "events.jsonl"), usage);
+            await usage.flush();
+          } catch {
+            diagnostics2?.record(phase, "failed", diagnosticError(usageFailed()));
+            throw usageFailed();
+          }
+          diagnostics2?.record(phase, "ok", { ms: Date.now() - phaseStarted });
+          stage("copilot.cleanup");
+        }
+        if (stopped === false) {
+          diagnostics2?.record(phase, "failed");
+          throw unavailable2();
+        }
+        if (directory2) {
+          const inside = relative3(tmpdir2(), directory2);
+          if (inside && !isAbsolute3(inside) && !inside.startsWith("..") && basename5(directory2).startsWith("enhance-copilot-")) {
+            await rm(directory2, { recursive: true, force: true, maxRetries: 3 }).catch(() => {
+              diagnostics2?.record(phase, "failed");
+              throw unavailable2();
+            });
+          }
         }
         diagnostics2?.record(phase, "ok", { ms: Date.now() - phaseStarted });
-        stage("copilot.cleanup");
+      } finally {
+        if (stopped !== false) active.delete(controller);
       }
-      if (stopped === false) {
-        diagnostics2?.record(phase, "failed");
-        throw unavailable2();
-      }
-      if (directory2) {
-        const inside = relative3(tmpdir2(), directory2);
-        if (inside && !isAbsolute3(inside) && !inside.startsWith("..") && basename5(directory2).startsWith("enhance-copilot-")) {
-          await rm(directory2, { recursive: true, force: true, maxRetries: 3 }).catch(() => {
-            diagnostics2?.record(phase, "failed");
-            throw unavailable2();
-          });
-        }
-      }
-      diagnostics2?.record(phase, "ok", { ms: Date.now() - phaseStarted });
     }
   }
-  return { catalog, rewrite, close() {
+  return { catalog, rewrite, hasActiveWork: () => active.size > 0, close() {
     for (const controller of active) controller.abort();
   } };
 }
@@ -6858,7 +6874,7 @@ var updates = createUpdates({
   store: persistentStore(join8(services.directory, "updates", installationKey(packageRoot))),
   installation: installationReader(session, packageRoot),
   metadata: remoteMetadata(),
-  busy: hasActiveRuns,
+  busy: () => hasActiveRuns() || worker.hasActiveWork() || copilot.hasActiveWork(),
   update: (target) => session.rpc.plugins.update({ name: target }),
   record: (operation, outcome, code) => diagnostics.record(operation, outcome, { code })
 });

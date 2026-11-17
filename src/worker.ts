@@ -499,7 +499,8 @@ type LiveRun = {
   orphan: ReturnType<typeof setTimeout> | null
 }
 const liveRuns = new Map<string, LiveRun>()
-export function hasActiveRuns(): boolean { return liveRuns.size > 0 }
+const pendingRuns = new Set<Promise<Outcome>>()
+export function hasActiveRuns(): boolean { return liveRuns.size > 0 || pendingRuns.size > 0 }
 let unnamedRuns = 0
 
 function startRun(host: EnhanceWorker, input: EnhanceInput, panelId: string, budgetMs: number): LiveRun {
@@ -533,6 +534,8 @@ function startRun(host: EnhanceWorker, input: EnhanceInput, panelId: string, bud
   // An id belongs to one run (the panel makes a new one for each): one still going under it stops.
   liveRuns.get(run.key)?.stop.abort()
   liveRuns.set(run.key, run)
+  pendingRuns.add(run.outcome)
+  void run.outcome.then(() => { pendingRuns.delete(run.outcome) })
   return run
 }
 

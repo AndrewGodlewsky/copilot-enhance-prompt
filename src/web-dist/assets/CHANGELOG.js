@@ -1,5 +1,11 @@
 var e=`# Changes
 
+## [0.12.4] - 2026-11-17
+
+### Fixed
+- Cancelling an enhancement or model test no longer allows an update to replace the plugin while its background helper is still stopping or saving usage. Cancellation still returns promptly; retry Update after cleanup finishes.
+- If helper shutdown cannot be confirmed, updates stay blocked. Check Show Logs and restart Copilot before trying again.
+
 ## [0.12.3] - 2026-11-17
 
 ### Fixed

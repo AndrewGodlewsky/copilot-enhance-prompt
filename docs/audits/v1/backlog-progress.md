@@ -8,7 +8,7 @@ Current baseline: 0.12.1 / 4104c29. Tracking issue: [#40](https://github.com/And
 
 ## Queue
 
-Security and correctness: #6, #7, #16, #17, #18, #36, #37, #39.
+Security and correctness: #7, #16, #17, #18, #36, #37, #39.
 
 Distribution/maintenance: #9, #10, #11, #33.
 
@@ -20,7 +20,7 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- Next: #6, retain update reservations through cancelled work and helper cleanup.
+- Next: #7, complete project identities for rules and history.
 
 ## Delivered versions
 
@@ -39,3 +39,11 @@ Uploads have durable session-owned receipts, strict chunk sequence/size checks a
 Verified: typecheck, build, 401 final tests and package checks; built extension smoke test with the same installed SDK/CLI and disposable local fixture. Outside junction and forged later-chunk regressions failed before the fix. Coverage includes root junctions, hard links, replacements, duplicate/out-of-order chunks, other sessions, legacy draft restoration, Unicode names, byte-sniffed images, limits and interrupted writes. Independent review passed 25 focused tests and injected a failed receipt rename to check recovery. No paid inference or UI automation.
 
 Limits: a malicious process sharing the OS account can still race parent directories or modify receipt files; this is not an OS sandbox. Unregistered legacy data is intentionally not recursively deleted. Manual desktop attachment/reopen checks remain in #29. Issue #5 records the pushed commit and preview release.
+
+### 0.12.4 — #6, cancelled work and update reservations
+
+Underlying request handlers and enhancement outcomes remain tracked after callers cancel. The production updater includes those operations and background helper shutdown/accounting/cleanup in its busy check. A failed helper stop remains an update blocker until the worker restarts; usage is not erased to bypass it.
+
+Verified: typecheck, build, 403 final tests, package checks and clean diff. A regression first demonstrated a separate child-process updater installing during cancelled cleanup; both enhancement and model-test paths now keep it blocked and permit installation once cleanup settles. Cancellation returns before the held cleanup. Provider tests hold both shutdown and accounting and simulate failed shutdown. Independent review ran 21 focused tests with no blockers.
+
+Installed SDK/CLI `1.0.106-8.unstable.r43566476370.g869eef3`: production helper fixture passed; disposable update fixture passed inventory/disk verification, old running process and reopened canvas, new session and cold resume. No paid models, live owner installation changes or desktop UI control. Issue #6 records the commit/release.
