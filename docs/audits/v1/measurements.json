@@ -1,0 +1,890 @@
+{
+  "description": "Synthetic offline v1 audit measurements; interpretation and limits in performance.md. No user data or live model calls.",
+  "workloads": [
+    {
+      "schema": 1,
+      "mode": "history",
+      "version": "0.12.0",
+      "sourceCommit": "d25be463718f1b5d8ab663177fc9aa248956f762",
+      "node": "v24.22.1",
+      "platform": "win32",
+      "architecture": "x64",
+      "capturedAt": "2026-11-17T03:55:24.467Z",
+      "syntheticOnly": true,
+      "modelCalls": 0,
+      "measurements": [
+        {
+          "name": "history.parse",
+          "records": 50,
+          "projects": 50,
+          "jsonBytes": 90931,
+          "beyondSupportedHistoryLimit": false,
+          "samples": [
+            0.096,
+            0.013,
+            0.013
+          ],
+          "medianMs": 0.013,
+          "maxMs": 0.096,
+          "minMs": 0.013
+        },
+        {
+          "name": "history.projects.current",
+          "records": 50,
+          "projects": 50,
+          "jsonBytes": 90931,
+          "beyondSupportedHistoryLimit": false,
+          "samples": [
+            4.866,
+            0.593,
+            0.194
+          ],
+          "medianMs": 0.593,
+          "maxMs": 4.866,
+          "minMs": 0.194
+        },
+        {
+          "name": "history.projects.singlePassPrototype",
+          "records": 50,
+          "projects": 50,
+          "jsonBytes": 90931,
+          "beyondSupportedHistoryLimit": false,
+          "samples": [
+            0.291,
+            0.064,
+            0.063
+          ],
+          "medianMs": 0.064,
+          "maxMs": 0.291,
+          "minMs": 0.063
+        },
+        {
+          "name": "history.searchAndSort",
+          "records": 50,
+          "projects": 50,
+          "jsonBytes": 90931,
+          "beyondSupportedHistoryLimit": false,
+          "samples": [
+            0.05,
+            0.014,
+            0.015
+          ],
+          "medianMs": 0.015,
+          "maxMs": 0.05,
+          "minMs": 0.014
+        },
+        {
+          "name": "history.retention",
+          "records": 50,
+          "keptAtDefault": 50,
+          "keptAtMaximum": 50
+        },
+        {
+          "name": "history.parse",
+          "records": 500,
+          "projects": 60,
+          "jsonBytes": 909971,
+          "beyondSupportedHistoryLimit": false,
+          "samples": [
+            0.065,
+            0.081,
+            0.06
+          ],
+          "medianMs": 0.065,
+          "maxMs": 0.081,
+          "minMs": 0.06
+        },
+        {
+          "name": "history.projects.current",
+          "records": 500,
+          "projects": 60,
+          "jsonBytes": 909971,
+          "beyondSupportedHistoryLimit": false,
+          "samples": [
+            0.761,
+            0.716,
+            0.959
+          ],
+          "medianMs": 0.761,
+          "maxMs": 0.959,
+          "minMs": 0.716
+        },
+        {
+          "name": "history.projects.singlePassPrototype",
+          "records": 500,
+          "projects": 60,
+          "jsonBytes": 909971,
+          "beyondSupportedHistoryLimit": false,
+          "samples": [
+            0.267,
+            0.271,
+            0.458
+          ],
+          "medianMs": 0.271,
+          "maxMs": 0.458,
+          "minMs": 0.267
+        },
+        {
+          "name": "history.searchAndSort",
+          "records": 500,
+          "projects": 60,
+          "jsonBytes": 909971,
+          "beyondSupportedHistoryLimit": false,
+          "samples": [
+            0.165,
+            0.109,
+            0.103
+          ],
+          "medianMs": 0.109,
+          "maxMs": 0.165,
+          "minMs": 0.103
+        },
+        {
+          "name": "history.retention",
+          "records": 500,
+          "keptAtDefault": 50,
+          "keptAtMaximum": 500
+        },
+        {
+          "name": "history.parse",
+          "records": 10000,
+          "projects": 1500,
+          "jsonBytes": 18223351,
+          "beyondSupportedHistoryLimit": true,
+          "samples": [
+            0.505,
+            0.408,
+            0.687
+          ],
+          "medianMs": 0.505,
+          "maxMs": 0.687,
+          "minMs": 0.408
+        },
+        {
+          "name": "history.projects.current",
+          "records": 10000,
+          "projects": 1500,
+          "jsonBytes": 18223351,
+          "beyondSupportedHistoryLimit": true,
+          "samples": [
+            116.513,
+            113.645,
+            111.177
+          ],
+          "medianMs": 113.645,
+          "maxMs": 116.513,
+          "minMs": 111.177
+        },
+        {
+          "name": "history.projects.singlePassPrototype",
+          "records": 10000,
+          "projects": 1500,
+          "jsonBytes": 18223351,
+          "beyondSupportedHistoryLimit": true,
+          "samples": [
+            7.279,
+            6.399,
+            6.234
+          ],
+          "medianMs": 6.399,
+          "maxMs": 7.279,
+          "minMs": 6.234
+        },
+        {
+          "name": "history.searchAndSort",
+          "records": 10000,
+          "projects": 1500,
+          "jsonBytes": 18223351,
+          "beyondSupportedHistoryLimit": true,
+          "samples": [
+            4.638,
+            4.501,
+            4.395
+          ],
+          "medianMs": 4.501,
+          "maxMs": 4.638,
+          "minMs": 4.395
+        },
+        {
+          "name": "history.retention",
+          "records": 10000,
+          "keptAtDefault": 50,
+          "keptAtMaximum": 500
+        },
+        {
+          "name": "history.parse",
+          "records": 50000,
+          "projects": 1500,
+          "jsonBytes": 91161221,
+          "beyondSupportedHistoryLimit": true,
+          "samples": [
+            9.703,
+            2.19,
+            1.874
+          ],
+          "medianMs": 2.19,
+          "maxMs": 9.703,
+          "minMs": 1.874
+        },
+        {
+          "name": "history.projects.current",
+          "records": 50000,
+          "projects": 1500,
+          "jsonBytes": 91161221,
+          "beyondSupportedHistoryLimit": true,
+          "samples": [
+            558.638,
+            557.055,
+            550.43
+          ],
+          "medianMs": 557.055,
+          "maxMs": 558.638,
+          "minMs": 550.43
+        },
+        {
+          "name": "history.projects.singlePassPrototype",
+          "records": 50000,
+          "projects": 1500,
+          "jsonBytes": 91161221,
+          "beyondSupportedHistoryLimit": true,
+          "samples": [
+            26.998,
+            26.317,
+            26.532
+          ],
+          "medianMs": 26.532,
+          "maxMs": 26.998,
+          "minMs": 26.317
+        },
+        {
+          "name": "history.searchAndSort",
+          "records": 50000,
+          "projects": 1500,
+          "jsonBytes": 91161221,
+          "beyondSupportedHistoryLimit": true,
+          "samples": [
+            20.425,
+            21.126,
+            20.515
+          ],
+          "medianMs": 20.515,
+          "maxMs": 21.126,
+          "minMs": 20.425
+        },
+        {
+          "name": "history.retention",
+          "records": 50000,
+          "keptAtDefault": 50,
+          "keptAtMaximum": 500
+        }
+      ],
+      "processMaxRssKiB": 439484
+    },
+    {
+      "schema": 1,
+      "mode": "storage",
+      "version": "0.12.0",
+      "sourceCommit": "d25be463718f1b5d8ab663177fc9aa248956f762",
+      "node": "v24.22.1",
+      "platform": "win32",
+      "architecture": "x64",
+      "capturedAt": "2026-11-17T03:55:30.622Z",
+      "syntheticOnly": true,
+      "modelCalls": 0,
+      "measurements": [
+        {
+          "name": "storage.readOneDraft",
+          "sessions": 100,
+          "records": 200,
+          "jsonBytes": 215501,
+          "samples": [
+            0.976,
+            0.714,
+            0.688
+          ],
+          "medianMs": 0.714,
+          "maxMs": 0.976,
+          "minMs": 0.688
+        },
+        {
+          "name": "storage.writeOneSmallPreference",
+          "sessions": 100,
+          "records": 200,
+          "jsonBytes": 215501,
+          "samples": [
+            3.63,
+            2.25,
+            3.927
+          ],
+          "medianMs": 3.63,
+          "maxMs": 3.927,
+          "minMs": 2.25
+        },
+        {
+          "name": "storage.fourConcurrentWrites",
+          "sessions": 100,
+          "records": 200,
+          "jsonBytes": 215501,
+          "samples": [
+            87.937,
+            93.687,
+            93.929
+          ],
+          "medianMs": 93.687,
+          "maxMs": 93.929,
+          "minMs": 87.937
+        },
+        {
+          "name": "storage.hydrate20Keys.current",
+          "sessions": 100,
+          "records": 200,
+          "jsonBytes": 215501,
+          "samples": [
+            8.056
+          ],
+          "medianMs": 8.056,
+          "maxMs": 8.056,
+          "minMs": 8.056
+        },
+        {
+          "name": "storage.hydrate20Keys.snapshotPrototype",
+          "sessions": 100,
+          "records": 200,
+          "jsonBytes": 215501,
+          "samples": [
+            0.823
+          ],
+          "medianMs": 0.823,
+          "maxMs": 0.823,
+          "minMs": 0.823
+        },
+        {
+          "name": "storage.readOneDraft",
+          "sessions": 1000,
+          "records": 2000,
+          "jsonBytes": 2155001,
+          "samples": [
+            2.91,
+            3.163,
+            3.148
+          ],
+          "medianMs": 3.148,
+          "maxMs": 3.163,
+          "minMs": 2.91
+        },
+        {
+          "name": "storage.writeOneSmallPreference",
+          "sessions": 1000,
+          "records": 2000,
+          "jsonBytes": 2155001,
+          "samples": [
+            9.685,
+            9.566,
+            8.655
+          ],
+          "medianMs": 9.566,
+          "maxMs": 9.685,
+          "minMs": 8.655
+        },
+        {
+          "name": "storage.fourConcurrentWrites",
+          "sessions": 1000,
+          "records": 2000,
+          "jsonBytes": 2155001,
+          "samples": [
+            124.899,
+            108.335,
+            93.883
+          ],
+          "medianMs": 108.335,
+          "maxMs": 124.899,
+          "minMs": 93.883
+        },
+        {
+          "name": "storage.hydrate20Keys.current",
+          "sessions": 1000,
+          "records": 2000,
+          "jsonBytes": 2155001,
+          "samples": [
+            63.539
+          ],
+          "medianMs": 63.539,
+          "maxMs": 63.539,
+          "minMs": 63.539
+        },
+        {
+          "name": "storage.hydrate20Keys.snapshotPrototype",
+          "sessions": 1000,
+          "records": 2000,
+          "jsonBytes": 2155001,
+          "samples": [
+            7.806
+          ],
+          "medianMs": 7.806,
+          "maxMs": 7.806,
+          "minMs": 7.806
+        },
+        {
+          "name": "storage.readOneDraft",
+          "sessions": 10000,
+          "records": 20000,
+          "jsonBytes": 21550001,
+          "samples": [
+            34.73,
+            29.79,
+            35.482
+          ],
+          "medianMs": 34.73,
+          "maxMs": 35.482,
+          "minMs": 29.79
+        },
+        {
+          "name": "storage.writeOneSmallPreference",
+          "sessions": 10000,
+          "records": 20000,
+          "jsonBytes": 21550001,
+          "samples": [
+            81.279,
+            72.887,
+            76.43
+          ],
+          "medianMs": 76.43,
+          "maxMs": 81.279,
+          "minMs": 72.887
+        },
+        {
+          "name": "storage.fourConcurrentWrites",
+          "sessions": 10000,
+          "records": 20000,
+          "jsonBytes": 21550001,
+          "samples": [
+            411.466,
+            410,
+            408.084
+          ],
+          "medianMs": 410,
+          "maxMs": 411.466,
+          "minMs": 408.084
+        },
+        {
+          "name": "storage.hydrate20Keys.current",
+          "sessions": 10000,
+          "records": 20000,
+          "jsonBytes": 21550001,
+          "samples": [
+            678.246
+          ],
+          "medianMs": 678.246,
+          "maxMs": 678.246,
+          "minMs": 678.246
+        },
+        {
+          "name": "storage.hydrate20Keys.snapshotPrototype",
+          "sessions": 10000,
+          "records": 20000,
+          "jsonBytes": 21550001,
+          "samples": [
+            41.699
+          ],
+          "medianMs": 41.699,
+          "maxMs": 41.699,
+          "minMs": 41.699
+        },
+        {
+          "name": "storage.readOneDraft",
+          "sessions": 30000,
+          "records": 60000,
+          "jsonBytes": 64650001,
+          "samples": [
+            94.914,
+            117.282,
+            127.489
+          ],
+          "medianMs": 117.282,
+          "maxMs": 127.489,
+          "minMs": 94.914
+        },
+        {
+          "name": "storage.writeOneSmallPreference",
+          "sessions": 30000,
+          "records": 60000,
+          "jsonBytes": 64650001,
+          "samples": [
+            283.583,
+            249.864,
+            245.06
+          ],
+          "medianMs": 249.864,
+          "maxMs": 283.583,
+          "minMs": 245.06
+        },
+        {
+          "name": "storage.fourConcurrentWrites",
+          "sessions": 30000,
+          "records": 60000,
+          "jsonBytes": 64650001,
+          "samples": [
+            1055.577,
+            1070.353,
+            1045.322
+          ],
+          "medianMs": 1055.577,
+          "maxMs": 1070.353,
+          "minMs": 1045.322
+        },
+        {
+          "name": "storage.hydrate20Keys.current",
+          "sessions": 30000,
+          "records": 60000,
+          "jsonBytes": 64650001,
+          "samples": [
+            2122.402
+          ],
+          "medianMs": 2122.402,
+          "maxMs": 2122.402,
+          "minMs": 2122.402
+        },
+        {
+          "name": "storage.hydrate20Keys.snapshotPrototype",
+          "sessions": 30000,
+          "records": 60000,
+          "jsonBytes": 64650001,
+          "samples": [
+            99.553
+          ],
+          "medianMs": 99.553,
+          "maxMs": 99.553,
+          "minMs": 99.553
+        }
+      ],
+      "processMaxRssKiB": 2966816
+    },
+    {
+      "schema": 1,
+      "mode": "context",
+      "version": "0.12.0",
+      "sourceCommit": "d25be463718f1b5d8ab663177fc9aa248956f762",
+      "node": "v24.22.1",
+      "platform": "win32",
+      "architecture": "x64",
+      "capturedAt": "2026-11-17T03:56:42.774Z",
+      "syntheticOnly": true,
+      "modelCalls": 0,
+      "measurements": [
+        {
+          "name": "context.enumerateAndReadRules.git",
+          "filesOnDisk": 30001,
+          "samples": [
+            689.98,
+            878.514,
+            908.688
+          ],
+          "medianMs": 878.514,
+          "maxMs": 908.688,
+          "minMs": 689.98
+        },
+        {
+          "name": "context.staticCacheHit",
+          "filesOnDisk": 30001,
+          "samples": [
+            0.023,
+            0.003,
+            0.001
+          ],
+          "medianMs": 0.003,
+          "maxMs": 0.023,
+          "minMs": 0.001
+        },
+        {
+          "name": "context.gather.off",
+          "filesOnDisk": 30001,
+          "selectorIsStub": false,
+          "researchModelNotIncluded": false,
+          "samples": [
+            0.246,
+            0.005,
+            0.002
+          ],
+          "medianMs": 0.005,
+          "maxMs": 0.246,
+          "minMs": 0.002
+        },
+        {
+          "name": "context.payload.off",
+          "items": 0,
+          "chars": 0
+        },
+        {
+          "name": "context.gather.standard",
+          "filesOnDisk": 30001,
+          "selectorIsStub": false,
+          "researchModelNotIncluded": false,
+          "samples": [
+            872.841,
+            852.55,
+            832.775
+          ],
+          "medianMs": 852.55,
+          "maxMs": 872.841,
+          "minMs": 832.775
+        },
+        {
+          "name": "context.payload.standard",
+          "items": 3,
+          "chars": 1233
+        },
+        {
+          "name": "context.gather.deep",
+          "filesOnDisk": 30001,
+          "selectorIsStub": false,
+          "researchModelNotIncluded": false,
+          "samples": [
+            5073.044,
+            5044.866,
+            5000.019
+          ],
+          "medianMs": 5044.866,
+          "maxMs": 5073.044,
+          "minMs": 5000.019
+        },
+        {
+          "name": "context.payload.deep",
+          "items": 10,
+          "chars": 2616
+        },
+        {
+          "name": "context.gather.max",
+          "filesOnDisk": 30001,
+          "selectorIsStub": true,
+          "researchModelNotIncluded": false,
+          "samples": [
+            5010.212,
+            4997.613,
+            5004.363
+          ],
+          "medianMs": 5004.363,
+          "maxMs": 5010.212,
+          "minMs": 4997.613
+        },
+        {
+          "name": "context.payload.max",
+          "items": 14,
+          "chars": 2960
+        },
+        {
+          "name": "context.gather.ai-test",
+          "filesOnDisk": 30001,
+          "selectorIsStub": false,
+          "researchModelNotIncluded": true,
+          "samples": [
+            5047.789,
+            4875.044,
+            4963.473
+          ],
+          "medianMs": 4963.473,
+          "maxMs": 5047.789,
+          "minMs": 4875.044
+        },
+        {
+          "name": "context.payload.ai-test",
+          "items": 10,
+          "chars": 2616
+        },
+        {
+          "name": "context.enumerate.noGit",
+          "filesOnDisk": 30001,
+          "samples": [
+            677.565
+          ],
+          "medianMs": 677.565,
+          "maxMs": 677.565,
+          "minMs": 677.565
+        },
+        {
+          "name": "context.noGitCoverage",
+          "filesOnDisk": 30001,
+          "filesEnumerated": 8000,
+          "targetFound": false
+        }
+      ],
+      "processMaxRssKiB": 268168
+    },
+    {
+      "schema": 1,
+      "mode": "search",
+      "version": "0.12.0",
+      "sourceCommit": "d25be463718f1b5d8ab663177fc9aa248956f762",
+      "node": "v24.22.1",
+      "platform": "win32",
+      "architecture": "x64",
+      "capturedAt": "2026-11-17T04:00:16.554Z",
+      "syntheticOnly": true,
+      "modelCalls": 0,
+      "measurements": [
+        {
+          "name": "context.search.separateGitProcesses",
+          "filesOnDisk": 30001,
+          "keywords": 5,
+          "samples": [
+            2975.215,
+            2979.754,
+            2953.504
+          ],
+          "medianMs": 2975.215,
+          "maxMs": 2979.754,
+          "minMs": 2953.504
+        },
+        {
+          "name": "context.search.singlePassPrototype",
+          "filesOnDisk": 30001,
+          "keywords": 5,
+          "fixtureOnly": true,
+          "samples": [
+            655.909,
+            678.503,
+            659.4
+          ],
+          "medianMs": 659.4,
+          "maxMs": 678.503,
+          "minMs": 655.909
+        }
+      ],
+      "processMaxRssKiB": 145356
+    },
+    {
+      "schema": 1,
+      "mode": "usage",
+      "version": "0.12.0",
+      "sourceCommit": "d25be463718f1b5d8ab663177fc9aa248956f762",
+      "node": "v24.22.1",
+      "platform": "win32",
+      "architecture": "x64",
+      "capturedAt": "2026-11-17T03:58:08.960Z",
+      "syntheticOnly": true,
+      "modelCalls": 0,
+      "measurements": [
+        {
+          "name": "usage.create10000Sessions20000Receipts",
+          "sessions": 10000,
+          "receipts": 20000,
+          "samples": [
+            35811.937
+          ],
+          "medianMs": 35811.937,
+          "maxMs": 35811.937,
+          "minMs": 35811.937
+        },
+        {
+          "name": "usage.readAll20000Receipts",
+          "consumerSimulation": true,
+          "sessions": 10000,
+          "receipts": 20000,
+          "samples": [
+            3421.202
+          ],
+          "medianMs": 3421.202,
+          "maxMs": 3421.202,
+          "minMs": 3421.202
+        },
+        {
+          "name": "usage.retained",
+          "sessions": 10000,
+          "receipts": 20000,
+          "eventFileBytes": 7430000,
+          "files": 20000
+        },
+        {
+          "name": "usage.burstSingleSession",
+          "receiptsPerSession": 10,
+          "abnormalBurst": false,
+          "samples": [
+            9.897
+          ],
+          "medianMs": 9.897,
+          "maxMs": 9.897,
+          "minMs": 9.897
+        },
+        {
+          "name": "usage.burstSingleSession",
+          "receiptsPerSession": 100,
+          "abnormalBurst": true,
+          "samples": [
+            85.807
+          ],
+          "medianMs": 85.807,
+          "maxMs": 85.807,
+          "minMs": 85.807
+        },
+        {
+          "name": "usage.burstSingleSession",
+          "receiptsPerSession": 1000,
+          "abnormalBurst": true,
+          "samples": [
+            1025.89
+          ],
+          "medianMs": 1025.89,
+          "maxMs": 1025.89,
+          "minMs": 1025.89
+        }
+      ],
+      "processMaxRssKiB": 109248
+    },
+    {
+      "schema": 1,
+      "mode": "animation",
+      "version": "0.12.0",
+      "sourceCommit": "d25be463718f1b5d8ab663177fc9aa248956f762",
+      "node": "v24.22.1",
+      "platform": "win32",
+      "architecture": "x64",
+      "capturedAt": "2026-11-17T03:55:27.102Z",
+      "syntheticOnly": true,
+      "modelCalls": 0,
+      "measurements": [
+        {
+          "name": "animation.sample600Frames",
+          "visibleWords": 50,
+          "frames": 600,
+          "browserPaintingExcluded": true,
+          "samples": [
+            4.389,
+            2.247,
+            0.873
+          ],
+          "medianMs": 2.247,
+          "maxMs": 4.389,
+          "minMs": 0.873
+        },
+        {
+          "name": "animation.sample600Frames",
+          "visibleWords": 200,
+          "frames": 600,
+          "browserPaintingExcluded": true,
+          "samples": [
+            5.2,
+            5.877,
+            4.605
+          ],
+          "medianMs": 5.2,
+          "maxMs": 5.877,
+          "minMs": 4.605
+        },
+        {
+          "name": "animation.sample600Frames",
+          "visibleWords": 1000,
+          "frames": 600,
+          "browserPaintingExcluded": true,
+          "samples": [
+            12.325,
+            12.926,
+            18.316
+          ],
+          "medianMs": 12.926,
+          "maxMs": 18.316,
+          "minMs": 12.325
+        }
+      ],
+      "processMaxRssKiB": 90724
+    }
+  ]
+}

@@ -153,6 +153,8 @@ The canvas uses an authenticated loopback server with origin and path checks. It
 
 ## Development
 
+The [v1 readiness audit](docs/audits/v1/README.md) records security findings, distribution and maintenance requirements, architecture diagrams, and offline scale measurements. Its findings are proposals and open issues, not fixes already included in this preview.
+
 For the prompt/context research, see the [measured findings](docs/research/prompt-evaluation-findings.md), [per-case results](docs/research/prompt-evaluation-results.md), and [opt-in evaluation runner](docs/research/prompt-evaluation-runner.md). The research harness uses synthetic inputs and separate, explicitly authorized subscription CLIs; it does not change the plugin's Copilot-only model integration. Normal tests make no account-backed inference calls.
 
 Install dependencies and rebuild the packaged extension and panel after changing source:
