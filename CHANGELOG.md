@@ -1,5 +1,10 @@
 # Changes
 
+## [0.12.27] - 2026-11-17
+
+### Verification
+- Expanded offline stress testing covers simultaneous draft writers, storage observers, interrupted saves and large tracked projects. The published results explain tested limits; no settings, retention limits or features change.
+
 ## [0.12.26] - 2026-11-17
 
 ### Improved

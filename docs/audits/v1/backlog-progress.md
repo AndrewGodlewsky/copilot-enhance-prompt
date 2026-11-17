@@ -14,11 +14,27 @@ Distribution/maintenance: #11 (manual/maintainer confirmation pending), #33 (run
 
 Efficiency: #12/#13/#15/#19/#20 shipped and closed. #14 saving implementation shipped (native-close/manual gate remains); #21 shipped and closed; #32 and #34 follow the usability fixes.
 
-Usability: #24/#25/#26 shipped and closed; #27 in verification.
+Usability: #24/#25/#26/#27 shipped and closed.
 
 Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and concrete choices; do independent work while an answer is pending. Never consume the owner's Copilot credits or control desktop/browser UI.
 
 ## Current work
+
+### 0.12.27 — #32, concurrent writers and interrupted persistence
+
+Added an opt-in production-storage/context workload: six 120,000-edit samples across four sessions, with/without 12 storage observers; three 400-transaction runs across four child processes with 500 retained rows; owned-child termination between temporary write and atomic replacement with stale-lock recovery; and three Deep gathers over 10,004 tracked files, long source, large diff and an unattached binary. Latest session values, counters/history, observed queue bounds, late evidence, omission notes and context budgets are asserted. No production behavior or features changed.
+
+Existing 23 focused cancellation/update/usage recovery interleaving tests pass, including separate-process reservation exclusion and deduplicated receipt replay. The new benchmark records all samples and parent memory endpoints. Typing includes a deliberate 5ms write delay; superseded edits coalesce, so acknowledgement is of the latest batch value rather than archival retention of every keystroke. No before/after speed improvement is claimed by this verification-only release.
+
+Independent review found no blockers and one measurement-precision minor: a global notification count could hide a missing subscriber behind another's duplicate. The harness now asserts exactly 20 draft notifications for each of 12 subscribers and reports the per-subscriber counts. The final measured run is repeated after that change. No deferred minor; one review/fix pass.
+
+Final verification: the revised scale workload passes all assertions, along with the 23 focused interleaving tests, typecheck, rebuild, all 541 final tests, package/diff checks and the disposable runtime archive fixture. Final median typing is 1,315ms without observers and 1,445ms with observers; shared transactions 1,272ms; tracked context 1,085ms. Highest sampled parent RSS is 180.51MiB, not a peak. SDK/CLI 1.0.106-8.unstable.r43566476370.g869eef3, Node24.22.1, Windows x64. Generated/exact hosted CI and release evidence follow before closure.
+
+Review rulings: the final benchmark and full checks are executor evidence, not an independent stress rerun. Native/browser memory, long soak, cold/slow/network disks, other platforms, OS/power loss, fsync and production orphan cleanup remain unclaimed. The unattached image does not verify uploads. Arbitrary settings/key flooding and archive/retention choices remain outside this fixed-key test. No production logic or paid-account behavior is changed. Final exact CI, assets and publication are recorded separately.
+
+Ruling: do not manufacture slow-disk, native rendering, OS power-loss or 24/7 soak evidence. The real killed-child test demonstrates process interruption, not fsync/power-loss durability. One runtime/Windows machine, local filesystem and synthetic tracked data do not establish enterprise or other-platform compatibility. Existing feature/capacity/retention decisions remain unchanged. Independent review and final verification follow.
+
+Previous release 0.12.26 / 17e8653 passed exact Verify 44068355156; preview and three runtime archive assets were published, and #27 is closed.
 
 ### 0.12.26 — #27, section and event-stream recovery
 

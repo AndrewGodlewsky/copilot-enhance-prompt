@@ -1,0 +1,384 @@
+{
+  "version": "0.12.27",
+  "at": "2026-11-17T10:56:53.971Z",
+  "node": "v24.22.1",
+  "platform": "win32",
+  "sourceCommit": "17e86539baa21147c17feaafe654de1f8c35a36f",
+  "workingTreeModified": true,
+  "syntheticOnly": true,
+  "modelCalls": 0,
+  "method": "Three samples per 4-session typing mode, 10 waves of 3000 edits per session (120000 edits/sample), 5ms injected write delay, 0 or 12 observers. New store per sample; no excluded warm-up, later samples warm filesystem/JIT. Shared writes: four real child processes x100 atomic transactions over 500 retained rows. Interruption: kill owned child after acknowledged save and before replacement rename, then wait 31s for its renewable lock to expire. Tracked repository: 10000 files, 6000-line source, 2.5MB diff, 1MiB binary image, three cold/warm gathers. Fixture creation excluded. Timings are observations, no performance thresholds; memory endpoints are parent process only, not peaks or child/browser totals.",
+  "sourceHashes": {
+    "src/save-queue.ts": "3295dd5294c6f0d801fe7db81e20efd0cd530eb6842d5b408b8842fd049eb3ef",
+    "src/copilot/storage.ts": "bdb2b891b08e93137eedc3a5bcdccd91a0cca126280edbc1737c885e156b6adb",
+    "src/copilot/store-observer.ts": "83624f144724d8cb2f7e2880166c4a32b1cf4c00e2f1fb55b92e7a20227a44e5",
+    "src/copilot/services.ts": "04b56fea78995ddb023f5fb441f3b7960686d594c4aaff35e82581ca458411fc",
+    "src/context/index.ts": "b37b16afc266ed4c6c53840763de0fe8f80c50b98dcc17a6c43dd92dbea82711",
+    "src/context/git.ts": "cd1d75f38d500a8b0415b824fbcca9c8172a4bc717e21026ff495ecd5555bb81",
+    "src/context/search.ts": "f679d15e2e0bcfd1343fb8faa665a4812fa6b8083986304d96f114a69ff4d805",
+    "scripts/audit/concurrency-scale.mjs": "7a16f6c8bb33a0fed93e3c7cd76b88c8e1b0f715ca0b9155224aa176a19345fa"
+  },
+  "typing": [
+    {
+      "watchers": false,
+      "sample": 1,
+      "edits": 120000,
+      "writes": 80,
+      "maxPending": 2,
+      "observations": 0,
+      "subscriberNotifications": [],
+      "ms": 1271.415,
+      "memory": {
+        "rss": 97574912,
+        "heapTotal": 31879168,
+        "heapUsed": 14441120,
+        "external": 10275534,
+        "arrayBuffers": 148293
+      },
+      "isolatedFinalValues": true
+    },
+    {
+      "watchers": false,
+      "sample": 2,
+      "edits": 120000,
+      "writes": 80,
+      "maxPending": 2,
+      "observations": 0,
+      "subscriberNotifications": [],
+      "ms": 1314.613,
+      "memory": {
+        "rss": 115884032,
+        "heapTotal": 49704960,
+        "heapUsed": 18461464,
+        "external": 10290504,
+        "arrayBuffers": 163223
+      },
+      "isolatedFinalValues": true
+    },
+    {
+      "watchers": false,
+      "sample": 3,
+      "edits": 120000,
+      "writes": 80,
+      "maxPending": 2,
+      "observations": 0,
+      "subscriberNotifications": [],
+      "ms": 1530.696,
+      "memory": {
+        "rss": 116928512,
+        "heapTotal": 50229248,
+        "heapUsed": 16194168,
+        "external": 10277390,
+        "arrayBuffers": 150109
+      },
+      "isolatedFinalValues": true
+    },
+    {
+      "watchers": true,
+      "sample": 1,
+      "edits": 120000,
+      "writes": 80,
+      "maxPending": 2,
+      "observations": 240,
+      "subscriberNotifications": [
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20
+      ],
+      "ms": 1444.637,
+      "memory": {
+        "rss": 116883456,
+        "heapTotal": 50753536,
+        "heapUsed": 26482760,
+        "external": 10323061,
+        "arrayBuffers": 163223
+      },
+      "isolatedFinalValues": true
+    },
+    {
+      "watchers": true,
+      "sample": 2,
+      "edits": 120000,
+      "writes": 80,
+      "maxPending": 2,
+      "observations": 240,
+      "subscriberNotifications": [
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20
+      ],
+      "ms": 1480.415,
+      "memory": {
+        "rss": 117465088,
+        "heapTotal": 51015680,
+        "heapUsed": 23442504,
+        "external": 10323061,
+        "arrayBuffers": 163223
+      },
+      "isolatedFinalValues": true
+    },
+    {
+      "watchers": true,
+      "sample": 3,
+      "edits": 120000,
+      "writes": 80,
+      "maxPending": 2,
+      "observations": 240,
+      "subscriberNotifications": [
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20,
+        20
+      ],
+      "ms": 1422.094,
+      "memory": {
+        "rss": 146878464,
+        "heapTotal": 84045824,
+        "heapUsed": 14581976,
+        "external": 10321565,
+        "arrayBuffers": 161727
+      },
+      "isolatedFinalValues": true
+    }
+  ],
+  "transactions": [
+    {
+      "sample": 1,
+      "transactions": 400,
+      "ms": 1271.645,
+      "memory": {
+        "rss": 147615744,
+        "heapTotal": 84332544,
+        "heapUsed": 15978312,
+        "external": 10675120,
+        "arrayBuffers": 508323
+      },
+      "allAcknowledged": true
+    },
+    {
+      "sample": 2,
+      "transactions": 400,
+      "ms": 1262.631,
+      "memory": {
+        "rss": 148258816,
+        "heapTotal": 84619264,
+        "heapUsed": 17244024,
+        "external": 10956180,
+        "arrayBuffers": 789383
+      },
+      "allAcknowledged": true
+    },
+    {
+      "sample": 3,
+      "transactions": 400,
+      "ms": 1300.408,
+      "memory": {
+        "rss": 148860928,
+        "heapTotal": 84905984,
+        "heapUsed": 18510032,
+        "external": 11237240,
+        "arrayBuffers": 1070443
+      },
+      "allAcknowledged": true
+    }
+  ],
+  "context": [
+    {
+      "sample": 1,
+      "ms": 1084.862,
+      "chars": 6628,
+      "items": [
+        {
+          "id": "workspace",
+          "chars": 5
+        },
+        {
+          "id": "rules:README.md",
+          "chars": 0
+        },
+        {
+          "id": "file:long.ts",
+          "chars": 198
+        },
+        {
+          "id": "git:status",
+          "chars": 22
+        },
+        {
+          "id": "git:log",
+          "chars": 41
+        },
+        {
+          "id": "git:diff",
+          "chars": 5170
+        },
+        {
+          "id": "tree",
+          "chars": 1192
+        }
+      ],
+      "notes": [
+        {
+          "code": "note.discovery_complete",
+          "params": {
+            "scanned": 10004,
+            "eligible": 10003,
+            "reasons": ""
+          }
+        },
+        {
+          "code": "note.explicit_unreadable"
+        }
+      ],
+      "memory": {
+        "rss": 121466880,
+        "heapTotal": 85532672,
+        "heapUsed": 16153080,
+        "external": 10470858,
+        "arrayBuffers": 376369
+      }
+    },
+    {
+      "sample": 2,
+      "ms": 1132.852,
+      "chars": 6629,
+      "items": [
+        {
+          "id": "workspace",
+          "chars": 5
+        },
+        {
+          "id": "rules:README.md",
+          "chars": 0
+        },
+        {
+          "id": "file:long.ts",
+          "chars": 198
+        },
+        {
+          "id": "git:status",
+          "chars": 22
+        },
+        {
+          "id": "git:log",
+          "chars": 42
+        },
+        {
+          "id": "git:diff",
+          "chars": 5170
+        },
+        {
+          "id": "tree",
+          "chars": 1192
+        }
+      ],
+      "notes": [
+        {
+          "code": "note.discovery_complete",
+          "params": {
+            "scanned": 10004,
+            "eligible": 10003,
+            "reasons": ""
+          }
+        },
+        {
+          "code": "note.explicit_unreadable"
+        }
+      ],
+      "memory": {
+        "rss": 152334336,
+        "heapTotal": 93630464,
+        "heapUsed": 43372104,
+        "external": 12187221,
+        "arrayBuffers": 2092732
+      }
+    },
+    {
+      "sample": 3,
+      "ms": 1037.855,
+      "chars": 6629,
+      "items": [
+        {
+          "id": "workspace",
+          "chars": 5
+        },
+        {
+          "id": "rules:README.md",
+          "chars": 0
+        },
+        {
+          "id": "file:long.ts",
+          "chars": 198
+        },
+        {
+          "id": "git:status",
+          "chars": 22
+        },
+        {
+          "id": "git:log",
+          "chars": 42
+        },
+        {
+          "id": "git:diff",
+          "chars": 5170
+        },
+        {
+          "id": "tree",
+          "chars": 1192
+        }
+      ],
+      "notes": [
+        {
+          "code": "note.discovery_complete",
+          "params": {
+            "scanned": 10004,
+            "eligible": 10003,
+            "reasons": ""
+          }
+        },
+        {
+          "code": "note.explicit_unreadable"
+        }
+      ],
+      "memory": {
+        "rss": 189276160,
+        "heapTotal": 154943488,
+        "heapUsed": 22867016,
+        "external": 10470928,
+        "arrayBuffers": 376439
+      }
+    }
+  ],
+  "interruption": {
+    "acknowledgedRetained": true,
+    "recoveryWrite": true,
+    "waitMs": 31000,
+    "osPowerLoss": false
+  }
+}

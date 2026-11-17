@@ -4035,7 +4035,7 @@ function compareVersions(left, right) {
 }
 
 // src/version.ts
-var VERSION = "0.12.26";
+var VERSION = "0.12.27";
 
 // src/release-history.ts
 var RELEASE_SEEN_KEY = "releaseHistory.seenVersion";

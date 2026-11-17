@@ -10,7 +10,10 @@ node scripts/audit/v1-benchmark.mjs usage
 node scripts/audit/v1-benchmark.mjs context
 node scripts/audit/v1-benchmark.mjs search
 node scripts/audit/v1-benchmark.mjs animation
+node scripts/audit/concurrency-scale.mjs
 ```
+
+`concurrency-scale.mjs` is a separate opt-in workload. It creates and removes only its own temporary root, launches owned fixture children, waits 31 seconds for an interrupted writer's stale lock, and commits sanitized measurements to `docs/audits/v1/concurrency-scale-measurements.json`. Allow a few minutes and roughly 100 MiB of scratch disk; parent memory is measured but is not an enforced cap. It runs six 120,000-edit samples and 1,200 cross-process transactions, then gathers context from 10,004 tracked files. See [method, results and limits](../../docs/audits/v1/concurrency-scale.md). It is not part of ordinary `npm test` and must run separately when these contracts change. Do not run competing benchmarks while collecting timings.
 
 Run modes sequentially when comparing elapsed times. `context` creates 30,001 files; `search` reuses a `context-*` fixture in `.artifacts/v1-audit`, so run context first. History reaches 50,000 entries; storage reaches 30,000 draft/result pairs; usage creates 10,000 sessions and 20,000 receipts. These are opt-in workloads, not part of the ordinary full test suite. Only the two inexpensive harness regression tests are included in `npm test`.
 
