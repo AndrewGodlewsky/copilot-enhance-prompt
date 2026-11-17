@@ -4,6 +4,8 @@
 
 Audited source: `d25be463718f1b5d8ab663177fc9aa248956f762`, **0.12.0**, 16 November 2026. This work adds audit reports and offline benchmark tools only. It does not fix the findings, change product behavior, bump the product version, publish a release, or certify the plugin secure.
 
+Follow-up work is tracked in [GitHub issue #40](https://github.com/AndrewGodlewsky/copilot-enhance-prompt/issues/40). See the [implementation plan](implementation-plan.md) and [first-batch results](first-batch-results.md) for subsequent fixes; the findings below describe the original audit baseline.
+
 ## Read the evidence
 
 - [Execution, data, update and proposed-storage diagrams](architecture.md)

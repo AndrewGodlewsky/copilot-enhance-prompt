@@ -17,5 +17,5 @@ test('an edited built-in replaces the built-in everywhere, and deleting it bring
 })
 
 test('the progress of an unknown run is null', () => {
-  assert.equal(progressOf('no-such-run'), null)
+  assert.equal(progressOf('no-such-run', 'panel'), null)
 })

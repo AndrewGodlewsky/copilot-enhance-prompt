@@ -1,0 +1,340 @@
+{
+  "schema": 1,
+  "mode": "history",
+  "version": "0.12.1",
+  "sourceCommit": "43204e6fca8399a848745f06aafc83bbed78df0e",
+  "workingTreeModified": true,
+  "node": "v24.22.1",
+  "platform": "win32",
+  "architecture": "x64",
+  "capturedAt": "2026-11-17T04:41:11.227Z",
+  "syntheticOnly": true,
+  "modelCalls": 0,
+  "measurements": [
+    {
+      "name": "history.parse",
+      "records": 50,
+      "projects": 50,
+      "jsonBytes": 90931,
+      "beyondSupportedHistoryLimit": false,
+      "samples": [
+        0.089,
+        0.012,
+        0.008
+      ],
+      "medianMs": 0.012,
+      "maxMs": 0.089,
+      "minMs": 0.008
+    },
+    {
+      "name": "history.projects.current",
+      "records": 50,
+      "projects": 50,
+      "jsonBytes": 90931,
+      "beyondSupportedHistoryLimit": false,
+      "samples": [
+        4.668,
+        0.103,
+        0.1
+      ],
+      "medianMs": 0.103,
+      "maxMs": 4.668,
+      "minMs": 0.1
+    },
+    {
+      "name": "history.projects.baseline0120",
+      "records": 50,
+      "projects": 50,
+      "jsonBytes": 90931,
+      "beyondSupportedHistoryLimit": false,
+      "samples": [
+        0.902,
+        0.272,
+        0.176
+      ],
+      "medianMs": 0.272,
+      "maxMs": 0.902,
+      "minMs": 0.176
+    },
+    {
+      "name": "history.projects.singlePassPrototype",
+      "records": 50,
+      "projects": 50,
+      "jsonBytes": 90931,
+      "beyondSupportedHistoryLimit": false,
+      "samples": [
+        0.227,
+        0.063,
+        0.061
+      ],
+      "medianMs": 0.063,
+      "maxMs": 0.227,
+      "minMs": 0.061
+    },
+    {
+      "name": "history.searchAndSort",
+      "records": 50,
+      "projects": 50,
+      "jsonBytes": 90931,
+      "beyondSupportedHistoryLimit": false,
+      "samples": [
+        0.059,
+        0.022,
+        0.024
+      ],
+      "medianMs": 0.024,
+      "maxMs": 0.059,
+      "minMs": 0.022
+    },
+    {
+      "name": "history.retention",
+      "records": 50,
+      "keptAtDefault": 50,
+      "keptAtMaximum": 50
+    },
+    {
+      "name": "history.parse",
+      "records": 500,
+      "projects": 60,
+      "jsonBytes": 909971,
+      "beyondSupportedHistoryLimit": false,
+      "samples": [
+        0.06,
+        0.077,
+        0.065
+      ],
+      "medianMs": 0.065,
+      "maxMs": 0.077,
+      "minMs": 0.06
+    },
+    {
+      "name": "history.projects.current",
+      "records": 500,
+      "projects": 60,
+      "jsonBytes": 909971,
+      "beyondSupportedHistoryLimit": false,
+      "samples": [
+        0.626,
+        0.305,
+        0.288
+      ],
+      "medianMs": 0.305,
+      "maxMs": 0.626,
+      "minMs": 0.288
+    },
+    {
+      "name": "history.projects.baseline0120",
+      "records": 500,
+      "projects": 60,
+      "jsonBytes": 909971,
+      "beyondSupportedHistoryLimit": false,
+      "samples": [
+        0.842,
+        0.55,
+        0.499
+      ],
+      "medianMs": 0.55,
+      "maxMs": 0.842,
+      "minMs": 0.499
+    },
+    {
+      "name": "history.projects.singlePassPrototype",
+      "records": 500,
+      "projects": 60,
+      "jsonBytes": 909971,
+      "beyondSupportedHistoryLimit": false,
+      "samples": [
+        0.287,
+        0.328,
+        0.17
+      ],
+      "medianMs": 0.287,
+      "maxMs": 0.328,
+      "minMs": 0.17
+    },
+    {
+      "name": "history.searchAndSort",
+      "records": 500,
+      "projects": 60,
+      "jsonBytes": 909971,
+      "beyondSupportedHistoryLimit": false,
+      "samples": [
+        0.138,
+        0.123,
+        0.118
+      ],
+      "medianMs": 0.123,
+      "maxMs": 0.138,
+      "minMs": 0.118
+    },
+    {
+      "name": "history.retention",
+      "records": 500,
+      "keptAtDefault": 50,
+      "keptAtMaximum": 500
+    },
+    {
+      "name": "history.parse",
+      "records": 10000,
+      "projects": 1500,
+      "jsonBytes": 18223351,
+      "beyondSupportedHistoryLimit": true,
+      "samples": [
+        0.511,
+        0.398,
+        0.364
+      ],
+      "medianMs": 0.398,
+      "maxMs": 0.511,
+      "minMs": 0.364
+    },
+    {
+      "name": "history.projects.current",
+      "records": 10000,
+      "projects": 1500,
+      "jsonBytes": 18223351,
+      "beyondSupportedHistoryLimit": true,
+      "samples": [
+        9.76,
+        7.632,
+        5.963
+      ],
+      "medianMs": 7.632,
+      "maxMs": 9.76,
+      "minMs": 5.963
+    },
+    {
+      "name": "history.projects.baseline0120",
+      "records": 10000,
+      "projects": 1500,
+      "jsonBytes": 18223351,
+      "beyondSupportedHistoryLimit": true,
+      "samples": [
+        102.263,
+        100.667,
+        100.883
+      ],
+      "medianMs": 100.883,
+      "maxMs": 102.263,
+      "minMs": 100.667
+    },
+    {
+      "name": "history.projects.singlePassPrototype",
+      "records": 10000,
+      "projects": 1500,
+      "jsonBytes": 18223351,
+      "beyondSupportedHistoryLimit": true,
+      "samples": [
+        7.047,
+        6.057,
+        6.237
+      ],
+      "medianMs": 6.237,
+      "maxMs": 7.047,
+      "minMs": 6.057
+    },
+    {
+      "name": "history.searchAndSort",
+      "records": 10000,
+      "projects": 1500,
+      "jsonBytes": 18223351,
+      "beyondSupportedHistoryLimit": true,
+      "samples": [
+        4.743,
+        4.544,
+        4.521
+      ],
+      "medianMs": 4.544,
+      "maxMs": 4.743,
+      "minMs": 4.521
+    },
+    {
+      "name": "history.retention",
+      "records": 10000,
+      "keptAtDefault": 50,
+      "keptAtMaximum": 500
+    },
+    {
+      "name": "history.parse",
+      "records": 50000,
+      "projects": 1500,
+      "jsonBytes": 91161221,
+      "beyondSupportedHistoryLimit": true,
+      "samples": [
+        5.636,
+        1.736,
+        2.019
+      ],
+      "medianMs": 2.019,
+      "maxMs": 5.636,
+      "minMs": 1.736
+    },
+    {
+      "name": "history.projects.current",
+      "records": 50000,
+      "projects": 1500,
+      "jsonBytes": 91161221,
+      "beyondSupportedHistoryLimit": true,
+      "samples": [
+        35.487,
+        31.47,
+        27.784
+      ],
+      "medianMs": 31.47,
+      "maxMs": 35.487,
+      "minMs": 27.784
+    },
+    {
+      "name": "history.projects.baseline0120",
+      "records": 50000,
+      "projects": 1500,
+      "jsonBytes": 91161221,
+      "beyondSupportedHistoryLimit": true,
+      "samples": [
+        552.539,
+        548.146,
+        542.4
+      ],
+      "medianMs": 548.146,
+      "maxMs": 552.539,
+      "minMs": 542.4
+    },
+    {
+      "name": "history.projects.singlePassPrototype",
+      "records": 50000,
+      "projects": 1500,
+      "jsonBytes": 91161221,
+      "beyondSupportedHistoryLimit": true,
+      "samples": [
+        25.829,
+        26.265,
+        26.575
+      ],
+      "medianMs": 26.265,
+      "maxMs": 26.575,
+      "minMs": 25.829
+    },
+    {
+      "name": "history.searchAndSort",
+      "records": 50000,
+      "projects": 1500,
+      "jsonBytes": 91161221,
+      "beyondSupportedHistoryLimit": true,
+      "samples": [
+        22.837,
+        21.687,
+        21.702
+      ],
+      "medianMs": 21.702,
+      "maxMs": 22.837,
+      "minMs": 21.687
+    },
+    {
+      "name": "history.retention",
+      "records": 50000,
+      "keptAtDefault": 50,
+      "keptAtMaximum": 500
+    }
+  ],
+  "processMaxRssKiB": 437584
+}

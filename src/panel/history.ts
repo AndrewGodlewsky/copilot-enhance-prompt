@@ -18,14 +18,23 @@ function pathLabel(path: string): { name: string; parent: string } {
 export function historyProjects(entries: HistoryEntry[], current: string | null, query = ''): HistoryProject[] {
   const paths = [...new Set([...entries.map(projectPath), ...(current ? [current] : [])])]
   const search = query.trim().toLowerCase()
+  const labels = new Map(paths.map(path => [path, pathLabel(path)]))
+  const names = new Map<string, number>()
+  const counts = new Map<string, number>()
+  for (const { name } of labels.values()) names.set(name, (names.get(name) ?? 0) + 1)
+  for (const entry of entries) {
+    if (!matches(entry, search)) continue
+    const path = projectPath(entry)
+    counts.set(path, (counts.get(path) ?? 0) + 1)
+  }
   return paths.map(path => {
-    const { name, parent } = pathLabel(path)
-    const duplicate = paths.some(other => other !== path && pathLabel(other).name === name)
+    const { name, parent } = labels.get(path)!
+    const duplicate = names.get(name)! > 1
     return {
       value: path ? `path:${path}` : 'unassigned', path, name,
       label: duplicate ? `${name} (${parent})` : name,
       detail: duplicate ? parent : '', current: path === current,
-      count: entries.filter(entry => projectPath(entry) === path && matches(entry, search)).length
+      count: counts.get(path) ?? 0
     }
   }).sort((a, b) => Number(b.current) - Number(a.current) || Number(!a.path) - Number(!b.path) || a.label.localeCompare(b.label, 'en'))
 }

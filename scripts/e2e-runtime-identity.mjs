@@ -4,13 +4,15 @@ import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { basename, isAbsolute, join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import { build } from 'esbuild'
 
 const sdkDirectory = process.env.COPILOT_SDK_DIR
 const runtime = process.env.COPILOT_CLI_PATH
 assert.ok(sdkDirectory && runtime, 'Set installed desktop SDK/runtime paths.')
+assert.ok(isAbsolute(runtime) && /^(copilot|copilot-runtime)(\.exe)?$/i.test(basename(runtime)),
+  'COPILOT_CLI_PATH must point to the installed Copilot SDK CLI executable, not the desktop launcher.')
 const temporary = await mkdtemp(join(tmpdir(), 'enhance-runtime-identity-'))
 const entry = join(temporary, 'probe.mjs')
 try {
@@ -22,7 +24,9 @@ try {
       import { createDiagnostics } from './src/diagnostics.ts'
       const diagnostics = createDiagnostics()
       let requests = 0
-      const parent = { rpc: { model: { list: async input => {
+      const parent = { rpc: {
+        gitHubAuth: { getStatus: async () => ({ isAuthenticated: true, login: 'fixture', host: 'https://github.com' }) },
+        model: { list: async input => {
         if (input.refresh !== true) throw new Error('Refresh required')
         requests++
         return { list: [{ id: 'fixture', provider: { kind: 'copilot' } }] }
@@ -34,7 +38,12 @@ try {
         const second = await provider.catalog()
         ok = first.models[0]?.id === 'fixture' && second.models[0]?.id === 'fixture'
       } catch {}
-      console.log('IDENTITY_RESULT:' + JSON.stringify({ ok, requests,
+      const missingDiagnostics = createDiagnostics()
+      let missingAuthRejected = false
+      try { await createCopilotModels({ rpc: { model: parent.rpc.model } }, undefined, missingDiagnostics).catalog() }
+      catch { missingAuthRejected = true }
+      console.log('IDENTITY_RESULT:' + JSON.stringify({ ok, requests, missingAuthRejected,
+        missingAuth: missingDiagnostics.snapshot().copilotModelDiscovery,
         bareArgument: process.argv.includes('extension_bootstrap.mjs'),
         discovery: diagnostics.snapshot().copilotModelDiscovery }))
       process.exit(0)
@@ -56,6 +65,9 @@ try {
     const result = JSON.parse(line.slice('IDENTITY_RESULT:'.length))
     assert.equal(result.ok, true, `${launch}: ${JSON.stringify(result)}`)
     assert.equal(result.requests, 2, `${launch}: each refresh reaches the catalog`)
+    assert.equal(result.missingAuthRejected, true, `${launch}: a missing authentication contract must fail closed`)
+    assert.equal(result.missingAuth.stage, 'authentication')
+    assert.equal(result.missingAuth.outcome, 'failed')
     assert.equal(result.discovery.attempt, 2)
     assert.equal(result.discovery.outcome, 'ok')
     assert.equal(result.discovery.checks.sdkImported, true)

@@ -67,7 +67,12 @@ export function createServices(session: CopilotSession, directory = process.env.
       await prepare()
       await prepareEfforts()
       const values: Record<string, JsonValue> = { ...DEFAULTS }
-      for (const name of await prefs.keys()) if (Object.hasOwn(DEFAULTS, name)) values[name] = (await prefs.get(name))!
+      // A final privacy check must not read its value and then wait on unrelated preferences.
+      for (const name of key === undefined ? await prefs.keys() : [key]) {
+        if (!Object.hasOwn(DEFAULTS, name)) continue
+        const saved = await prefs.get(name)
+        if (saved !== null || key === undefined) values[name] = saved
+      }
       if (!isChatTextSize(values.chatTextSize)) values.chatTextSize = 'medium'
       if (typeof values.useEnhancedPrompts !== 'boolean') values.useEnhancedPrompts = true
       for (const name of UNSUPPORTED_SETTINGS) values[name] = false

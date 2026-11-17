@@ -1236,11 +1236,11 @@ var require_mtime_precision = __commonJS({
     function probe(file, fs, callback) {
       const cachedPrecision = fs[cacheSymbol];
       if (cachedPrecision) {
-        return fs.stat(file, (err, stat4) => {
+        return fs.stat(file, (err, stat5) => {
           if (err) {
             return callback(err);
           }
-          callback(null, stat4.mtime, cachedPrecision);
+          callback(null, stat5.mtime, cachedPrecision);
         });
       }
       const mtime = new Date(Math.ceil(Date.now() / 1e3) * 1e3 + 5);
@@ -1248,13 +1248,13 @@ var require_mtime_precision = __commonJS({
         if (err) {
           return callback(err);
         }
-        fs.stat(file, (err2, stat4) => {
+        fs.stat(file, (err2, stat5) => {
           if (err2) {
             return callback(err2);
           }
-          const precision = stat4.mtime.getTime() % 1e3 === 0 ? "s" : "ms";
+          const precision = stat5.mtime.getTime() % 1e3 === 0 ? "s" : "ms";
           Object.defineProperty(fs, cacheSymbol, { value: precision });
-          callback(null, stat4.mtime, precision);
+          callback(null, stat5.mtime, precision);
         });
       });
     }
@@ -1308,14 +1308,14 @@ var require_lockfile = __commonJS({
         if (options.stale <= 0) {
           return callback(Object.assign(new Error("Lock file is already being held"), { code: "ELOCKED", file }));
         }
-        options.fs.stat(lockfilePath, (err2, stat4) => {
+        options.fs.stat(lockfilePath, (err2, stat5) => {
           if (err2) {
             if (err2.code === "ENOENT") {
               return acquireLock(file, { ...options, stale: 0 }, callback);
             }
             return callback(err2);
           }
-          if (!isLockStale(stat4, options)) {
+          if (!isLockStale(stat5, options)) {
             return callback(Object.assign(new Error("Lock file is already being held"), { code: "ELOCKED", file }));
           }
           removeLock(file, options, (err3) => {
@@ -1327,8 +1327,8 @@ var require_lockfile = __commonJS({
         });
       });
     }
-    function isLockStale(stat4, options) {
-      return stat4.mtime.getTime() < Date.now() - options.stale;
+    function isLockStale(stat5, options) {
+      return stat5.mtime.getTime() < Date.now() - options.stale;
     }
     function removeLock(file, options, callback) {
       options.fs.rmdir(getLockFile(file, options), (err) => {
@@ -1346,7 +1346,7 @@ var require_lockfile = __commonJS({
       lock2.updateDelay = lock2.updateDelay || options.update;
       lock2.updateTimeout = setTimeout(() => {
         lock2.updateTimeout = null;
-        options.fs.stat(lock2.lockfilePath, (err, stat4) => {
+        options.fs.stat(lock2.lockfilePath, (err, stat5) => {
           const isOverThreshold = lock2.lastUpdate + options.stale < Date.now();
           if (err) {
             if (err.code === "ENOENT" || isOverThreshold) {
@@ -1355,7 +1355,7 @@ var require_lockfile = __commonJS({
             lock2.updateDelay = 1e3;
             return updateLock(file, options);
           }
-          const isMtimeOurs = lock2.mtime.getTime() === stat4.mtime.getTime();
+          const isMtimeOurs = lock2.mtime.getTime() === stat5.mtime.getTime();
           if (!isMtimeOurs) {
             return setLockAsCompromised(
               file,
@@ -1480,11 +1480,11 @@ var require_lockfile = __commonJS({
         if (err) {
           return callback(err);
         }
-        options.fs.stat(getLockFile(file2, options), (err2, stat4) => {
+        options.fs.stat(getLockFile(file2, options), (err2, stat5) => {
           if (err2) {
             return err2.code === "ENOENT" ? callback(null, false) : callback(err2);
           }
-          return callback(null, !isLockStale(stat4, options));
+          return callback(null, !isLockStale(stat5, options));
         });
       });
     }
@@ -2176,7 +2176,29 @@ function snippet(text, hits, maxChars) {
 
 // src/context/git.ts
 import { execFile, spawn as spawn2 } from "node:child_process";
-function git(cwd, args, options = {}) {
+async function git(cwd, args, options = {}) {
+  const overrides = [];
+  if (args[0] === "diff" || args[0] === "status") {
+    const names = await gitRaw(cwd, ["config", "--null", "--name-only", "--list"], { ...options, maxBytes: 128e3 }, true);
+    if (names === null) return null;
+    const drivers = /* @__PURE__ */ new Set();
+    for (const key of names.split("\0")) {
+      const match = /^filter\.([\s\S]*)\.(clean|smudge|process|required)$/i.exec(key);
+      if (match) {
+        if (!match[1] || /[=\r\n]/.test(match[1])) return null;
+        drivers.add(match[1]);
+      }
+    }
+    for (const driver of drivers) {
+      for (const setting of ["clean=", "smudge=", "process=", "required=false"]) overrides.push("-c", `filter.${driver}.${setting}`);
+    }
+    if (overrides.join(" ").length > 16e3) return null;
+    overrides.push("-c", "diff.submodule=short");
+    args = [args[0], "--ignore-submodules=dirty", ...args.slice(1)];
+  }
+  return gitRaw(cwd, [...overrides, ...args], options);
+}
+function gitRaw(cwd, args, options, requireComplete = false) {
   const { signal } = options;
   if (signal?.aborted) return Promise.resolve(null);
   return new Promise((resolve4) => {
@@ -2186,7 +2208,7 @@ function git(cwd, args, options = {}) {
     };
     const child = execFile(
       "git",
-      // core.fsmonitor=false: a repository's own config cannot make a read run a program.
+      // Disable the filesystem monitor hook; worktree filters are disabled above.
       ["-c", "core.quotepath=off", "-c", "color.ui=never", "-c", "core.fsmonitor=false", ...args],
       {
         cwd,
@@ -2202,7 +2224,7 @@ function git(cwd, args, options = {}) {
           resolve4(null);
           return;
         }
-        if (error && !stdout) {
+        if (error && (requireComplete || !stdout)) {
           resolve4(null);
           return;
         }
@@ -2255,7 +2277,7 @@ function parseNameStatus(out) {
   return entries;
 }
 async function gitDiff(root, maxChars, allow = () => true, signal) {
-  const names = await git(root, ["diff", "HEAD", "--name-status", "-z", "-M", "--", ...SAFE_PATHSPECS], { signal });
+  const names = await git(root, ["diff", "HEAD", "--name-status", "-z", "-M", "--no-ext-diff", "--no-textconv", "--", ...SAFE_PATHSPECS], { signal });
   if (names === null) return null;
   const refused = /* @__PURE__ */ new Set();
   for (const paths of parseNameStatus(names)) {
@@ -2263,12 +2285,12 @@ async function gitDiff(root, maxChars, allow = () => true, signal) {
   }
   if (refused.size > MAX_DIFF_EXCLUSIONS) return null;
   const pathspecs = [...SAFE_PATHSPECS, ...[...refused].map((path) => `:(exclude,literal)${path}`)];
-  const stat4 = await git(root, ["diff", "HEAD", "-M", "--stat=100", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { signal });
-  if (stat4 === null || !stat4.trim()) {
+  const stat5 = await git(root, ["diff", "HEAD", "-M", "--stat=100", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { signal });
+  if (stat5 === null || !stat5.trim()) {
     return null;
   }
   const diff = await git(root, ["diff", "HEAD", "-M", "-U2", "--no-ext-diff", "--no-textconv", "--", ...pathspecs], { maxBytes: 4e6, signal }) ?? "";
-  return { stat: stat4.trim(), diff: diff.length > maxChars ? `${maskedStart(diff, maxChars)}
+  return { stat: stat5.trim(), diff: diff.length > maxChars ? `${maskedStart(diff, maxChars)}
 \u2026(diff truncated)` : redactCode(diff) };
 }
 function maskedStart(text, maxChars) {
@@ -4156,6 +4178,8 @@ async function addHistory(host, settings, entry) {
   if (settings.historyLimit <= 0 || !settings.privacy.saveHistory) return;
   await historyChange(host, async () => {
     const list = parseHistory(await host.storage.get(HISTORY_KEY));
+    const historyLimit = num(await host.settings.get("historyLimit"), 50);
+    if (historyLimit <= 0 || await host.settings.get("saveHistory") === false) return;
     const at = Date.now();
     const added = {
       id: `${at.toString(36)}${Math.random().toString(36).slice(2, 6)}`,
@@ -4164,7 +4188,7 @@ async function addHistory(host, settings, entry) {
       original: trimForHistory(entry.original),
       enhanced: trimForHistory(entry.enhanced)
     };
-    const next = capHistory([added, ...list], settings.historyLimit);
+    const next = capHistory([added, ...list], historyLimit);
     await host.storage.set(HISTORY_KEY, next.map(toJson));
   });
 }
@@ -4381,8 +4405,8 @@ async function sendPieces(host, terminalId, pieces) {
 }
 var latestProgress = /* @__PURE__ */ new Map();
 var MAX_TRACKED_RUNS = 20;
-function progressOf(runId) {
-  return latestProgress.get(runId) ?? null;
+function progressOf(runId, panelId) {
+  return latestProgress.get(JSON.stringify([panelId, runId])) ?? null;
 }
 var liveRuns = /* @__PURE__ */ new Map();
 function hasActiveRuns() {
@@ -4392,8 +4416,9 @@ var unnamedRuns = 0;
 function startRun(host, input, panelId, budgetMs) {
   const runId = typeof input.runId === "string" ? input.runId.slice(0, 64) : "";
   const progress = runId ? (level, allowProjectFiles, readsOtherAgents) => createProgress(runId, planSteps(level, allowProjectFiles, readsOtherAgents), (snapshot) => {
-    latestProgress.delete(runId);
-    latestProgress.set(runId, snapshot);
+    const key = JSON.stringify([panelId, runId]);
+    latestProgress.delete(key);
+    latestProgress.set(key, snapshot);
     for (const old of [...latestProgress.keys()].slice(0, Math.max(0, latestProgress.size - MAX_TRACKED_RUNS))) latestProgress.delete(old);
     host.panels.post("enhance.progress", snapshot, { panel: panelId });
   }) : void 0;
@@ -4496,7 +4521,7 @@ async function enhanceRequest(host, input, signal, panelId) {
 }
 function registerRunHandlers(host) {
   host.panels.handle("prompt.enhance", async (input, { signal, panel }) => enhanceRequest(host, input, signal, panel.id));
-  host.panels.handle("enhance.progress.get", async ({ runId }) => progressOf(runId));
+  host.panels.handle("enhance.progress.get", async ({ runId }, { panel }) => progressOf(runId, panel.id));
   host.panels.handle("context.preview", async ({ prompt, terminalId, level, exclude, workspaceId }, { signal }) => {
     const settings = await readSettings(host);
     const requested = isContextLevel(level) ? level : settings.contextLevel;
@@ -4519,13 +4544,13 @@ function registerRunHandlers(host) {
     if (allowed === "ai-test") notes.push(msg("note.preview_no_research"));
     return { context: view(gathered.items), notes, chars: gathered.items.reduce((sum, entry) => sum + entry.chars, 0) };
   });
-  host.panels.handle("prompt.send", async ({ terminalId, text, enter, force }) => {
+  host.panels.handle("prompt.send", async ({ terminalId, text, enter, force }, { signal }) => {
     const settings = await readSettings(host);
     if (!settings.privacy.allowTerminalSend) throw hostError(msg("error.send_off"), "not_permitted");
     if (host.host.has("session.send")) {
       const prompt = terminalSafe(text).trim();
       if (!prompt) throw hostError(msg("error.nothing_to_send"), "invalid_params");
-      return host.host.call("session.send", { sessionId: terminalId, text: prompt });
+      return host.host.call("session.send", { sessionId: terminalId, text: prompt }, { signal });
     }
     const pieces = terminalChunks(text, settings.sendMode);
     if (pieces.length === 0) throw hostError(msg("error.nothing_to_send"), "invalid_params");
@@ -5343,7 +5368,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.0";
+var VERSION = "0.12.1";
 
 // src/worker-host.ts
 import { EventEmitter as EventEmitter2 } from "node:events";
@@ -5677,7 +5702,7 @@ function isChatTextSize(value) {
 
 // src/copilot/session.ts
 import { basename as basename4, isAbsolute as isAbsolute3 } from "node:path";
-import { realpath as realpath3 } from "node:fs/promises";
+import { realpath as realpath3, stat as stat4 } from "node:fs/promises";
 var unavailable = (message) => Object.assign(new Error(message), { code: "unavailable" });
 async function bounded(request) {
   let timer;
@@ -5693,10 +5718,15 @@ function sessionAdapter(session2) {
   let sending = false;
   let lastSent = 0;
   const project2 = async () => {
-    const info = await bounded(session2.rpc.metadata.snapshot());
-    if (info.isRemote || !isAbsolute3(info.workingDirectory)) return null;
-    const path = await realpath3(info.workingDirectory);
-    return { id: `copilot::${path}`, path, name: basename4(path) };
+    try {
+      const info = await bounded(session2.rpc.metadata.snapshot());
+      if (!info || info.isRemote !== false || typeof info.workingDirectory !== "string" || !isAbsolute3(info.workingDirectory)) return null;
+      const path = await realpath3(info.workingDirectory);
+      if (!(await stat4(path)).isDirectory()) return null;
+      return { id: `copilot::${path}`, path, name: basename4(path) };
+    } catch {
+      return null;
+    }
   };
   const state = async () => {
     try {
@@ -5719,7 +5749,7 @@ function sessionAdapter(session2) {
     has: (name) => operations.has(name),
     state,
     project: project2,
-    async call(name, input) {
+    async call(name, input, options) {
       let result;
       if (name === "workspace.list") {
         const place = await project2();
@@ -5731,6 +5761,7 @@ function sessionAdapter(session2) {
         const place = await project2();
         result = { agents: [{ terminalId: session2.sessionId, title: "GitHub Copilot", agent: "copilot", state: await state(), stateStartedAt: Date.now(), ...place ? { workspaceId: place.id } : {} }] };
       } else if (name === "session.send") {
+        options?.signal?.throwIfAborted();
         const { sessionId, text } = input;
         if (sessionId !== session2.sessionId) throw unavailable("The canvas belongs to another Copilot session.");
         if (typeof text !== "string" || !text.trim() || text.length > 1e6) throw unavailable("The prompt is empty or too large.");
@@ -5738,6 +5769,7 @@ function sessionAdapter(session2) {
         sending = true;
         try {
           const current = await state();
+          options?.signal?.throwIfAborted();
           if (current !== "waiting") throw Object.assign(new Error(withMessage(msg("error.session_not_idle"))), { code: "session_not_idle" });
           await session2.send({ prompt: text, mode: "enqueue" });
           lastSent = Date.now();
@@ -5808,7 +5840,11 @@ function createServices(session2, directory = process.env.ENHANCE_PROMPT_DATA_DI
       await prepare();
       await prepareEfforts();
       const values = { ...DEFAULTS };
-      for (const name of await prefs.keys()) if (Object.hasOwn(DEFAULTS, name)) values[name] = await prefs.get(name);
+      for (const name of key === void 0 ? await prefs.keys() : [key]) {
+        if (!Object.hasOwn(DEFAULTS, name)) continue;
+        const saved = await prefs.get(name);
+        if (saved !== null || key === void 0) values[name] = saved;
+      }
       if (!isChatTextSize(values.chatTextSize)) values.chatTextSize = "medium";
       if (typeof values.useEnhancedPrompts !== "boolean") values.useEnhancedPrompts = true;
       for (const name of UNSUPPORTED_SETTINGS) values[name] = false;

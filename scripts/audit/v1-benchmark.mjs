@@ -15,6 +15,7 @@ import { gatherContext, staticParts } from '../../src/context/index.ts'
 import { gitGrepCount, SAFE_PATHSPECS } from '../../src/context/git.ts'
 import { mockHost } from '../../src/testing.ts'
 import { makeCrew, sampleCrew } from '../../src/panel/word-crew.ts'
+import { VERSION } from '../../src/version.ts'
 
 export function syntheticHistory(count, projects = 100) {
   return Array.from({ length: count }, (_, index) => ({ id: `audit-${index}`, at: 1_790_000_000_000 - index * 60_000,
@@ -23,7 +24,7 @@ export function syntheticHistory(count, projects = 100) {
     model: 'fixture', style: 'balanced', source: 'panel', project: `/synthetic/team-${index % projects}/project-${index % 30}` }))
 }
 
-// Isolated optimization experiment. Production is unchanged. Preserve exact public output.
+// Original audit prototype, retained for comparison with production and the frozen baseline.
 export function groupedProjects(entries, current, query = '') {
   const label = path => {
     if (!path) return { name: 'No project recorded', parent: '' }
@@ -45,6 +46,25 @@ export function groupedProjects(entries, current, query = '') {
   }).sort((a, b) => Number(b.current) - Number(a.current) || Number(!a.path) - Number(!b.path) || a.label.localeCompare(b.label, 'en'))
 }
 
+// Frozen 0.12.0 history grouping algorithm. Benchmark/reference only; never shipped in the panel.
+export function baselineProjects(entries, current, query = '') {
+  const label = path => {
+    if (!path) return { name: 'No project recorded', parent: '' }
+    const trimmed = path.replace(/[\\/]+$/, '')
+    const slash = Math.max(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'))
+    return { name: trimmed.slice(slash + 1) || path, parent: trimmed.slice(0, Math.max(0, slash)) || (path.startsWith('/') ? '/' : '') }
+  }
+  const paths = [...new Set([...entries.map(entry => entry.project || ''), ...(current ? [current] : [])])]
+  const search = query.trim().toLowerCase()
+  return paths.map(path => {
+    const { name, parent } = label(path)
+    const duplicate = paths.some(other => other !== path && label(other).name === name)
+    return { value: path ? `path:${path}` : 'unassigned', path, name,
+      label: duplicate ? `${name} (${parent})` : name, detail: duplicate ? parent : '', current: path === current,
+      count: entries.filter(entry => (entry.project || '') === path && (entry.original.toLowerCase().includes(search) || entry.enhanced.toLowerCase().includes(search))).length }
+  }).sort((a, b) => Number(b.current) - Number(a.current) || Number(!a.path) - Number(!b.path) || a.label.localeCompare(b.label, 'en'))
+}
+
 export function summarize(samples) {
   assert.ok(samples.length && samples.every(value => Number.isFinite(value) && value >= 0))
   const sorted = [...samples].sort((a, b) => a - b)
@@ -57,7 +77,8 @@ async function run(mode) {
   const directory = join(base, `${mode}-${randomUUID()}`)
   assert.ok(!relative(base, directory).startsWith('..'))
   await mkdir(directory, { recursive: true })
-  const results = { schema: 1, mode, version: '0.12.0', sourceCommit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+  const results = { schema: 1, mode, version: VERSION, sourceCommit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+    workingTreeModified: !!execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim(),
     node: process.version, platform: process.platform, architecture: process.arch, capturedAt: new Date().toISOString(),
     syntheticOnly: true, modelCalls: 0, measurements: [] }
   async function measure(name, fn, metadata = {}, repetitions = 3) {
@@ -77,6 +98,8 @@ async function run(mode) {
       const meta = { records: count, projects, jsonBytes: Buffer.byteLength(JSON.stringify(data)), beyondSupportedHistoryLimit: count > 500 }
       await measure('history.parse', () => parseHistory(data), meta)
       const current = await measure('history.projects.current', () => historyProjects(data, null, 'module 2'), meta)
+      const baseline = await measure('history.projects.baseline0120', () => baselineProjects(data, null, 'module 2'), meta)
+      assert.deepEqual(current, baseline)
       const proposed = await measure('history.projects.singlePassPrototype', () => groupedProjects(data, null, 'module 2'), meta)
       assert.deepEqual(proposed, current)
       const filtered = await measure('history.searchAndSort', () => filterHistory(data, 'module 2', null, 'newest'), meta)

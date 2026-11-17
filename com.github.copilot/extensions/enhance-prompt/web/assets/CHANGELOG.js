@@ -1,5 +1,15 @@
 var e=`# Changes
 
+## [0.12.1] - 2026-11-16
+
+### Fixed
+- Project context collection now disables configured Git filter programs during status and diff reads. Unreadable or unsupported filter configuration skips those reads instead of running a filter.
+- Git context keeps submodule commit summaries without inspecting submodule working-tree content.
+- Turning off **Settings → Privacy → Save history** during an enhancement prevents that completed prompt from being added to History. Existing history is preserved.
+- Closing a canvas cancels a pending **Send to Copilot** before it reaches the session's send boundary. A message already accepted by Copilot cannot be recalled.
+- Uncertain project metadata no longer exposes a local directory, and progress lookups are limited to the canvas that started the enhancement.
+- History project counts use fewer repeated scans, and the enhancement progress bar exposes its numeric progress to assistive technology.
+
 ## [0.12.0] - 2026-11-16
 
 ### Added

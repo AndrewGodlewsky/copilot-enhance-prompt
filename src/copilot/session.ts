@@ -1,6 +1,7 @@
 import { basename, isAbsolute } from 'node:path'
-import { realpath } from 'node:fs/promises'
+import { realpath, stat } from 'node:fs/promises'
 import type { EnhanceWorker, PlatformOperations } from '../host.ts'
+import type { RequestOptions } from '../runtime.ts'
 import { msg, withMessage } from '../messages.ts'
 
 /** The narrow SDK surface used here; validated against the desktop SDK in docs/copilot-migration-assessment.md. */
@@ -31,10 +32,13 @@ export function sessionAdapter(session: CopilotSession): EnhanceWorker['host'] &
   let sending = false
   let lastSent = 0
   const project = async () => {
-    const info = await bounded(session.rpc.metadata.snapshot())
-    if (info.isRemote || !isAbsolute(info.workingDirectory)) return null
-    const path = await realpath(info.workingDirectory)
-    return { id: `copilot::${path}`, path, name: basename(path) }
+    try {
+      const info = await bounded(session.rpc.metadata.snapshot())
+      if (!info || info.isRemote !== false || typeof info.workingDirectory !== 'string' || !isAbsolute(info.workingDirectory)) return null
+      const path = await realpath(info.workingDirectory)
+      if (!(await stat(path)).isDirectory()) return null
+      return { id: `copilot::${path}`, path, name: basename(path) }
+    } catch { return null }
   }
   const state = async () => {
     try {
@@ -50,7 +54,7 @@ export function sessionAdapter(session: CopilotSession): EnhanceWorker['host'] &
   const operations = new Set(['workspace.list', 'workspace.readContext', 'agents.list', 'session.send'])
   return {
     has: name => operations.has(name), state, project,
-    async call<K extends keyof PlatformOperations>(name: K, input: PlatformOperations[K]['input']): Promise<PlatformOperations[K]['output']> {
+    async call<K extends keyof PlatformOperations>(name: K, input: PlatformOperations[K]['input'], options?: RequestOptions): Promise<PlatformOperations[K]['output']> {
       let result: unknown
       if (name === 'workspace.list') {
         const place = await project()
@@ -62,6 +66,7 @@ export function sessionAdapter(session: CopilotSession): EnhanceWorker['host'] &
         const place = await project()
         result = { agents: [{ terminalId: session.sessionId, title: 'GitHub Copilot', agent: 'copilot', state: await state(), stateStartedAt: Date.now(), ...(place ? { workspaceId: place.id } : {}) }] }
       } else if (name === 'session.send') {
+        options?.signal?.throwIfAborted()
         const { sessionId, text } = input as PlatformOperations['session.send']['input']
         if (sessionId !== session.sessionId) throw unavailable('The canvas belongs to another Copilot session.')
         if (typeof text !== 'string' || !text.trim() || text.length > 1_000_000) throw unavailable('The prompt is empty or too large.')
@@ -69,6 +74,7 @@ export function sessionAdapter(session: CopilotSession): EnhanceWorker['host'] &
         sending = true
         try {
           const current = await state()
+          options?.signal?.throwIfAborted()
           if (current !== 'waiting') throw Object.assign(new Error(withMessage(msg('error.session_not_idle'))), { code: 'session_not_idle' })
           // Never use immediate mode: a new message must not become a response to a pending question.
           await session.send({ prompt: text, mode: 'enqueue' })

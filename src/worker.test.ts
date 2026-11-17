@@ -65,6 +65,99 @@ function hostFor(root: string | null, extra: Record<string, unknown> = {}) {
   }
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>(done => { resolve = done })
+  return { promise, resolve }
+}
+
+test('disabling history while rewriting, history storage or final preferences wait prevents retention', async () => {
+  for (const phase of ['model', 'storage', 'settings']) {
+    const reached = deferred<void>()
+    const release = deferred<void>()
+    let rewritten = false
+    setRewrite(async () => {
+      if (phase === 'model') { reached.resolve(); await release.promise }
+      rewritten = true
+      return 'New rewritten prompt'
+    })
+    const saved = [{ id: 'old', at: 1, original: 'Keep this', enhanced: 'Existing prompt', style: 'balanced', model: 'fixture' }]
+    const host = mockHost({ storage: { models: { profiles: [profile('main')] }, history: saved }, results: hostFor(null) })
+    const get = host.storage.get
+    host.storage.get = async key => {
+      if (phase === 'storage' && rewritten && key === 'history') { reached.resolve(); await release.promise }
+      return get(key)
+    }
+    const getSetting = host.settings.get
+    host.settings.get = async key => {
+      const snapshot = await getSetting(key)
+      if (phase === 'settings' && rewritten && (key === undefined || key === 'historyLimit')) {
+        reached.resolve(); await release.promise
+      }
+      return snapshot
+    }
+    const worker = await mountWorker(main, { host })
+    try {
+      const request = worker.request('prompt.enhance', { prompt: 'Explain this', level: 'off' })
+      await reached.promise
+      await worker.panel('settings-canvas').settings.set('saveHistory', false)
+      release.resolve()
+      assert.equal((await request).enhanced, 'New rewritten prompt')
+      assert.deepEqual(host.data().storage.history, saved, phase)
+    } finally { release.resolve(); await worker.deactivate() }
+  }
+})
+
+test('progress lookup belongs to the requesting panel, including completed runs and duplicate run IDs', async () => {
+  stubRewrite(() => 'Rewritten prompt')
+  const host = mockHost({ settings: { saveHistory: false }, storage: { models: { profiles: [profile('main')] } }, results: hostFor(null) })
+  const worker = await mountWorker(main, { host })
+  try {
+    for (const panelId of ['owner-a', 'owner-b']) {
+      await worker.request('prompt.enhance', { prompt: 'Explain this', level: 'off', runId: 'shared-id' }, { panelId })
+      assert.equal(await worker.request('enhance.progress.get', { runId: 'shared-id' }, { panelId: 'stranger' }), null)
+    }
+    for (const panelId of ['owner-a', 'owner-b']) {
+      const expected = worker.posts.filter(post => post.panel === panelId && post.event === 'enhance.progress').at(-1)?.payload
+      assert.ok(expected)
+      assert.deepEqual(await worker.request('enhance.progress.get', { runId: 'shared-id' }, { panelId }), expected)
+    }
+    const reached = deferred<void>()
+    setRewrite((_input, { signal }) => new Promise((_resolve, reject) => {
+      signal!.addEventListener('abort', () => reject(new DOMException('Cancelled', 'AbortError')), { once: true })
+      reached.resolve()
+    }))
+    const cancelled = worker.request('prompt.enhance', { prompt: 'Cancel this', level: 'off', runId: 'cancelled-id' }, { panelId: 'owner-c' })
+    const rejection = assert.rejects(cancelled, /aborted/)
+    await reached.promise
+    worker.closePanel('owner-c')
+    await rejection
+    assert.ok(await worker.request('enhance.progress.get', { runId: 'cancelled-id' }, { panelId: 'owner-c' }))
+    assert.equal(await worker.request('enhance.progress.get', { runId: 'cancelled-id' }, { panelId: 'owner-b' }), null)
+    assert.equal(await worker.request('enhance.progress.get', { runId: 'unknown-id' }, { panelId: 'owner-c' }), null)
+  } finally { await worker.deactivate() }
+})
+
+test('closing a canvas propagates cancellation to its pending session Send', async () => {
+  const reached = deferred<AbortSignal>()
+  const release = deferred<void>()
+  const host = mockHost({ results: { 'session.send': async (_input: unknown, options: { signal: AbortSignal }) => {
+    reached.resolve(options?.signal)
+    await release.promise
+    return { accepted: true }
+  } } })
+  const worker = await mountWorker(main, { host })
+  try {
+    const request = worker.request('prompt.send', { terminalId: 't1', text: 'hello' }, { panelId: 'closing' })
+    const rejected = assert.rejects(request, /aborted/)
+    const signal = await reached.promise
+    worker.closePanel('closing')
+    assert.equal(signal?.aborted, true)
+    release.resolve()
+    await rejected
+  } finally { release.resolve(); await worker.deactivate() }
+})
+
 test('enhanced prompts default on; an explicit saved false restores the original request payload', async () => {
   const calls = stubRewrite(() => 'A rewritten prompt')
   const host = mockHost({ storage: { models: { profiles: [profile('main')] } }, results: hostFor(null) })

@@ -153,6 +153,10 @@ async function addHistory(host: EnhanceWorker, settings: Settings, entry: Omit<H
   if (settings.historyLimit <= 0 || !settings.privacy.saveHistory) return
   await historyChange(host, async () => {
     const list = parseHistory(await host.storage.get(HISTORY_KEY))
+    // The run's starting preference cannot authorize retention after a later opt-out.
+    // Recheck after waiting for the transaction and its read, immediately before writing.
+    const historyLimit = num(await host.settings.get('historyLimit'), 50)
+    if (historyLimit <= 0 || await host.settings.get('saveHistory') === false) return
     const at = Date.now()
     const added: HistoryEntry = {
       id: `${at.toString(36)}${Math.random().toString(36).slice(2, 6)}`,
@@ -161,7 +165,7 @@ async function addHistory(host: EnhanceWorker, settings: Settings, entry: Omit<H
       original: trimForHistory(entry.original),
       enhanced: trimForHistory(entry.enhanced)
     }
-    const next = capHistory([added, ...list], settings.historyLimit)
+    const next = capHistory([added, ...list], historyLimit)
     await host.storage.set(HISTORY_KEY, next.map(toJson))
   })
 }
@@ -437,13 +441,13 @@ export async function sendPieces(host: EnhanceWorker, terminalId: string, pieces
   return { accepted: sent === pieces.length }
 }
 
-/** The latest progress of recent runs, by run id, for callers that cannot hear panel events (the web panel's dev server). */
+/** Recent progress is scoped to the requesting panel, just like live events and resumable runs. */
 type ProgressSnapshot = Parameters<Parameters<typeof createProgress>[2]>[0]
 const latestProgress = new Map<string, ProgressSnapshot>()
 const MAX_TRACKED_RUNS = 20
 
-export function progressOf(runId: string): ProgressSnapshot | null {
-  return latestProgress.get(runId) ?? null
+export function progressOf(runId: string, panelId: string): ProgressSnapshot | null {
+  return latestProgress.get(JSON.stringify([panelId, runId])) ?? null
 }
 
 type EnhanceInput = Parameters<typeof enhance>[1] & { runId?: string; resumable?: boolean; resume?: boolean }
@@ -474,8 +478,9 @@ function startRun(host: EnhanceWorker, input: EnhanceInput, panelId: string, bud
   const progress = runId
     ? (level: ContextLevel, allowProjectFiles: boolean, readsOtherAgents: boolean) =>
         createProgress(runId, planSteps(level, allowProjectFiles, readsOtherAgents), (snapshot) => {
-          latestProgress.delete(runId)
-          latestProgress.set(runId, snapshot)
+          const key = JSON.stringify([panelId, runId])
+          latestProgress.delete(key)
+          latestProgress.set(key, snapshot)
           for (const old of [...latestProgress.keys()].slice(0, Math.max(0, latestProgress.size - MAX_TRACKED_RUNS))) latestProgress.delete(old)
           host.panels.post('enhance.progress', snapshot, { panel: panelId })
         })
@@ -601,7 +606,7 @@ export async function enhanceRequest(host: EnhanceWorker, input: EnhanceInput, s
 /** Enhance, Preview context, Send, Copy and the list of terminals to send to. */
 function registerRunHandlers(host: EnhanceWorker): void {
   host.panels.handle('prompt.enhance', async (input, { signal, panel }) => enhanceRequest(host, input, signal, panel.id))
-  host.panels.handle('enhance.progress.get', async ({ runId }) => progressOf(runId))
+  host.panels.handle('enhance.progress.get', async ({ runId }, { panel }) => progressOf(runId, panel.id))
 
   host.panels.handle('context.preview', async ({ prompt, terminalId, level, exclude, workspaceId }, { signal }) => {
     const settings = await readSettings(host)
@@ -627,13 +632,13 @@ function registerRunHandlers(host: EnhanceWorker): void {
     return { context: view(gathered.items), notes, chars: gathered.items.reduce((sum, entry) => sum + entry.chars, 0) }
   })
 
-  host.panels.handle('prompt.send', async ({ terminalId, text, enter, force }) => {
+  host.panels.handle('prompt.send', async ({ terminalId, text, enter, force }, { signal }) => {
     const settings = await readSettings(host)
     if (!settings.privacy.allowTerminalSend) throw hostError(msg('error.send_off'), 'not_permitted')
     if (host.host.has('session.send')) {
       const prompt = terminalSafe(text).trim()
       if (!prompt) throw hostError(msg('error.nothing_to_send'), 'invalid_params')
-      return host.host.call('session.send', { sessionId: terminalId, text: prompt })
+      return host.host.call('session.send', { sessionId: terminalId, text: prompt }, { signal })
     }
     const pieces = terminalChunks(text, settings.sendMode)
     if (pieces.length === 0) throw hostError(msg('error.nothing_to_send'), 'invalid_params')

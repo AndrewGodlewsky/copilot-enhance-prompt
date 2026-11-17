@@ -7,6 +7,36 @@ import { persistentStore } from './storage.ts'
 import { createServices } from './services.ts'
 import type { CopilotSession } from './session.ts'
 import type { JsonValue } from '../runtime.ts'
+import { promises as fs } from 'node:fs'
+import { syncBuiltinESMExports } from 'node:module'
+
+test('a keyed privacy read uses one current preference snapshot without enumerating unrelated settings', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'enhance-keyed-setting-'))
+  const original = fs.readFile
+  try {
+    const unused = async (): Promise<never> => { throw new Error('No session calls in this fixture.') }
+    const services = createServices({ sessionId: 'fixture', send: unused,
+      rpc: { metadata: { snapshot: unused, activity: unused, isProcessing: unused }, permissions: { pendingRequests: unused }, queue: { pendingItems: unused } }
+    }, dir)
+    await services.settings.set('saveHistory', false)
+    await services.settings.set('customInstructions', 'Keep user rules')
+    await services.settings.get() // Finish migrations before measuring the ordinary read.
+    let reads = 0
+    fs.readFile = (async (...args: Parameters<typeof fs.readFile>) => {
+      if (String(args[0]) === join(dir, 'preferences', 'state.json')) reads++
+      return original(...args)
+    }) as typeof fs.readFile
+    syncBuiltinESMExports()
+    assert.equal(await services.settings.get('saveHistory'), false)
+    assert.equal(reads, 1, 'privacy must not be sampled before later unrelated preference reads')
+    assert.equal(await services.settings.get('chatTextSize'), 'medium')
+    assert.equal(await services.settings.get('customInstructions'), 'Keep user rules')
+  } finally {
+    fs.readFile = original
+    syncBuiltinESMExports()
+    await rm(dir, { recursive: true, force: true })
+  }
+})
 
 test('writes survive restart, concurrent transactions preserve changes, and scopes stay separate', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'enhance-store-test-'))

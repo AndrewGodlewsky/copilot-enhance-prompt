@@ -3,10 +3,42 @@ import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { isSensitive, filterAllowed, type FileFilter } from './files.ts'
 import { redactCode } from './secrets.ts'
 
-export function git(
+type GitOptions = { timeoutMs?: number; maxBytes?: number; signal?: AbortSignal }
+
+export async function git(cwd: string, args: string[], options: GitOptions = {}): Promise<string | null> {
+  const overrides: string[] = []
+  if (args[0] === 'diff' || args[0] === 'status') {
+    // Even a read-only diff can invoke clean/process filters. Inspect effective names
+    // (including includes and global config), never values that could contain secrets.
+    const names = await gitRaw(cwd, ['config', '--null', '--name-only', '--list'], { ...options, maxBytes: 128_000 }, true)
+    if (names === null) return null
+    const drivers = new Set<string>()
+    for (const key of names.split('\0')) {
+      const match = /^filter\.([\s\S]*)\.(clean|smudge|process|required)$/i.exec(key)
+      if (match) {
+        // These names cannot be represented safely as command-line config overrides.
+        if (!match[1] || /[=\r\n]/.test(match[1])) return null
+        drivers.add(match[1])
+      }
+    }
+    for (const driver of drivers) {
+      for (const setting of ['clean=', 'smudge=', 'process=', 'required=false']) overrides.push('-c', `filter.${driver}.${setting}`)
+    }
+    // Stay comfortably within Windows' command-line limit. Unknown config fails closed.
+    if (overrides.join(' ').length > 16_000) return null
+    // Child repositories have their own unchecked filters. Keep gitlink commit summaries,
+    // but never inspect their worktrees or honor an inline submodule-diff preference.
+    overrides.push('-c', 'diff.submodule=short')
+    args = [args[0], '--ignore-submodules=dirty', ...args.slice(1)]
+  }
+  return gitRaw(cwd, [...overrides, ...args], options)
+}
+
+function gitRaw(
   cwd: string,
   args: string[],
-  options: { timeoutMs?: number; maxBytes?: number; signal?: AbortSignal } = {}
+  options: GitOptions,
+  requireComplete = false
 ): Promise<string | null> {
   const { signal } = options
   if (signal?.aborted) return Promise.resolve(null)
@@ -18,7 +50,7 @@ export function git(
     }
     const child = execFile(
       'git',
-      // core.fsmonitor=false: a repository's own config cannot make a read run a program.
+      // Disable the filesystem monitor hook; worktree filters are disabled above.
       ['-c', 'core.quotepath=off', '-c', 'color.ui=never', '-c', 'core.fsmonitor=false', ...args],
       {
         cwd,
@@ -35,7 +67,7 @@ export function git(
           return
         }
         // git grep exits 1 when nothing matched; a too-large output still has a useful prefix.
-        if (error && !stdout) {
+        if (error && (requireComplete || !stdout)) {
           resolve(null)
           return
         }
@@ -121,7 +153,7 @@ export async function gitDiff(
   allow: FileFilter = () => true,
   signal?: AbortSignal
 ): Promise<{ stat: string; diff: string } | null> {
-  const names = await git(root, ['diff', 'HEAD', '--name-status', '-z', '-M', '--', ...SAFE_PATHSPECS], { signal })
+  const names = await git(root, ['diff', 'HEAD', '--name-status', '-z', '-M', '--no-ext-diff', '--no-textconv', '--', ...SAFE_PATHSPECS], { signal })
   if (names === null) return null
   const refused = new Set<string>()
   for (const paths of parseNameStatus(names)) {
