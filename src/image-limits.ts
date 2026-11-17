@@ -3,6 +3,8 @@ export const MAX_IMAGES = 4
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 /** A file pasted, dropped or picked in the panel can be at most this large. */
 export const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
+export const MAX_FILES = 8
+export const MAX_ATTACHMENT_TOTAL = MAX_FILES * MAX_ATTACHMENT_BYTES
 /**
  * the host accepts a panel request whose input is at most 64 KiB of JSON; a larger one is refused with
  * `too_large` ("message too large"). Attachments go up in pieces of ATTACHMENT_CHUNK_BYTES: in base64

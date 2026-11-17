@@ -1,5 +1,12 @@
 var e=`# Changes
 
+## [0.12.8] - 2026-11-17
+
+### Fixed
+- Settings now validate the displayed history and model-timeout ranges in the backend too. Older out-of-range numeric preferences use a safe effective value without rewriting saved data.
+- Direct requests cannot bypass the eight-file attachment limit, send oversized lists, or start unlimited work. Busy requests ask you to finish pending work and retry; existing work is preserved.
+- The canvas limits simultaneous requests and event streams, and releases stalled request bodies after a timeout. Normal panel startup and multiple canvases remain supported.
+
 ## [0.12.7] - 2026-11-17
 
 ### Fixed

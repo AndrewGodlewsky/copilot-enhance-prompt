@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createUpdates } from '../updates/service.ts'
 import { persistentStore } from './storage.ts'
+import { request as httpRequest } from 'node:http'
 
 test('the canvas rejects unauthenticated, cross-origin and oversized requests, and confines storage writes', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'enhance-http-'))
@@ -74,4 +75,88 @@ test('updating is human-UI-only, rejects client targets, preserves drafts and su
     assert.equal((await update.state()).status, 'reload'); assert.equal(updates, 1)
     assert.equal((await (await post({ method: 'storage.get', input: { key: 'panel:draft' } })).json()).result, 'Keep this request 日本語')
   } finally { await server.close(); await worker.deactivate(); await rm(directory, { recursive: true, force: true, maxRetries: 5 }) }
+})
+
+test('HTTP and SSE saturation is bounded per canvas and released after work/streams close', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'enhance-http-quota-'))
+  const finish: (() => void)[] = []
+  const worker = await mountWorker({ default: api => { api.panels.handle('models.get', async () => {
+    await new Promise<void>(resolve => finish.push(resolve)); return { profiles: [], selectorProfileId: null }
+  }) } }, { host: mockHost() })
+  const server = await createCanvasServer({ worker, assets: directory })
+  const streams: AbortController[] = []
+  const requests: Promise<Response>[] = []
+  try {
+    const url = server.open('one'), other = server.open('two')
+    const headers = (url: string) => ({ authorization: `Bearer ${new URL(url).pathname.split('/')[2]}`, 'content-type': 'application/json' })
+    const post = (url: string, name: string) => fetch(url + 'api', { method: 'POST', headers: headers(url), body: JSON.stringify({ method: 'request', name }) })
+    for (let i = 0; i < 24; i++) requests.push(post(url, 'models.get'))
+    while (finish.length !== 24) await new Promise(resolve => setTimeout(resolve, 1))
+    const busy = await post(url, 'logs.get')
+    assert.equal(busy.status, 429); assert.equal(busy.headers.get('retry-after'), '2')
+    assert.equal((await post(other, 'logs.get')).status, 200, 'a healthy second canvas remains usable')
+    finish.forEach(done => done()); await Promise.all(requests)
+    assert.equal((await post(url, 'logs.get')).status, 200)
+    for (let i = 0; i < 2; i++) {
+      const stop = new AbortController(); streams.push(stop)
+      assert.equal((await fetch(url + 'events', { headers: headers(url), signal: stop.signal })).status, 200)
+    }
+    assert.equal((await fetch(url + 'events', { headers: headers(url) })).status, 429)
+    streams.forEach(stop => stop.abort())
+    await new Promise(resolve => setTimeout(resolve, 20))
+    const stop = new AbortController(); streams.push(stop)
+    assert.equal((await fetch(url + 'events', { headers: headers(url), signal: stop.signal })).status, 200)
+    for (let i = 2; i < 16; i++) server.open(`canvas-${i}`)
+    assert.throws(() => server.open('overflow'), { code: 'rate_limited' })
+    server.closeCanvas('canvas-2')
+    assert.ok(server.open('replacement'))
+  } finally {
+    finish.forEach(done => done()); streams.forEach(stop => stop.abort())
+    await server.close(); await Promise.allSettled(requests); await worker.deactivate(); await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test('a stalled request body times out and releases capacity without waiting for its sender', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'enhance-http-body-'))
+  const worker = await mountWorker({ default: () => {} }, { host: mockHost() })
+  const server = await createCanvasServer({ worker, assets: directory, bodyTimeoutMs: 40 })
+  try {
+    const url = server.open('one'), authorization = `Bearer ${new URL(url).pathname.split('/')[2]}`
+    const response = await new Promise<number>((resolve, reject) => {
+      const request = httpRequest(url + 'api', { method: 'POST', headers: { authorization, 'content-type': 'application/json', 'content-length': '1000' } }, result => { result.resume(); resolve(result.statusCode!) })
+      request.on('error', reject); request.write('{')
+    })
+    assert.equal(response, 408)
+    assert.equal((await fetch(url + 'api', { method: 'POST', headers: { authorization, 'content-type': 'application/json' }, body: JSON.stringify({ method: 'request', name: 'logs.get' }) })).status, 200)
+  } finally { await server.close(); await worker.deactivate(); await rm(directory, { recursive: true, force: true }) }
+})
+
+test('four simultaneous canvas startups restore eighty saved atoms without exceeding capacity', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'enhance-startup-quota-'))
+  const worker = await mountWorker({ default: () => {} }, { host: mockHost() })
+  let active = 0, peak = 0
+  worker.api.storage.get = async () => {
+    peak = Math.max(peak, ++active)
+    await new Promise(resolve => setTimeout(resolve, 10))
+    active--; return 'Saved request 日本語'
+  }
+  const server = await createCanvasServer({ worker, assets: directory })
+  try {
+    await Promise.all(Array.from({ length: 4 }, async (_, index) => {
+      const runtime = await import(new URL(`../runtime.ts?startup-${index}`, import.meta.url).href)
+      const atoms = Array.from({ length: 20 }, () => runtime.atom('draft', '', { persist: 'plugin' }))
+      const url = server.open(`startup-${index}`), authorization = `Bearer ${new URL(url).pathname.split('/')[2]}`
+      runtime.bindPanel({ storage: {
+        async get(key: string) {
+          const response = await fetch(url + 'api', { method: 'POST', headers: { authorization, 'content-type': 'application/json' }, body: JSON.stringify({ method: 'storage.get', input: { key } }) })
+          const value = await response.json()
+          if (!response.ok) throw Object.assign(new Error(value.error.message), { code: value.error.code })
+          return value.result
+        }, onDidChange: () => ({ dispose() {} })
+      } })
+      await runtime.ready()
+      assert.ok(atoms.every(atom => runtime.read(atom) === 'Saved request 日本語'))
+    }))
+    assert.ok(peak <= 16, `peak concurrent startup reads: ${peak}`)
+  } finally { await server.close(); await worker.deactivate(); await rm(directory, { recursive: true, force: true }) }
 })

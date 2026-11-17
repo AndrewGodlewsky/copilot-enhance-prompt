@@ -9,7 +9,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import lockfile from 'proper-lockfile'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, relative, resolve } from 'node:path'
-import { MAX_ATTACHMENT_BYTES, MAX_CHUNK_BASE64, MAX_IMAGE_BYTES, MAX_IMAGES, sizeOver } from './image-limits.ts'
+import { MAX_ATTACHMENT_BYTES, MAX_ATTACHMENT_TOTAL, MAX_FILES, MAX_CHUNK_BASE64, MAX_IMAGE_BYTES, MAX_IMAGES, sizeOver } from './image-limits.ts'
 import { megabytes, sniffImage, type ImageData } from './images.ts'
 import { LlmError } from './llm.ts'
 import { msg } from './messages.ts'
@@ -114,6 +114,7 @@ export function safeName(name: string): string {
  */
 export async function putChunk(input: { id: string; name: string; index: number; total: number; data: string; size?: number }, owner: string): Promise<{ path: string; bytes: number } | { received: number }> {
   const key = ownerKey(owner)
+  if (!input || typeof input.name !== 'string' || input.name.length > 1024 || !Number.isSafeInteger(input.total) || input.total > 1024) throw bad()
   if (!/^[a-z0-9-]{6,40}$/.test(input.id)) throw new LlmError(msg('error.attachment_bad'), 'invalid_params')
   // One piece must fit in a panel request (64 KiB): the panel cuts files at ATTACHMENT_CHUNK_BYTES.
   if (typeof input.data !== 'string' || input.data.length > MAX_CHUNK_BASE64) throw new LlmError(msg('error.attachment_bad'), 'invalid_params')
@@ -253,7 +254,9 @@ export function excerpt(text: string, max = TEXT_MAX): { text: string; cut: numb
 /** Reads attached files: images as images, text as text (a long one as an excerpt), anything else by path only. */
 export async function loadFiles(paths: readonly string[], owner: string): Promise<LoadedFiles> {
   const key = ownerKey(owner)
+  if (!Array.isArray(paths) || paths.length > MAX_FILES) throw new LlmError(msg('error.attachment_limit'), 'invalid_params')
   const out: LoadedFiles = { images: [], texts: [], paths: [] }
+  let totalBytes = 0
   for (const path of paths) {
     // Only what the panel uploaded (attachments.put): a request cannot have another file of this
     // machine read and sent to a model.
@@ -264,6 +267,8 @@ export async function loadFiles(paths: readonly string[], owner: string): Promis
       const { file, info } = await verifiedFile(path)
       try {
         if (!matches(info, upload)) throw bad()
+        totalBytes += Number(info.size)
+        if (totalBytes > MAX_ATTACHMENT_TOTAL) throw new LlmError(msg('error.attachment_limit'), 'invalid_params')
         const buffer = Buffer.alloc(Number(info.size) + 1)
         let used = 0
         while (used < buffer.length) {

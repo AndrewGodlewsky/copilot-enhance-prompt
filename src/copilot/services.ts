@@ -2,6 +2,7 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 import { DEFAULTS } from '../defaults.ts'
+import { validSetting, effectiveSetting } from '../limits.ts'
 import { isChatTextSize } from '../text-size.ts'
 import type { EnhanceWorker } from '../host.ts'
 import type { JsonValue, KeyValueStore, SettingsStore } from '../runtime.ts'
@@ -64,19 +65,20 @@ export function createServices(session: CopilotSession, directory = process.env.
   const adapter = sessionAdapter(session)
   const settings: SettingsStore = {
     get: (async (key?: string) => {
+      if (key !== undefined && (typeof key !== 'string' || key.length > 200)) throw new Error('Invalid setting key.')
       await prepare()
       await prepareEfforts()
       const values: Record<string, JsonValue> = { ...DEFAULTS }
       // A final privacy check must not read its value and then wait on unrelated preferences.
       const saved = key === undefined ? await prefs.snapshot() : { [key]: await prefs.get(key) }
-      for (const [name, value] of Object.entries(saved)) if (Object.hasOwn(DEFAULTS, name) && (value !== null || key === undefined)) values[name] = value
+      for (const [name, value] of Object.entries(saved)) if (Object.hasOwn(DEFAULTS, name)) values[name] = effectiveSetting(name, value) as JsonValue
       if (!isChatTextSize(values.chatTextSize)) values.chatTextSize = 'medium'
       if (typeof values.useEnhancedPrompts !== 'boolean') values.useEnhancedPrompts = true
       for (const name of UNSUPPORTED_SETTINGS) values[name] = false
       return key === undefined ? values : values[key]
     }) as SettingsStore['get'],
     set: async (key, value) => {
-      if (!Object.hasOwn(DEFAULTS, key) || typeof value !== typeof DEFAULTS[key]) throw new Error('Invalid setting.')
+      if (!validSetting(key, value)) throw new Error('Invalid setting. Check its allowed range or length.')
       if (key === 'chatTextSize' && !isChatTextSize(value)) throw new Error('Invalid chat text size.')
       if (Object.values(EFFORT_SETTINGS).some(name => name === key) && value !== 'recommended' && !parseModelAssignment(value) && !parseCatalogAssignment(value)) throw new Error('Invalid effort model assignment.')
       if (Object.values(REASONING_SETTINGS).some(name => name === key) && !validReasoning(value)) throw new Error('Invalid reasoning level.')

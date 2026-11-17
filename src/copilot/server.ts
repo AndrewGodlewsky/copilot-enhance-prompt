@@ -7,10 +7,10 @@ import type { createWorkerHost } from '../worker-host.ts'
 import type { Disposable, JsonValue, RequestInput } from '../runtime.ts'
 import type { PluginRequests } from '../protocol.ts'
 import type { createUpdates } from '../updates/service.ts'
+import { REQUEST_BYTES, busyError, validateJson } from '../limits.ts'
 
 type Worker = ReturnType<typeof createWorkerHost>
-type Canvas = { id: string; token: string; streams: Set<ServerResponse>; subscriptions: Disposable[] }
-const LIMIT = 2_500_000
+type Canvas = { id: string; token: string; streams: Set<ServerResponse>; subscriptions: Disposable[]; pending: number }
 const MODEL_WRITES = new Set(['models.save', 'models.delete', 'models.move', 'models.roles', 'consent.set', 'rules.save'])
 const PANEL_KEYS = new Set(['tab', 'style', 'level', 'effort', 'structureChoice', 'terminalWorkspaces', 'optionsOpen', 'draft', 'result', 'lastRun', 'contextShown', 'contextNotes', 'files', 'workspaceKey', 'parked', 'sendAfterEnhance', 'historyScope'])
 const readable = (key: string) => key === 'history' || key === 'colorTheme' || key.startsWith('panel:') && PANEL_KEYS.has(key.slice(6))
@@ -18,27 +18,38 @@ const writable = (key: string) => key === 'colorTheme' || key.startsWith('panel:
 const PRIVATE_PANEL_KEYS = new Set(['draft', 'result', 'lastRun', 'contextShown', 'contextNotes', 'files', 'workspaceKey', 'parked'])
 const invalid = (message = 'Invalid canvas request.') => Object.assign(new Error(message), { status: 400 })
 
-async function body(request: IncomingMessage): Promise<Record<string, any>> {
+async function body(request: IncomingMessage, timeoutMs: number): Promise<Record<string, any>> {
   if (!request.headers['content-type']?.startsWith('application/json')) throw invalid()
   let size = 0
+  let tooLarge = false
   const parts: Buffer[] = []
   await new Promise<void>((resolve, reject) => {
-    request.on('data', (chunk: Buffer) => {
+    const finish = (error?: Error) => {
+      clearTimeout(timer)
+      request.off('data', data); request.off('end', end); request.off('error', fail); request.off('aborted', aborted)
+      if (error) { request.pause(); parts.length = 0; reject(error) } else resolve()
+    }
+    const data = (chunk: Buffer) => {
       size += chunk.length
-      if (size > LIMIT) reject(Object.assign(new Error('The canvas request is too large.'), { status: 413 }))
-      else parts.push(chunk)
-    })
-    request.on('end', resolve)
-    request.on('error', reject)
+      if (size > REQUEST_BYTES) { tooLarge = true; parts.length = 0 }
+      else if (!tooLarge) parts.push(chunk)
+    }
+    const end = () => finish(tooLarge ? Object.assign(new Error('The canvas request is too large.'), { status: 413 }) : undefined)
+    const fail = (error: Error) => finish(error)
+    const aborted = () => finish(invalid('The request was disconnected.'))
+    const timer = setTimeout(() => finish(Object.assign(new Error('The request body timed out. Retry when the connection is ready.'), { status: 408 })), timeoutMs)
+    request.on('data', data); request.on('end', end); request.on('error', fail); request.on('aborted', aborted)
   })
   const value: unknown = JSON.parse(Buffer.concat(parts).toString('utf8'))
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw invalid()
+  validateJson(value)
   return value as Record<string, any>
 }
 
-export async function createCanvasServer(options: { worker: Worker; assets: string; onClose?: (id: string) => void; updates?: ReturnType<typeof createUpdates> }) {
+export async function createCanvasServer(options: { worker: Worker; assets: string; onClose?: (id: string) => void; updates?: ReturnType<typeof createUpdates>; bodyTimeoutMs?: number }) {
   const { worker } = options
   const canvases = new Map<string, Canvas>()
+  let pending = 0, streams = 0
   let origin = ''
   const assets = await realpath(options.assets)
   const json = (res: ServerResponse, status: number, value: unknown) => { res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(value ?? null)) }
@@ -59,6 +70,7 @@ export async function createCanvasServer(options: { worker: Worker; assets: stri
     for (const stream of canvas.streams) stream.end()
   }
   const server = createServer(async (req, res) => {
+    let release: (() => void) | undefined
     res.setHeader('cache-control', 'no-store')
     res.setHeader('referrer-policy', 'no-referrer')
     res.setHeader('x-content-type-options', 'nosniff')
@@ -74,15 +86,21 @@ export async function createCanvasServer(options: { worker: Worker; assets: stri
         if (req.headers.authorization !== `Bearer ${canvas.token}`) { json(res, 403, { error: 'Forbidden' }); return }
         if (route === 'events') {
           if (req.method !== 'GET') throw invalid()
+          if (canvas.streams.size >= 2 || streams >= 16) throw busyError()
           res.writeHead(200, { 'content-type': 'text/event-stream', connection: 'keep-alive' })
           res.write('data: {"kind":"connected"}\n\n')
           canvas.streams.add(res)
+          streams++
           const ping = setInterval(() => res.write(': heartbeat\n\n'), 15_000)
-          res.on('close', () => { clearInterval(ping); canvas.streams.delete(res) })
+          res.on('close', () => { clearInterval(ping); if (canvas.streams.delete(res)) streams-- })
           return
         }
         if (req.method !== 'POST') throw invalid()
-        const request = await body(req)
+        // Leave room for bounded startup reads alongside normal panel controls.
+        if (canvas.pending >= 24 || pending >= 64) throw busyError()
+        canvas.pending++; pending++
+        release = () => { canvas.pending--; pending-- }
+        const request = await body(req, options.bodyTimeoutMs ?? 10_000)
         const controller = new AbortController()
         res.on('close', () => { if (!res.writableEnded) controller.abort() })
         const { method, input = {} } = request
@@ -141,16 +159,25 @@ export async function createCanvasServer(options: { worker: Worker; assets: stri
       if (!mime[extname(file)]) { json(res, 404, { error: 'Not found' }); return }
       res.writeHead(200, { 'content-type': mime[extname(file)] }); res.end(await readFile(file))
     } catch (error) {
-      if (!res.destroyed && !res.headersSent) json(res, (error as any).status ?? 400, { error: { message: error instanceof Error ? error.message : 'Canvas request failed.', code: (error as any)?.code ?? 'request_failed' } })
-    }
+      if (!res.destroyed && !res.headersSent) {
+        if (!req.complete) { res.shouldKeepAlive = false; res.once('finish', () => req.destroy()) }
+        if ((error as any).status === 429) res.setHeader('retry-after', '2')
+        json(res, (error as any).status ?? 400, { error: { message: error instanceof Error ? error.message : 'Canvas request failed.', code: (error as any)?.code ?? 'request_failed' } })
+      }
+    } finally { release?.() }
   })
+  server.maxConnections = 128
+  server.maxHeadersCount = 100
+  server.headersTimeout = 10_000
+  server.requestTimeout = 15_000
   await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve) })
   origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
   return {
     open(id: string) {
       let canvas = canvases.get(id)
       if (!canvas) {
-        canvas = { id, token: randomBytes(32).toString('hex'), streams: new Set(), subscriptions: [] }
+        if (canvases.size >= 16) throw busyError()
+        canvas = { id, token: randomBytes(32).toString('hex'), streams: new Set(), subscriptions: [], pending: 0 }
         const target = canvas
         target.subscriptions.push(
           worker.onPost(post => { if (!post.panel || post.panel === id) broadcast(target, { kind: 'plugin', name: post.event, payload: post.payload }) }),

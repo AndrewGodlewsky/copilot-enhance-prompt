@@ -1667,6 +1667,135 @@ async function copyToClipboard(text, platform = process.platform) {
   return { copied: false, error: lastError };
 }
 
+// src/defaults.ts
+var DEFAULTS = {
+  "chatTextSize": "medium",
+  "defaultStyle": "balanced",
+  "useEnhancedPrompts": true,
+  "customInstructions": "",
+  "contextLevel": "standard",
+  "effortLowModel": "recommended",
+  "effortMediumModel": "recommended",
+  "effortHighModel": "recommended",
+  "effortLowReasoning": "default",
+  "effortMediumReasoning": "default",
+  "effortHighReasoning": "default",
+  "terminalLines": 100,
+  "extraContextFiles": "",
+  "excludePatterns": "dist/\nbuild/\nout/\ncoverage/\n*.lock\npackage-lock.json\npnpm-lock.yaml\n*.min.js\n*.map\n*.snap",
+  "adaptToAgent": true,
+  "fallbackEnabled": true,
+  "fallbackOn": "any",
+  "timeoutSeconds": 60,
+  "sendMode": "paste",
+  "sendPressEnter": false,
+  "historyLimit": 50,
+  "allowProjectFiles": true,
+  "allowGit": true,
+  "allowTerminalRead": true,
+  "allowOtherAgents": false,
+  "otherAgentsMax": 4,
+  "otherAgentsLines": 80,
+  "allowAgentActivity": false,
+  "allowEditorSaves": false,
+  "allowTerminalSend": true,
+  "allowOpenFiles": true,
+  "saveHistory": true,
+  "allowOnlineModelLists": true
+};
+
+// src/image-limits.ts
+var MAX_IMAGES = 4;
+var MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+var MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+var MAX_FILES = 8;
+var MAX_ATTACHMENT_TOTAL = MAX_FILES * MAX_ATTACHMENT_BYTES;
+var REQUEST_INPUT_LIMIT = 64 * 1024;
+var ATTACHMENT_CHUNK_BYTES = 44 * 1024;
+var MAX_CHUNK_BASE64 = Math.ceil(ATTACHMENT_CHUNK_BYTES / 3) * 4;
+var attachmentItemId = (path) => `attach:${path.split(/[\\/]/).slice(-2).join("/")}`;
+function sizeOver(size, max) {
+  const mb = (bytes, digits) => (bytes / (1024 * 1024)).toFixed(digits);
+  for (const digits of [1, 2, 3]) if (mb(size, digits) !== mb(max, digits)) return `${mb(size, digits)} MB`;
+  return `${size.toLocaleString("en-US")} bytes`;
+}
+
+// src/limits.ts
+var REQUEST_BYTES = 25e5;
+var MAX_WORK = 32;
+var MAX_UPLOADS = 8;
+var MAX_REWRITES = 4;
+var MAX_PROFILES = 50;
+var invalidInput = (message = "Invalid canvas request.") => Object.assign(new Error(message), { code: "invalid_params", status: 400 });
+var busyError = () => Object.assign(new Error("Too much work is pending. Finish pending work and retry."), { code: "rate_limited", status: 429 });
+var ranges = {
+  historyLimit: [0, 500],
+  timeoutSeconds: [5, 300],
+  terminalLines: [1, 1e3],
+  otherAgentsMax: [1, 8],
+  otherAgentsLines: [10, 300]
+};
+function validSetting(key, value) {
+  if (typeof key !== "string") return false;
+  if (!Object.hasOwn(DEFAULTS, key) || typeof value !== typeof DEFAULTS[key]) return false;
+  if (typeof value === "number") {
+    const range = ranges[key];
+    return !!range && Number.isSafeInteger(value) && value >= range[0] && value <= range[1];
+  }
+  return typeof value !== "string" || value.length <= 64e3;
+}
+function effectiveSetting(key, value) {
+  const range = ranges[key];
+  if (range && typeof value === "number" && Number.isFinite(value)) return Math.min(range[1], Math.max(range[0], Math.round(value)));
+  return validSetting(key, value) ? value : DEFAULTS[key];
+}
+function validateJson(input) {
+  const todo = [{ value: input, depth: 0 }];
+  let nodes = 0, chars = 0;
+  while (todo.length) {
+    const { value, depth } = todo.pop();
+    if (++nodes > 2e4 || depth > 24 || chars > REQUEST_BYTES) throw invalidInput("Request complexity exceeds the limit.");
+    if (typeof value === "string") {
+      chars += value.length;
+      if (chars > REQUEST_BYTES) throw invalidInput("Request text exceeds the limit.");
+    } else if (typeof value === "number") {
+      if (!Number.isFinite(value)) throw invalidInput();
+    } else if (value !== null && typeof value === "object") {
+      const keys = Object.keys(value);
+      if (keys.length > 1024) throw invalidInput("Request list exceeds the limit.");
+      for (const key of keys) {
+        chars += key.length;
+        todo.push({ value: value[key], depth: depth + 1 });
+      }
+    } else if (value !== null && typeof value !== "boolean" && value !== void 0) throw invalidInput();
+  }
+}
+function validateRequest(name, input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw invalidInput();
+  validateJson(input);
+  const text = (key, max, required = false) => {
+    if (input[key] === void 0 && !required) return;
+    if (typeof input[key] !== "string" || input[key].length > max) throw invalidInput(`Invalid ${key}; maximum length is ${max} characters.`);
+  };
+  const list = (key, max) => {
+    if (input[key] === void 0) return;
+    if (!Array.isArray(input[key]) || input[key].length > max || input[key].some((value) => typeof value !== "string" || value.length > 32768)) throw invalidInput(`${key} exceeds the limit of ${max} paths.`);
+  };
+  if (name === "prompt.enhance" || name === "context.preview") {
+    text("prompt", 1e6, input.resume !== true);
+    list("files", MAX_FILES);
+    list("exclude", 1024);
+    for (const key of ["style", "level", "effort", "runId", "structureId"]) text(key, 64);
+    for (const key of ["workspaceId", "terminalId", "profileId", "model"]) if (input[key] !== null) text(key, 32768);
+  }
+  if (name === "prompt.send" || name === "prompt.copy") text("text", 1e6, true);
+  if (name === "models.move" && input.to !== void 0 && (!Number.isSafeInteger(input.to) || input.to < 0 || input.to >= MAX_PROFILES)) throw invalidInput();
+  if (name === "rules.save") {
+    const config = input.config;
+    if (!config || !Array.isArray(config.rules) || !Array.isArray(config.structures) || config.rules.length > 1e3 || config.structures.length > 20 || config.structures.some((item2) => !Array.isArray(item2?.sections) || item2.sections.length > 12)) throw invalidInput("Rules or structures exceed the limit.");
+  }
+}
+
 // src/workspaces.ts
 function pathInWorkspaceId(id2) {
   const at = id2.indexOf("::");
@@ -1865,6 +1994,7 @@ var MESSAGES = {
   "error.selector_model": "The saved AI-assisted model is unavailable. Select an enabled Copilot model for AI-assisted context in Models.",
   "error.effort_model": "The model assigned to {effort} effort is unavailable. Choose an available Copilot model in Models \u2192 Effort models.",
   "error.attachment_bad": "That attachment could not be received; try attaching it again.",
+  "error.attachment_limit": "Attach at most 8 files totaling no more than 80 MiB per prompt.",
   "error.attachment_missing": "The attached file {name} is no longer there (attachments are kept for a day). Attach it again.",
   "error.file_too_large": "{name} is {size}; an attachment can be at most {max}.",
   "error.cancelled": "Cancelled.",
@@ -3380,22 +3510,6 @@ import { constants } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
 import { basename as basename2, dirname as dirname2, join as join2, relative as relative2, resolve } from "node:path";
-
-// src/image-limits.ts
-var MAX_IMAGES = 4;
-var MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-var MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
-var REQUEST_INPUT_LIMIT = 64 * 1024;
-var ATTACHMENT_CHUNK_BYTES = 44 * 1024;
-var MAX_CHUNK_BASE64 = Math.ceil(ATTACHMENT_CHUNK_BYTES / 3) * 4;
-var attachmentItemId = (path) => `attach:${path.split(/[\\/]/).slice(-2).join("/")}`;
-function sizeOver(size, max) {
-  const mb = (bytes, digits) => (bytes / (1024 * 1024)).toFixed(digits);
-  for (const digits of [1, 2, 3]) if (mb(size, digits) !== mb(max, digits)) return `${mb(size, digits)} MB`;
-  return `${size.toLocaleString("en-US")} bytes`;
-}
-
-// src/attachments.ts
 var ATTACHMENTS_DIR = join2(tmpdir(), `enhance-prompt-attachments${process.env.NODE_TEST_CONTEXT ? `-test-${process.pid}` : ""}`);
 var TEXT_MAX = 2e4;
 var DAY_MS = 24 * 36e5;
@@ -3491,6 +3605,7 @@ function safeName(name) {
 }
 async function putChunk(input, owner2) {
   const key = ownerKey(owner2);
+  if (!input || typeof input.name !== "string" || input.name.length > 1024 || !Number.isSafeInteger(input.total) || input.total > 1024) throw bad();
   if (!/^[a-z0-9-]{6,40}$/.test(input.id)) throw new LlmError(msg("error.attachment_bad"), "invalid_params");
   if (typeof input.data !== "string" || input.data.length > MAX_CHUNK_BASE64) throw new LlmError(msg("error.attachment_bad"), "invalid_params");
   if (input.index === 0 && typeof input.size === "number" && input.size > MAX_ATTACHMENT_BYTES) {
@@ -3632,7 +3747,9 @@ ${tail}`, cut };
 }
 async function loadFiles(paths, owner2) {
   const key = ownerKey(owner2);
+  if (!Array.isArray(paths) || paths.length > MAX_FILES) throw new LlmError(msg("error.attachment_limit"), "invalid_params");
   const out = { images: [], texts: [], paths: [] };
+  let totalBytes = 0;
   for (const path of paths) {
     const { id: id2, name } = pathParts(path);
     const bytes = await locked(id2, async (dir) => {
@@ -3641,6 +3758,8 @@ async function loadFiles(paths, owner2) {
       const { file, info } = await verifiedFile(path);
       try {
         if (!matches(info, upload)) throw bad();
+        totalBytes += Number(info.size);
+        if (totalBytes > MAX_ATTACHMENT_TOTAL) throw new LlmError(msg("error.attachment_limit"), "invalid_params");
         const buffer = Buffer.alloc(Number(info.size) + 1);
         let used = 0;
         while (used < buffer.length) {
@@ -4524,6 +4643,7 @@ async function enhance(host, input, signal, progress, budgetMs) {
     list = candidates(config.profiles, profileId, settings.fallbackEnabled).map((profile) => chosenModel && profile.id === profileId ? { ...profile, model: chosenModel } : profile);
   }
   if (list.length === 0) throw hostError(msg("error.no_model"), "invalid_params");
+  if (list.length > MAX_PROFILES) throw invalidInput("Too many fallback models. Choose a single model or remove unused profiles in Models.");
   const pickerConfig = config.selectorProfileId ? config : { profiles: list, selectorProfileId: list[0].id };
   const pickerReasoning = config.selectorProfileId ? void 0 : reasoningEffort;
   const style = isStyle(input.style) ? input.style : settings.defaultStyle;
@@ -4669,6 +4789,7 @@ function hasActiveRuns() {
 }
 var unnamedRuns = 0;
 function startRun(host, input, panelId, budgetMs) {
+  if (pendingRuns.size >= MAX_REWRITES) throw busyError();
   const runId = typeof input.runId === "string" ? input.runId.slice(0, 64) : "";
   const progress = runId ? (level, allowProjectFiles, readsOtherAgents) => createProgress(runId, planSteps(level, allowProjectFiles, readsOtherAgents), (snapshot) => {
     const key = JSON.stringify([panelId, runId]);
@@ -4766,6 +4887,7 @@ async function waitForRun(host, run2, signal, sliceMs) {
   }
 }
 async function enhanceRequest(host, input, signal, panelId) {
+  validateRequest("prompt.enhance", input);
   const id2 = typeof input.runId === "string" ? input.runId.slice(0, 64) : "";
   const keepsWaiting = id2 !== "" && (input.resumable === true || input.resume === true);
   let run2;
@@ -4886,6 +5008,7 @@ function registerModelHandlers(host) {
     rejectExternalOptions(input);
     const config = await loadModels(host);
     const existing = input.id ? config.profiles.findIndex((profile2) => profile2.id === input.id) : -1;
+    if (existing < 0 && config.profiles.length >= MAX_PROFILES) throw invalidInput("Model profiles exceed the limit of 50. Remove an unused profile before adding another.");
     if (input.id !== void 0 && existing < 0) throw hostError(msg("error.invalid_profile"), "invalid_params");
     const id2 = existing >= 0 ? config.profiles[existing].id : newProfileId(input.name || "copilot");
     const profile = normalizeProfile({ preset: "copilot", provider: "copilot", ...input, id: id2 });
@@ -5637,7 +5760,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.7";
+var VERSION = "0.12.8";
 
 // src/worker-host.ts
 import { EventEmitter as EventEmitter2 } from "node:events";
@@ -5796,6 +5919,7 @@ function createWorkerHost(services2, log = (_message) => {
   const commands = /* @__PURE__ */ new Map();
   const requests = /* @__PURE__ */ new Map();
   const operations = /* @__PURE__ */ new Set();
+  let uploads = 0;
   const listen = (name, handler) => {
     events.on(name, handler);
     return { dispose: () => {
@@ -5837,6 +5961,8 @@ function createWorkerHost(services2, log = (_message) => {
   async function request(name, input, options = {}) {
     const handler = handlers.get(name);
     if (!handler) throw Object.assign(new Error(`Unknown request: ${name}`), { code: "unavailable" });
+    validateRequest(name, input ?? {});
+    if (operations.size >= MAX_WORK || name === "attachments.put" && uploads >= MAX_UPLOADS) throw busyError();
     const controller = new AbortController();
     const panelId = options.panelId ?? options.panel ?? "panel";
     requests.set(controller, panelId);
@@ -5857,8 +5983,10 @@ function createWorkerHost(services2, log = (_message) => {
       });
       const operation = Promise.resolve().then(() => handler(input ?? {}, { signal: controller.signal, panel: { id: panelId } }));
       operations.add(operation);
+      if (name === "attachments.put") uploads++;
       const settled = () => {
         operations.delete(operation);
+        if (name === "attachments.put") uploads--;
       };
       void operation.then(settled, settled);
       const answer = await Promise.race([operation, stopped]);
@@ -5937,43 +6065,6 @@ function createWorkerHost(services2, log = (_message) => {
 import { homedir } from "node:os";
 import { join as join5 } from "node:path";
 import { createHash as createHash3 } from "node:crypto";
-
-// src/defaults.ts
-var DEFAULTS = {
-  "chatTextSize": "medium",
-  "defaultStyle": "balanced",
-  "useEnhancedPrompts": true,
-  "customInstructions": "",
-  "contextLevel": "standard",
-  "effortLowModel": "recommended",
-  "effortMediumModel": "recommended",
-  "effortHighModel": "recommended",
-  "effortLowReasoning": "default",
-  "effortMediumReasoning": "default",
-  "effortHighReasoning": "default",
-  "terminalLines": 100,
-  "extraContextFiles": "",
-  "excludePatterns": "dist/\nbuild/\nout/\ncoverage/\n*.lock\npackage-lock.json\npnpm-lock.yaml\n*.min.js\n*.map\n*.snap",
-  "adaptToAgent": true,
-  "fallbackEnabled": true,
-  "fallbackOn": "any",
-  "timeoutSeconds": 60,
-  "sendMode": "paste",
-  "sendPressEnter": false,
-  "historyLimit": 50,
-  "allowProjectFiles": true,
-  "allowGit": true,
-  "allowTerminalRead": true,
-  "allowOtherAgents": false,
-  "otherAgentsMax": 4,
-  "otherAgentsLines": 80,
-  "allowAgentActivity": false,
-  "allowEditorSaves": false,
-  "allowTerminalSend": true,
-  "allowOpenFiles": true,
-  "saveHistory": true,
-  "allowOnlineModelLists": true
-};
 
 // src/text-size.ts
 function isChatTextSize(value) {
@@ -6117,18 +6208,19 @@ function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_D
   const adapter = sessionAdapter(session2);
   const settings = {
     get: (async (key) => {
+      if (key !== void 0 && (typeof key !== "string" || key.length > 200)) throw new Error("Invalid setting key.");
       await prepare();
       await prepareEfforts();
       const values = { ...DEFAULTS };
       const saved = key === void 0 ? await prefs.snapshot() : { [key]: await prefs.get(key) };
-      for (const [name, value] of Object.entries(saved)) if (Object.hasOwn(DEFAULTS, name) && (value !== null || key === void 0)) values[name] = value;
+      for (const [name, value] of Object.entries(saved)) if (Object.hasOwn(DEFAULTS, name)) values[name] = effectiveSetting(name, value);
       if (!isChatTextSize(values.chatTextSize)) values.chatTextSize = "medium";
       if (typeof values.useEnhancedPrompts !== "boolean") values.useEnhancedPrompts = true;
       for (const name of UNSUPPORTED_SETTINGS) values[name] = false;
       return key === void 0 ? values : values[key];
     }),
     set: async (key, value) => {
-      if (!Object.hasOwn(DEFAULTS, key) || typeof value !== typeof DEFAULTS[key]) throw new Error("Invalid setting.");
+      if (!validSetting(key, value)) throw new Error("Invalid setting. Check its allowed range or length.");
       if (key === "chatTextSize" && !isChatTextSize(value)) throw new Error("Invalid chat text size.");
       if (Object.values(EFFORT_SETTINGS).some((name) => name === key) && value !== "recommended" && !parseModelAssignment(value) && !parseCatalogAssignment(value)) throw new Error("Invalid effort model assignment.");
       if (Object.values(REASONING_SETTINGS).some((name) => name === key) && !validReasoning(value)) throw new Error("Invalid reasoning level.");
@@ -6176,33 +6268,55 @@ import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import { readFile as readFile4, realpath as realpath5 } from "node:fs/promises";
 import { extname, resolve as resolve3, sep as sep2 } from "node:path";
-var LIMIT = 25e5;
 var MODEL_WRITES = /* @__PURE__ */ new Set(["models.save", "models.delete", "models.move", "models.roles", "consent.set", "rules.save"]);
 var PANEL_KEYS = /* @__PURE__ */ new Set(["tab", "style", "level", "effort", "structureChoice", "terminalWorkspaces", "optionsOpen", "draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked", "sendAfterEnhance", "historyScope"]);
 var readable = (key) => key === "history" || key === "colorTheme" || key.startsWith("panel:") && PANEL_KEYS.has(key.slice(6));
 var writable = (key) => key === "colorTheme" || key.startsWith("panel:") && PANEL_KEYS.has(key.slice(6));
 var PRIVATE_PANEL_KEYS = /* @__PURE__ */ new Set(["draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked"]);
 var invalid = (message = "Invalid canvas request.") => Object.assign(new Error(message), { status: 400 });
-async function body(request) {
+async function body(request, timeoutMs) {
   if (!request.headers["content-type"]?.startsWith("application/json")) throw invalid();
   let size = 0;
+  let tooLarge = false;
   const parts = [];
   await new Promise((resolve5, reject) => {
-    request.on("data", (chunk) => {
+    const finish = (error) => {
+      clearTimeout(timer);
+      request.off("data", data);
+      request.off("end", end);
+      request.off("error", fail);
+      request.off("aborted", aborted);
+      if (error) {
+        request.pause();
+        parts.length = 0;
+        reject(error);
+      } else resolve5();
+    };
+    const data = (chunk) => {
       size += chunk.length;
-      if (size > LIMIT) reject(Object.assign(new Error("The canvas request is too large."), { status: 413 }));
-      else parts.push(chunk);
-    });
-    request.on("end", resolve5);
-    request.on("error", reject);
+      if (size > REQUEST_BYTES) {
+        tooLarge = true;
+        parts.length = 0;
+      } else if (!tooLarge) parts.push(chunk);
+    };
+    const end = () => finish(tooLarge ? Object.assign(new Error("The canvas request is too large."), { status: 413 }) : void 0);
+    const fail = (error) => finish(error);
+    const aborted = () => finish(invalid("The request was disconnected."));
+    const timer = setTimeout(() => finish(Object.assign(new Error("The request body timed out. Retry when the connection is ready."), { status: 408 })), timeoutMs);
+    request.on("data", data);
+    request.on("end", end);
+    request.on("error", fail);
+    request.on("aborted", aborted);
   });
   const value = JSON.parse(Buffer.concat(parts).toString("utf8"));
   if (!value || typeof value !== "object" || Array.isArray(value)) throw invalid();
+  validateJson(value);
   return value;
 }
 async function createCanvasServer(options) {
   const { worker: worker2 } = options;
   const canvases = /* @__PURE__ */ new Map();
+  let pending = 0, streams = 0;
   let origin = "";
   const assets = await realpath5(options.assets);
   const json3 = (res, status, value) => {
@@ -6228,6 +6342,7 @@ async function createCanvasServer(options) {
     for (const stream of canvas2.streams) stream.end();
   };
   const server2 = createServer(async (req, res) => {
+    let release;
     res.setHeader("cache-control", "no-store");
     res.setHeader("referrer-policy", "no-referrer");
     res.setHeader("x-content-type-options", "nosniff");
@@ -6252,18 +6367,27 @@ async function createCanvasServer(options) {
         }
         if (route === "events") {
           if (req.method !== "GET") throw invalid();
+          if (canvas2.streams.size >= 2 || streams >= 16) throw busyError();
           res.writeHead(200, { "content-type": "text/event-stream", connection: "keep-alive" });
           res.write('data: {"kind":"connected"}\n\n');
           canvas2.streams.add(res);
+          streams++;
           const ping = setInterval(() => res.write(": heartbeat\n\n"), 15e3);
           res.on("close", () => {
             clearInterval(ping);
-            canvas2.streams.delete(res);
+            if (canvas2.streams.delete(res)) streams--;
           });
           return;
         }
         if (req.method !== "POST") throw invalid();
-        const request = await body(req);
+        if (canvas2.pending >= 24 || pending >= 64) throw busyError();
+        canvas2.pending++;
+        pending++;
+        release = () => {
+          canvas2.pending--;
+          pending--;
+        };
+        const request = await body(req, options.bodyTimeoutMs ?? 1e4);
         const controller = new AbortController();
         res.on("close", () => {
           if (!res.writableEnded) controller.abort();
@@ -6338,9 +6462,22 @@ async function createCanvasServer(options) {
       res.writeHead(200, { "content-type": mime[extname(file)] });
       res.end(await readFile4(file));
     } catch (error) {
-      if (!res.destroyed && !res.headersSent) json3(res, error.status ?? 400, { error: { message: error instanceof Error ? error.message : "Canvas request failed.", code: error?.code ?? "request_failed" } });
+      if (!res.destroyed && !res.headersSent) {
+        if (!req.complete) {
+          res.shouldKeepAlive = false;
+          res.once("finish", () => req.destroy());
+        }
+        if (error.status === 429) res.setHeader("retry-after", "2");
+        json3(res, error.status ?? 400, { error: { message: error instanceof Error ? error.message : "Canvas request failed.", code: error?.code ?? "request_failed" } });
+      }
+    } finally {
+      release?.();
     }
   });
+  server2.maxConnections = 128;
+  server2.maxHeadersCount = 100;
+  server2.headersTimeout = 1e4;
+  server2.requestTimeout = 15e3;
   await new Promise((resolve5, reject) => {
     server2.once("error", reject);
     server2.listen(0, "127.0.0.1", resolve5);
@@ -6350,7 +6487,8 @@ async function createCanvasServer(options) {
     open(id2) {
       let canvas2 = canvases.get(id2);
       if (!canvas2) {
-        canvas2 = { id: id2, token: randomBytes(32).toString("hex"), streams: /* @__PURE__ */ new Set(), subscriptions: [] };
+        if (canvases.size >= 16) throw busyError();
+        canvas2 = { id: id2, token: randomBytes(32).toString("hex"), streams: /* @__PURE__ */ new Set(), subscriptions: [], pending: 0 };
         const target = canvas2;
         target.subscriptions.push(
           worker2.onPost((post) => {

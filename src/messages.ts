@@ -45,6 +45,7 @@ export const MESSAGES = {
   'error.selector_model': 'The saved AI-assisted model is unavailable. Select an enabled Copilot model for AI-assisted context in Models.',
   'error.effort_model': 'The model assigned to {effort} effort is unavailable. Choose an available Copilot model in Models → Effort models.',
   'error.attachment_bad': 'That attachment could not be received; try attaching it again.',
+  'error.attachment_limit': 'Attach at most 8 files totaling no more than 80 MiB per prompt.',
   'error.attachment_missing': 'The attached file {name} is no longer there (attachments are kept for a day). Attach it again.',
   'error.file_too_large': '{name} is {size}; an attachment can be at most {max}.',
   'error.cancelled': 'Cancelled.',

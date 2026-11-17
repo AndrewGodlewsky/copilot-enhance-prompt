@@ -12,7 +12,7 @@ The English-language React panel retains model chains and fallback, prompt style
 
 ## Download and install
 
-**Development preview, version 0.12.0.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
+**Development preview.** See the [release history](CHANGELOG.md) for the current version and changes. The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
 
 ### Requirements
 
@@ -151,7 +151,7 @@ The worker reads the project directory from Copilot session metadata, never from
 
 Preferences, profiles, rules and history are local. Saved prompt history is not encrypted; drafts and results are scoped to the Copilot session. Upgrade removes legacy encrypted API-key entries while preserving unrelated local data. The default data directory is `%LOCALAPPDATA%/copilot-enhance-prompt` on Windows and `~/.local/share/copilot-enhance-prompt` elsewhere. `ENHANCE_PROMPT_DATA_DIR` overrides it for tests or a separate installation.
 
-The canvas uses an authenticated loopback server with origin and path checks. It exposes no agent-callable send or consent action. There is no tracking or analytics. [Privacy details](docs/privacy.md).
+The canvas uses an authenticated loopback server with origin and path checks. It exposes no agent-callable send or consent action. There is no tracking or analytics. [Privacy details](docs/privacy.md). [Resource limits](docs/resource-limits.md) describe attachment, settings and concurrency bounds, including when to retry busy requests.
 
 ## Development
 

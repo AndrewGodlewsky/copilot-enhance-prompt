@@ -8,7 +8,7 @@ Current baseline: 0.12.1 / 4104c29. Tracking issue: [#40](https://github.com/And
 
 ## Queue
 
-Security and correctness: #18, #36, #37, #39.
+Security and correctness: #36, #37, #39.
 
 Distribution/maintenance: #9, #10, #11, #33.
 
@@ -20,9 +20,17 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- Next: #18, backend ranges and aggregate request limits.
+- Next: #36, process identity for stale update reservations.
 
 ## Delivered versions
+
+### 0.12.8 — #18, backend resource bounds
+
+Finite integer setting ranges, request shape/depth/list limits, eight-file/80 MiB aggregate validation and bounded upload chunk counts now apply behind the UI. Worker operations retain capacity through cancellation cleanup; enhancement concurrency is capped separately. Authenticated HTTP/SSE and canvas limits reject excess work with clear retry guidance; request bodies have bounded size/time. Saved out-of-range numeric preferences use clamped effective values without rewriting them. Existing larger model configurations stay readable/editable; oversized fallback chains and additional profiles are refused. See [resource limits](../../resource-limits.md) for exact bounds.
+
+Verified: typecheck, build, 438 final tests, package checks and clean diff. Regressions first reproduced numeric/list bypasses and unlimited worker calls, then verified limits, cancellation retention, eight uploads and four enhancements, HTTP/SSE saturation, timeout cleanup and remaining capacity for another canvas. Independent review found four simultaneous startups could reject 16 of 80 reads; a failing startup regression led to four-at-a-time restore and bounded retry of read-only capacity failures. A real HTTP fixture now restores all 80 atoms across four canvases with at most 16 simultaneous reads. Installed runtime built-extension fixture passed without paid calls or UI automation. Manual rendering remains #29. Issue #18 records the commit and preview release.
+
+Ruling: quotas apply per worker/server, not to all desktop processes; no OS-wide quota is claimed. Initial restore reads may retry capacity errors twice, while writes and model calls never retry automatically. Existing history retention still follows the effective setting when history changes; validation itself deletes no saved data.
 
 ### 0.12.7 — #17, recover retained usage accounting
 

@@ -3,6 +3,7 @@ import type { EnhanceWorker, RequestContext, WorkerHooks } from './host.ts'
 import type { AppEvents, Disposable, PanelClient, RequestInput, RequestOptions } from './runtime.ts'
 import type { PluginPanelEvents, PluginRequests } from './protocol.ts'
 import { createDiagnostics, diagnosticError } from './diagnostics.ts'
+import { validateRequest, MAX_WORK, MAX_UPLOADS, busyError } from './limits.ts'
 
 type Handler = (input: any, context: RequestContext) => unknown
 export function createWorkerHost(services: Pick<EnhanceWorker, 'storage' | 'settings' | 'host' | 'attachmentOwner'>, log = (_message: string) => {}, diagnostics = createDiagnostics()) {
@@ -16,6 +17,7 @@ export function createWorkerHost(services: Pick<EnhanceWorker, 'storage' | 'sett
   const requests = new Map<AbortController, string>()
   // Caller cancellation is prompt; the actual handler may still be stopping a helper or writing usage.
   const operations = new Set<Promise<unknown>>()
+  let uploads = 0
   const listen = (name: string, handler: (...args: any[]) => void): Disposable => {
     events.on(name, handler)
     return { dispose: () => { events.off(name, handler) } }
@@ -36,6 +38,8 @@ export function createWorkerHost(services: Pick<EnhanceWorker, 'storage' | 'sett
   async function request<K extends keyof PluginRequests>(name: K, input?: RequestInput<K>, options: RequestOptions & { panelId?: string; panel?: string } = {}): Promise<PluginRequests[K]['output']> {
     const handler = handlers.get(name)
     if (!handler) throw Object.assign(new Error(`Unknown request: ${name}`), { code: 'unavailable' })
+    validateRequest(name, input ?? {})
+    if (operations.size >= MAX_WORK || name === 'attachments.put' && uploads >= MAX_UPLOADS) throw busyError()
     const controller = new AbortController()
     const panelId = options.panelId ?? options.panel ?? 'panel'
     requests.set(controller, panelId)
@@ -55,7 +59,8 @@ export function createWorkerHost(services: Pick<EnhanceWorker, 'storage' | 'sett
       })
       const operation = Promise.resolve().then(() => handler(input ?? {}, { signal: controller.signal, panel: { id: panelId } }))
       operations.add(operation)
-      const settled = () => { operations.delete(operation) }
+      if (name === 'attachments.put') uploads++
+      const settled = () => { operations.delete(operation); if (name === 'attachments.put') uploads-- }
       void operation.then(settled, settled)
       const answer = await Promise.race([operation, stopped])
       const result = answer as { ok?: boolean; copied?: boolean; accepted?: boolean; restored?: boolean; pending?: boolean; error?: unknown; errorText?: unknown; text?: unknown } | null

@@ -4,10 +4,10 @@ import { formatText } from '../format.ts'
 // answers with the path the run then uses.
 import { plugin, read, set } from '#panel'
 import { busy, files, notice, message, put, workspaceKey, type AttachedFile } from './state.ts'
-import { ATTACHMENT_CHUNK_BYTES, MAX_ATTACHMENT_BYTES, MAX_IMAGE_BYTES, sizeOver } from '../image-limits.ts'
+import { ATTACHMENT_CHUNK_BYTES, MAX_ATTACHMENT_BYTES, MAX_IMAGE_BYTES, MAX_FILES, sizeOver } from '../image-limits.ts'
 import { beginUploads, failedUploads, finishUpload, pendingUploads } from './uploads.ts'
 
-export const MAX_FILES = 8
+export { MAX_FILES } from '../image-limits.ts'
 export const MAX_FILE_BYTES = MAX_ATTACHMENT_BYTES
 /**
  * Raw bytes per request. Copilot refuses a panel request larger than 64 KiB ("message too large"):

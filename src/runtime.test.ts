@@ -31,3 +31,20 @@ test('persisted panel atoms hydrate from durable storage across new clients', as
   await ready()
   assert.equal(read(saved), 'keep this draft')
 })
+
+test('startup bounds concurrent reads, retries capacity errors and preserves saved text', async () => {
+  const saved = Array.from({ length: 20 }, (_, i) => atom(`bounded-${i}`, '', { persist: 'plugin' }))
+  let active = 0, peak = 0, limited = false
+  bindPanel({ storage: {
+    async get(key: string) {
+      if (!limited) { limited = true; throw Object.assign(new Error('Busy'), { code: 'rate_limited' }) }
+      peak = Math.max(peak, ++active)
+      await new Promise(resolve => setTimeout(resolve, 2))
+      active--
+      return key.includes('bounded-') ? 'Saved Unicode 日本語' : null
+    }, onDidChange: () => ({ dispose() {} })
+  } } as unknown as PanelClient)
+  await ready()
+  assert.ok(peak <= 4, `peak concurrent reads: ${peak}`)
+  assert.ok(saved.every(value => read(value) === 'Saved Unicode 日本語'))
+})

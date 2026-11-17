@@ -95,12 +95,25 @@ export async function ready(): Promise<void> {
   const current = frame()
   const epoch = generation
   const load = async (target: Atom<unknown>) => {
-    const value = await current.storage.get(storageKey(target))
+    let value: JsonValue | null = null
+    for (let attempt = 0; ; attempt++) {
+      if (generation !== epoch) return
+      try { value = await current.storage.get(storageKey(target)); break }
+      catch (error) {
+        if ((error as { code?: string })?.code !== 'rate_limited' || attempt >= 2) throw error
+        await new Promise(resolve => setTimeout(resolve, 2000 * (attempt + 1)))
+      }
+    }
     if (generation !== epoch) return
     target.value = value ?? copy(target.initial)
     changed()
   }
-  await Promise.all([...atoms].filter(target => target.persist && target.key).map(load))
+  const pending = [...atoms].filter(target => target.persist && target.key)
+  let index = 0
+  await Promise.all(Array.from({ length: Math.min(4, pending.length) }, async () => {
+    while (index < pending.length && generation === epoch) await load(pending[index++])
+  }))
+  if (generation !== epoch) return
   followStorage?.dispose()
   followStorage = current.storage.onDidChange(({ key }) => {
     for (const target of atoms) if (target.persist === 'storage' && target.key && storageKey(target) === key) void load(target)

@@ -3,6 +3,7 @@
 import type { PluginRequests } from '#panel'
 import type { JsonValue, EnhanceWorker } from '#host'
 import { copyToClipboard } from './clipboard.ts'
+import { validateRequest, MAX_REWRITES, MAX_PROFILES, busyError, invalidInput } from './limits.ts'
 import { forgetActivity, recordSave, recordStatus, recordTool } from './context/activity.ts'
 import { researchContext, RESEARCH_LIMITS } from './context/research.ts'
 import { isSensitive } from './context/files.ts'
@@ -329,6 +330,7 @@ export async function enhance(
       chosenModel && profile.id === profileId ? { ...profile, model: chosenModel } : profile)
   }
   if (list.length === 0) throw hostError(msg('error.no_model'), 'invalid_params')
+  if (list.length > MAX_PROFILES) throw invalidInput('Too many fallback models. Choose a single model or remove unused profiles in Models.')
   // A separately configured selector keeps its own model defaults; otherwise it shares the effort pair.
   const pickerConfig = config.selectorProfileId ? config : { profiles: list, selectorProfileId: list[0].id }
   const pickerReasoning = config.selectorProfileId ? undefined : reasoningEffort
@@ -505,6 +507,7 @@ export function hasActiveRuns(): boolean { return liveRuns.size > 0 || pendingRu
 let unnamedRuns = 0
 
 function startRun(host: EnhanceWorker, input: EnhanceInput, panelId: string, budgetMs: number): LiveRun {
+  if (pendingRuns.size >= MAX_REWRITES) throw busyError()
   const runId = typeof input.runId === 'string' ? input.runId.slice(0, 64) : ''
   // Progress goes only to the panel that asked, and only when it asked for it.
   const progress = runId
@@ -622,6 +625,7 @@ async function waitForRun(host: EnhanceWorker, run: LiveRun, signal: AbortSignal
  * older panel, the command line) gets its answer within one request (RUN_LIMITS.budgetMs).
  */
 export async function enhanceRequest(host: EnhanceWorker, input: EnhanceInput, signal: AbortSignal, panelId: string): Promise<EnhanceAnswer> {
+  validateRequest('prompt.enhance', input)
   const id = typeof input.runId === 'string' ? input.runId.slice(0, 64) : ''
   const keepsWaiting = id !== '' && (input.resumable === true || input.resume === true)
   let run: LiveRun | undefined
@@ -767,6 +771,7 @@ function registerModelHandlers(host: EnhanceWorker): void {
     rejectExternalOptions(input)
     const config = await loadModels(host)
     const existing = input.id ? config.profiles.findIndex((profile) => profile.id === input.id) : -1
+    if (existing < 0 && config.profiles.length >= MAX_PROFILES) throw invalidInput('Model profiles exceed the limit of 50. Remove an unused profile before adding another.')
     if (input.id !== undefined && existing < 0) throw hostError(msg('error.invalid_profile'), 'invalid_params')
     const id = existing >= 0 ? config.profiles[existing].id : newProfileId(input.name || 'copilot')
     const profile = normalizeProfile({ preset: 'copilot', provider: 'copilot', ...input, id })

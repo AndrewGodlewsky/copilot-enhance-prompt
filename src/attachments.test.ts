@@ -18,6 +18,12 @@ test('tests keep their attachments apart from the real panel\'s', () => {
   assert.equal(dirname(ATTACHMENTS_DIR), tmpdir())
 })
 
+test('backend attachment count and chunk-count limits apply before reading or creating files', async () => {
+  await assert.rejects(loadFiles(Array(9).fill('not-an-owned-file')), /at most 8/)
+  await assert.rejects(putChunk({ id: 'att-limit', name: 'file', index: 0, total: Number.MAX_SAFE_INTEGER, data: '' }))
+  assert.equal(existsSync(join(ATTACHMENTS_DIR, 'att-limit')), false)
+})
+
 test('an unregistered later chunk and an arbitrary existing file are never treated as an upload', async () => {
   const dir = join(ATTACHMENTS_DIR, 'att-forged')
   mkdirSync(dir, { recursive: true })
