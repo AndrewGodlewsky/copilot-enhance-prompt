@@ -114,6 +114,14 @@ export function createServices(session: CopilotSession, directory = process.env.
       }))
       return { ...values }
     },
+    patch: async values => {
+      const entries = Object.entries(values)
+      if (entries.length > 64) throw new Error('Too many storage changes.')
+      const groups = new Map<ReturnType<typeof storeFor>, Record<string, JsonValue | undefined>>()
+      for (const [key, value] of entries) { const store = storeFor(key); const changes = groups.get(store) ?? Object.create(null); changes[key] = value; groups.set(store, changes) }
+      await prepare()
+      await data.transaction(() => panelData.transaction(async () => { for (const [store, changes] of groups) await store.patch(changes) }))
+    },
     set: async (key, value) => { await prepare(); await storeFor(key).set(key, value) },
     delete: async key => { await prepare(); await storeFor(key).delete(key) },
     keys: async () => { await prepare(); return [...new Set([...(await data.keys()).filter(visibleShared), ...await panelData.keys()])] },

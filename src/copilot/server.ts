@@ -9,6 +9,7 @@ import type { PluginRequests } from '../protocol.ts'
 import type { createUpdates } from '../updates/service.ts'
 import { REQUEST_BYTES, busyError, validateJson } from '../limits.ts'
 import { readConfinedFile } from '../confined-read.ts'
+import { PRIVATE_PANEL_KEYS } from '../panel-storage.ts'
 
 type Worker = ReturnType<typeof createWorkerHost>
 type Canvas = { id: string; token: string; streams: Set<ServerResponse>; subscriptions: Disposable[]; pending: number }
@@ -16,7 +17,6 @@ const MODEL_WRITES = new Set(['models.save', 'models.delete', 'models.move', 'mo
 const PANEL_KEYS = new Set(['tab', 'style', 'level', 'effort', 'structureChoice', 'terminalWorkspaces', 'optionsOpen', 'draft', 'result', 'lastRun', 'contextShown', 'contextNotes', 'files', 'workspaceKey', 'parked', 'sendAfterEnhance', 'historyScope'])
 const readable = (key: string) => key === 'history' || key === 'colorTheme' || key.startsWith('panel:') && PANEL_KEYS.has(key.slice(6))
 const writable = (key: string) => key === 'colorTheme' || key.startsWith('panel:') && PANEL_KEYS.has(key.slice(6))
-const PRIVATE_PANEL_KEYS = new Set(['draft', 'result', 'lastRun', 'contextShown', 'contextNotes', 'files', 'workspaceKey', 'parked'])
 const invalid = (message = 'Invalid canvas request.') => Object.assign(new Error(message), { status: 400 })
 
 async function body(request: IncomingMessage, timeoutMs: number): Promise<Record<string, any>> {
@@ -109,6 +109,11 @@ export async function createCanvasServer(options: { worker: Worker; assets: stri
         let answer: unknown
         const client = worker.panel(canvas.id)
         const work = <T>(run: () => Promise<T>) => options.updates ? options.updates.withWork(run) : run()
+        const atomic = <T>(run: () => Promise<T>) => client.storage.transaction ? client.storage.transaction(run) : run()
+        const patch = async (values: Record<string, JsonValue | undefined>) => {
+          if (client.storage.patch) return client.storage.patch(values)
+          for (const [key, value] of Object.entries(values)) if (value === undefined) await client.storage.delete(key); else await client.storage.set(key, value)
+        }
         if (typeof method === 'string' && method.startsWith('updates.')) {
           if (!options.updates) throw invalid('Updates are unavailable in this runtime.')
           const action = method.slice(8)
@@ -133,7 +138,13 @@ export async function createCanvasServer(options: { worker: Worker; assets: stri
           }
           answer = ['logs.get', 'targets.list', 'models.get', 'rules.get', 'consents.get', 'data.summary', 'enhance.progress.get'].includes(name) ? await guarded() : await work(guarded)
         } else if (method === 'settings.get') answer = input.key === undefined ? await client.settings.get() : await client.settings.get(input.key)
-        else if (method === 'settings.set') { await work(() => client.settings.set(input.key, input.value)); answer = true }
+        else if (method === 'settings.set') {
+          await work(() => input.key === 'saveHistory' && input.value === false ? atomic(async () => {
+            await client.settings.set(input.key, input.value)
+            await patch(Object.fromEntries([...PRIVATE_PANEL_KEYS].map(key => [`panel:${key}`, undefined])))
+          }) : client.settings.set(input.key, input.value))
+          answer = true
+        }
         else if (method === 'storage.keys') answer = (await client.storage.keys()).filter(readable)
         else if (method === 'storage.getMany') {
           if (Object.keys(input).some(key => key !== 'keys') || !Array.isArray(input.keys) || input.keys.length > 64 || input.keys.some((key: unknown) => typeof key !== 'string' || !readable(key))) throw invalid()
@@ -143,14 +154,28 @@ export async function createCanvasServer(options: { worker: Worker; assets: stri
         else if (method === 'storage.get') {
           if (typeof input.key !== 'string' || !readable(input.key)) throw invalid()
           answer = await client.storage.get(input.key)
+        } else if (method === 'storage.patch') {
+          if (Object.keys(input).some(key => key !== 'changes') || !Array.isArray(input.changes) || input.changes.length > 64) throw invalid()
+          const values: Record<string, JsonValue | undefined> = Object.create(null)
+          for (const change of input.changes) {
+            if (!change || typeof change !== 'object' || Array.isArray(change) || Object.keys(change).some(key => !['key', 'value', 'remove'].includes(key)) || typeof change.key !== 'string' || !writable(change.key) ||
+              (change.remove === true ? Object.hasOwn(change, 'value') : Object.hasOwn(change, 'remove') || !Object.hasOwn(change, 'value'))) throw invalid()
+            if (change.key === 'colorTheme' && !change.remove && !['system', 'light', 'dark'].includes(change.value)) throw invalid()
+            values[change.key] = change.remove ? undefined : change.value
+          }
+          await work(() => atomic(async () => {
+            if (await client.settings.get('saveHistory') === false) for (const key of Object.keys(values)) if (PRIVATE_PANEL_KEYS.has(key.slice(6))) values[key] = undefined
+            await patch(values)
+          }))
+          answer = true
         } else if (method === 'storage.set' || method === 'storage.delete') {
           if (typeof input.key !== 'string' || !writable(input.key)) throw invalid()
           if (method === 'storage.set' && input.key === 'colorTheme' && !['system', 'light', 'dark'].includes(input.value)) throw invalid()
-          await work(async () => {
+          await work(() => atomic(async () => {
             if (method === 'storage.set' && PRIVATE_PANEL_KEYS.has(input.key.slice(6)) && await client.settings.get('saveHistory') === false) await client.storage.delete(input.key)
             else if (method === 'storage.set') await client.storage.set(input.key, input.value as JsonValue)
             else await client.storage.delete(input.key)
-          })
+          }))
           answer = true
         } else if (method === 'close') {
           worker.closePanel(canvas.id); options.onClose?.(canvas.id); answer = true

@@ -9,6 +9,7 @@ export type KeyValueStore = {
   transaction?<T>(fn: () => Promise<T>): Promise<T>
   get(key: string): Promise<JsonValue | null>
   getMany?(keys: string[]): Promise<Record<string, JsonValue>>
+  patch?(values: Record<string, JsonValue | undefined>): Promise<void>
   set(key: string, value: JsonValue): Promise<void>
   delete(key: string): Promise<void>
   keys(): Promise<string[]>
@@ -27,6 +28,7 @@ export type AppEvents = {
 }
 export type SaveOptions = { suggestedName?: string; mimeType?: string; data: string | ArrayBuffer }
 export type PanelClient = {
+  persistence?: { flush(): Promise<void>; retry(): Promise<void>; snapshot(): import('./save-queue.ts').SaveState; subscribe(listener: () => void): () => void }
   updates?: import('./updates/types.ts').UpdateClient
   plugin: {
     request<K extends keyof PluginRequests>(name: K, input?: RequestInput<K>, options?: RequestOptions): Promise<PluginRequests[K]['output']>
@@ -57,6 +59,7 @@ export function frame(): PanelClient {
   if (!client) throw new Error('The canvas is not connected.')
   return client
 }
+export const persistence = () => client?.persistence
 export function atom<T>(initial: T): Atom<T>
 export function atom<T>(key: string, initial: T, options?: { persist?: string }): Atom<T>
 export function atom<T>(keyOrInitial: string | T, initial?: T, options?: { persist?: string }): Atom<T> {

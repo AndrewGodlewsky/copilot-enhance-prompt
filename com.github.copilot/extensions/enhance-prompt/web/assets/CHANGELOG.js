@@ -1,5 +1,13 @@
 var e=`# Changes
 
+## [0.12.18] - 2026-11-17
+
+### Improved
+- Rapid edits save the newest pending text together instead of queuing every intermediate draft. A small status below navigation shows Saving, Saved, or a save failure with Retry save.
+- Sending, enhancement and plugin updates wait for pending saves. Turning draft saving off retires failed private saves so Retry cannot bring them back after saving is re-enabled.
+- Large saved fields split safely across requests. Brief Windows file-sharing conflicts get a bounded retry; persistent save failures remain visible.
+- Wait for Saved before closing Copilot's canvas. The plugin attempts a final save, but the desktop can close it without waiting; copy your text if saving fails. Native-close warning behavior still needs manual verification.
+
 ## [0.12.17] - 2026-11-17
 
 ### Improved

@@ -1,0 +1,85 @@
+{
+  "version": "0.12.18",
+  "capturedAt": "2026-11-17T08:19:59.800Z",
+  "node": "v24.22.1",
+  "platform": "win32",
+  "sourceCommit": "1f3ff3fc18aff00e7dd0467edd0fc8c24b1a6403",
+  "workingTreeModified": true,
+  "syntheticOnly": true,
+  "modelCalls": 0,
+  "measurements": [
+    {
+      "edits": 100,
+      "coalesced": false,
+      "writes": 101,
+      "pendingEntries": 101,
+      "ms": 162.607,
+      "heapUsedBytes": 11971176,
+      "heapDeltaBytes": 1410368,
+      "rssBytes": 78991360,
+      "finalValueVerified": true
+    },
+    {
+      "edits": 100,
+      "coalesced": true,
+      "writes": 2,
+      "pendingEntries": 2,
+      "ms": 4.901,
+      "heapUsedBytes": 11224592,
+      "heapDeltaBytes": 353984,
+      "rssBytes": 79192064,
+      "finalValueVerified": true
+    },
+    {
+      "edits": 1000,
+      "coalesced": false,
+      "writes": 1001,
+      "pendingEntries": 1001,
+      "ms": 1448.157,
+      "heapUsedBytes": 14301776,
+      "heapDeltaBytes": 3396552,
+      "rssBytes": 83308544,
+      "finalValueVerified": true
+    },
+    {
+      "edits": 1000,
+      "coalesced": true,
+      "writes": 2,
+      "pendingEntries": 2,
+      "ms": 5.664,
+      "heapUsedBytes": 13270088,
+      "heapDeltaBytes": 1988016,
+      "rssBytes": 82866176,
+      "finalValueVerified": true
+    },
+    {
+      "edits": 10000,
+      "coalesced": true,
+      "writes": 2,
+      "pendingEntries": 2,
+      "ms": 19.083,
+      "heapUsedBytes": 13416688,
+      "heapDeltaBytes": 2254208,
+      "rssBytes": 85090304,
+      "finalValueVerified": true
+    },
+    {
+      "edits": 30000,
+      "coalesced": true,
+      "writes": 2,
+      "pendingEntries": 2,
+      "ms": 43.72,
+      "heapUsedBytes": 16133224,
+      "heapDeltaBytes": 4864256,
+      "rssBytes": 87072768,
+      "finalValueVerified": true
+    }
+  ],
+  "sourceHashes": {
+    "src/save-queue.ts": "3295dd5294c6f0d801fe7db81e20efd0cd530eb6842d5b408b8842fd049eb3ef",
+    "src/copilot/services.ts": "bd0dd06354490fd3b59e6766ee988fa5ccc3ac0916bf78f326e8421c770d8062",
+    "src/copilot/storage.ts": "bdb2b891b08e93137eedc3a5bcdccd91a0cca126280edbc1737c885e156b6adb",
+    "scripts/audit/draft-saves.mjs": "1ea65c6b64e2333f5332acd63ebbf1327357a83a7df21f93429a764cfde8c8d7"
+  },
+  "method": "Burst while the first save is held, then drain real atomic disk writes and reopen through a new service. Timings include burst submission and drain; no rendering, network or realistic typing cadence. Endpoint memory is not peak memory. Old sequential writes measured only at 100/1000; no extrapolated time for larger bursts."
+}

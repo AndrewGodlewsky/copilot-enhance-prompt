@@ -1,6 +1,9 @@
 import { bindPanel, type JsonValue, type PanelClient, type RequestOptions } from '../../src/runtime.ts'
 import { panelDiagnostics } from '../../src/panel/diagnostics.ts'
 import { diagnosticError } from '../../src/diagnostics.ts'
+import { createSaveQueue } from '../../src/save-queue.ts'
+import { privatePanelKey } from '../../src/panel-storage.ts'
+import { storageSaveRequests } from '../../src/save-batches.ts'
 
 export function connectCanvas(): void {
   const token = /^\/c\/([a-f0-9]{64})\/$/.exec(location.pathname)?.[1]
@@ -13,13 +16,13 @@ export function connectCanvas(): void {
     return { dispose: () => { set.delete(handler) } }
   }
   let closing = false
-  let writes: Promise<unknown> = Promise.resolve()
-  const failedWrites = new Set<string>()
+  let retainingDrafts = true
+  let retentionRevision = 0
   async function call(method: string, input: unknown = {}, options: RequestOptions = {}, name?: string): Promise<any> {
     const started = Date.now()
     try {
       const signal = AbortSignal.any([...(options.signal ? [options.signal] : []), AbortSignal.timeout(options.timeoutMs ?? 120_000)])
-      const response = await fetch('api', { method: 'POST', headers, body: JSON.stringify({ method, input, ...(name ? { name } : {}) }), signal })
+      const response = await fetch('api', { method: 'POST', headers, body: JSON.stringify({ method, input, ...(name ? { name } : {}) }), signal, ...(closing ? { keepalive: true } : {}) })
       const body = await response.json()
       if (!response.ok) throw Object.assign(new Error(body.error?.message ?? 'The canvas connection failed.'), { code: body.error?.code ?? 'disconnected', status: response.status })
       return body.result
@@ -28,27 +31,49 @@ export function connectCanvas(): void {
       throw error
     }
   }
-  const write = (method: string, input: unknown): Promise<void> => {
-    const key = `${method.startsWith('settings.') ? 'settings' : 'storage'}:${(input as { key?: string }).key}`
-    const result = writes.catch(() => {}).then(() => call(method, input)).then(value => { failedWrites.delete(key); return value }, error => { failedWrites.add(key); throw error })
-    writes = result
-    return result
-  }
+  const saves = createSaveQueue(async operations => {
+    if (operations[0].scope === 'settings') {
+      const { key, value } = operations[0]
+      await call('settings.set', { key, value })
+      if (key === 'saveHistory') {
+        retentionRevision++
+        retainingDrafts = value !== false
+        if (!retainingDrafts) saves.forgetFailedStorage(privatePanelKey)
+      }
+    } else for (const request of storageSaveRequests(operations)) await call(request.method, request.input)
+  })
+  const needsSavedState = new Set(['prompt.enhance', 'prompt.send', 'models.test', 'context.preview', 'data.clear'])
   const client: PanelClient = {
+    persistence: saves,
     updates: {
       state: () => call('updates.state'), check: manual => call('updates.check', { manual }),
-      install: async () => { await writes; if (failedWrites.size) throw new Error('Some changes could not be saved. Save them successfully before updating.'); return call('updates.install', {}, { timeoutMs: 180_000 }) },
+      install: async () => { await saves.flush(); return call('updates.install', {}, { timeoutMs: 180_000 }) },
       later: () => call('updates.later'), automatic: enabled => call('updates.automatic', { enabled })
     },
-    plugin: { request: (name, input, options) => call('request', input ?? {}, options, name), on: (name, handler) => listen(`plugin:${name}`, handler) },
+    plugin: { request: async (name, input, options) => {
+      if (needsSavedState.has(name)) await saves.flush()
+      options?.signal?.throwIfAborted()
+      return call('request', input ?? {}, options, name)
+    }, on: (name, handler) => listen(`plugin:${name}`, handler) },
     settings: {
-      get: ((key?: string) => call('settings.get', key ? { key } : {})) as PanelClient['settings']['get'],
-      set: (key, value) => write('settings.set', { key, value }), onDidChange: handler => listen('settings', handler)
+      get: (async (key?: string) => {
+        const revision = retentionRevision
+        const value = await call('settings.get', key ? { key } : {})
+        if (revision === retentionRevision && (!key || key === 'saveHistory')) {
+          retainingDrafts = (key ? value : value.saveHistory) !== false
+          if (!retainingDrafts) saves.forgetFailedStorage(privatePanelKey)
+        }
+        return value
+      }) as PanelClient['settings']['get'],
+      set: (key, value) => {
+        if (key === 'saveHistory') { retentionRevision++; if (value === false) retainingDrafts = false }
+        return saves.enqueue({ scope: 'settings', key, value })
+      }, onDidChange: handler => listen('settings', handler)
     },
     storage: {
       getMany: keys => call('storage.getMany', { keys }),
-      get: key => call('storage.get', { key }), set: (key, value: JsonValue) => write('storage.set', { key, value }),
-      delete: key => write('storage.delete', { key }), keys: () => call('storage.keys'), onDidChange: handler => listen('storage', handler)
+      get: key => call('storage.get', { key }), set: (key, value: JsonValue) => saves.enqueue(!retainingDrafts && privatePanelKey(key) ? { scope: 'storage', key, remove: true } : { scope: 'storage', key, value }),
+      delete: key => saves.enqueue({ scope: 'storage', key, remove: true }), keys: () => call('storage.keys'), onDidChange: handler => listen('storage', handler)
     },
     on: (name, handler) => listen(name, handler),
     shell: { openExternal: async url => {
@@ -102,8 +127,15 @@ export function connectCanvas(): void {
   }
   void events()
   const poll = setInterval(() => emit('workspace.changed', {}), 5000)
+  window.addEventListener('beforeunload', event => {
+    if (saves.snapshot().phase === 'saved') return
+    event.preventDefault(); event.returnValue = ''
+  })
   window.addEventListener('pagehide', () => {
+    if (closing) return
     closing = true; clearInterval(poll)
-    void fetch('api', { method: 'POST', headers, body: JSON.stringify({ method: 'close' }), keepalive: true }).catch(() => {})
+    // The desktop's onClose callback is fire-and-forget. This final attempt
+    // cannot delay native close, and keepalive has a browser payload limit.
+    void saves.flush().catch(() => {}).then(() => call('close')).catch(() => {})
   })
 }

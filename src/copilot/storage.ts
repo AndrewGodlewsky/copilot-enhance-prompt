@@ -48,7 +48,15 @@ export function persistentStore(directory: string, name = 'state.json'): Persist
     }
     const temporary = `${file}.${randomUUID()}.tmp`
     await writeFile(temporary, JSON.stringify(data), { encoding: 'utf8', mode: 0o600 })
-    await rename(temporary, file)
+    // Windows readers/antivirus can briefly deny replacement. Keep the lock
+    // and original file intact; retry only this rename, with a short bound.
+    for (let attempt = 0; ; attempt++) {
+      try { await rename(temporary, file); break }
+      catch (error) {
+        if (process.platform !== 'win32' || attempt >= 5 || !['EPERM', 'EBUSY'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error
+        await new Promise(resolve => setTimeout(resolve, 10 * 2 ** attempt))
+      }
+    }
     notifyStoreWrite(file, data, entries.map(([key]) => key))
   })
   return {

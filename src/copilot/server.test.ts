@@ -207,3 +207,28 @@ test('HTTP bulk restore is authenticated, bounded and confined to readable keys 
     assert.deepEqual((await response.json()).result, { 'panel:draft': 'Only my request 🧪', history: [{ original: 'Saved history' }], 'panel:result': null })
   } finally { await server.close(); await worker.deactivate(); await rm(directory, { recursive: true, force: true }) }
 })
+
+test('atomic panel saves retain their session and privacy opt-out prevents queued text from returning', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'enhance-save-http-'))
+  const services = createServices({ sessionId: 'first' } as CopilotSession, join(directory, 'state'))
+  const other = createServices({ sessionId: 'second' } as CopilotSession, join(directory, 'state'))
+  await services.settings.get(); await other.storage.set('panel:draft', 'Other session retained')
+  const worker = createWorkerHost(services), server = await createCanvasServer({ worker, assets: directory })
+  try {
+    const url = server.open('one'), token = new URL(url).pathname.split('/')[2]
+    const post = (method: string, input: unknown, authenticated = true) => fetch(url + 'api', { method: 'POST', headers: { 'content-type': 'application/json', ...(authenticated ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ method, input }) })
+    const changes = [{ key: 'panel:draft', value: 'Latest Unicode 🧪' }, { key: 'panel:result', value: 'Reviewed' }]
+    assert.equal((await post('storage.patch', { changes }, false)).status, 403)
+    for (const input of [{ changes, target: 'second' }, { changes: [{ key: 'history', value: [] }] }, { changes: [{ key: 'panel:draft', value: 'Invalid', remove: true }] }, { changes: [{ key: 'panel:draft' }] }, { changes: Array(65).fill(changes[0]) }]) assert.equal((await post('storage.patch', input)).status, 400)
+    assert.equal((await post('storage.patch', { changes })).status, 200)
+    assert.equal(await services.storage.get('panel:draft'), 'Latest Unicode 🧪')
+    assert.equal(await services.storage.get('panel:result'), 'Reviewed')
+    assert.equal(await other.storage.get('panel:draft'), 'Other session retained')
+    assert.equal((await post('settings.set', { key: 'saveHistory', value: false })).status, 200)
+    assert.equal(await services.storage.get('panel:draft'), null)
+    assert.equal(await services.storage.get('panel:result'), null)
+    assert.equal((await post('storage.patch', { changes })).status, 200)
+    assert.equal(await services.storage.get('panel:draft'), null, 'late queued text must be discarded with saving off')
+    assert.equal(await other.storage.get('panel:draft'), 'Other session retained', 'opt-out must not expire inactive drafts')
+  } finally { await server.close(); await worker.deactivate(); await rm(directory, { recursive: true, force: true }) }
+})

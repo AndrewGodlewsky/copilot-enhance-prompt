@@ -10,6 +10,32 @@ import type { JsonValue } from '../runtime.ts'
 import { promises as fs } from 'node:fs'
 import { syncBuiltinESMExports } from 'node:module'
 
+test('Windows atomic replacement tolerates brief sharing locks but reports persistent or unrelated failures', async () => {
+  if (process.platform !== 'win32') return
+  const dir = await mkdtemp(join(tmpdir(), 'enhance-rename-sharing-')), original = fs.rename
+  const store = persistentStore(dir)
+  try {
+    await store.set('draft', 'Original')
+    let attempts = 0, remaining = 2, code = 'EPERM'
+    fs.rename = (async (...args: Parameters<typeof fs.rename>) => {
+      attempts++
+      if (remaining-- > 0) throw Object.assign(Error('Synthetic file sharing failure'), {code})
+      return original(...args)
+    }) as typeof fs.rename
+    syncBuiltinESMExports()
+    await store.set('draft', 'Latest Unicode 🧪')
+    assert.equal(attempts, 3)
+    assert.equal(await store.get('draft'), 'Latest Unicode 🧪')
+    attempts = 0; remaining = Infinity
+    await assert.rejects(store.set('draft', 'Must not replace'), /sharing failure/)
+    assert.equal(attempts, 6, 'retry count is bounded')
+    assert.equal(await store.get('draft'), 'Latest Unicode 🧪')
+    attempts = 0; code = 'ENOSPC'
+    await assert.rejects(store.set('draft', 'Disk full'), /sharing failure/)
+    assert.equal(attempts, 1, 'other errors must not be retried')
+  } finally { fs.rename = original; syncBuiltinESMExports(); await rm(dir, {recursive:true,force:true}) }
+})
+
 test('a keyed privacy read uses one current preference snapshot without enumerating unrelated settings', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'enhance-keyed-setting-'))
   const original = fs.readFile

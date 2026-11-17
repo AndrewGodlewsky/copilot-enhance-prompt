@@ -5400,7 +5400,15 @@ function persistentStore(directory2, name = "state.json") {
     }
     const temporary = `${file}.${randomUUID2()}.tmp`;
     await writeFile(temporary, JSON.stringify(data), { encoding: "utf8", mode: 384 });
-    await rename2(temporary, file);
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await rename2(temporary, file);
+        break;
+      } catch (error) {
+        if (process.platform !== "win32" || attempt >= 5 || !["EPERM", "EBUSY"].includes(error.code ?? "")) throw error;
+        await new Promise((resolve5) => setTimeout(resolve5, 10 * 2 ** attempt));
+      }
+    }
     notifyStoreWrite(file, data, entries.map(([key]) => key));
   });
   return {
@@ -5949,7 +5957,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.17";
+var VERSION = "0.12.18";
 
 // src/worker-host.ts
 import { EventEmitter } from "node:events";
@@ -6503,6 +6511,21 @@ function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_D
       }));
       return { ...values };
     },
+    patch: async (values) => {
+      const entries = Object.entries(values);
+      if (entries.length > 64) throw new Error("Too many storage changes.");
+      const groups = /* @__PURE__ */ new Map();
+      for (const [key, value] of entries) {
+        const store = storeFor(key);
+        const changes = groups.get(store) ?? /* @__PURE__ */ Object.create(null);
+        changes[key] = value;
+        groups.set(store, changes);
+      }
+      await prepare();
+      await data.transaction(() => panelData.transaction(async () => {
+        for (const [store, changes] of groups) await store.patch(changes);
+      }));
+    },
     set: async (key, value) => {
       await prepare();
       await storeFor(key).set(key, value);
@@ -6542,11 +6565,15 @@ import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import { realpath as realpath6 } from "node:fs/promises";
 import { extname } from "node:path";
+
+// src/panel-storage.ts
+var PRIVATE_PANEL_KEYS = /* @__PURE__ */ new Set(["draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked"]);
+
+// src/copilot/server.ts
 var MODEL_WRITES = /* @__PURE__ */ new Set(["models.save", "models.delete", "models.move", "models.roles", "consent.set", "rules.save"]);
 var PANEL_KEYS = /* @__PURE__ */ new Set(["tab", "style", "level", "effort", "structureChoice", "terminalWorkspaces", "optionsOpen", "draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked", "sendAfterEnhance", "historyScope"]);
 var readable = (key) => key === "history" || key === "colorTheme" || key.startsWith("panel:") && PANEL_KEYS.has(key.slice(6));
 var writable = (key) => key === "colorTheme" || key.startsWith("panel:") && PANEL_KEYS.has(key.slice(6));
-var PRIVATE_PANEL_KEYS = /* @__PURE__ */ new Set(["draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked"]);
 var invalid = (message = "Invalid canvas request.") => Object.assign(new Error(message), { status: 400 });
 async function body(request, timeoutMs) {
   if (!request.headers["content-type"]?.startsWith("application/json")) throw invalid();
@@ -6671,6 +6698,12 @@ async function createCanvasServer(options) {
         let answer;
         const client = worker2.panel(canvas2.id);
         const work = (run2) => options.updates ? options.updates.withWork(run2) : run2();
+        const atomic = (run2) => client.storage.transaction ? client.storage.transaction(run2) : run2();
+        const patch = async (values) => {
+          if (client.storage.patch) return client.storage.patch(values);
+          for (const [key, value] of Object.entries(values)) if (value === void 0) await client.storage.delete(key);
+          else await client.storage.set(key, value);
+        };
         if (typeof method === "string" && method.startsWith("updates.")) {
           if (!options.updates) throw invalid("Updates are unavailable in this runtime.");
           const action = method.slice(8);
@@ -6696,7 +6729,10 @@ async function createCanvasServer(options) {
           answer = ["logs.get", "targets.list", "models.get", "rules.get", "consents.get", "data.summary", "enhance.progress.get"].includes(name) ? await guarded() : await work(guarded);
         } else if (method === "settings.get") answer = input.key === void 0 ? await client.settings.get() : await client.settings.get(input.key);
         else if (method === "settings.set") {
-          await work(() => client.settings.set(input.key, input.value));
+          await work(() => input.key === "saveHistory" && input.value === false ? atomic(async () => {
+            await client.settings.set(input.key, input.value);
+            await patch(Object.fromEntries([...PRIVATE_PANEL_KEYS].map((key) => [`panel:${key}`, void 0])));
+          }) : client.settings.set(input.key, input.value));
           answer = true;
         } else if (method === "storage.keys") answer = (await client.storage.keys()).filter(readable);
         else if (method === "storage.getMany") {
@@ -6706,14 +6742,29 @@ async function createCanvasServer(options) {
         } else if (method === "storage.get") {
           if (typeof input.key !== "string" || !readable(input.key)) throw invalid();
           answer = await client.storage.get(input.key);
+        } else if (method === "storage.patch") {
+          if (Object.keys(input).some((key) => key !== "changes") || !Array.isArray(input.changes) || input.changes.length > 64) throw invalid();
+          const values = /* @__PURE__ */ Object.create(null);
+          for (const change of input.changes) {
+            if (!change || typeof change !== "object" || Array.isArray(change) || Object.keys(change).some((key) => !["key", "value", "remove"].includes(key)) || typeof change.key !== "string" || !writable(change.key) || (change.remove === true ? Object.hasOwn(change, "value") : Object.hasOwn(change, "remove") || !Object.hasOwn(change, "value"))) throw invalid();
+            if (change.key === "colorTheme" && !change.remove && !["system", "light", "dark"].includes(change.value)) throw invalid();
+            values[change.key] = change.remove ? void 0 : change.value;
+          }
+          await work(() => atomic(async () => {
+            if (await client.settings.get("saveHistory") === false) {
+              for (const key of Object.keys(values)) if (PRIVATE_PANEL_KEYS.has(key.slice(6))) values[key] = void 0;
+            }
+            await patch(values);
+          }));
+          answer = true;
         } else if (method === "storage.set" || method === "storage.delete") {
           if (typeof input.key !== "string" || !writable(input.key)) throw invalid();
           if (method === "storage.set" && input.key === "colorTheme" && !["system", "light", "dark"].includes(input.value)) throw invalid();
-          await work(async () => {
+          await work(() => atomic(async () => {
             if (method === "storage.set" && PRIVATE_PANEL_KEYS.has(input.key.slice(6)) && await client.settings.get("saveHistory") === false) await client.storage.delete(input.key);
             else if (method === "storage.set") await client.storage.set(input.key, input.value);
             else await client.storage.delete(input.key);
-          });
+          }));
           answer = true;
         } else if (method === "close") {
           worker2.closePanel(canvas2.id);

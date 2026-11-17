@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "plugin": "enhance-prompt",
-  "version": "0.12.17",
+  "version": "0.12.18",
   "hostProvided": [
     "@github/copilot-sdk",
     "@github/copilot-sdk/extension",
@@ -1199,20 +1199,20 @@
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/extension.mjs",
-      "bytes": 352784,
-      "sha256": "b11b03da81063ed2d7696feb51b31dd32026b21065ffcf1f71e799c6f5e1408d",
+      "bytes": 355664,
+      "sha256": "c67cf3193a6026202a8754a1a40830a345849cc050029f4cbaa8ed5546aef607",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/CHANGELOG.js",
-      "bytes": 32775,
-      "sha256": "4900ad9c356bd566355a5235bf6f867d6114196381e5bafff05eaaaf03be2f5c",
+      "bytes": 33556,
+      "sha256": "edf590afc855119cfb4e0d6fc46ef4c10c37e1fcd0f73cdbd70a363d8954054e",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/app.js",
-      "bytes": 544498,
-      "sha256": "0b688e500b05cfb17857da31ee7b842fdfc5583a9aa0a82e6eff7a0f87993324",
+      "bytes": 548463,
+      "sha256": "9159114a314b931d9ba93baa09d5bb6f7e8b58a4ffd5b77ffa165764e6d9bcf8",
       "normalization": "lf"
     },
     {
@@ -1260,7 +1260,7 @@
     {
       "path": "plugin.json",
       "bytes": 422,
-      "sha256": "0d645a796fda14689dbf6d44e69c5dcac680771541fa685c671bb5682b5b0933",
+      "sha256": "4df4c8e592cf6d060a9f1ed30b7c979030d2f9ebab1a3ac0b2593a4cd8c4a5ac",
       "normalization": "lf"
     }
   ],
@@ -1281,8 +1281,8 @@
   "inputs": [
     {
       "path": "CHANGELOG.md",
-      "bytes": 32739,
-      "sha256": "a7240a49ac24ecf73274148bc4d45d109396e18dcce4bf9e89be6a0ab8b4b1b9",
+      "bytes": 33520,
+      "sha256": "b362afba5b25253d8ad88271c4d7a4fefa6f5d5aa47ccc5662b67304f3ce37ea",
       "normalization": "lf"
     },
     {
@@ -1515,14 +1515,14 @@
     },
     {
       "path": "src/copilot/server.ts",
-      "bytes": 13256,
-      "sha256": "aef4499d67d701b78f171b92d4e6bbf8d41486176e32dbdc495482d8270e701a",
+      "bytes": 15141,
+      "sha256": "d93a47430ad721a75de1618d1f641622d718c68d76314fc5beef73458a169d06",
       "normalization": "lf"
     },
     {
       "path": "src/copilot/services.ts",
-      "bytes": 9550,
-      "sha256": "d960104ddfcaf82cad5bf14f14778eb50df491f4f3a45d0bbb613616b63656bf",
+      "bytes": 10151,
+      "sha256": "bd0dd06354490fd3b59e6766ee988fa5ccc3ac0916bf78f326e8421c770d8062",
       "normalization": "lf"
     },
     {
@@ -1539,8 +1539,8 @@
     },
     {
       "path": "src/copilot/storage.ts",
-      "bytes": 3171,
-      "sha256": "5f586d769824dd5a53fd37932ef9dc5ba4332fa3abb8d7b9e5168d0d0ca9e14b",
+      "bytes": 3643,
+      "sha256": "bdb2b891b08e93137eedc3a5bcdccd91a0cca126280edbc1737c885e156b6adb",
       "normalization": "lf"
     },
     {
@@ -1631,6 +1631,12 @@
       "path": "src/models.ts",
       "bytes": 7623,
       "sha256": "72f131b24644426b564d8567b3ef1399b6318d0781e6e8fac418bea1c973ece4",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/panel-storage.ts",
+      "bytes": 332,
+      "sha256": "6634210817063a4bf4bf4e50e330db2ea34731ae4bd55779530c09f00baebd9a",
       "normalization": "lf"
     },
     {
@@ -1755,8 +1761,20 @@
     },
     {
       "path": "src/runtime.ts",
-      "bytes": 8999,
-      "sha256": "28413d17b1a86001a6029c4d4c60953438cb06707e1022814571d0bca2265be4",
+      "bytes": 9284,
+      "sha256": "3e23dba776bddb445a92165aefde2c21d7236699ddcc5a6c2b44788106b159b9",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/save-batches.ts",
+      "bytes": 1354,
+      "sha256": "3c923afdca6d8d1a1935b6b6835b933c71ca25346487f95abf96a693df90c669",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/save-queue.ts",
+      "bytes": 3825,
+      "sha256": "3295dd5294c6f0d801fe7db81e20efd0cd530eb6842d5b408b8842fd049eb3ef",
       "normalization": "lf"
     },
     {
@@ -1792,7 +1810,7 @@
     {
       "path": "src/version.ts",
       "bytes": 93,
-      "sha256": "ca12c1635c51ef09584a74d23374438654e50da4c10f157405bbe093a397cfae",
+      "sha256": "6500a7a8d61816c8e1830faface94043694456c9ed8dfc957499a4429adac079",
       "normalization": "lf"
     },
     {
@@ -2799,8 +2817,8 @@
     },
     {
       "path": "web/src/main.tsx",
-      "bytes": 10021,
-      "sha256": "df34b8b9a956de6c2394eca62bc0de99686a37a267050f2a5a4cf941f4a30945",
+      "bytes": 10087,
+      "sha256": "7b5c0c11af28d9782b1ab0eb2de26c35d38b15fe7ffd539ad8c3557e8ce8623d",
       "normalization": "lf"
     },
     {
@@ -2822,6 +2840,12 @@
       "normalization": "lf"
     },
     {
+      "path": "web/src/save-status.tsx",
+      "bytes": 1079,
+      "sha256": "6884f471502713ea31879d53dd0a594bd3be1c0f1cda4e9a603de49a6660bd18",
+      "normalization": "lf"
+    },
+    {
       "path": "web/src/sections.tsx",
       "bytes": 32056,
       "sha256": "93c9f1367cc77c5a5fc399238634fb18b13c444d70e036037937f956149671fd",
@@ -2835,8 +2859,8 @@
     },
     {
       "path": "web/src/transport.ts",
-      "bytes": 6043,
-      "sha256": "2e99b74aadd8772f1344c0dec678e86576214286c8c0c6535263b15732384429",
+      "bytes": 7372,
+      "sha256": "64ef5ec09e6dd7c40b15766f2d6c273ab7c36e221fc56211e966d784587c9e9b",
       "normalization": "lf"
     },
     {
@@ -2930,6 +2954,7 @@
     "src/llm.ts",
     "src/messages.ts",
     "src/models.ts",
+    "src/panel-storage.ts",
     "src/panel/actions.ts",
     "src/panel/appearance.ts",
     "src/panel/attach.ts",
@@ -2951,6 +2976,8 @@
     "src/protocol.ts",
     "src/rules.ts",
     "src/runtime.ts",
+    "src/save-batches.ts",
+    "src/save-queue.ts",
     "src/text-size.ts",
     "src/updates/metadata.ts",
     "src/updates/process-owner.ts",
@@ -3120,6 +3147,7 @@
     "web/src/panel-runtime.ts",
     "web/src/preferences.tsx",
     "web/src/quiet-desk.tsx",
+    "web/src/save-status.tsx",
     "web/src/sections.tsx",
     "web/src/theme.ts",
     "web/src/transport.ts",
@@ -3170,6 +3198,7 @@
     "src/llm.ts",
     "src/messages.ts",
     "src/models.ts",
+    "src/panel-storage.ts",
     "src/panel/actions.ts",
     "src/panel/appearance.ts",
     "src/panel/attach.ts",
@@ -3191,6 +3220,8 @@
     "src/protocol.ts",
     "src/rules.ts",
     "src/runtime.ts",
+    "src/save-batches.ts",
+    "src/save-queue.ts",
     "src/text-size.ts",
     "src/updates/metadata.ts",
     "src/updates/process-owner.ts",
@@ -3226,6 +3257,7 @@
     "web/src/panel-runtime.ts",
     "web/src/preferences.tsx",
     "web/src/quiet-desk.tsx",
+    "web/src/save-status.tsx",
     "web/src/sections.tsx",
     "web/src/theme.ts",
     "web/src/transport.ts",

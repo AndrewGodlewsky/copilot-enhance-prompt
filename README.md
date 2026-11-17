@@ -155,6 +155,8 @@ The worker reads the project directory from Copilot session metadata, never from
 
 Preferences, profiles, rules and history are local. Saved prompt history is not encrypted; drafts and results use a separate file for each Copilot session. Upgrade removes legacy encrypted API-key entries while preserving unrelated local data. The default data directory is `%LOCALAPPDATA%/copilot-enhance-prompt` on Windows and `~/.local/share/copilot-enhance-prompt` elsewhere. `ENHANCE_PROMPT_DATA_DIR` overrides it for tests or a separate installation. See [session migration and recovery](docs/session-storage.md); restart Copilot after updating and keep saved files if migration reports a problem.
 
+The status below navigation shows saving progress and offers **Retry save** on failure. Wait for **Saved** before closing; Copilot's native close does not wait for the plugin. Copy your text if saving fails. See [draft saving and close limitations](docs/draft-saving.md).
+
 The canvas uses an authenticated loopback server with origin and path checks. It exposes no agent-callable send or consent action. There is no tracking or analytics. [Privacy details](docs/privacy.md). [Resource limits](docs/resource-limits.md) describe attachment, settings and concurrency bounds, including when to retry busy requests.
 
 ## Development

@@ -12,7 +12,7 @@ Security and correctness: delivered; see versions below.
 
 Distribution/maintenance: #11 (manual/maintainer confirmation pending), #33 (runtime package prepared; stable channel/manual gates pending).
 
-Efficiency: #12, #13, #14, #15, #19, #20, #21, #32, #34.
+Efficiency: #12/#13 shipped and closed. #14 saving implementation in verification (native-close/manual gate remains); then #15, #19, #20, #21, #32, #34.
 
 Usability: #24, #25, #26, #27.
 
@@ -20,9 +20,23 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- #12 shipped in 0.12.16 / d7c88da; hosted Verify 44039499253 passed, preview and runtime archive published. #13 is verified locally; publishing 0.12.17 after hosted CI. Next: #14, coalesced durable draft saves. #11 and #33 manual/owner gates remain open.
+- #12 shipped in 0.12.16 / d7c88da (Verify 44039499253); #13 shipped in 0.12.17 / 1f3ff3f (Verify 44041368340). Both preview releases and runtime archives are published and issues closed. #14 implementation is in review for 0.12.18, with native-close acceptance kept open. Next: #15 retained-data visibility and safe explicit cleanup. #11 and #33 owner gates remain open.
 
 ## Delivered versions
+
+### 0.12.18 — #14, coalesced saves and visible recovery
+
+The panel keeps one active batch and only the latest queued value per key within a storage batch. Settings form ordering barriers. Authenticated batch saves use existing file transactions and key/size boundaries. Sending, enhancement, model tests, previews, clearing and updates flush first. Saving/Saved/failure and explicit Retry are visible below navigation. An opt-out transaction clears current private fields, retires failed private saves, and filters late queued writes. Cancellation after a flush wait cannot send a prompt. [Details and limits](../../draft-saving.md).
+
+Local typecheck/build, all 481 final tests, package/diff checks and the disposable installed-runtime package fixture pass. Tests first reproduced missing batch/flush behavior, opt-out/re-enable resurrection and stale settings reads; all now pass. Synthetic bursts at 100/1k/10k/30k verify final Unicode content after reopening and exactly two coalesced disk writes. At 1k the serial path is 1,001 writes / 1448.157 ms versus two / 5.664 ms; at 30k the new path is 43.720 ms. Raw counts, timings, source hashes and endpoint memory samples are committed. These are held-first-save bursts, not desktop typing, rendering, peak RSS or large-baseline extrapolations.
+
+Final review: fixed an important oversized-batch defect. Two individually accepted 450k-character Japanese fields reproduced HTTP 413 together and unrecoverable Retry. A real-server regression failed before size/complexity-aware splitting, then passed with exact Unicode, partial failure/Retry, complex values and old-envelope depth preserved. The reviewer passed 13 focused tests and found no minors. No second review replaces the full rebuilt test suite.
+
+The full-suite reproduction exposed a Windows EPERM rename sharing failure while a large stored file was observed. A new regression first failed and then verified at most six rename attempts, unchanged old content on persistent failure, and immediate failure for unrelated errors. Locks remain held and replacement remains atomic; only the narrow Windows sharing case waits a total of up to 310 ms between attempts. The final rebuilt suite and runtime fixture were rerun after this correction.
+
+Final review rulings: native-close warning/durability and desktop visual/accessibility behavior remain explicit manual gates; unsupported host guarantees cannot be invented. Same-session collaborative merging remains outside this change, with documented last-writer behavior (simultaneous edits can replace each other's saved composer). Power-loss/fsync and cross-file crash atomicity remain unclaimed (partial writes can need recovery). Paid/account model behavior is unchanged and untested here because no paid calls are authorized. These limits are disclosed rather than counted as passed acceptance tests.
+
+Ruling: #14 remains open for native-close/manual acceptance. SDK onClose is fire-and-forget; browser pagehide/keepalive and beforeunload warnings are best-effort only. A visible Saved acknowledgment plus copy/Retry guidance is shipped, without a false final-keystroke guarantee. No private browser cache or automatic expiry is added. Different sessions are isolated; same-session canvases retain last-successful-write semantics rather than collaborative merging. Independent review and exact hosted CI/release evidence are recorded before publication.
 
 ### 0.12.17 — #13, batched restoration and shared observers
 
