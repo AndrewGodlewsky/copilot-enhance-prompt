@@ -20,6 +20,16 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
+### 0.12.32 — #35, archive and feature-cost decision
+
+Published a concrete decision brief recommending bounded recent History for v1 while preserving usage, drafts and all existing features. It documents effective count/text limits, filtered Markdown export without import/restore, and the evidence separating current History from usage accounting. An optional archive needs separate indexed/paged storage, opt-in privacy/retention, migration/recovery/export rules and 10k/50k/100k evidence before caps change. AI context/reasoning and native animation trade-offs remain evidence-gated; no removal or expiry is inferred. README now states the practical History limits; the historical audit points to current results and the eight remaining acceptance gates.
+
+Ruling: the owner decision is still pending, so #35 remains open. Publishing a recommendation does not approve an archive or change retention. Synthetic scale evidence is not a 24/7, peak-memory or exhaustive 90-day guarantee.
+
+Final verification: typecheck, build, 543 final tests, package/diff checks and disposable installed-runtime archive fixture pass. Independent review found no findings, resolved 113 local Markdown file links, checked actual count/text bounds and export code, and confirmed 31 closed audit issues/eight open gates on GitHub. Thread limit required reusing an independent reviewer of unrelated releases. No new test is needed for unchanged production behavior; the full existing suite is retained. Review rulings: owner archive scope, an unapproved archive implementation, model quality, native rendering/AT/close/update activation, account policy/billing, long-running/peak/tail performance, hostile same-account and power-loss guarantees remain unverified. External guide availability and every historical CI result were not independently rechecked. Exact hosted CI and preview publication follow; #35 and tracker #40 stay open for the recorded gates.
+
+Previous release 0.12.31 / b6e93bd passed exact Verify 44075875098; preview and three runtime archive assets were published; #31 remains open for authorized model-quality evidence.
+
 ### 0.12.31 — #31, frozen paired quality study
 
 Added eight new public synthetic holdout cases and offline preparation of 48 actual original/enhanced production inputs across three target model/reasoning tiers. Exact shared user/context, distinct system text, hashes and semantic/literal criteria are stored in SQLite; a zero call ceiling and unapproved route prevent generation. Preparation refuses an existing output directory. The new quality-gate protocol separates rewriting, reasoning, context replay, actual retrieval and downstream completion, with predefined scoring, failures, missing pairs, budget and no-proxy rules. Production prompts, defaults and independent context depth are unchanged.

@@ -1,5 +1,11 @@
 var e=`# Changes
 
+## [0.12.32] - 2026-11-17
+
+### Verification
+- Added a History and archive decision guide explaining current limits, filtered Markdown export, and what a future optional archive would require.
+- Published the remaining v1 acceptance checklist. History, usage retention, model choices and features remain unchanged; this is still a preview.
+
 ## [0.12.31] - 2026-11-17
 
 ### Verification

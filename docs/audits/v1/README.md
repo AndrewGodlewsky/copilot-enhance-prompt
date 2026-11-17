@@ -6,6 +6,8 @@ Audited source: `d25be463718f1b5d8ab663177fc9aa248956f762`, **0.12.0**, 16 Novem
 
 Follow-up work is tracked in [GitHub issue #40](https://github.com/AndrewGodlewsky/copilot-enhance-prompt/issues/40). See the [implementation plan](implementation-plan.md) and [first-batch results](first-batch-results.md) for subsequent fixes; the findings below describe the original audit baseline.
 
+For the current state after the implementation pass, use the [release ledger](backlog-progress.md) and [remaining acceptance gates](remaining-gates.md). The historical findings below are not a list of unfixed defects in the latest preview.
+
 ## Read the evidence
 
 - [Execution, data, update and proposed-storage diagrams](architecture.md)
