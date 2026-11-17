@@ -23,6 +23,7 @@ import { panelDiagnostics } from './diagnostics.ts'
 import { diagnosticError } from '../diagnostics.ts'
 import { chatTextSize } from './appearance.ts'
 import { isChatTextSize } from '../text-size.ts'
+import { pendingUploads, resetUploads, uploadBlockReason, uploadRevision } from './uploads.ts'
 
 let inFlight: AbortController | null = null
 /** The enhance-and-send in flight (enhanceAndSend), so that Cancel and a closing panel stop its send too. */
@@ -304,6 +305,8 @@ type Enhanced = { prompt: string; enhanced: string }
  * there to act on: it failed or was cancelled, or its project is no longer the one in focus.
  */
 async function runEnhance(): Promise<Enhanced | null> {
+  const blocked = uploadBlockReason()
+  if (blocked) { set(notice, { tone: 'warning', text: blocked }); return null }
   const configuration = effortConfiguration()
   const prompt = read(draft).trim()
   if (!prompt || read(busy)) return null
@@ -440,7 +443,9 @@ export function removeFile(path: string): void {
 
 /** Clear the request and reviewed prompt through the normal saved-state and attachment cleanup paths. */
 export function clearRequest(): boolean {
+  if (read(pendingUploads).length) return false
   if (read(busy) !== null) return false
+  resetUploads()
   put(draft, '')
   put(result, '')
   put(lastRun, null)
@@ -510,7 +515,8 @@ const IDLE_STATES = new Set(['waiting', 'done'])
  * Why a prompt that was just enhanced is not sent by itself, as a sentence for the person, or null
  * when every condition holds. `start` is what was fixed when the run began.
  */
-function heldBack(start: { terminalId: string | null; key: string | null }, done: Enhanced): string | null {
+function heldBack(start: { terminalId: string | null; key: string | null; uploads: number; files: string }, done: Enhanced): string | null {
+  if (uploadBlockReason() || start.uploads !== read(uploadRevision) || start.files !== JSON.stringify(read(files).map(file => file.path))) return 'The attachments changed while it ran.'
   const key = read(workspaceKey)
   // the host tells several same-named projects apart only by their terminals; while it could not (when
   // the run began, or now), this could be a terminal of another project.
@@ -546,7 +552,7 @@ function heldBack(start: { terminalId: string | null; key: string | null }, done
  */
 export async function enhanceAndSend(): Promise<void> {
   if (!sendsAfterEnhance()) return enhanceNow()
-  const start = { terminalId: read(target), key: read(workspaceKey) }
+  const start = { terminalId: read(target), key: read(workspaceKey), uploads: read(uploadRevision), files: JSON.stringify(read(files).map(file => file.path)) }
   const step = { cancelled: false }
   oneStep = step
   const done = await runEnhance()

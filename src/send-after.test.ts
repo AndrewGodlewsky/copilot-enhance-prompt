@@ -4,7 +4,8 @@
 import { read, set } from '#panel'
 import { assert, mockHost, mount, test, type MockHost } from '#testing'
 import { clearData, enhanceAndSend, exportHistory, savePrompt, sendsAfterEnhance, setSendAfterEnhance } from './panel/actions.ts'
-import { draft, historyFilter, notice, put, result, sendAfterEnhance, target, type Target } from './panel/state.ts'
+import { draft, files, historyFilter, notice, put, result, sendAfterEnhance, target, type Target } from './panel/state.ts'
+import { beginUploads, discardUpload } from './panel/uploads.ts'
 import { closePanel, wirePanel } from './panel/setup.ts'
 import { mountPanel } from './panel/testing.ts'
 import { DISCLOSURES, exportName, fenced, historyMarkdown, SEND_AFTER_ROW, stamp, switchRow } from './panel/view.ts'
@@ -116,6 +117,24 @@ test('the one-step send holds back, and says why, whenever the agent is not idle
   assert.deepEqual(view.errors, [])
   set(sendAfterEnhance, false)
   await view.unmount()
+})
+
+test('the one-step send holds back if attachments change or an upload starts and is cancelled during the run', async () => {
+  const { view, sent, world } = await panel()
+  setSendAfterEnhance(true)
+  try {
+    world.during = () => set(files, [{ path: '/attachments/new.txt', name: 'new.txt', type: 'text/plain', bytes: 3 }])
+    await enhanceAndSend()
+    assert.deepEqual(sent, [])
+    assert.match(read(notice)?.text ?? '', /attachments changed/)
+    world.during = () => {
+      const [upload] = beginUploads(['late.txt'])
+      discardUpload(upload.id)
+    }
+    await enhanceAndSend()
+    assert.deepEqual(sent, [])
+    assert.match(read(notice)?.text ?? '', /attachments changed/)
+  } finally { await view.unmount() }
 })
 
 test('the one-step send holds back when the terminal, the project or the text is not what it was at the start', async () => {

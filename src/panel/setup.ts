@@ -20,6 +20,7 @@ import {
 } from './actions.ts'
 import { restoreSaved, tab } from './state.ts'
 import { watchContextPreview, cancelContextPreview } from './context-preview.ts'
+import { resetUploads } from './uploads.ts'
 
 /**
  * Brings back what the last panel run saved, follows the events and loads the models, terminals,
@@ -57,6 +58,7 @@ export function wirePanel(): () => void {
 
 /** The panel is closing or reloading: its run ends, and the request's signal stops the worker's model call too. */
 export function closePanel(): void {
+  resetUploads()
   cancelContextPreview()
   cancelCatalogLoads()
   cancel()

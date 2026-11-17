@@ -8,7 +8,7 @@ Current baseline: 0.12.1 / 4104c29. Tracking issue: [#40](https://github.com/And
 
 ## Queue
 
-Security and correctness: #16, #17, #18, #36, #37, #39.
+Security and correctness: #17, #18, #36, #37, #39.
 
 Distribution/maintenance: #9, #10, #11, #33.
 
@@ -20,9 +20,15 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- Next: #16, pending attachment coordination with enhancement and sending.
+- Next: #17, durable recovery of retained usage journals.
 
 ## Delivered versions
+
+### 0.12.6 — #16, complete attachment inputs
+
+Upload behavior now lives in the testable panel layer. The whole selected batch is reserved before awaiting a file, using unique IDs even for duplicate filenames. Both enhancement buttons and their operation boundary refuse pending/failed uploads. Cancel explicitly excludes a file; failures remain visible with Remove/re-attach guidance. Clear is blocked while uploads run and clears failures afterward. Closing aborts upload requests and discards late results. Auto-send checks both attachment identities and upload revisions after enhancement.
+
+Verified: typecheck, build, 416 final tests, package checks and clean diff. The delayed batch test first failed, then passed with both enhancement paths blocked, full attachment inclusion and no send on completion. Additional regressions cover duplicate names, final-chunk failure/retry, incomplete responses, Cancel/close, restored state, Clear, changed attachments and cancelled late uploads before auto-send. Static UI checks cover both buttons and accessible Cancel. Independent review passed 18 focused tests with no blockers. No paid calls or desktop/browser UI control; manual appearance checks remain #29. Issue #16 records the pushed commit and preview release.
 
 ### 0.12.5 — #7, complete project identities
 

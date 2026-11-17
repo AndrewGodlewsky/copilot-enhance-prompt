@@ -1,5 +1,12 @@
 # Changes
 
+## [0.12.6] - 2026-11-17
+
+### Fixed
+- Enhance and Enhance and send now wait for every selected attachment to finish uploading. You can cancel individual uploads; finishing an upload never starts enhancement automatically.
+- Failed attachments stay visible with a Remove button. Remove and reattach them, or explicitly continue without them. Clear also removes failed attachment notices.
+- Changing attachments during enhancement holds back automatic sending so you can review the result first.
+
 ## [0.12.5] - 2026-11-17
 
 ### Fixed

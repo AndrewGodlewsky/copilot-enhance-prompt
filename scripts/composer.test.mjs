@@ -14,9 +14,10 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
       import { TooltipProvider } from './src/components/ui/tooltip.tsx'
       import { captured } from './src/components/ui/textarea.tsx'
       import { set } from '../src/runtime.ts'
-      import { optionsOpen, result, draft, files, busy, run, catalogs, catalogLoading, copilotCheck, copilotDetailsOpen } from '../src/panel/state.ts'
+      import { optionsOpen, result, draft, files, busy, run, catalogs, catalogLoading, copilotCheck, copilotDetailsOpen, sendAfterEnhance, privacy } from '../src/panel/state.ts'
       import { testCrew } from './src/use-word-crew.ts'
       import { pending } from './src/attach.ts'
+      import { pendingUploads, failedUploads } from '../src/panel/uploads.ts'
       export const indicator = () => CopilotConnectionIndicator()?.props
       export const redraw = () => renderToStaticMarkup(React.createElement(TooltipProvider, null,
         React.createElement(EnhanceSection, { refresh() {} })))
@@ -30,6 +31,10 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
         set(draft, request)
         set(files, attachments)
         pending.splice(0, pending.length, ...uploading)
+        set(pendingUploads, uploading.map((name, index) => ({id:String(index), name})))
+        set(failedUploads, [])
+        set(sendAfterEnhance, true)
+        set(privacy, {allowTerminalSend: true})
         set(catalogs, connection.connected ? { copilot: { models: [{id:'sol',label:'GPT-6.1 Sol',supportedReasoningEfforts:['high']}], source:'Copilot',fetchedAt:1, ...(connection.error ? {error:'Connection failed'} : {}) } } : {})
         set(catalogLoading, {copilot: connection.checking === true})
         set(copilotDetailsOpen, false)
@@ -107,6 +112,11 @@ test('composer exposes three choices and leaves request textarea Enter keys to n
   const uploading = clearButton(module.exports.render(false, false, false, 'Request', {}, [], ['image.png']).html)
   assert.match(uploading, / disabled=""/)
   assert.match(uploading, /Wait for attachments to finish uploading/)
+  const pendingHtml = module.exports.render(false, false, false, 'Request', {}, [], ['image.png']).html
+  assert.match(pendingHtml, /<button\b[^>]*disabled=""[^>]*>Enhance<\/button>/)
+  assert.match(pendingHtml, /<button\b[^>]*title="Wait for attachments[^>]*disabled=""[^>]*>[\s\S]*?Enhance and send<\/button>/)
+  assert.match(pendingHtml, /Cancel upload of image.png/)
+  assert.match(pendingHtml, /Wait for attachments to finish uploading, or cancel the uploads/)
   module.exports.render(false, false, false, '', {connected:true})
   assert.match(connected, /aria-label="Connected: show connection details"/)
   assert.doesNotMatch(connected, />Check connection</)

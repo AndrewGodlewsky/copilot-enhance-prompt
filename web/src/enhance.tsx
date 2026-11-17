@@ -107,13 +107,14 @@ import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { attachFiles, filesOf, MAX_FILES, previews, uploadingNames } from './attach'
+import { discardUpload, failedUploads, pendingUploads, uploadBlockReason } from '../../src/panel/uploads.ts'
 import { Field, IconAction, megabytes, Pick } from './common'
 
 /** Attached files: a thumbnail for images, an icon for the rest, each with its size and a remove button. */
 function Attachments() {
   const list = read(files)
-  const pending = uploadingNames()
-  if (list.length === 0 && pending.length === 0) return null
+  const pending = read(pendingUploads), failed = read(failedUploads)
+  if (list.length === 0 && pending.length === 0 && failed.length === 0) return null
   return (
     <div className="flex flex-wrap gap-1.5">
       {list.map((file) => (
@@ -139,10 +140,17 @@ function Attachments() {
           </button>
         </div>
       ))}
-      {pending.map((name) => (
-        <div key={name} className="text-muted-foreground flex items-center gap-1.5 rounded-md border border-dashed px-2 py-1 text-xs">
+      {pending.map(({ id, name }) => (
+        <div key={id} className="text-muted-foreground flex items-center gap-1.5 rounded-md border border-dashed px-2 py-1 text-xs">
           <Spinner className="size-3" />
           <span className="max-w-32 truncate">{name}</span>
+          <Button size="sm" variant="ghost" aria-label={`Cancel upload of ${name}`} onClick={() => discardUpload(id)}>Cancel</Button>
+        </div>
+      ))}
+      {failed.map(({ id, name, error }) => (
+        <div key={id} className="flex max-w-full flex-wrap items-center gap-2 rounded-md border border-destructive px-2 py-1 text-xs" role="status">
+          <span className="min-w-0 break-words">{name}: {error}</span>
+          <Button size="sm" variant="outline" aria-label={`Remove failed attachment ${name}`} onClick={() => discardUpload(id)}>Remove</Button>
         </div>
       ))}
     </div>
@@ -156,7 +164,8 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
   const working = read(busy)
   const text = read(draft)
   const locked = working === 'enhance' || crew.finishing
-  const attachedCount = read(files).length + uploadingNames().length
+  const attachedCount = read(files).length + uploadingNames().length + read(failedUploads).length
+  const uploadBlocked = uploadBlockReason()
 
   const onPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
     if (locked) return
@@ -271,12 +280,12 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
             <>
               {/* "Send right after enhancing" is on: the one-step button sits next to Enhance, which still stops at the result. */}
               {sendsAfterEnhance() ? (
-                <Button size="sm" title={'Enhance and send without reviewing'} variant="outline" onClick={() => void enhanceAndSend()} disabled={locked || !text.trim() || working !== null || !read(target)}>
+                <Button size="sm" title={uploadBlocked ?? 'Enhance and send without reviewing'} variant="outline" onClick={() => void enhanceAndSend()} disabled={locked || !!uploadBlocked || !text.trim() || working !== null || !read(target)}>
                   <SendIcon />
                   {'Enhance and send'}
                 </Button>
               ) : null}
-              <Button size="sm" onClick={() => void enhanceNow()} disabled={locked || !text.trim() || working !== null}>
+              <Button size="sm" onClick={() => void enhanceNow()} disabled={locked || !!uploadBlocked || !text.trim() || working !== null}>
                 {'Enhance'}
               </Button>
             </>
@@ -284,6 +293,7 @@ function Composer({ refresh, crew }: { refresh: () => void; crew: ReturnType<typ
         </div>
       </div>
       {!text.trim() && !locked && working === null ? <p className="text-muted-foreground text-xs">Enter a request to enable Enhance.</p> : null}
+      {uploadBlocked ? <p role="status" className="text-muted-foreground text-xs">{uploadBlocked}</p> : null}
       {sendsAfterEnhance() ? <p className="text-muted-foreground text-xs">{'Enhance and send skips review. Enhance lets you edit first.'}</p> : null}
       </div>
     </div>
