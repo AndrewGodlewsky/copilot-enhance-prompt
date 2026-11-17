@@ -9,13 +9,13 @@ test('Update flushes queued saves and refuses installation after an unrelated su
   const module = { exports: {} }
   new Function('require', 'module', 'exports', compiled.outputFiles[0].text)(createRequire(import.meta.url), module, module.exports)
   const originals = new Map(['window', 'location', 'fetch', 'setInterval', 'clearInterval'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]))
-  const calls = [], listeners = {}; let finish, stream, failDraft = false, finishSettings, holdSettings = false
+  const calls = [], listeners = {}; let finish, stream, failDraft = false, finishSettings, holdSettings = false, restarted = false, eventCalls = 0
   try {
     globalThis.location = { pathname: '/c/' + 'a'.repeat(64) + '/' }
     globalThis.window = { addEventListener: (event, callback) => { listeners[event] = callback } }
     globalThis.setInterval = () => 0; globalThis.clearInterval = () => {}
     globalThis.fetch = async (url, init) => {
-      if (url === 'events') return new Response(new ReadableStream({ start(controller) { stream = controller } }))
+      if (url === 'events') { eventCalls++; return restarted ? new Response('', {status:404}) : new Response(new ReadableStream({ start(controller) { stream = controller } })) }
       const body = JSON.parse(init.body); calls.push(body)
       if (body.method === 'settings.get' && holdSettings) {
         await new Promise(resolve => { finishSettings = resolve })
@@ -82,6 +82,13 @@ test('Update flushes queued saves and refuses installation after an unrelated su
     assert.ok(finish)
     controller.abort(); finish(); await held; await rejected
     assert.equal(calls.some(c => c.input.text === 'Never send'), false)
+    const beforeReconnect = calls.length
+    restarted = true; stream.close(); stream = undefined
+    const reconnectDeadline = Date.now() + 4000
+    while (eventCalls < 2 && Date.now() < reconnectDeadline) await new Promise(resolve => setTimeout(resolve, 5))
+    assert.equal(eventCalls, 2, 'backend restart invalidates the old canvas token')
+    assert.equal(calls.length, beforeReconnect, 'reconnect never replays a save, enhancement, update or send')
+    assert.equal(client.persistence.snapshot().phase, 'saved')
     // A queued last edit is attempted before our close request. The host can
     // still close independently; this only verifies the best-effort ordering.
     const final = client.storage.set('panel:draft', 'Final edit')

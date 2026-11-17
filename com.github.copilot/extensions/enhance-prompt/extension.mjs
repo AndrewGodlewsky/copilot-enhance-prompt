@@ -4035,7 +4035,7 @@ function compareVersions(left, right) {
 }
 
 // src/version.ts
-var VERSION = "0.12.25";
+var VERSION = "0.12.26";
 
 // src/release-history.ts
 var RELEASE_SEEN_KEY = "releaseHistory.seenVersion";
@@ -6191,6 +6191,7 @@ var OPERATIONS = /* @__PURE__ */ new Set([
   "canvas.connection",
   "canvas.request",
   "panel.start",
+  "panel.section",
   "panel.persistence",
   "release.history",
   "clipboard",

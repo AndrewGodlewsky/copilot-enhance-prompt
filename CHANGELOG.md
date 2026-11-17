@@ -1,5 +1,11 @@
 # Changes
 
+## [0.12.26] - 2026-11-17
+
+### Improved
+- Sections now show loading and Retry guidance if they cannot be displayed, keeping navigation and your composer state available.
+- A disconnected canvas shows a live-events notice and Retry connection. Reconnecting never repeats enhancements or sends; expired connections explain how to reopen safely.
+
 ## [0.12.25] - 2026-11-17
 
 ### Improved

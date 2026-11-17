@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "plugin": "enhance-prompt",
-  "version": "0.12.25",
+  "version": "0.12.26",
   "hostProvided": [
     "@github/copilot-sdk",
     "@github/copilot-sdk/extension",
@@ -1199,20 +1199,20 @@
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/extension.mjs",
-      "bytes": 386758,
-      "sha256": "9315b4fec89a8b10743b157ff460552d1859fd8a8e64a144760898eb182e9242",
+      "bytes": 386777,
+      "sha256": "407833f9b87aa2f329965e006664ed09d7b7d57adb1c16fe058b41c808ed04de",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/CHANGELOG.js",
-      "bytes": 36689,
-      "sha256": "93913abb63e4b2997e638cda0fa428998bb60a9efcdf28e64d0f6d5da252702b",
+      "bytes": 37033,
+      "sha256": "235785cffafdc801279d700a2bf6270bc067e46c7a5a6a3a0fd3afb172e95788",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/app.js",
-      "bytes": 553537,
-      "sha256": "cf127de8abad010f297c0cb5e638b7d2eced96487f0bae1819577e662bb10556",
+      "bytes": 556505,
+      "sha256": "9d84b74bce94024b7854d2855065056dc33c3515319e3d1598215f8359aa2d6c",
       "normalization": "lf"
     },
     {
@@ -1241,8 +1241,8 @@
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/index.css",
-      "bytes": 61651,
-      "sha256": "6867e4c788c83271a9978167299a54232382a01d79b398d3dc526c66b85ab747",
+      "bytes": 61719,
+      "sha256": "da85c30110ff5ae7893d1230be51a724e0c4f356a63e69bfddeedf8f1934a297",
       "normalization": "lf"
     },
     {
@@ -1260,7 +1260,7 @@
     {
       "path": "plugin.json",
       "bytes": 422,
-      "sha256": "923e7cc6bd97e3a053cc09d6775b0cbf6cc82b02d7c5e45f7dce322f85002046",
+      "sha256": "395dc87d478f258346d87ea58b8eac999d3b5c62418fd79a68765c6d250f7bb5",
       "normalization": "lf"
     }
   ],
@@ -1281,8 +1281,8 @@
   "inputs": [
     {
       "path": "CHANGELOG.md",
-      "bytes": 36653,
-      "sha256": "2ab9c4ac8526133fce3f08d9184884627468904cd30b8f3fc5cc48580424edad",
+      "bytes": 36997,
+      "sha256": "30b1097ebff22406a5fca359805444d80a7fdd090bce0d1bc998907be7ee3322",
       "normalization": "lf"
     },
     {
@@ -1409,6 +1409,12 @@
       "path": "src/brand.ts",
       "bytes": 199,
       "sha256": "8ea069322992a29896c06bcd14a18b0e92244dd24b6d278a8d57f50fd804a1eb",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/canvas-events.ts",
+      "bytes": 2970,
+      "sha256": "734521c2925115f477187479328f57500920d74eaaf10c404b667907285eea5b",
       "normalization": "lf"
     },
     {
@@ -1593,8 +1599,8 @@
     },
     {
       "path": "src/diagnostics.ts",
-      "bytes": 6553,
-      "sha256": "2426869864569ef360af4c8be24f6c4a31beaf09191967b0df0f1bbd52df02e4",
+      "bytes": 6570,
+      "sha256": "a809a2f01f18448e0dd0cdf2e3856937438dbde4cecf708dcd502655d7a39ee4",
       "normalization": "lf"
     },
     {
@@ -1846,7 +1852,7 @@
     {
       "path": "src/version.ts",
       "bytes": 93,
-      "sha256": "b472b4f766b502a1d6133189f0dc39952360f8bf168743402aed44f2fc67660c",
+      "sha256": "5539b64cb7da4f662b58db2b5a6d59fc62c5187e68b80d819a7e753d730e1695",
       "normalization": "lf"
     },
     {
@@ -2714,6 +2720,12 @@
       "normalization": "lf"
     },
     {
+      "path": "web/src/canvas-connection.tsx",
+      "bytes": 1689,
+      "sha256": "e45e8dcd01e35e61c9f8b0caa5a8d7992c746792949d9c0016a77b7211878747",
+      "normalization": "lf"
+    },
+    {
       "path": "web/src/common.tsx",
       "bytes": 8841,
       "sha256": "103f23c1a1b7fa6b430c82c228e3ce3d5fd5b6b77b5b11a1a8a6d6304c776450",
@@ -2859,8 +2871,8 @@
     },
     {
       "path": "web/src/main.tsx",
-      "bytes": 9962,
-      "sha256": "76ea3fe5a45f952b6045514fcdec27fa43036eb673afc9af83718cf71a91ac75",
+      "bytes": 10018,
+      "sha256": "19a1a2d5a0e046d14d962f30bc40c271ca3c957102040b51f0cdbc85bad47201",
       "normalization": "lf"
     },
     {
@@ -2894,6 +2906,12 @@
       "normalization": "lf"
     },
     {
+      "path": "web/src/section-recovery.tsx",
+      "bytes": 1568,
+      "sha256": "1a47c059b99e0cefdf7d4ae43467809b06239b664d93147ec0041443b8af55ed",
+      "normalization": "lf"
+    },
+    {
       "path": "web/src/sections.tsx",
       "bytes": 32579,
       "sha256": "ed0c1e22f95ac7e51a32a2ea204a0c43dcb93d6c1c4d4f853f99176a6c5a836f",
@@ -2907,8 +2925,8 @@
     },
     {
       "path": "web/src/transport.ts",
-      "bytes": 7619,
-      "sha256": "8889b8016ef08cf47adc2794ea785d77b2d2b5c716a6de934792b9e707b9df11",
+      "bytes": 7385,
+      "sha256": "50776266a801d230d54d4b8a97ab336f4713a43b1079b88528e8eed48b3f324b",
       "normalization": "lf"
     },
     {
@@ -2965,6 +2983,7 @@
     "node_modules/signal-exit/signals.js",
     "src/attachments.ts",
     "src/brand.ts",
+    "src/canvas-events.ts",
     "src/capabilities.ts",
     "src/clipboard.ts",
     "src/confined-read.ts",
@@ -3175,6 +3194,7 @@
     "web/node_modules/use-callback-ref/dist/es2015/useRef.js",
     "web/node_modules/use-sidecar/dist/es2015/exports.js",
     "web/node_modules/use-sidecar/dist/es2015/medium.js",
+    "web/src/canvas-connection.tsx",
     "web/src/common.tsx",
     "web/src/components/reui/alert.tsx",
     "web/src/components/reui/badge.tsx",
@@ -3204,6 +3224,7 @@
     "web/src/quiet-desk.tsx",
     "web/src/retained-data.tsx",
     "web/src/save-status.tsx",
+    "web/src/section-recovery.tsx",
     "web/src/sections.tsx",
     "web/src/theme.ts",
     "web/src/transport.ts",
@@ -3217,6 +3238,7 @@
     "CHANGELOG.md",
     "src/attachments.ts",
     "src/brand.ts",
+    "src/canvas-events.ts",
     "src/capabilities.ts",
     "src/clipboard.ts",
     "src/confined-read.ts",
@@ -3293,6 +3315,7 @@
     "src/worker-host.ts",
     "src/worker.ts",
     "src/workspaces.ts",
+    "web/src/canvas-connection.tsx",
     "web/src/common.tsx",
     "web/src/components/reui/alert.tsx",
     "web/src/components/reui/badge.tsx",
@@ -3322,6 +3345,7 @@
     "web/src/quiet-desk.tsx",
     "web/src/retained-data.tsx",
     "web/src/save-status.tsx",
+    "web/src/section-recovery.tsx",
     "web/src/sections.tsx",
     "web/src/theme.ts",
     "web/src/transport.ts",

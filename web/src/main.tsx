@@ -1,6 +1,6 @@
 // The web panel's entry: starts the panel's state (src/panel/setup.ts wires Copilot's events to it), then
 // draws the header and the current section.
-import { lazy, StrictMode, Suspense, useReducer } from 'react'
+import { StrictMode, useReducer } from 'react'
 import { createRoot } from 'react-dom/client'
 import { onPersistenceError, read, set } from '#panel'
 import { BookOpenIcon, BotIcon, ScrollTextIcon, SettingsIcon, SparklesIcon } from 'lucide-react'
@@ -28,13 +28,17 @@ import { EnhanceSection } from './enhance'
 import { connectCanvas } from './transport'
 import { UpdateNotice } from './updates'
 import { SaveStatus } from './save-status'
+import { CanvasConnectionNotice } from './canvas-connection'
+import { RecoverableSection, SectionBoundary } from './section-recovery'
 
 // The Enhance section is drawn at once; the others load the first time they open (a smaller first load).
 const loadSections = () => import('./sections')
-const HistorySection = lazy(() => import('./history').then((module) => ({ default: module.HistorySection })))
-const ModelsSection = lazy(() => loadSections().then((module) => ({ default: module.ModelsSection })))
-const RulesSection = lazy(() => loadSections().then((module) => ({ default: module.RulesSection })))
-const SettingsSection = lazy(() => loadSections().then((module) => ({ default: module.SettingsSection })))
+const sectionLoaders = {
+  history: () => import('./history').then(module => ({ default: module.HistorySection })),
+  models: () => loadSections().then(module => ({ default: module.ModelsSection })),
+  rules: () => loadSections().then(module => ({ default: module.RulesSection })),
+  privacy: () => loadSections().then(module => ({ default: module.SettingsSection }))
+}
 
 const SECTIONS = [
   { value: 'enhance', Icon: SparklesIcon },
@@ -48,6 +52,7 @@ function App() {
   usePanel()
   // Uploads keep their own list outside the atoms; this redraws when it changes.
   const [, refresh] = useReducer((count: number) => count + 1, 0)
+  const [enhanceAttempt, retryEnhance] = useReducer((count: number) => count + 1, 0)
   const current = SECTIONS.find((section) => section.value === read(tab)) ?? SECTIONS[0]
   return (
     <TooltipProvider delayDuration={300}>
@@ -75,20 +80,10 @@ function App() {
         </header>
         <UpdateNotice />
         <SaveStatus />
+        <CanvasConnectionNotice />
         <main className="panel-section" data-section={current.value}>
-        <Suspense fallback={null}>
-          {current.value === 'history' ? (
-            <HistorySection />
-          ) : current.value === 'models' ? (
-            <ModelsSection />
-          ) : current.value === 'rules' ? (
-            <RulesSection />
-          ) : current.value === 'privacy' ? (
-            <SettingsSection />
-          ) : (
-            <EnhanceSection refresh={refresh} />
-          )}
-        </Suspense>
+          {current.value === 'enhance' ? <SectionBoundary key={enhanceAttempt} name="Enhance" retry={retryEnhance}><EnhanceSection refresh={refresh} /></SectionBoundary>
+            : <RecoverableSection key={current.value} name={SECTION_LABELS[current.value]} load={sectionLoaders[current.value]} />}
         </main>
         <Footer onSettings={() => { openSection('privacy'); window.scrollTo({ top: 0, behavior: 'instant' }) }} />
       </div>

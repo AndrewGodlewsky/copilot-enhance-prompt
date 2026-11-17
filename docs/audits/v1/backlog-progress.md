@@ -14,11 +14,27 @@ Distribution/maintenance: #11 (manual/maintainer confirmation pending), #33 (run
 
 Efficiency: #12/#13/#15/#19/#20 shipped and closed. #14 saving implementation shipped (native-close/manual gate remains); #21 shipped and closed; #32 and #34 follow the usability fixes.
 
-Usability: #24/#25 shipped and closed; #26 in verification, then #27.
+Usability: #24/#25/#26 shipped and closed; #27 in verification.
 
 Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and concrete choices; do independent work while an answer is pending. Never consume the owner's Copilot credits or control desktop/browser UI.
 
 ## Current work
+
+### 0.12.26 — #27, section and event-stream recovery
+
+Lazy sections have named loading feedback, a render boundary and explicit retry with a fresh lazy wrapper. Enhance has a boundary without unloading the surrounding app. The authenticated event subscription has visible states, a 45-second header/idle bound, 65,536-string-unit frame bound, 2–30-second failure backoff and a coalesced manual Retry. Invalidated/unauthorized canvas tokens stop automatic retries and offer reopen guidance. Closing aborts the stream; safe status polling runs only while connected. Commands, saves and model runs are never replayed by this loop.
+
+Controlled stream failures first failed on the absent implementation. Tests cover disconnect/reconnect, missing/forbidden tokens, stalls, invalid/oversized frames, cancellation and repeated clicks. The production transport fixture verifies no request replay after a backend-token reset and acknowledged draft saves remain acknowledged. React server markup plus a hook fixture exercises rejected lazy loader retry, failure diagnostics and unchanged composer atoms. These are not mounted native desktop tests.
+
+Ruling: preserve existing in-flight enhancement ownership/result handling; reconnect restores future events only. No automatic reload, cache-busting executable import, session restart or resubmission is safe. Local unsaved edit-form state inside a failed section may reset; saved data and composer atoms remain outside it. Browser suspension can delay timers. Manual focus, layout and actual desktop restart checks remain #29. Full verification and final independent review follow.
+
+Independent review found valid coalesced frames were rejected by an aggregate read-size limit. A 70-event burst regression failed before parsing individual bounded frames fixed it; complete and incomplete oversized frames still fail. Added explicit timer tests for exponential backoff, 30-second cap and heartbeat reset. No minor findings. One review/fix pass, then full rebuilt verification.
+
+Final verification: typecheck, build, all 541 tests, package/diff checks and disposable runtime archive fixture pass. Installed SDK/CLI 1.0.106-8.unstable.r43566476370.g869eef3, Node24.22.1, Windows x64. Generated, exact-commit hosted CI and release evidence follow before issue closure.
+
+Review rulings: actual browser import-cache fetch retry, native focus/keyboard/appearance, close delivery, restart and suspension remain owner gate #29. Reconnect intentionally does not replay missed events or comprehensively resynchronize every preference. Local unsaved edit forms can reset, as documented. Account availability is separate. Existing persistence/server quotas/same-user filesystem threat guarantees are unchanged; no paid inference or owner installation mutation. Parent records full tests/runtime/generated/CI and publication separately.
+
+Previous release 0.12.25 / 89bcdaa passed exact Verify 44066759022; preview and three runtime archive assets were published, and #26 is closed.
 
 ### 0.12.25 — #26, durable release history and accurate action copy
 

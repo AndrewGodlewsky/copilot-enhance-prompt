@@ -4,6 +4,8 @@ import { diagnosticError } from '../../src/diagnostics.ts'
 import { createSaveQueue } from '../../src/save-queue.ts'
 import { privatePanelKey } from '../../src/panel-storage.ts'
 import { storageSaveRequests } from '../../src/save-batches.ts'
+import { createCanvasEvents, type CanvasConnection } from '../../src/canvas-events.ts'
+import { setCanvasConnection, setCanvasRetry } from './canvas-connection'
 
 export function connectCanvas(): void {
   const token = /^\/c\/([a-f0-9]{64})\/$/.exec(location.pathname)?.[1]
@@ -97,47 +99,31 @@ export function connectCanvas(): void {
     } }
   }
   bindPanel(client)
-  let connected: boolean | undefined
-  const connection = (next: boolean) => {
-    if (next !== connected) panelDiagnostics.record('canvas.connection', next ? 'ok' : 'failed')
+  let connected: CanvasConnection | undefined
+  const connection = (next: CanvasConnection) => {
+    if (next !== connected) panelDiagnostics.record('canvas.connection', next === 'connected' ? 'ok' : next === 'connecting' ? 'started' : 'failed')
     connected = next
+    setCanvasConnection(next)
+    if (next === 'connected') emit('workspace.changed', {})
   }
-  async function events() {
-    while (!closing) {
-      try {
-        const response = await fetch('events', { headers })
-        if (!response.ok || !response.body) throw new Error('Disconnected')
-        connection(true)
-        emit('workspace.changed', {})
-        const reader = response.body.pipeThrough(new TextDecoderStream()).getReader()
-        let pending = ''
-        while (!closing) {
-          const next = await reader.read()
-          if (next.done) break
-          pending += next.value
-          let end: number
-          while ((end = pending.indexOf('\n\n')) >= 0) {
-            const line = pending.slice(0, end); pending = pending.slice(end + 2)
-            if (!line.startsWith('data: ')) continue
-            const event = JSON.parse(line.slice(6))
-            if (event.kind === 'plugin') emit(`plugin:${event.name}`, event.payload)
-            else if (event.kind === 'storage' || event.kind === 'settings') emit(event.kind, { key: event.key })
-          }
-        }
-        if (!closing) connection(false)
-      } catch { if (!closing) connection(false); emit('workspace.changed', {}) }
-      if (!closing) await new Promise(resolve => setTimeout(resolve, 2000))
+  const events = createCanvasEvents({
+    connect: signal => fetch('events', { headers, signal }), state: connection,
+    event: value => {
+      if (!value || typeof value !== 'object') return
+      const event = value as { kind?: string; name?: string; payload?: unknown; key?: string }
+      if (event.kind === 'plugin' && typeof event.name === 'string') emit(`plugin:${event.name}`, event.payload)
+      else if ((event.kind === 'storage' || event.kind === 'settings') && typeof event.key === 'string') emit(event.kind, { key: event.key })
     }
-  }
-  void events()
-  const poll = setInterval(() => emit('workspace.changed', {}), 5000)
+  })
+  setCanvasRetry(events.retry)
+  const poll = setInterval(() => { if (connected === 'connected') emit('workspace.changed', {}) }, 5000)
   window.addEventListener('beforeunload', event => {
     if (saves.snapshot().phase === 'saved') return
     event.preventDefault(); event.returnValue = ''
   })
   window.addEventListener('pagehide', () => {
     if (closing) return
-    closing = true; clearInterval(poll)
+    closing = true; clearInterval(poll); events.close(); setCanvasRetry(() => {})
     // The desktop's onClose callback is fire-and-forget. This final attempt
     // cannot delay native close, and keepalive has a browser payload limit.
     void saves.flush().catch(() => {}).then(() => call('close')).catch(() => {})
