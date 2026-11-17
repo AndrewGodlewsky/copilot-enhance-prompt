@@ -169,7 +169,13 @@ test('legacy language cleanup preserves unrelated preferences, credentials and u
       await assert.rejects(first.settings.set(key, 'zh'), /Invalid setting/)
     }
     for (const key of retired) assert.equal(await data.get(key), null, key)
-    for (const [key, value] of Object.entries(kept)) assert.deepEqual(await data.get(key), value, key)
+    for (const [key, value] of Object.entries(kept)) {
+      const owner = key.startsWith(scope('first')) ? first : key.startsWith(scope('second')) ? second : null
+      if (owner) {
+        assert.equal(await data.get(key), null, 'migrated session text leaves the shared file')
+        assert.deepEqual(await owner.storage.get(key.replace(/^session:[a-f0-9]{24}:/, '')), value, key)
+      } else assert.deepEqual(await data.get(key), value, key)
+    }
     assert.equal(await first.storage.get('panel:draft'), '旧草稿 🧪')
     assert.equal(await second.storage.get('panel:draft'), null)
     assert.equal(await second.storage.get('panel:result'), 'Kết quả đã lưu')

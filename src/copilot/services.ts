@@ -7,6 +7,7 @@ import { isChatTextSize } from '../text-size.ts'
 import type { EnhanceWorker } from '../host.ts'
 import type { JsonValue, KeyValueStore, SettingsStore } from '../runtime.ts'
 import { persistentStore } from './storage.ts'
+import { partitionSessions, sessionData, SESSION_LAYOUT_KEY, validateSessionLayout } from './session-storage.ts'
 import { sessionAdapter, type CopilotSession } from './session.ts'
 import { UNSUPPORTED_SETTINGS } from '../capabilities.ts'
 import type { createCopilotModels } from './models.ts'
@@ -20,22 +21,28 @@ export function createServices(session: CopilotSession, directory = process.env.
   const prefs = persistentStore(join(directory, 'preferences'))
   const retiredCredentials = persistentStore(join(directory, 'credentials'))
   const scope = createHash('sha256').update(session.sessionId).digest('hex').slice(0, 24)
+  const panelData = sessionData(directory, scope)
   // Remove retired state without reading or decrypting old provider credentials.
   // Each store uses its normal cross-process transaction; a failed cleanup can be retried.
   let migration: Promise<void> | undefined
   const prepare = (): Promise<void> => migration ??= (async () => {
-    await prefs.transaction(async () => {
-      for (const key of ['uiLanguage', 'outputLanguage', 'notifyWhenDone', 'allowEnvKeys', 'statusBarItem', 'allowAgentLaunch']) if (await prefs.get(key) !== null) await prefs.delete(key)
-    })
     await data.transaction(async () => {
-      for (const key of await data.keys()) {
-        if (key === 'uiLocale' || key.startsWith('catalog:') || key.startsWith('sent:') || /^(?:session:[a-f0-9]{24}:)?panel:(?:uiLanguage|outputChoice|feedbackAsk|feedbackOff|hookLast)$/.test(key)) await data.delete(key)
+      const snapshot = await data.snapshot()
+      validateSessionLayout(snapshot)
+      await prefs.transaction(async () => {
+        for (const key of ['uiLanguage', 'outputLanguage', 'notifyWhenDone', 'allowEnvKeys', 'statusBarItem', 'allowAgentLaunch']) if (await prefs.get(key) !== null) await prefs.delete(key)
+      })
+      const changes: Record<string, JsonValue | undefined> = {}
+      for (const key of Object.keys(snapshot)) {
+        if (key === 'uiLocale' || key.startsWith('catalog:') || key.startsWith('sent:') || /^(?:session:[a-f0-9]{24}:)?panel:(?:uiLanguage|outputChoice|feedbackAsk|feedbackOff|hookLast)$/.test(key)) changes[key] = undefined
       }
-      const saved = await data.get(MODELS_KEY)
-      if (saved !== null) {
+      const saved = snapshot[MODELS_KEY]
+      if (saved !== undefined) {
         const cleaned = modelsToJson(parseModelsConfig(saved))
-        if (JSON.stringify(saved) !== JSON.stringify(cleaned)) await data.set(MODELS_KEY, cleaned)
+        if (JSON.stringify(saved) !== JSON.stringify(cleaned)) changes[MODELS_KEY] = cleaned
       }
+      await data.patch(changes)
+      await partitionSessions(directory, data)
     })
     await retiredCredentials.transaction(async () => {
       for (const key of await retiredCredentials.keys()) if (key.startsWith('apiKey.')) await retiredCredentials.delete(key)
@@ -50,7 +57,7 @@ export function createServices(session: CopilotSession, directory = process.env.
     const storedModels = await data.get(MODELS_KEY)
     const saved = parseModelsConfig(storedModels).profiles
     const profiles = saved.filter(profile => profile.enabled)
-    const legacy = async (key: string) => await data.get(`session:${scope}:panel:${key}`) ?? await data.get(`panel:${key}`)
+    const legacy = async (key: string) => await panelData.get(`panel:${key}`) ?? await data.get(`panel:${key}`)
     const choice = await legacy('profileChoice')
     const explicit = typeof choice === 'string' && choice !== 'auto' && /^[a-z0-9-]{1,40}$/.test(choice) ? choice : null
     const selected = profiles.find(profile => profile.id === explicit)
@@ -88,14 +95,22 @@ export function createServices(session: CopilotSession, directory = process.env.
     },
     onDidChange: listener => prefs.onDidChange(listener)
   }
-  const scopeKey = (key: string) => key.startsWith('panel:') ? `session:${scope}:${key}` : key
+  const visibleShared = (key: string) => !key.startsWith('session:') && key !== SESSION_LAYOUT_KEY
+  const storeFor = (key: string) => {
+    if (!visibleShared(key)) throw new Error('This storage key belongs to internal session state.')
+    return key.startsWith('panel:') ? panelData : data
+  }
   const storage: KeyValueStore = {
-    get: async key => { await prepare(); return data.get(scopeKey(key)) },
-    set: async (key, value) => { await prepare(); await data.set(scopeKey(key), value) },
-    delete: async key => { await prepare(); await data.delete(scopeKey(key)) },
-    keys: async () => { await prepare(); return (await data.keys()).filter(key => !key.startsWith('session:') || key.startsWith(`session:${scope}:`)).map(key => key.replace(`session:${scope}:`, '')) },
-    onDidChange: listener => data.onDidChange(({ key }) => { if (!key.startsWith('session:') || key.startsWith(`session:${scope}:`)) listener({ key: key.replace(`session:${scope}:`, '') }) }),
-    transaction: async fn => { await prepare(); return data.transaction(fn) }
+    get: async key => { await prepare(); return storeFor(key).get(key) },
+    set: async (key, value) => { await prepare(); await storeFor(key).set(key, value) },
+    delete: async key => { await prepare(); await storeFor(key).delete(key) },
+    keys: async () => { await prepare(); return [...new Set([...(await data.keys()).filter(visibleShared), ...await panelData.keys()])] },
+    onDidChange: listener => {
+      const shared = data.onDidChange(({ key }) => { if (visibleShared(key) && !key.startsWith('panel:')) listener({ key }) })
+      const own = panelData.onDidChange(listener)
+      return { dispose: () => { shared.dispose(); own.dispose() } }
+    },
+    transaction: async fn => { await prepare(); return data.transaction(() => panelData.transaction(fn)) }
   }
   const host: EnhanceWorker['host'] = {
     has: name => (Boolean(copilot) && ['copilot.catalog', 'copilot.rewrite', 'copilot.usage.status', 'copilot.usage.recover'].includes(name)) || adapter.has(name),

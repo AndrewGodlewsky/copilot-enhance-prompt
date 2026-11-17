@@ -20,9 +20,19 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- In progress: #33, optional runtime package and channel policy. Next: #12, partition session drafts. #11's guidance shipped in 0.12.14 / 1a21bfa; hosted CI passed (run 44035339697), with manual/maintainer confirmations still open.
+- #12 implementation verified; publishing 0.12.16 after hosted CI. Next: #13, bulk restore and change snapshots. #11 and #33 shipped preparation in 0.12.14 and 0.12.15; their manual/owner gates remain open.
 
 ## Delivered versions
+
+### 0.12.16 — #12, session storage partitions
+
+Each session's draft, result and attachment references now use a separate atomic file and lock. Shared history/models/rules and unrelated preferences remain intact. Migration copies at most eight files concurrently, settles failed writers before releasing the global lock and commits shared replacement last. Inactive drafts do not expire. A private offline export supports maintainer-reviewed recovery without changing live files.
+
+Verified: typecheck/build, all 466 final tests, package/diff checks and installed-runtime archive fixture pass. The fixture preserves synthetic drafts/results/preferences through a managed local metadata update and tests the built canvas with no paid model. Instrumented tests prove session edits do not read or rewrite shared/other-session files. Cross-process transactions and notifications, partial-copy failures and Unicode preservation pass. [Raw measurements](session-storage-measurements.json) verify every body at 100/1k/10k/30k sessions. At 30k, median small writes dropped from 358.359 ms to 2.108 ms; the one-time migration took 29.707 seconds. Timing depends on disk/load; some checks ran concurrently during this final measurement.
+
+Final review fixed two important findings with failing regressions followed by green tests: validate unknown/mixed layouts before cleanup changes any preferences or models; refuse conflicting partial copies after an older worker edits/deletes source values instead of resurrecting text. No minor findings remain. The review's seven initial focused tests and the final nine focused tests passed.
+
+Ruling: retain both ambiguous copies and request recovery, rather than guessing or deleting data. Unchanged interrupted copies retry automatically. Close old workers by restarting Copilot after upgrade. A large migration can exhaust another worker's bounded lock wait and require retry. Separate file transactions are not crash-atomic across files; no power-loss/fsync or OS sandbox guarantee is added. Recovery requires a closed app/private backup and does not automate rollback. Desktop appearance/reopening remains part of #29. Hosted CI, exact commit and preview archive checksums are attached to #12 before closure.
 
 ### 0.12.15 — #33, optional runtime archive
 

@@ -53,7 +53,12 @@ test('Copilot-only migration retires external state without losing user data or 
     assert.equal(await credentials.get('apiKey.old'), null)
     assert.equal(await credentials.get('unrelated'), 'keep-this')
     for (const key of ['catalog:external', 'sent:old', scoped + 'feedbackAsk', scoped + 'feedbackOff']) assert.equal(await data.get(key), null)
-    for (const [key, value] of Object.entries(preserved)) assert.deepEqual(await data.get(key), value, key)
+    for (const [key, value] of Object.entries(preserved)) {
+      if (key.startsWith(scoped)) {
+        assert.equal(await data.get(key), null, 'migrated session data leaves the shared file')
+        assert.deepEqual(await first.storage.get(key.replace(/^session:[a-f0-9]{24}:/, '')), value, key)
+      } else assert.deepEqual(await data.get(key), value, key)
+    }
     assert.equal(await prefs.get('autoEnhanceAppend'), 'My saved instructions: 保留原文', 'inactive chat settings remain recoverable')
     assert.equal(first.host.has('secrets.protection'), false)
     assert.equal(first.host.has('notifications.show'), false)

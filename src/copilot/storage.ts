@@ -9,15 +9,19 @@ import type { JsonValue, KeyValueStore } from '../runtime.ts'
 
 const held = new AsyncLocalStorage<Set<string>>()
 const buses = new Map<string, EventEmitter>()
-export type PersistentStore = KeyValueStore & { snapshot(): Promise<Record<string, JsonValue>>; transaction<T>(fn: () => Promise<T>): Promise<T> }
+export type PersistentStore = KeyValueStore & {
+  snapshot(): Promise<Record<string, JsonValue>>
+  patch(values: Record<string, JsonValue | undefined>): Promise<void>
+  transaction<T>(fn: () => Promise<T>): Promise<T>
+}
 
 /** Atomic replacement plus a renewable cross-process lock. Never hold it during model/network calls. */
-export function persistentStore(directory: string): PersistentStore {
+export function persistentStore(directory: string, name = 'state.json'): PersistentStore {
   const root = resolve(directory)
-  const file = join(root, 'state.json')
-  const bus = buses.get(root) ?? new EventEmitter()
-  bus.setMaxListeners(100)
-  buses.set(root, bus)
+  if (name !== 'state.json' && !/^[a-f0-9]{24}\.json$/.test(name)) throw new Error('Invalid session storage filename.')
+  const file = join(root, name)
+  // Preserve the old shared-store lock path; each flat session file locks itself.
+  const lockTarget = name === 'state.json' ? root : file
   const read = async (): Promise<Record<string, JsonValue>> => {
     try {
       const value: unknown = JSON.parse(await readFile(file, 'utf8'))
@@ -29,27 +33,37 @@ export function persistentStore(directory: string): PersistentStore {
     }
   }
   const transaction = async <T>(fn: () => Promise<T>): Promise<T> => {
-    if (held.getStore()?.has(root)) return fn()
+    if (held.getStore()?.has(lockTarget)) return fn()
     await mkdir(root, { recursive: true, mode: 0o700 })
-    const release = await lockfile.lock(root, { realpath: false, stale: 30_000, retries: { retries: 80, minTimeout: 20, maxTimeout: 250, factor: 1.2 } })
-    try { return await held.run(new Set([...(held.getStore() ?? []), root]), fn) }
+    const release = await lockfile.lock(lockTarget, { realpath: false, stale: 30_000, retries: { retries: 80, minTimeout: 20, maxTimeout: 250, factor: 1.2 } })
+    try { return await held.run(new Set([...(held.getStore() ?? []), lockTarget]), fn) }
     finally { await release() }
   }
-  const change = async (key: string, value?: JsonValue) => transaction(async () => {
-    if (['__proto__', 'constructor', 'prototype'].includes(key) || key.length > 2000) throw new Error('Invalid storage key.')
+  const patch = async (values: Record<string, JsonValue | undefined>) => transaction(async () => {
+    const entries = Object.entries(values)
+    if (!entries.length) return
+    for (const [key] of entries) if (['__proto__', 'constructor', 'prototype'].includes(key) || key.length > 2000) throw new Error('Invalid storage key.')
     const data = await read()
-    if (value === undefined) delete data[key]
-    else data[key] = value
+    for (const [key, value] of entries) {
+      if (value === undefined) delete data[key]
+      else data[key] = value
+    }
     const temporary = `${file}.${randomUUID()}.tmp`
     await writeFile(temporary, JSON.stringify(data), { encoding: 'utf8', mode: 0o600 })
     await rename(temporary, file)
-    bus.emit('change', { key })
+    for (const [key] of entries) buses.get(file)?.emit('change', { key })
   })
   return {
     snapshot: read,
+    patch,
     get: async key => { const data = await read(); return Object.hasOwn(data, key) ? data[key] : null },
-    set: (key, value) => change(key, value), delete: key => change(key), keys: async () => Object.keys(await read()),
+    set: (key, value) => patch({ [key]: value }), delete: key => patch({ [key]: undefined }), keys: async () => Object.keys(await read()),
     onDidChange: listener => {
+      // Migration may touch tens of thousands of inactive files. Only observed
+      // stores need a bus, and the last subscriber releases it.
+      const bus = buses.get(file) ?? new EventEmitter()
+      bus.setMaxListeners(100)
+      buses.set(file, bus)
       bus.on('change', listener)
       let active = true
       let previous = read().catch(() => ({} as Record<string, JsonValue>))
@@ -64,7 +78,10 @@ export function persistentStore(directory: string): PersistentStore {
         previous = next
       }
       watchFile(file, { interval: 500, persistent: false }, refresh)
-      return { dispose: () => { active = false; bus.off('change', listener); unwatchFile(file, refresh) } }
+      return { dispose: () => {
+        active = false; bus.off('change', listener); unwatchFile(file, refresh)
+        if (!bus.listenerCount('change') && buses.get(file) === bus) buses.delete(file)
+      } }
     },
     transaction
   }

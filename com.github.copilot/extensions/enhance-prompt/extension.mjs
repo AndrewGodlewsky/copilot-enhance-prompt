@@ -595,9 +595,9 @@ var require_graceful_fs = __commonJS({
         }
       }
       var fs$readdir = fs2.readdir;
-      fs2.readdir = readdir4;
+      fs2.readdir = readdir5;
       var noReaddirOptionVersions = /^v[0-5]\./;
-      function readdir4(path, options, cb) {
+      function readdir5(path, options, cb) {
         if (typeof options === "function")
           cb = options, options = null;
         var go$readdir = noReaddirOptionVersions.test(process.version) ? function go$readdir2(path2, options2, cb2, startTime) {
@@ -5275,7 +5275,7 @@ function activate(host) {
 }
 
 // src/copilot/extension.ts
-import { join as join10 } from "node:path";
+import { join as join11 } from "node:path";
 
 // src/copilot/storage.ts
 var import_proper_lockfile2 = __toESM(require_proper_lockfile(), 1);
@@ -5287,12 +5287,11 @@ import { join as join3, resolve as resolve3 } from "node:path";
 import { randomUUID as randomUUID2 } from "node:crypto";
 var held = new AsyncLocalStorage();
 var buses = /* @__PURE__ */ new Map();
-function persistentStore(directory2) {
+function persistentStore(directory2, name = "state.json") {
   const root = resolve3(directory2);
-  const file = join3(root, "state.json");
-  const bus = buses.get(root) ?? new EventEmitter();
-  bus.setMaxListeners(100);
-  buses.set(root, bus);
+  if (name !== "state.json" && !/^[a-f0-9]{24}\.json$/.test(name)) throw new Error("Invalid session storage filename.");
+  const file = join3(root, name);
+  const lockTarget = name === "state.json" ? root : file;
   const read = async () => {
     try {
       const value = JSON.parse(await readFile(file, "utf8"));
@@ -5304,35 +5303,43 @@ function persistentStore(directory2) {
     }
   };
   const transaction = async (fn) => {
-    if (held.getStore()?.has(root)) return fn();
+    if (held.getStore()?.has(lockTarget)) return fn();
     await mkdir2(root, { recursive: true, mode: 448 });
-    const release = await import_proper_lockfile2.default.lock(root, { realpath: false, stale: 3e4, retries: { retries: 80, minTimeout: 20, maxTimeout: 250, factor: 1.2 } });
+    const release = await import_proper_lockfile2.default.lock(lockTarget, { realpath: false, stale: 3e4, retries: { retries: 80, minTimeout: 20, maxTimeout: 250, factor: 1.2 } });
     try {
-      return await held.run(/* @__PURE__ */ new Set([...held.getStore() ?? [], root]), fn);
+      return await held.run(/* @__PURE__ */ new Set([...held.getStore() ?? [], lockTarget]), fn);
     } finally {
       await release();
     }
   };
-  const change = async (key, value) => transaction(async () => {
-    if (["__proto__", "constructor", "prototype"].includes(key) || key.length > 2e3) throw new Error("Invalid storage key.");
+  const patch = async (values) => transaction(async () => {
+    const entries = Object.entries(values);
+    if (!entries.length) return;
+    for (const [key] of entries) if (["__proto__", "constructor", "prototype"].includes(key) || key.length > 2e3) throw new Error("Invalid storage key.");
     const data = await read();
-    if (value === void 0) delete data[key];
-    else data[key] = value;
+    for (const [key, value] of entries) {
+      if (value === void 0) delete data[key];
+      else data[key] = value;
+    }
     const temporary = `${file}.${randomUUID2()}.tmp`;
     await writeFile(temporary, JSON.stringify(data), { encoding: "utf8", mode: 384 });
     await rename2(temporary, file);
-    bus.emit("change", { key });
+    for (const [key] of entries) buses.get(file)?.emit("change", { key });
   });
   return {
     snapshot: read,
+    patch,
     get: async (key) => {
       const data = await read();
       return Object.hasOwn(data, key) ? data[key] : null;
     },
-    set: (key, value) => change(key, value),
-    delete: (key) => change(key),
+    set: (key, value) => patch({ [key]: value }),
+    delete: (key) => patch({ [key]: void 0 }),
     keys: async () => Object.keys(await read()),
     onDidChange: (listener) => {
+      const bus = buses.get(file) ?? new EventEmitter();
+      bus.setMaxListeners(100);
+      buses.set(file, bus);
       bus.on("change", listener);
       let active = true;
       let previous = read().catch(() => ({}));
@@ -5352,6 +5359,7 @@ function persistentStore(directory2) {
         active = false;
         bus.off("change", listener);
         unwatchFile(file, refresh);
+        if (!bus.listenerCount("change") && buses.get(file) === bus) buses.delete(file);
       } };
     },
     transaction
@@ -5889,7 +5897,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.15";
+var VERSION = "0.12.16";
 
 // src/worker-host.ts
 import { EventEmitter as EventEmitter2 } from "node:events";
@@ -6192,12 +6200,65 @@ function createWorkerHost(services2, log = (_message) => {
 
 // src/copilot/services.ts
 import { homedir } from "node:os";
-import { join as join6 } from "node:path";
+import { join as join7 } from "node:path";
 import { createHash as createHash3 } from "node:crypto";
 
 // src/text-size.ts
 function isChatTextSize(value) {
   return value === "small" || value === "medium" || value === "large";
+}
+
+// src/copilot/session-storage.ts
+import { join as join6 } from "node:path";
+import { readdir as readdir3 } from "node:fs/promises";
+import { isDeepStrictEqual } from "node:util";
+var SESSION_LAYOUT_KEY = "internal:sessionStorage";
+var scoped = /^session:([a-f0-9]{24}):(panel:.+)$/;
+var sessionData = (directory2, scope) => persistentStore(join6(directory2, "data", "sessions"), `${scope}.json`);
+function validateSessionLayout(saved) {
+  if (saved[SESSION_LAYOUT_KEY] === void 0) return;
+  if (saved[SESSION_LAYOUT_KEY] !== 1) throw new Error("This saved session format needs a newer Enhance Prompt version. No data was changed.");
+  if (Object.keys(saved).some((key) => scoped.test(key))) throw new Error("An older Enhance Prompt version wrote session data after migration. Close its sessions and keep the saved files for recovery; do not clear data or downgrade.");
+}
+async function partitionSessions(directory2, data) {
+  await data.transaction(async () => {
+    const saved = await data.snapshot();
+    validateSessionLayout(saved);
+    if (saved[SESSION_LAYOUT_KEY] !== void 0) {
+      return;
+    }
+    const sessions = /* @__PURE__ */ new Map();
+    const removed = { [SESSION_LAYOUT_KEY]: 1 };
+    for (const [key, value] of Object.entries(saved)) {
+      const match = scoped.exec(key);
+      if (!match) continue;
+      const values = sessions.get(match[1]) ?? /* @__PURE__ */ Object.create(null);
+      values[match[2]] = value;
+      sessions.set(match[1], values);
+      removed[key] = void 0;
+    }
+    const copied = await readdir3(join6(directory2, "data", "sessions")).catch((error) => {
+      if (error.code === "ENOENT") return [];
+      throw error;
+    });
+    for (const name of copied) {
+      if (!/^[a-f0-9]{24}\.json$/.test(name)) continue;
+      const scope = name.slice(0, -5), expected = sessions.get(scope);
+      const current = await sessionData(directory2, scope).snapshot();
+      if (!expected || !isDeepStrictEqual({ ...current }, { ...expected })) throw new Error("An interrupted session migration has conflicting saved copies. Close Copilot and keep the data directory for maintainer recovery; no session copy was replaced.");
+    }
+    const pending = [...sessions.entries()];
+    let next = 0;
+    const results = await Promise.allSettled(Array.from({ length: Math.min(8, pending.length) }, async () => {
+      while (next < pending.length) {
+        const [scope, values] = pending[next++];
+        await sessionData(directory2, scope).patch(values);
+      }
+    }));
+    const failed = results.find((result) => result.status === "rejected");
+    if (failed?.status === "rejected") throw failed.reason;
+    await data.patch(removed);
+  });
 }
 
 // src/copilot/session.ts
@@ -6287,25 +6348,31 @@ function sessionAdapter(session2) {
 var UNSUPPORTED_SETTINGS = /* @__PURE__ */ new Set(["allowTerminalRead", "allowOtherAgents", "allowAgentActivity", "allowEditorSaves", "allowOpenFiles"]);
 
 // src/copilot/services.ts
-function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_DIR || join6(process.env.LOCALAPPDATA || join6(homedir(), ".local", "share"), "copilot-enhance-prompt"), copilot2) {
-  const data = persistentStore(join6(directory2, "data"));
-  const prefs = persistentStore(join6(directory2, "preferences"));
-  const retiredCredentials = persistentStore(join6(directory2, "credentials"));
+function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_DIR || join7(process.env.LOCALAPPDATA || join7(homedir(), ".local", "share"), "copilot-enhance-prompt"), copilot2) {
+  const data = persistentStore(join7(directory2, "data"));
+  const prefs = persistentStore(join7(directory2, "preferences"));
+  const retiredCredentials = persistentStore(join7(directory2, "credentials"));
   const scope = createHash3("sha256").update(session2.sessionId).digest("hex").slice(0, 24);
+  const panelData = sessionData(directory2, scope);
   let migration;
   const prepare = () => migration ??= (async () => {
-    await prefs.transaction(async () => {
-      for (const key of ["uiLanguage", "outputLanguage", "notifyWhenDone", "allowEnvKeys", "statusBarItem", "allowAgentLaunch"]) if (await prefs.get(key) !== null) await prefs.delete(key);
-    });
     await data.transaction(async () => {
-      for (const key of await data.keys()) {
-        if (key === "uiLocale" || key.startsWith("catalog:") || key.startsWith("sent:") || /^(?:session:[a-f0-9]{24}:)?panel:(?:uiLanguage|outputChoice|feedbackAsk|feedbackOff|hookLast)$/.test(key)) await data.delete(key);
+      const snapshot = await data.snapshot();
+      validateSessionLayout(snapshot);
+      await prefs.transaction(async () => {
+        for (const key of ["uiLanguage", "outputLanguage", "notifyWhenDone", "allowEnvKeys", "statusBarItem", "allowAgentLaunch"]) if (await prefs.get(key) !== null) await prefs.delete(key);
+      });
+      const changes = {};
+      for (const key of Object.keys(snapshot)) {
+        if (key === "uiLocale" || key.startsWith("catalog:") || key.startsWith("sent:") || /^(?:session:[a-f0-9]{24}:)?panel:(?:uiLanguage|outputChoice|feedbackAsk|feedbackOff|hookLast)$/.test(key)) changes[key] = void 0;
       }
-      const saved = await data.get(MODELS_KEY);
-      if (saved !== null) {
+      const saved = snapshot[MODELS_KEY];
+      if (saved !== void 0) {
         const cleaned = modelsToJson(parseModelsConfig(saved));
-        if (JSON.stringify(saved) !== JSON.stringify(cleaned)) await data.set(MODELS_KEY, cleaned);
+        if (JSON.stringify(saved) !== JSON.stringify(cleaned)) changes[MODELS_KEY] = cleaned;
       }
+      await data.patch(changes);
+      await partitionSessions(directory2, data);
     });
     await retiredCredentials.transaction(async () => {
       for (const key of await retiredCredentials.keys()) if (key.startsWith("apiKey.")) await retiredCredentials.delete(key);
@@ -6322,7 +6389,7 @@ function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_D
     const storedModels = await data.get(MODELS_KEY);
     const saved = parseModelsConfig(storedModels).profiles;
     const profiles = saved.filter((profile) => profile.enabled);
-    const legacy = async (key) => await data.get(`session:${scope}:panel:${key}`) ?? await data.get(`panel:${key}`);
+    const legacy = async (key) => await panelData.get(`panel:${key}`) ?? await data.get(`panel:${key}`);
     const choice = await legacy("profileChoice");
     const explicit = typeof choice === "string" && choice !== "auto" && /^[a-z0-9-]{1,40}$/.test(choice) ? choice : null;
     const selected = profiles.find((profile) => profile.id === explicit);
@@ -6359,30 +6426,41 @@ function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_D
     },
     onDidChange: (listener) => prefs.onDidChange(listener)
   };
-  const scopeKey = (key) => key.startsWith("panel:") ? `session:${scope}:${key}` : key;
+  const visibleShared = (key) => !key.startsWith("session:") && key !== SESSION_LAYOUT_KEY;
+  const storeFor = (key) => {
+    if (!visibleShared(key)) throw new Error("This storage key belongs to internal session state.");
+    return key.startsWith("panel:") ? panelData : data;
+  };
   const storage = {
     get: async (key) => {
       await prepare();
-      return data.get(scopeKey(key));
+      return storeFor(key).get(key);
     },
     set: async (key, value) => {
       await prepare();
-      await data.set(scopeKey(key), value);
+      await storeFor(key).set(key, value);
     },
     delete: async (key) => {
       await prepare();
-      await data.delete(scopeKey(key));
+      await storeFor(key).delete(key);
     },
     keys: async () => {
       await prepare();
-      return (await data.keys()).filter((key) => !key.startsWith("session:") || key.startsWith(`session:${scope}:`)).map((key) => key.replace(`session:${scope}:`, ""));
+      return [.../* @__PURE__ */ new Set([...(await data.keys()).filter(visibleShared), ...await panelData.keys()])];
     },
-    onDidChange: (listener) => data.onDidChange(({ key }) => {
-      if (!key.startsWith("session:") || key.startsWith(`session:${scope}:`)) listener({ key: key.replace(`session:${scope}:`, "") });
-    }),
+    onDidChange: (listener) => {
+      const shared = data.onDidChange(({ key }) => {
+        if (visibleShared(key) && !key.startsWith("panel:")) listener({ key });
+      });
+      const own2 = panelData.onDidChange(listener);
+      return { dispose: () => {
+        shared.dispose();
+        own2.dispose();
+      } };
+    },
     transaction: async (fn) => {
       await prepare();
-      return data.transaction(fn);
+      return data.transaction(() => panelData.transaction(fn));
     }
   };
   const host = {
@@ -6639,7 +6717,7 @@ async function createCanvasServer(options) {
 
 // src/copilot/models.ts
 import { mkdtemp, mkdir as mkdir5, realpath as realpath9, rm as rm2 } from "node:fs/promises";
-import { basename as basename6, isAbsolute as isAbsolute5, join as join9, relative as relative5 } from "node:path";
+import { basename as basename6, isAbsolute as isAbsolute5, join as join10, relative as relative5 } from "node:path";
 import { tmpdir as tmpdir3 } from "node:os";
 import { randomUUID as randomUUID6 } from "node:crypto";
 
@@ -6648,14 +6726,14 @@ import { randomUUID as randomUUID5 } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { homedir as homedir2 } from "node:os";
 import { lstat as lstat4, mkdir as mkdir4, open as open4, realpath as realpath8, rename as rename4, writeFile as writeFile3 } from "node:fs/promises";
-import { join as join8 } from "node:path";
+import { join as join9 } from "node:path";
 import { StringDecoder } from "node:string_decoder";
 
 // src/copilot/usage-recovery.ts
 var import_proper_lockfile3 = __toESM(require_proper_lockfile(), 1);
 import { randomUUID as randomUUID4 } from "node:crypto";
-import { lstat as lstat3, mkdir as mkdir3, open as open3, readdir as readdir3, realpath as realpath7, rename as rename3, rm, rmdir as rmdir2, unlink as unlink2, writeFile as writeFile2 } from "node:fs/promises";
-import { basename as basename5, isAbsolute as isAbsolute4, join as join7, relative as relative4, resolve as resolve4 } from "node:path";
+import { lstat as lstat3, mkdir as mkdir3, open as open3, readdir as readdir4, realpath as realpath7, rename as rename3, rm, rmdir as rmdir2, unlink as unlink2, writeFile as writeFile2 } from "node:fs/promises";
+import { basename as basename5, isAbsolute as isAbsolute4, join as join8, relative as relative4, resolve as resolve4 } from "node:path";
 import { tmpdir as tmpdir2 } from "node:os";
 var uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 var ownerFile = ".enhance-usage-owner.json";
@@ -6692,7 +6770,7 @@ async function identity(directory2) {
 async function owner(record) {
   const info = await identity(record.directory);
   if (info.dev !== record.dev || info.ino !== record.ino) throw generic();
-  const value = await json2(join7(record.directory, ownerFile));
+  const value = await json2(join8(record.directory, ownerFile));
   if (value.token !== record.token || value.sessionId !== record.sessionId || !["running", "stopped"].includes(value.state)) throw generic();
   return value;
 }
@@ -6706,28 +6784,28 @@ async function sameDirectory(record) {
 }
 async function cleanup(record) {
   if ((await owner(record)).state !== "stopped") throw generic();
-  for (const name of await readdir3(record.directory)) {
+  for (const name of await readdir4(record.directory)) {
     if (name === ownerFile) continue;
     await sameDirectory(record);
-    await rm(join7(record.directory, name), { recursive: true, force: false, maxRetries: 3 });
+    await rm(join8(record.directory, name), { recursive: true, force: false, maxRetries: 3 });
   }
   if ((await owner(record)).state !== "stopped") throw generic();
-  await unlink2(join7(record.directory, ownerFile));
+  await unlink2(join8(record.directory, ownerFile));
   await rmdir2(record.directory);
 }
 async function registerUsageJournal(root, sessionId, directory2) {
   if (!uuid.test(sessionId)) throw generic();
   const record = { sessionId, ...await identity(await realpath7(directory2)), token: randomUUID4() };
-  const registry = join7(root, "recovery"), file = join7(registry, `${sessionId}.json`);
+  const registry = join8(root, "recovery"), file = join8(registry, `${sessionId}.json`);
   await mkdir3(registry, { recursive: true, mode: 448 });
-  await writeFile2(join7(record.directory, ownerFile), JSON.stringify({ token: record.token, sessionId, state: "running" }), { flag: "wx", mode: 384 });
+  await writeFile2(join8(record.directory, ownerFile), JSON.stringify({ token: record.token, sessionId, state: "running" }), { flag: "wx", mode: 384 });
   await writeFile2(file, JSON.stringify(record), { flag: "wx", mode: 384 });
   let release;
   return {
     async stopped() {
       release = await import_proper_lockfile3.default.lock(registry, { realpath: false, stale: 3e4, retries: { retries: 80, minTimeout: 50, maxTimeout: 250 } });
       await owner(record);
-      await save2(join7(record.directory, ownerFile), { token: record.token, sessionId, state: "stopped" });
+      await save2(join8(record.directory, ownerFile), { token: record.token, sessionId, state: "stopped" });
     },
     async committed() {
       await save2(file, { ...record, committed: true });
@@ -6750,7 +6828,7 @@ async function registerUsageJournal(root, sessionId, directory2) {
 async function journal(record) {
   let path = record.directory;
   for (const component of ["home", "session-state", record.sessionId, "events.jsonl"]) {
-    path = join7(path, component);
+    path = join8(path, component);
     const info = await lstat3(path);
     if (info.isSymbolicLink() || await realpath7(path) !== path || (component === "events.jsonl" ? !info.isFile() || info.nlink !== 1 : !info.isDirectory())) throw generic();
   }
@@ -6762,7 +6840,7 @@ async function recoverUsageJournals(root, consume, options = {}) {
   try {
     const rootInfo = await lstat3(root);
     if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink()) throw generic();
-    registry = join7(await realpath7(root), "recovery");
+    registry = join8(await realpath7(root), "recovery");
     const info = await lstat3(registry);
     if (!info.isDirectory() || info.isSymbolicLink() || await realpath7(registry) !== registry) throw generic();
   } catch (error) {
@@ -6773,8 +6851,8 @@ async function recoverUsageJournals(root, consume, options = {}) {
   try {
     const now = options.now?.() ?? Date.now();
     let attempted = 0;
-    for (const name of (await readdir3(registry)).filter((name2) => name2.endsWith(".json")).sort()) {
-      const file = join7(registry, name);
+    for (const name of (await readdir4(registry)).filter((name2) => name2.endsWith(".json")).sort()) {
+      const file = join8(registry, name);
       let record;
       try {
         record = parse(await json2(file), name);
@@ -6793,7 +6871,7 @@ async function recoverUsageJournals(root, consume, options = {}) {
               }
             }
             await sameDirectory(record);
-            if ((await readdir3(record.directory)).length === 0) {
+            if ((await readdir4(record.directory)).length === 0) {
               if (!options.inspect) {
                 await rmdir2(record.directory);
                 await unlink2(file);
@@ -6949,14 +7027,14 @@ async function replace(file, content) {
   await rename4(temporary, file);
 }
 function usageHome() {
-  return join8(process.env.ENHANCE_PROMPT_DATA_DIR || join8(process.env.LOCALAPPDATA || join8(homedir2(), ".local", "share"), "copilot-enhance-prompt"), "usage");
+  return join9(process.env.ENHANCE_PROMPT_DATA_DIR || join9(process.env.LOCALAPPDATA || join9(homedir2(), ".local", "share"), "copilot-enhance-prompt"), "usage");
 }
 async function createUsageRecorder(sessionId, root = usageHome(), options = {}) {
   if (!uuid2.test(sessionId)) throw new Error("Invalid usage session ID.");
-  const directory2 = join8(root, "session-state", sessionId);
-  const file = join8(directory2, "events.jsonl");
+  const directory2 = join9(root, "session-state", sessionId);
+  const file = join9(directory2, "events.jsonl");
   const started = (/* @__PURE__ */ new Date()).toISOString();
-  await mkdir4(join8(root, "session-state"), { recursive: true, mode: 448 });
+  await mkdir4(join9(root, "session-state"), { recursive: true, mode: 448 });
   let lines = JSON.stringify({ type: "session.start", id: randomUUID5(), timestamp: started, data: { sessionId, context: { repository: "Enhanced Prompt" } } }) + "\n";
   const seen = /* @__PURE__ */ new Set();
   const keyOf = (receipt2) => {
@@ -6965,7 +7043,7 @@ async function createUsageRecorder(sessionId, root = usageHome(), options = {}) 
   };
   if (options.resume) {
     const canonical = await realpath8(root);
-    if (await realpath8(directory2) !== join8(canonical, "session-state", sessionId)) throw new Error("Unable to reopen usage accounting.");
+    if (await realpath8(directory2) !== join9(canonical, "session-state", sessionId)) throw new Error("Unable to reopen usage accounting.");
     const before = await lstat4(file, { bigint: true });
     if (!before.isFile() || before.nlink !== 1n || before.size > 64n * 1024n * 1024n) throw new Error("Unable to reopen usage accounting.");
     const handle = await open4(file, "r");
@@ -6992,7 +7070,7 @@ async function createUsageRecorder(sessionId, root = usageHome(), options = {}) 
     }
   } else {
     await mkdir4(directory2, { mode: 448 });
-    await replace(join8(directory2, "workspace.yaml"), JSON.stringify({ id: sessionId, name: `Enhanced Prompt \xB7 ${started}` }) + "\n");
+    await replace(join9(directory2, "workspace.yaml"), JSON.stringify({ id: sessionId, name: `Enhanced Prompt \xB7 ${started}` }) + "\n");
     await replace(file, lines);
   }
   const recovery = options.helperDirectory ? await registerUsageJournal(root, sessionId, options.helperDirectory) : void 0;
@@ -7187,14 +7265,14 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
         checkReasoning(requested, input.reasoningEffort);
         check();
       }
-      directory2 = await mkdtemp(join9(tmpdir3(), "enhance-copilot-"));
-      const workspace = join9(directory2, "workspace");
+      directory2 = await mkdtemp(join10(tmpdir3(), "enhance-copilot-"));
+      const workspace = join10(directory2, "workspace");
       await mkdir5(workspace);
       check();
       client = new sdk.CopilotClient({
         mode: "empty",
         workingDirectory: workspace,
-        baseDirectory: join9(directory2, "home"),
+        baseDirectory: join10(directory2, "home"),
         connection: sdk.RuntimeConnection.forStdio({ path, args: ["--no-auto-update"] }),
         env: runtimeEnvironment(),
         useLoggedInUser: true,
@@ -7218,7 +7296,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
         sessionId,
         onEvent: (event) => usage.record(event),
         workingDirectory: workspace,
-        configDirectory: join9(directory2, "home"),
+        configDirectory: join10(directory2, "home"),
         model: input.model,
         ...input.reasoningEffort !== void 0 ? { reasoningEffort: input.reasoningEffort } : {},
         systemMessage: { mode: "replace", content: input.system },
@@ -7303,7 +7381,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
           stage("copilot.usage");
           try {
             if (stopped !== false) await usage.stopped?.();
-            if (stopped !== false && directory2) await reconcileUsageJournal(join9(directory2, "home", "session-state", sessionId, "events.jsonl"), usage);
+            if (stopped !== false && directory2) await reconcileUsageJournal(join10(directory2, "home", "session-state", sessionId, "events.jsonl"), usage);
             await usage.flush();
             if (stopped !== false) await usage.committed?.();
           } catch {
@@ -7422,7 +7500,7 @@ activate(worker.api);
 var packageRoot = fileURLToPath(new URL("../../../", import.meta.url));
 var updates = createUpdates({
   running: VERSION,
-  store: persistentStore(join10(services.directory, "updates", installationKey(packageRoot))),
+  store: persistentStore(join11(services.directory, "updates", installationKey(packageRoot))),
   installation: installationReader(session, packageRoot),
   metadata: remoteMetadata(),
   busy: () => hasActiveRuns() || worker.hasActiveWork() || copilot.hasActiveWork(),

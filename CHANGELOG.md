@@ -1,5 +1,12 @@
 # Changes
 
+## [0.12.16] - 2026-11-17
+
+### Improved
+- Saved requests, results and attachments now use a separate data file for each Copilot session, so editing a draft no longer rewrites all inactive sessions.
+- Existing data migrates automatically without expiring drafts or changing shared rules, history or preferences. Large first-time migrations can take longer; restart Copilot after updating so older workers cannot keep writing the old format.
+- Maintainers have a local recovery export for reviewed rollbacks. If migration reports a problem, keep the saved files and follow the recovery guide instead of clearing data.
+
 ## [0.12.15] - 2026-11-17
 
 ### Added
