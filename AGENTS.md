@@ -56,4 +56,6 @@ Commit and push completed, verified work to `main` unless the owner requests oth
 
 For the remaining v1 audit backlog (#40), the owner explicitly authorized one version and GitHub release per completed issue. Publish these as preview releases after verification and pushing main; record user-oriented notes and evidence in the issue and `docs/audits/v1/backlog-progress.md`. This authorization does not authorize paid Copilot tests, desktop automation, user-data expiry, or marking manual/product gates complete without evidence.
 
+The owner approved preparing the separate `runtime-preview` marketplace branch. Source changes still go to `main`. Follow [runtime channel publication](docs/runtime-marketplace.md): generate from an exact verified source commit, retain runtime-only ancestry, publish with a normal fast-forward push, and never merge source history or automatically migrate existing installations. A push to `main` alone does not publish this optional channel. Bounded recent History remains the approved v1 scope; live prompt evaluations remain pending.
+
 For this project, every completion report must state the plugin version, whether changes were pushed, the destination branch and commit, and any verification still pending.

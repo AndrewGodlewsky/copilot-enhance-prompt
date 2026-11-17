@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "plugin": "enhance-prompt",
-  "version": "0.12.33",
+  "version": "0.12.34",
   "hostProvided": [
     "@github/copilot-sdk",
     "@github/copilot-sdk/extension",
@@ -1200,19 +1200,19 @@
     {
       "path": "com.github.copilot/extensions/enhance-prompt/extension.mjs",
       "bytes": 386777,
-      "sha256": "d77f11953f963f659777a871a4d792e507cab3a68242d07ec2d9fbc7551c076f",
+      "sha256": "0067d958f9c04772de615e6d6b0333e671038e10b1c252304fa080a81f9ea5a5",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/CHANGELOG.js",
-      "bytes": 39199,
-      "sha256": "725be24ad66c084c7a43747332a27481d3de458efc0d7f031a7c1dfb3b54d253",
+      "bytes": 39593,
+      "sha256": "3722f9b1c95b01ee885dfd2d45861fbaa60fb15f977867a1a7914048ed47aba8",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/app.js",
       "bytes": 556505,
-      "sha256": "0a466ba2f31bc6e3d271c4618474c0127d8e344cdd733f15b00b6e881129e33d",
+      "sha256": "a0479803c84caae40d48d722494db92bf9884a3d827b59daa627ae1008fce1d8",
       "normalization": "lf"
     },
     {
@@ -1260,7 +1260,7 @@
     {
       "path": "plugin.json",
       "bytes": 422,
-      "sha256": "af6f22cd2d329fa5b13e1e0464c7cf9c61f96858701935c6a064d50eecd36f8f",
+      "sha256": "6f3d2cdb72b6f606270d7414d32ee4f36e69f60a0f788f1149a394e4e3a0dc3b",
       "normalization": "lf"
     }
   ],
@@ -1281,8 +1281,8 @@
   "inputs": [
     {
       "path": "CHANGELOG.md",
-      "bytes": 39163,
-      "sha256": "08d4324889dd025f916d49c4a789ecf8ab2e5065a39dc1f777e992d6b86ef12b",
+      "bytes": 39557,
+      "sha256": "a362c9d5d15fd47dd9dd2da5536a30a3eeb794c8f77faaae0521e0d75c7472b8",
       "normalization": "lf"
     },
     {
@@ -1852,7 +1852,7 @@
     {
       "path": "src/version.ts",
       "bytes": 93,
-      "sha256": "11cbcda9beb5bdaa4ab2918561f80c2432a3479efe47463dbcaa3171b5e2dba9",
+      "sha256": "25ae362683e2a357d9e133c3bee30d0f2093d2d9a313374ab6647a7e922d2b33",
       "normalization": "lf"
     },
     {

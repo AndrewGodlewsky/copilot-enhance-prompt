@@ -1,5 +1,11 @@
 # Changes
 
+## [0.12.34] - 2026-11-17
+
+### Verification
+- Prepared an optional runtime-preview marketplace branch containing the plugin runtime, icon, notices and release history, with traceable source/file hashes.
+- Added an explicit channel migration guide and disposable installation/update/data-retention tests. Existing marketplace sources stay unchanged; native desktop acceptance is still pending.
+
 ## [0.12.33] - 2026-11-17
 
 ### Verification

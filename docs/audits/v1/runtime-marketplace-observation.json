@@ -1,0 +1,20 @@
+{
+  "fixture": true,
+  "modelCalls": 0,
+  "checks": [
+    "fresh exact runtime-only marketplace installation",
+    "implicit source replacement/removal refused; explicit reinstall preserves exact synthetic data",
+    "attached-session update follows selected runtime branch; exact payload and retained data"
+  ],
+  "files": 19,
+  "packageBytes": 1417639,
+  "sourceFiles": 19,
+  "sourceBytes": 1414234,
+  "pluginVersion": "0.12.34",
+  "sourceHashes": {
+    "scripts/runtime-marketplace.mjs": "4bff1b2516409bcc47c5b560e264f0c14898d1db4279a8ff8e779b00be6952a8",
+    "scripts/e2e-runtime-marketplace.mjs": "e609c3658297cc37fd260348706e62fed378edcdbe705259af9eba3adc9c8a05",
+    "scripts/runtime-package.mjs": "9ad68c2bbf621630cb1485d5e43946fb6a25f9c66d8c75713d35ff04c9185330"
+  },
+  "runtime": "GitHub Copilot CLI 1.0.106-8.unstable.r43566476370.g869eef3."
+}
