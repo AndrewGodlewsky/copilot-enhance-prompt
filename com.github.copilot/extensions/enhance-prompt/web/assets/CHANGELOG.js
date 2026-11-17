@@ -1,5 +1,11 @@
 var e=`# Changes
 
+## [0.12.9] - 2026-11-17
+
+### Fixed
+- Interrupted update and work reservations now distinguish the original process from an unrelated process that reused its ID, reducing false “work is active” blocks.
+- Reservations remain protected when the process identity cannot be verified. No installer or active work is expired merely because it is old; existing restart guidance still applies.
+
 ## [0.12.8] - 2026-11-17
 
 ### Fixed

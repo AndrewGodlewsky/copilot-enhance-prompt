@@ -16,6 +16,10 @@ The SDK response alone is insufficient: the backend checks the source identity a
 
 If an update times out or its HTTP connection drops, its journal remains reserved while the owning extension process lives. Other canvases cannot start a duplicate update or new plugin work. A late result is still verified. After an interrupted process, reopening reconciles the installed files/inventory before offering any retry. A mismatch or uncertain result is reported, not cleaned up by uninstalling or replacing files. If Copilot never returns, use its Installed screen to inspect the result, then restart Copilot before retrying.
 
+New reservations also record the process creation identity. Windows reads the local OS process's [StartTime](https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.process.starttime) as UTC ticks using the built-in PowerShell executable (hidden, no profile, a bounded two-second read; no downloaded dependency). Linux uses the boot ID plus `/proc/<pid>/stat` start time. Matching positive identity checks may be cached for five seconds; a cache mismatch is rechecked and never authorizes release by itself. A reused PID can therefore delay recovery briefly without permanently impersonating its previous owner.
+
+Legacy PID-only records, unsupported platforms, permission failures and unavailable identity metadata remain conservative: a live PID keeps the reservation. Elapsed time alone never releases it. These cases can still require restarting Copilot and checking the managed installation. Tests simulate PID reuse and missing identity, and exercise real Windows parent/child identity and cross-process work exclusion. Linux parsing is implemented but has not been exercised on a Linux desktop in this Windows validation session.
+
 ## Sources
 
 | Installation | Behavior |
@@ -49,7 +53,7 @@ The modules have distinct responsibilities:
 - `src/copilot/update-installation.ts`: installation/profile resolution and source validation. Supply the joined session, actual package root and plugin name. Keep its cache/config parsing isolated when adapting to a newer host contract.
 - `src/updates/metadata.ts`: validated GitHub metadata reads. `remoteMetadata` accepts plugin name, manifest/catalog paths and changelog path; network access is injectable.
 - `src/updates/version.ts`: dependency-free SemVer validation and precedence.
-- `src/updates/service.ts`: state decisions, daily cache, backoff, dismissal, concurrency and result verification. Supply running version, transactional storage, installation/metadata readers, attached-session update executor, active-work callback and safe diagnostics. Clock/process liveness are injectable in tests. Adapt the activation message to the other plugin’s verified lifecycle.
+- `src/updates/service.ts`: state decisions, daily cache, backoff, dismissal, concurrency and result verification. Supply running version, transactional storage, installation/metadata readers, attached-session update executor, active-work callback and safe diagnostics. Clock, PID liveness and creation identity are injectable in tests. `process-owner.ts` supplies bounded local OS identity reads; unknown identity must be treated as possibly live. Adapt the activation message to the other plugin’s verified lifecycle.
 - `src/copilot/server.ts` and `web/src/transport.ts`: authenticated human-only methods, strict request fields and save flushing. Keep these outside the agent-facing protocol.
 - `web/src/updates.tsx`: small notice and Settings controls, including reduced draft risk when saving is off. Automatic failures remain quiet.
 

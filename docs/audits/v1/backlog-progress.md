@@ -8,7 +8,7 @@ Current baseline: 0.12.1 / 4104c29. Tracking issue: [#40](https://github.com/And
 
 ## Queue
 
-Security and correctness: #36, #37, #39.
+Security and correctness: #37, #39.
 
 Distribution/maintenance: #9, #10, #11, #33.
 
@@ -20,9 +20,17 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- Next: #36, process identity for stale update reservations.
+- Next: #37, project/static-file check-to-open races.
 
 ## Delivered versions
+
+### 0.12.9 — #36, update reservation process identity
+
+New work and installer reservations record OS process creation identity alongside PID. Windows uses a bounded hidden built-in PowerShell read of StartTime UTC ticks; Linux uses boot identity and process start ticks. A live PID with a different known creation identity no longer owns an old reservation. Positive matches cache for five seconds; mismatches requery. Missing/unsupported identity and older PID-only records stay conservative, with no age-based expiry.
+
+Verified: typecheck, build, 441 final tests, package checks and clean diff. Synthetic PID reuse first reproduced an indefinitely reserved interrupted install; regressions verify old work recovery, matching/unknown identities, legacy records, late completion and unchanged user data. Real Windows parent/child identities are distinct and become unavailable after child exit. Existing real child-process work/cancellation exclusion passes. Independent review passed 17 focused tests with no blockers. Disposable installed-runtime update fixture passed inventory/disk verification and old/new session lifecycle without paid models or live installation changes. Issue #36 records the commit/release.
+
+Ruling: unsupported/failed identity queries retain PID-only behavior instead of guessing an owner is dead. A legacy live/recycled PID can still require manual restart/investigation. Linux identity parsing is implemented but not exercised on Linux in this Windows session. No claim of forcing actual OS PID reuse is made; that case uses explicit injected identities.
 
 ### 0.12.8 — #18, backend resource bounds
 

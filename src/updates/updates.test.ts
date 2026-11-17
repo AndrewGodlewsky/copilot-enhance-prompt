@@ -144,3 +144,33 @@ test('timed-out installation remains reserved until its real completion is verif
   for (let i = 0; i < 50 && (await client.state()).status === 'updating'; i++) await new Promise(resolve => setTimeout(resolve, 5))
   assert.equal((await client.state()).status, 'reload')
 }))
+
+test('recycled PIDs do not own old work or an interrupted installer; uncertain identities stay reserved', async () => fixture(async f => {
+  const service = createUpdates({ ...f.options, identity: async () => 'process-new' })
+  await service.check(true)
+  const saved = await f.store.get('state') as Record<string, any>
+  await f.store.set('state', { ...saved, work: { old: { pid: 42, identity: 'process-old' } } })
+  await assert.rejects(createUpdates({ ...f.options, identity: async () => 'process-old' }).install(), /Finish active/)
+  assert.equal((await service.install()).status, 'reload')
+  f.installation({ installed: '1.0.0' })
+  await f.store.set('state', { ...saved, pending: { id: 'old-install', pid: 42, identity: 'process-old', started: 1, version: '1.1.0' } })
+  assert.match((await service.state()).message, /interrupted/)
+  assert.equal((await f.store.get('state') as any).pending, undefined)
+  await f.store.set('state', { ...saved, pending: { id: 'uncertain', pid: 42, identity: 'process-old', started: 1, version: '1.1.0' } })
+  const uncertain = createUpdates({ ...f.options, identity: async () => undefined })
+  f.advance(86_400_000 * 30)
+  assert.equal((await uncertain.state()).status, 'updating', 'age never expires a possibly live installer')
+  const same = createUpdates({ ...f.options, identity: async () => 'process-old' })
+  assert.equal((await same.state()).status, 'updating')
+}))
+
+test('legacy PID-only reservations and unreadable creation identity never expire by age', async () => fixture(async f => {
+  const service = createUpdates({ ...f.options, identity: async () => { throw new Error('PRIVATE permission error') } })
+  await service.check(true)
+  const saved = await f.store.get('state') as Record<string, any>
+  await f.store.set('state', { ...saved, work: { legacy: 42, unreadable: { pid: 42, identity: 'old' } } })
+  f.advance(86_400_000 * 100)
+  await assert.rejects(service.install(), /Finish active/)
+  await f.store.set('state', { ...saved, pending: { id: 'legacy', pid: 42, started: 1, version: '1.1.0' } })
+  assert.equal((await service.state()).status, 'updating')
+}))

@@ -3,20 +3,23 @@ import type { JsonValue, KeyValueStore } from '../runtime.ts'
 import type { Available, Installation, UpdateClient, UpdateView } from './types.ts'
 import { compareVersions } from './version.ts'
 import { UpdateError } from './metadata.ts'
+import { processIdentity } from './process-owner.ts'
 
 const DAY = 86_400_000
-type Pending = { id: string; pid: number; started: number; version: string }
+type Owner = { pid: number; identity?: string }
+type Pending = Owner & { id: string; started: number; version: string }
 type State = {
   scope?: string; automatic?: boolean; checkedAt?: number; nextCheck?: number; retryAt?: number; failures?: number
   available?: Available; dismissed?: string; error?: string; unavailable?: boolean
   completedCheck?: string
-  check?: { id: string; until: number }; pending?: Pending; work?: Record<string, number>
+  check?: { id: string; until: number }; pending?: Pending; work?: Record<string, number | Owner>
 }
 type Options = {
   running: string; store: KeyValueStore & { transaction<T>(fn: () => Promise<T>): Promise<T> }
   installation(): Promise<Installation>; metadata(installation: Installation): Promise<Available>
   update(target: string): Promise<unknown>; busy?(): boolean; now?: () => number; pid?: number
   alive?: (pid: number) => boolean; updateTimeoutMs?: number
+  identity?: (pid: number) => Promise<string | undefined>
   record?: (operation: string, outcome: 'started' | 'ok' | 'failed' | 'pending', code?: string) => void
 }
 export const RELOAD_MESSAGE = 'Update installed. Restart Copilot, then reopen this session and Enhance Prompt to keep your saved draft. A new session also loads the update; reopening only this tab does not.'
@@ -28,6 +31,34 @@ export function deadline<T>(task: Promise<T>, ms: number): Promise<T> {
 
 export function createUpdates(options: Options): UpdateClient & { withWork<T>(run: () => Promise<T>): Promise<T> } {
   const now = options.now ?? Date.now, pid = options.pid ?? process.pid, isAlive = options.alive ?? alive
+  // Tests supplying synthetic liveness also supply their own creation identities when needed.
+  const identity = options.identity ?? (options.alive ? async () => undefined : processIdentity)
+  let ownIdentity: Promise<string | undefined> | undefined
+  const confirmed = new Map<number, { identity: string; until: number }>()
+  const own = async (): Promise<Owner> => {
+    const value = await (ownIdentity ??= identity(pid).catch(() => undefined))
+    return { pid, ...(value ? { identity: value } : {}) }
+  }
+  const living = async (owner: number | Owner, reads = new Map<number, Promise<string | undefined>>()) => {
+    const item = typeof owner === 'number' ? { pid: owner } : owner
+    if (!isAlive(item.pid)) return false
+    if (!item.identity) return true // Legacy PID-only reservations cannot prove PID reuse.
+    const cached = confirmed.get(item.pid)
+    // Cache only positive matches. A reused PID can delay recovery by five seconds, never release live work.
+    if (cached?.identity === item.identity && cached.until > performance.now()) return true
+    if (!reads.has(item.pid)) reads.set(item.pid, item.pid === pid ? own().then(value => value.identity) : identity(item.pid).catch(() => undefined))
+    const current = await reads.get(item.pid)
+    if (current === item.identity) {
+      if (confirmed.size >= 128) confirmed.delete(confirmed.keys().next().value!)
+      confirmed.set(item.pid, { identity: current, until: performance.now() + 5000 })
+    }
+    return current === undefined || current === item.identity
+  }
+  const liveWork = async (work: State['work']) => {
+    const reads = new Map<number, Promise<string | undefined>>()
+    const entries = await Promise.all(Object.entries(work ?? {}).map(async ([id, owner]) => await living(owner, reads) ? [id, owner] as const : null))
+    return Object.fromEntries(entries.filter(entry => entry !== null))
+  }
   const get = async () => (await options.store.get('state') ?? {}) as State
   const put = (state: State) => options.store.set('state', state as JsonValue)
   const mutate = <T>(fn: (state: State) => Promise<T>) => options.store.transaction(async () => fn(await get()))
@@ -57,7 +88,7 @@ export function createUpdates(options: Options): UpdateClient & { withWork<T>(ru
         state = { automatic: state.automatic, scope: installation.scope, work: state.work }
       }
       if (state.check && state.check.until <= now()) delete state.check
-      if (state.pending && !isAlive(state.pending.pid)) {
+      if (state.pending && !await living(state.pending)) {
         const installed = compareVersions(installation.installed, state.pending.version)
         state.error = installed !== null && installed >= 0 ? undefined : 'The previous update was interrupted or could not be verified. Review the installed version, then check again before retrying.'
         delete state.pending
@@ -127,11 +158,12 @@ export function createUpdates(options: Options): UpdateClient & { withWork<T>(ru
     if (!installation.canUpdate || !installation.target || !installation.source) throw new UpdateError(installation.reason ?? 'Updating is unavailable for this installation.')
     if (compareVersions(installation.installed, options.running) === -1) throw new UpdateError('The installed version is older than this canvas. Review the installation in Copilot before updating.')
     const available = await deadline(options.metadata(installation), 60_000)
-    const pending: Pending = { id: randomUUID(), pid, started: now(), version: available.version }
+    const pending: Pending = { id: randomUUID(), ...await own(), started: now(), version: available.version }
     const reserved = await mutate(async state => {
       if (state.pending) return false
       if (state.scope !== installation.scope) throw new UpdateError('The installation source changed. Check for updates again.')
-      if (options.busy?.() || Object.values(state.work ?? {}).some(isAlive)) throw new UpdateError('Finish active plugin work in all open canvases, then retry Update.')
+      state.work = await liveWork(state.work)
+      if (options.busy?.() || Object.keys(state.work).length) throw new UpdateError('Finish active plugin work in all open canvases, then retry Update.')
       if (compareVersions(available.version, installation.installed) !== 1 || compareVersions(installation.installed, options.running) === 1) return false
       state.pending = pending; state.available = available; delete state.error; await put(state); return true
     })
@@ -155,10 +187,11 @@ export function createUpdates(options: Options): UpdateClient & { withWork<T>(ru
     async automatic(enabled) { await mutate(async state => { state.automatic = enabled; await put(state) }); return state() },
     async withWork(run) {
       const id = randomUUID()
+      const owner = await own()
       await mutate(async state => {
         if (state.pending) throw new UpdateError('An update is in progress. Wait for verification before starting more plugin work.')
-        state.work = Object.fromEntries(Object.entries(state.work ?? {}).filter(([, owner]) => isAlive(owner)))
-        state.work[id] = pid; await put(state)
+        state.work = await liveWork(state.work)
+        state.work[id] = owner; await put(state)
       })
       const release = async () => {
         if (options.busy?.()) { const timer = setTimeout(() => { void release().catch(() => {}) }, 1000); timer.unref(); return }

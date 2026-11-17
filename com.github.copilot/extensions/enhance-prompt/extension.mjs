@@ -523,8 +523,8 @@ var require_graceful_fs = __commonJS({
       fs2.createReadStream = createReadStream2;
       fs2.createWriteStream = createWriteStream;
       var fs$readFile = fs2.readFile;
-      fs2.readFile = readFile5;
-      function readFile5(path, options, cb) {
+      fs2.readFile = readFile6;
+      function readFile6(path, options, cb) {
         if (typeof options === "function")
           cb = options, options = null;
         return go$readFile(path, options, cb);
@@ -4654,7 +4654,7 @@ async function enhance(host, input, signal, progress, budgetMs) {
   }
   const privacy = gatherPrivacy(settings);
   const step = progress?.(level, settings.privacy.allowProjectFiles, privacy.allowOtherAgents) ?? (() => void 0);
-  const own = await ownRules(host, typeof input.workspaceId === "string" ? input.workspaceId : null);
+  const own2 = await ownRules(host, typeof input.workspaceId === "string" ? input.workspaceId : null);
   const gathered = await gatherContext(host, {
     level,
     prompt,
@@ -4701,8 +4701,8 @@ async function enhance(host, input, signal, progress, budgetMs) {
     style,
     customInstructions: settings.customInstructions,
     agent: settings.adaptToAgent ? agentItem?.content.split(" ")[0] ?? null : null,
-    rules: own.rules,
-    structure: structureById(own.config, input.structureId)
+    rules: own2.rules,
+    structure: structureById(own2.config, input.structureId)
   }, settings.useEnhancedPrompts);
   await restoreSavedAttachments(host);
   const files = await loadFiles((input.files ?? []).filter((path) => typeof path === "string" && path.trim()), host.attachmentOwner).catch((error) => {
@@ -4745,7 +4745,7 @@ ${otherFiles.map((path, index) => `${index + 1}. ${path}`).join("\n")}
       notes: gathered.notes,
       settings,
       style,
-      project: own.where.project
+      project: own2.where.project
     };
   } catch (error) {
     step("model", "failed", tried || void 0);
@@ -5234,7 +5234,7 @@ function activate(host) {
 }
 
 // src/copilot/extension.ts
-import { join as join9 } from "node:path";
+import { join as join10 } from "node:path";
 
 // src/copilot/storage.ts
 var import_proper_lockfile2 = __toESM(require_proper_lockfile(), 1);
@@ -5540,6 +5540,45 @@ function installationReader(session2, packageRoot2, name = "enhance-prompt") {
 
 // src/updates/service.ts
 import { randomUUID as randomUUID3 } from "node:crypto";
+
+// src/updates/process-owner.ts
+import { execFile as execFile2 } from "node:child_process";
+import { readFile as readFile4 } from "node:fs/promises";
+import { join as join5 } from "node:path";
+import { promisify } from "node:util";
+var execute = promisify(execFile2);
+var own;
+async function processIdentity(pid) {
+  if (!Number.isSafeInteger(pid) || pid < 1) return void 0;
+  if (pid === process.pid) return own ??= inspect(pid);
+  return inspect(pid);
+}
+async function inspect(pid) {
+  try {
+    if (process.platform === "win32") {
+      if (!process.env.SystemRoot) return void 0;
+      const executable = join5(process.env.SystemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
+      const { stdout } = await execute(executable, [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        `(Get-Process -Id ${pid} -ErrorAction Stop).StartTime.ToUniversalTime().Ticks`
+      ], { windowsHide: true, timeout: 2e3, maxBuffer: 4096 });
+      const ticks = stdout.trim();
+      return /^\d{16,20}$/.test(ticks) ? `win:${ticks}` : void 0;
+    }
+    if (process.platform === "linux") {
+      const [stat4, boot] = await Promise.all([readFile4(`/proc/${pid}/stat`, "utf8"), readFile4("/proc/sys/kernel/random/boot_id", "utf8")]);
+      const started = stat4.slice(stat4.lastIndexOf(")") + 2).trim().split(/\s+/)[19];
+      return /^\d+$/.test(started) && /^[0-9a-f-]{36}$/i.test(boot.trim()) ? `linux:${boot.trim()}:${started}` : void 0;
+    }
+  } catch {
+  }
+  return void 0;
+}
+
+// src/updates/service.ts
 var DAY = 864e5;
 var RELOAD_MESSAGE = "Update installed. Restart Copilot, then reopen this session and Enhance Prompt to keep your saved draft. A new session also loads the update; reopening only this tab does not.";
 var alive = (pid) => {
@@ -5558,10 +5597,36 @@ function deadline(task, ms) {
 }
 function createUpdates(options) {
   const now = options.now ?? Date.now, pid = options.pid ?? process.pid, isAlive = options.alive ?? alive;
+  const identity2 = options.identity ?? (options.alive ? async () => void 0 : processIdentity);
+  let ownIdentity;
+  const confirmed = /* @__PURE__ */ new Map();
+  const own2 = async () => {
+    const value = await (ownIdentity ??= identity2(pid).catch(() => void 0));
+    return { pid, ...value ? { identity: value } : {} };
+  };
+  const living = async (owner2, reads = /* @__PURE__ */ new Map()) => {
+    const item2 = typeof owner2 === "number" ? { pid: owner2 } : owner2;
+    if (!isAlive(item2.pid)) return false;
+    if (!item2.identity) return true;
+    const cached = confirmed.get(item2.pid);
+    if (cached?.identity === item2.identity && cached.until > performance.now()) return true;
+    if (!reads.has(item2.pid)) reads.set(item2.pid, item2.pid === pid ? own2().then((value) => value.identity) : identity2(item2.pid).catch(() => void 0));
+    const current = await reads.get(item2.pid);
+    if (current === item2.identity) {
+      if (confirmed.size >= 128) confirmed.delete(confirmed.keys().next().value);
+      confirmed.set(item2.pid, { identity: current, until: performance.now() + 5e3 });
+    }
+    return current === void 0 || current === item2.identity;
+  };
+  const liveWork = async (work) => {
+    const reads = /* @__PURE__ */ new Map();
+    const entries = await Promise.all(Object.entries(work ?? {}).map(async ([id2, owner2]) => await living(owner2, reads) ? [id2, owner2] : null));
+    return Object.fromEntries(entries.filter((entry) => entry !== null));
+  };
   const get = async () => await options.store.get("state") ?? {};
   const put = (state2) => options.store.set("state", state2);
   const mutate = (fn) => options.store.transaction(async () => fn(await get()));
-  const inspect = () => deadline(options.installation(), 8e3);
+  const inspect2 = () => deadline(options.installation(), 8e3);
   const record = options.record ?? (() => {
   });
   let checking;
@@ -5594,7 +5659,7 @@ function createUpdates(options) {
         state2 = { automatic: state2.automatic, scope: installation.scope, work: state2.work };
       }
       if (state2.check && state2.check.until <= now()) delete state2.check;
-      if (state2.pending && !isAlive(state2.pending.pid)) {
+      if (state2.pending && !await living(state2.pending)) {
         const installed = compareVersions(installation.installed, state2.pending.version);
         state2.error = installed !== null && installed >= 0 ? void 0 : "The previous update was interrupted or could not be verified. Review the installed version, then check again before retrying.";
         delete state2.pending;
@@ -5604,12 +5669,12 @@ function createUpdates(options) {
     });
   }
   async function state() {
-    const installation = await inspect();
+    const installation = await inspect2();
     return view2(await reconcile(installation), installation);
   }
   async function performCheck(manual) {
     const previous = await get();
-    const installation = await inspect();
+    const installation = await inspect2();
     await reconcile(installation);
     const id2 = randomUUID3();
     const reserved = await mutate(async (state2) => {
@@ -5659,7 +5724,7 @@ function createUpdates(options) {
   async function verify(pending, installation, failed) {
     let after;
     try {
-      after = await inspect();
+      after = await inspect2();
     } catch {
     }
     await mutate(async (state2) => {
@@ -5673,17 +5738,18 @@ function createUpdates(options) {
     });
   }
   async function install() {
-    const installation = await inspect();
+    const installation = await inspect2();
     const current = await reconcile(installation);
     if (current.pending) return view2(current, installation);
     if (!installation.canUpdate || !installation.target || !installation.source) throw new UpdateError(installation.reason ?? "Updating is unavailable for this installation.");
     if (compareVersions(installation.installed, options.running) === -1) throw new UpdateError("The installed version is older than this canvas. Review the installation in Copilot before updating.");
     const available = await deadline(options.metadata(installation), 6e4);
-    const pending = { id: randomUUID3(), pid, started: now(), version: available.version };
+    const pending = { id: randomUUID3(), ...await own2(), started: now(), version: available.version };
     const reserved = await mutate(async (state2) => {
       if (state2.pending) return false;
       if (state2.scope !== installation.scope) throw new UpdateError("The installation source changed. Check for updates again.");
-      if (options.busy?.() || Object.values(state2.work ?? {}).some(isAlive)) throw new UpdateError("Finish active plugin work in all open canvases, then retry Update.");
+      state2.work = await liveWork(state2.work);
+      if (options.busy?.() || Object.keys(state2.work).length) throw new UpdateError("Finish active plugin work in all open canvases, then retry Update.");
       if (compareVersions(available.version, installation.installed) !== 1 || compareVersions(installation.installed, options.running) === 1) return false;
       state2.pending = pending;
       state2.available = available;
@@ -5694,7 +5760,7 @@ function createUpdates(options) {
     if (!reserved) return state();
     record("updates.install", "started");
     const operation = Promise.resolve().then(async () => {
-      const fresh = await inspect();
+      const fresh = await inspect2();
       if (fresh.scope !== installation.scope || fresh.installed !== installation.installed || !fresh.canUpdate) throw new UpdateError("Installation changed before update.");
       await options.update(installation.target);
     }).then(() => verify(pending, installation, false), () => verify(pending, installation, true));
@@ -5730,10 +5796,11 @@ function createUpdates(options) {
     },
     async withWork(run2) {
       const id2 = randomUUID3();
+      const owner2 = await own2();
       await mutate(async (state2) => {
         if (state2.pending) throw new UpdateError("An update is in progress. Wait for verification before starting more plugin work.");
-        state2.work = Object.fromEntries(Object.entries(state2.work ?? {}).filter(([, owner2]) => isAlive(owner2)));
-        state2.work[id2] = pid;
+        state2.work = await liveWork(state2.work);
+        state2.work[id2] = owner2;
         await put(state2);
       });
       const release = async () => {
@@ -5760,7 +5827,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.8";
+var VERSION = "0.12.9";
 
 // src/worker-host.ts
 import { EventEmitter as EventEmitter2 } from "node:events";
@@ -6063,7 +6130,7 @@ function createWorkerHost(services2, log = (_message) => {
 
 // src/copilot/services.ts
 import { homedir } from "node:os";
-import { join as join5 } from "node:path";
+import { join as join6 } from "node:path";
 import { createHash as createHash3 } from "node:crypto";
 
 // src/text-size.ts
@@ -6158,10 +6225,10 @@ function sessionAdapter(session2) {
 var UNSUPPORTED_SETTINGS = /* @__PURE__ */ new Set(["allowTerminalRead", "allowOtherAgents", "allowAgentActivity", "allowEditorSaves", "allowOpenFiles"]);
 
 // src/copilot/services.ts
-function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_DIR || join5(process.env.LOCALAPPDATA || join5(homedir(), ".local", "share"), "copilot-enhance-prompt"), copilot2) {
-  const data = persistentStore(join5(directory2, "data"));
-  const prefs = persistentStore(join5(directory2, "preferences"));
-  const retiredCredentials = persistentStore(join5(directory2, "credentials"));
+function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_DIR || join6(process.env.LOCALAPPDATA || join6(homedir(), ".local", "share"), "copilot-enhance-prompt"), copilot2) {
+  const data = persistentStore(join6(directory2, "data"));
+  const prefs = persistentStore(join6(directory2, "preferences"));
+  const retiredCredentials = persistentStore(join6(directory2, "credentials"));
   const scope = createHash3("sha256").update(session2.sessionId).digest("hex").slice(0, 24);
   let migration;
   const prepare = () => migration ??= (async () => {
@@ -6266,7 +6333,7 @@ function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_D
 // src/copilot/server.ts
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
-import { readFile as readFile4, realpath as realpath5 } from "node:fs/promises";
+import { readFile as readFile5, realpath as realpath5 } from "node:fs/promises";
 import { extname, resolve as resolve3, sep as sep2 } from "node:path";
 var MODEL_WRITES = /* @__PURE__ */ new Set(["models.save", "models.delete", "models.move", "models.roles", "consent.set", "rules.save"]);
 var PANEL_KEYS = /* @__PURE__ */ new Set(["tab", "style", "level", "effort", "structureChoice", "terminalWorkspaces", "optionsOpen", "draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked", "sendAfterEnhance", "historyScope"]);
@@ -6460,7 +6527,7 @@ async function createCanvasServer(options) {
         return;
       }
       res.writeHead(200, { "content-type": mime[extname(file)] });
-      res.end(await readFile4(file));
+      res.end(await readFile5(file));
     } catch (error) {
       if (!res.destroyed && !res.headersSent) {
         if (!req.complete) {
@@ -6514,7 +6581,7 @@ async function createCanvasServer(options) {
 
 // src/copilot/models.ts
 import { mkdtemp, mkdir as mkdir5, realpath as realpath8, rm as rm2 } from "node:fs/promises";
-import { basename as basename6, isAbsolute as isAbsolute4, join as join8, relative as relative4 } from "node:path";
+import { basename as basename6, isAbsolute as isAbsolute4, join as join9, relative as relative4 } from "node:path";
 import { tmpdir as tmpdir3 } from "node:os";
 import { randomUUID as randomUUID6 } from "node:crypto";
 
@@ -6523,14 +6590,14 @@ import { randomUUID as randomUUID5 } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { homedir as homedir2 } from "node:os";
 import { lstat as lstat3, mkdir as mkdir4, open as open3, realpath as realpath7, rename as rename4, writeFile as writeFile3 } from "node:fs/promises";
-import { join as join7 } from "node:path";
+import { join as join8 } from "node:path";
 import { StringDecoder } from "node:string_decoder";
 
 // src/copilot/usage-recovery.ts
 var import_proper_lockfile3 = __toESM(require_proper_lockfile(), 1);
 import { randomUUID as randomUUID4 } from "node:crypto";
 import { lstat as lstat2, mkdir as mkdir3, open as open2, readdir as readdir3, realpath as realpath6, rename as rename3, rm, rmdir as rmdir2, unlink as unlink2, writeFile as writeFile2 } from "node:fs/promises";
-import { basename as basename5, isAbsolute as isAbsolute3, join as join6, relative as relative3, resolve as resolve4 } from "node:path";
+import { basename as basename5, isAbsolute as isAbsolute3, join as join7, relative as relative3, resolve as resolve4 } from "node:path";
 import { tmpdir as tmpdir2 } from "node:os";
 var uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 var ownerFile = ".enhance-usage-owner.json";
@@ -6567,7 +6634,7 @@ async function identity(directory2) {
 async function owner(record) {
   const info = await identity(record.directory);
   if (info.dev !== record.dev || info.ino !== record.ino) throw generic();
-  const value = await json2(join6(record.directory, ownerFile));
+  const value = await json2(join7(record.directory, ownerFile));
   if (value.token !== record.token || value.sessionId !== record.sessionId || !["running", "stopped"].includes(value.state)) throw generic();
   return value;
 }
@@ -6584,25 +6651,25 @@ async function cleanup(record) {
   for (const name of await readdir3(record.directory)) {
     if (name === ownerFile) continue;
     await sameDirectory(record);
-    await rm(join6(record.directory, name), { recursive: true, force: false, maxRetries: 3 });
+    await rm(join7(record.directory, name), { recursive: true, force: false, maxRetries: 3 });
   }
   if ((await owner(record)).state !== "stopped") throw generic();
-  await unlink2(join6(record.directory, ownerFile));
+  await unlink2(join7(record.directory, ownerFile));
   await rmdir2(record.directory);
 }
 async function registerUsageJournal(root, sessionId, directory2) {
   if (!uuid.test(sessionId)) throw generic();
   const record = { sessionId, ...await identity(await realpath6(directory2)), token: randomUUID4() };
-  const registry = join6(root, "recovery"), file = join6(registry, `${sessionId}.json`);
+  const registry = join7(root, "recovery"), file = join7(registry, `${sessionId}.json`);
   await mkdir3(registry, { recursive: true, mode: 448 });
-  await writeFile2(join6(record.directory, ownerFile), JSON.stringify({ token: record.token, sessionId, state: "running" }), { flag: "wx", mode: 384 });
+  await writeFile2(join7(record.directory, ownerFile), JSON.stringify({ token: record.token, sessionId, state: "running" }), { flag: "wx", mode: 384 });
   await writeFile2(file, JSON.stringify(record), { flag: "wx", mode: 384 });
   let release;
   return {
     async stopped() {
       release = await import_proper_lockfile3.default.lock(registry, { realpath: false, stale: 3e4, retries: { retries: 80, minTimeout: 50, maxTimeout: 250 } });
       await owner(record);
-      await save2(join6(record.directory, ownerFile), { token: record.token, sessionId, state: "stopped" });
+      await save2(join7(record.directory, ownerFile), { token: record.token, sessionId, state: "stopped" });
     },
     async committed() {
       await save2(file, { ...record, committed: true });
@@ -6625,7 +6692,7 @@ async function registerUsageJournal(root, sessionId, directory2) {
 async function journal(record) {
   let path = record.directory;
   for (const component of ["home", "session-state", record.sessionId, "events.jsonl"]) {
-    path = join6(path, component);
+    path = join7(path, component);
     const info = await lstat2(path);
     if (info.isSymbolicLink() || await realpath6(path) !== path || (component === "events.jsonl" ? !info.isFile() || info.nlink !== 1 : !info.isDirectory())) throw generic();
   }
@@ -6633,7 +6700,7 @@ async function journal(record) {
 }
 async function recoverUsageJournals(root, consume, options = {}) {
   const status = { pending: 0, unconfirmed: 0, recovered: 0, failed: 0, deferred: 0 };
-  const registry = join6(root, "recovery");
+  const registry = join7(root, "recovery");
   try {
     if (!(await lstat2(registry)).isDirectory() || await realpath6(registry) !== resolve4(registry)) throw generic();
   } catch (error) {
@@ -6645,7 +6712,7 @@ async function recoverUsageJournals(root, consume, options = {}) {
     const now = options.now?.() ?? Date.now();
     let attempted = 0;
     for (const name of (await readdir3(registry)).filter((name2) => name2.endsWith(".json")).sort()) {
-      const file = join6(registry, name);
+      const file = join7(registry, name);
       let record;
       try {
         record = parse(await json2(file), name);
@@ -6820,14 +6887,14 @@ async function replace(file, content) {
   await rename4(temporary, file);
 }
 function usageHome() {
-  return join7(process.env.ENHANCE_PROMPT_DATA_DIR || join7(process.env.LOCALAPPDATA || join7(homedir2(), ".local", "share"), "copilot-enhance-prompt"), "usage");
+  return join8(process.env.ENHANCE_PROMPT_DATA_DIR || join8(process.env.LOCALAPPDATA || join8(homedir2(), ".local", "share"), "copilot-enhance-prompt"), "usage");
 }
 async function createUsageRecorder(sessionId, root = usageHome(), options = {}) {
   if (!uuid2.test(sessionId)) throw new Error("Invalid usage session ID.");
-  const directory2 = join7(root, "session-state", sessionId);
-  const file = join7(directory2, "events.jsonl");
+  const directory2 = join8(root, "session-state", sessionId);
+  const file = join8(directory2, "events.jsonl");
   const started = (/* @__PURE__ */ new Date()).toISOString();
-  await mkdir4(join7(root, "session-state"), { recursive: true, mode: 448 });
+  await mkdir4(join8(root, "session-state"), { recursive: true, mode: 448 });
   let lines = JSON.stringify({ type: "session.start", id: randomUUID5(), timestamp: started, data: { sessionId, context: { repository: "Enhanced Prompt" } } }) + "\n";
   const seen = /* @__PURE__ */ new Set();
   const keyOf = (receipt2) => {
@@ -6836,7 +6903,7 @@ async function createUsageRecorder(sessionId, root = usageHome(), options = {}) 
   };
   if (options.resume) {
     const canonical = await realpath7(root);
-    if (await realpath7(directory2) !== join7(canonical, "session-state", sessionId)) throw new Error("Unable to reopen usage accounting.");
+    if (await realpath7(directory2) !== join8(canonical, "session-state", sessionId)) throw new Error("Unable to reopen usage accounting.");
     const before = await lstat3(file, { bigint: true });
     if (!before.isFile() || before.nlink !== 1n || before.size > 64n * 1024n * 1024n) throw new Error("Unable to reopen usage accounting.");
     const handle = await open3(file, "r");
@@ -6863,7 +6930,7 @@ async function createUsageRecorder(sessionId, root = usageHome(), options = {}) 
     }
   } else {
     await mkdir4(directory2, { mode: 448 });
-    await replace(join7(directory2, "workspace.yaml"), JSON.stringify({ id: sessionId, name: `Enhanced Prompt \xB7 ${started}` }) + "\n");
+    await replace(join8(directory2, "workspace.yaml"), JSON.stringify({ id: sessionId, name: `Enhanced Prompt \xB7 ${started}` }) + "\n");
     await replace(file, lines);
   }
   const recovery = options.helperDirectory ? await registerUsageJournal(root, sessionId, options.helperDirectory) : void 0;
@@ -6898,12 +6965,12 @@ async function createUsageRecorder(sessionId, root = usageHome(), options = {}) 
     }
   };
 }
-async function recoverUsage(manual = false, root = usageHome(), inspect = false) {
+async function recoverUsage(manual = false, root = usageHome(), inspect2 = false) {
   return recoverUsageJournals(root, async (sessionId, journal2) => {
     const recorder = await createUsageRecorder(sessionId, root, { resume: true });
     await reconcileUsageJournal(journal2, recorder);
     await recorder.flush();
-  }, { manual, inspect });
+  }, { manual, inspect: inspect2 });
 }
 
 // src/copilot/models.ts
@@ -7058,14 +7125,14 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
         checkReasoning(requested, input.reasoningEffort);
         check();
       }
-      directory2 = await mkdtemp(join8(tmpdir3(), "enhance-copilot-"));
-      const workspace = join8(directory2, "workspace");
+      directory2 = await mkdtemp(join9(tmpdir3(), "enhance-copilot-"));
+      const workspace = join9(directory2, "workspace");
       await mkdir5(workspace);
       check();
       client = new sdk.CopilotClient({
         mode: "empty",
         workingDirectory: workspace,
-        baseDirectory: join8(directory2, "home"),
+        baseDirectory: join9(directory2, "home"),
         connection: sdk.RuntimeConnection.forStdio({ path, args: ["--no-auto-update"] }),
         env: runtimeEnvironment(),
         useLoggedInUser: true,
@@ -7089,7 +7156,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
         sessionId,
         onEvent: (event) => usage.record(event),
         workingDirectory: workspace,
-        configDirectory: join8(directory2, "home"),
+        configDirectory: join9(directory2, "home"),
         model: input.model,
         ...input.reasoningEffort !== void 0 ? { reasoningEffort: input.reasoningEffort } : {},
         systemMessage: { mode: "replace", content: input.system },
@@ -7174,7 +7241,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
           stage("copilot.usage");
           try {
             if (stopped !== false) await usage.stopped?.();
-            if (stopped !== false && directory2) await reconcileUsageJournal(join8(directory2, "home", "session-state", sessionId, "events.jsonl"), usage);
+            if (stopped !== false && directory2) await reconcileUsageJournal(join9(directory2, "home", "session-state", sessionId, "events.jsonl"), usage);
             await usage.flush();
             if (stopped !== false) await usage.committed?.();
           } catch {
@@ -7223,12 +7290,12 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
   return {
     catalog,
     rewrite,
-    async recoverUsage(manual = false, inspect = false) {
+    async recoverUsage(manual = false, inspect2 = false) {
       const activity = new AbortController();
       active.add(activity);
       try {
-        const status = await recoverUsage(manual, void 0, inspect);
-        if (!inspect) diagnostics2?.record("copilot.usage_recovery", status.failed || status.unconfirmed ? "failed" : "ok");
+        const status = await recoverUsage(manual, void 0, inspect2);
+        if (!inspect2) diagnostics2?.record("copilot.usage_recovery", status.failed || status.unconfirmed ? "failed" : "ok");
         return status;
       } catch {
         throw usageFailed();
@@ -7293,7 +7360,7 @@ activate(worker.api);
 var packageRoot = fileURLToPath(new URL("../../../", import.meta.url));
 var updates = createUpdates({
   running: VERSION,
-  store: persistentStore(join9(services.directory, "updates", installationKey(packageRoot))),
+  store: persistentStore(join10(services.directory, "updates", installationKey(packageRoot))),
   installation: installationReader(session, packageRoot),
   metadata: remoteMetadata(),
   busy: () => hasActiveRuns() || worker.hasActiveWork() || copilot.hasActiveWork(),
