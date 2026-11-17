@@ -1,0 +1,37 @@
+name: Dependency audit
+
+on:
+  schedule:
+    - cron: '23 13 * * 1'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['package-lock.json', 'web/package-lock.json', '.github/workflows/dependency-audit.yml']
+  pull_request:
+    paths: ['package-lock.json', 'web/package-lock.json', '.github/workflows/dependency-audit.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Audit ${{ matrix.directory }}
+    runs-on: windows-2025
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        directory: ['.', 'web']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.1
+          package-manager-cache: false
+      - name: Pin npm
+        run: npm install --global npm@12.0.2 --ignore-scripts
+      - name: Audit the full locked tree, including development dependencies
+        working-directory: ${{ matrix.directory }}
+        run: npm audit --package-lock-only --include=dev --audit-level=high

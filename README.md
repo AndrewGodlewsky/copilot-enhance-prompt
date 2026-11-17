@@ -181,6 +181,8 @@ The development panel runs at `http://localhost:5174` with sample data, without 
 
 Run the checks above for each release. Installed-runtime fixture tests use synthetic account/catalog data; real account-backed rewriting and desktop appearance require separate owner validation. The preview is not a published stable release.
 
+GitHub runs a clean Windows build and checks committed generated files on changes. Both dependency trees and workflow pins receive weekly monitoring; see [maintainer procedures and verified repository settings](docs/maintenance.md). CI does not publish or merge releases automatically.
+
 ## License and attribution
 
 This is a fork of [Enhance Prompt](https://github.com/cattfan/orca-enhance-prompt), originally created by [cattfan](https://github.com/cattfan). It adapts that work for GitHub Copilot. Credit for the original plugin's design and implementation belongs to its original author and contributors.

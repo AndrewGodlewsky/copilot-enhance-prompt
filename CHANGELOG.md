@@ -1,5 +1,11 @@
 # Changes
 
+## [0.12.13] - 2026-11-17
+
+### Added
+- Every proposed change now receives a clean Windows build and tests that detect stale packaged files. Weekly dependency monitoring covers the plugin, panel and build workflows.
+- Maintainer guidance records security-alert settings and release checks. These checks use no Copilot credits and do not automatically publish or install updates.
+
 ## [0.12.12] - 2026-11-17
 
 ### Added

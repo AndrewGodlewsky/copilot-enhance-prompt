@@ -5889,7 +5889,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.12";
+var VERSION = "0.12.13";
 
 // src/worker-host.ts
 import { EventEmitter as EventEmitter2 } from "node:events";

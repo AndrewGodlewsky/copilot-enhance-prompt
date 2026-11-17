@@ -20,9 +20,17 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- Next: #10, clean-build CI and dependency monitoring.
+- In progress: #10, verified locally; awaiting actual GitHub CI before release. Next: #11, security reporting and recovery guidance.
 
 ## Delivered versions
+
+### 0.12.13 ? #10, clean-build CI and monitoring
+
+Read-only Windows workflows install both locks with pinned Node/npm, run typecheck/build/final tests/package checks, and reject modified/staged/deleted/untracked generated artifacts. Separate full-tree audits cover both roots on schedule and dependency changes. SHA-pinned actions and weekly Dependabot PRs cover both npm roots/actions; no secrets, model calls, auto-merges or publication.
+
+Local verification: clean root/web npm ci, typecheck/build, 454 final tests, package checks and clean diff pass. Both full dependency audits report zero known advisories. A failing generated-guard regression now covers modified/staged/removed/new outputs and excludes unrelated files. Independent review found no blockers. Actual GitHub runner evidence will be recorded in #10 before publishing.
+
+Repository API verified alerts/security-update PRs were disabled; both are now enabled and rechecked. Secret scanning/push protection were already enabled. Main is unprotected, with no rulesets; workflows are read-only but repository policy allows all actions. Ruling: do not change direct-to-main policy by silently imposing PR-only enforcement. CI status is advisory until owner policy changes. Documented in [maintenance](../../maintenance.md).
 
 ### 0.12.12 ? #9, distribution notices and inventory
 
