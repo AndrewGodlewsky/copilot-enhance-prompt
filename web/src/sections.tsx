@@ -3,6 +3,7 @@ import { formatText } from '../../src/format.ts'
 // actions (src/panel/*), drawn with shadcn/ReUI.
 import { Fragment, useState } from 'react'
 import { UsageRecovery } from './usage-recovery'
+import { SECURITY_GUIDE_URL, SECURITY_REPORT_URL } from '../../src/panel/view.ts'
 import { read, set, update } from '#panel'
 import { ArrowDownIcon, ArrowUpIcon, RotateCcwIcon, CheckIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, PencilIcon, PlugZapIcon, PlusIcon, RefreshCwIcon, Settings2Icon, Trash2Icon } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -643,6 +644,14 @@ export function SettingsSection() {
         }}
       />
       <UsageRecovery />
+      <Group title="Security and recovery">
+        <Row><p className="text-muted-foreground text-xs">To pause Enhance Prompt, disable it in Copilot's plugin management, then fully quit and reopen Copilot. Turning off update checks does not pause the plugin. Keep your saved data while investigating an issue.</p>
+        <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+          <a className="inline-flex min-h-8 items-center underline underline-offset-4" href={SECURITY_GUIDE_URL} target="_blank" rel="noopener noreferrer">Pause and recovery guide</a>
+          <a className="inline-flex min-h-8 items-center underline underline-offset-4" href={SECURITY_REPORT_URL} target="_blank" rel="noopener noreferrer">Report a vulnerability privately</a>
+        </div>
+        <p className="text-muted-foreground text-xs">Use Feedback for ordinary bugs. Do not post secrets, raw journals or private prompts in public issues. Review Show Logs before sharing; reports are never uploaded automatically.</p></Row>
+      </Group>
       <Group title={'Stored on this machine'} hint={'Nothing is sent anywhere except your prompt and the context you allow, to the model you run. No tracking or analytics.'}>
         {data ? (
           [

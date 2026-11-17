@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "plugin": "enhance-prompt",
-  "version": "0.12.13",
+  "version": "0.12.14",
   "hostProvided": [
     "@github/copilot-sdk",
     "@github/copilot-sdk/extension",
@@ -1200,25 +1200,25 @@
     {
       "path": "com.github.copilot/extensions/enhance-prompt/extension.mjs",
       "bytes": 346255,
-      "sha256": "bef4bfc4ee2ac294848a9b77ca8dc5601a687f56247ba1b370a3c4d309882e97",
+      "sha256": "f40f669b28c48ed41f990e0a8ea7f4c597acf439833b84b41d2b1109fd304943",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/CHANGELOG.js",
-      "bytes": 30866,
-      "sha256": "5363609d3321f5376ae0e4f81afeeb64e36ecdfd79d761a83c4327b915800ea0",
+      "bytes": 31277,
+      "sha256": "f4672a307e087a32a5ff75773ef1617fc5ba92d5627614d8c4b98203d2dec605",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/app.js",
-      "bytes": 543798,
-      "sha256": "92efa5c664e1bcc474aa058aab748c642e741497b5b729958788910fe81dce13",
+      "bytes": 543898,
+      "sha256": "02a384345549d184b04bbad4bcae74b84149f5bba6928a1284ec37624f22a72e",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/dropdown-menu.js",
-      "bytes": 18373,
-      "sha256": "05e6a353e94e2bcd8655bcc04e25d51d789c1804c32415559dbb9faec9d8b39b",
+      "bytes": 18374,
+      "sha256": "d3313b155319bf85f075be4dadf0cc1cfaf3e6572f5a240abc48b79d15603080",
       "normalization": "lf"
     },
     {
@@ -1230,7 +1230,7 @@
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/history.js",
       "bytes": 10378,
-      "sha256": "64fa04362a2f63fb379017019aa3de3cf238f969c330e164d54ea5512c9e5875",
+      "sha256": "386174e16d1892e949bfac1e05b0bc3a3442ea6dd0efcb3c485aea875a67b276",
       "normalization": "lf"
     },
     {
@@ -1241,14 +1241,14 @@
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/index.css",
-      "bytes": 61118,
-      "sha256": "ade398f0d4b2dd0daf9d624719004e1a3212883949510802f35557cbc94863de",
+      "bytes": 61205,
+      "sha256": "712057574fa0cb3e34e8fd0c9b580369c722ee1bfb294e944e39d93c73b8fa29",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/sections.js",
-      "bytes": 26359,
-      "sha256": "82bb9fbd3873da02fcd00dedb3ac01812d4928bcdb821267baf21e158d418a47",
+      "bytes": 27429,
+      "sha256": "cca1e14280dc69a0d5ff282b0b8f3858301908a0ebb46682d2cfba7ae69f78ec",
       "normalization": "lf"
     },
     {
@@ -1260,7 +1260,7 @@
     {
       "path": "plugin.json",
       "bytes": 422,
-      "sha256": "2ac94b532c77bbf10b411a5916c68e9c6089b8a078c3cd3c554fc8674beecd86",
+      "sha256": "1bb5dc6a42d55fc9d80a21a9c90ae3b26b7ab607b67d0cd39c8bbbf48399266f",
       "normalization": "lf"
     }
   ],
@@ -1281,8 +1281,8 @@
   "inputs": [
     {
       "path": "CHANGELOG.md",
-      "bytes": 30830,
-      "sha256": "98c0e39f6d75a9bc745ec77d4d3eb89dee123c4d4a4d315128d5c9793faba894",
+      "bytes": 31241,
+      "sha256": "49087019949580230028c96c2147b6e767d2e9eb0ff578f194e5ce1a720f840d",
       "normalization": "lf"
     },
     {
@@ -1683,8 +1683,8 @@
     },
     {
       "path": "src/panel/view.ts",
-      "bytes": 22721,
-      "sha256": "305cf03f80d5a3c6eed58fb175f5f0676f4fe2cbdcd1599f379b72da696e2f6f",
+      "bytes": 22899,
+      "sha256": "7c6557f99b534d0bf2e30df3aad9fe7c5151f935cd969ef5ed7dc396f64918ea",
       "normalization": "lf"
     },
     {
@@ -1780,7 +1780,7 @@
     {
       "path": "src/version.ts",
       "bytes": 93,
-      "sha256": "c07ab62a905e5a8ce22a61883d80f81e0a25ee79e8bdc379a7a8ceda6ca25cdc",
+      "sha256": "6d4f31dbadd92cbbe0883f5a92f2065343dc6c492290a8f825be089d7e1b4a3e",
       "normalization": "lf"
     },
     {
@@ -2811,8 +2811,8 @@
     },
     {
       "path": "web/src/sections.tsx",
-      "bytes": 30947,
-      "sha256": "2898ed8007cb570d5e82351d764500a7450ed8fa8c4b06140a67a2ea39125be0",
+      "bytes": 32056,
+      "sha256": "93c9f1367cc77c5a5fc399238634fb18b13c444d70e036037937f956149671fd",
       "normalization": "lf"
     },
     {

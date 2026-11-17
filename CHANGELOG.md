@@ -1,5 +1,11 @@
 # Changes
 
+## [0.12.14] - 2026-11-17
+
+### Added
+- Settings now links to private vulnerability reporting and a guide to pausing, updating and recovering Enhance Prompt without clearing saved data.
+- The security policy explains supported preview versions, what each update changes, and which pause/restart checks still need desktop confirmation. Use Feedback for ordinary bugs and private reporting for security concerns.
+
 ## [0.12.13] - 2026-11-17
 
 ### Added

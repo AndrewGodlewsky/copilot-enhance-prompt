@@ -10,7 +10,7 @@ Current baseline: 0.12.1 / 4104c29. Tracking issue: [#40](https://github.com/And
 
 Security and correctness: delivered; see versions below.
 
-Distribution/maintenance: #10, #11, #33.
+Distribution/maintenance: #11 (manual/maintainer confirmation pending), #33.
 
 Efficiency: #12, #13, #14, #15, #19, #20, #21, #32, #34.
 
@@ -20,9 +20,19 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- In progress: #10, verified locally; awaiting actual GitHub CI before release. Next: #11, security reporting and recovery guidance.
+- In progress: #11, security guidance and private reporting; desktop/maintainer confirmation requested. Next: #33, smaller runtime package and distribution policy.
 
 ## Delivered versions
+
+### 0.12.14 — #11, security support and recovery
+
+Private reporting was enabled via the GitHub API and rechecked; its public reporting route returned HTTP 200. SECURITY.md describes preview support, maintainer ownership, safe report content, disabling/restarting, component-specific updates, retained accounting and reviewed rollback. Settings links to the guide and private report without changing public Feedback. No self-disable command, restart, uninstall or automatic upload is exposed.
+
+Verification: Settings rendering first failed for missing guidance/links, then passed with static HTTPS destinations and safe external-link attributes. A disposable CLI fixture installed a synthetic plugin, disabled/re-enabled it across separate processes and verified a retained data sentinel. Runtime `1.0.106-8.unstable.r43566476370.g869eef3`, Windows x64; no model calls, owner-profile mutation or GUI automation. Full build/test/CI evidence is attached to the issue/release before publication.
+
+Local typecheck/build, all 456 final tests, package and diff checks pass. Independent review passed both composer tests, checked eight local documentation links, and found no blockers. Hosted CI is checked on the exact release commit before publication.
+
+Ruling: keep #11 open until the owner confirms desktop pause/re-enable/data retention and private-report notification/response expectations. An API-enabled route is not proof of inbox delivery. No numeric response commitment or immediate worker shutdown is claimed. Guidance deliberately avoids deletion and policy bypass. Owner questions are pending; other issues can proceed.
 
 ### 0.12.13 ? #10, clean-build CI and monitoring
 
@@ -31,6 +41,8 @@ Read-only Windows workflows install both locks with pinned Node/npm, run typeche
 Local verification: clean root/web npm ci, typecheck/build, 454 final tests, package checks and clean diff pass. Both full dependency audits report zero known advisories. A failing generated-guard regression now covers modified/staged/removed/new outputs and excludes unrelated files. Independent review found no blockers. Actual GitHub runner evidence will be recorded in #10 before publishing.
 
 The first real Windows CI run passed 446/454 tests and failed eight usage-recovery tests: the trusted accounting root can use Windows short-name/case aliases. A local case-alias regression reproduced the failure. Resolve that trusted root before validating its recovery child; root and child links are still refused. Both new regressions pass. The corrected full suite has 456 tests; the final runner result is attached to #10 before release.
+
+Final GitHub Verify passed on fb2ce46 (run 44034466167); dependency audit passed on unchanged locks/workflow at 9347e90 (run 44033872155). Version 0.12.13 was pushed to main and published as a preview; #10 is closed. Local and hosted suites both passed 456 tests.
 
 Repository API verified alerts/security-update PRs were disabled; both are now enabled and rechecked. Secret scanning/push protection were already enabled. Main is unprotected, with no rulesets; workflows are read-only but repository policy allows all actions. Ruling: do not change direct-to-main policy by silently imposing PR-only enforcement. CI status is advisory until owner policy changes. Documented in [maintenance](../../maintenance.md).
 

@@ -398,3 +398,5 @@ export const DISCLOSURES: Partial<Record<PrivacyKey | 'sendAfterEnhance', string
 /** The plugin's issue page, in the browser (the host asks before opening a site the first time). */
 export const REPOSITORY_URL = 'https://github.com/AndrewGodlewsky/copilot-enhance-prompt'
 export const ISSUES_URL = `${REPOSITORY_URL}/issues/new`
+export const SECURITY_REPORT_URL = `${REPOSITORY_URL}/security/advisories/new`
+export const SECURITY_GUIDE_URL = `${REPOSITORY_URL}/blob/main/SECURITY.md#pausing-and-recovering`
