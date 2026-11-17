@@ -1,0 +1,22 @@
+{
+  "pluginVersion": "0.12.30",
+  "node": "v24.22.1",
+  "platform": "win32",
+  "runtime": "GitHub Copilot CLI 1.0.106-8.unstable.r43566476370.g869eef3.",
+  "declarationHash": "819873114d258979d3f5a513e3e4544ea3e683531eba33b25eb12d062268ede7",
+  "inferenceCalls": 0,
+  "credentialsSupplied": false,
+  "loggedInFallback": false,
+  "results": [
+    {
+      "managedSettings": false,
+      "sessionCreated": true,
+      "authenticated": false
+    },
+    {
+      "managedSettings": true,
+      "sessionCreated": true,
+      "authenticated": false
+    }
+  ]
+}

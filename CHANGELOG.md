@@ -1,5 +1,10 @@
 # Changes
 
+## [0.12.30] - 2026-11-17
+
+### Verification
+- Documented the managed-account compatibility gate and added a credential-free runtime probe. Account and policy checks remain enforced; real managed-account validation is still pending.
+
 ## [0.12.29] - 2026-11-17
 
 ### Verification

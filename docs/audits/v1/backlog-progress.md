@@ -20,6 +20,16 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
+### 0.12.30 — #30, managed-account contract evidence
+
+Published current official/installed authentication research and an opt-in credential-free runtime observation probe. It imports only the installed SDK, uses an owned empty home/workspace, strips inherited credentials, disables stored/CLI fallback, blocks proxy-aware outbound access, never sends/model-tests, bounds calls and stops only its own runtime. Raw published evidence has only version/hash/boolean outcomes. Both control and managed-settings-enabled sessions are accepted unauthenticated on the installed runtime, differing from the declaration's expected missing-token rejection. This is not a successful policy or inference test. Production account/catalog/isolation checks remain unchanged; 21 model regressions passed separately.
+
+Ruling: #30 stays open for personal and administrator-approved managed-account evidence. Do not disable managed settings, extract credentials, bypass policy or introduce another provider to reconcile a declaration/runtime discrepancy. Existing personal user success is not enterprise acceptance. This release adds no model request or account secrets. Full verification and independent final review follow.
+
+Final verification: the updated observation probe again reports both unauthenticated session creations; 21 focused model regressions, typecheck, build, 541 final tests, package/diff checks and disposable runtime archive fixture pass. Independent review verified syntax, 21 local links, installed declaration hash/SDK forwarding and current official references, with no blockers. Thread limit required an independent earlier reviewer. Final: minor (deferred): developer-probe raw SDK stderr/startup/status/stop errors are not sanitized; documentation limits shareable evidence to inspected successful stdout JSON, while production Show Logs remains allowlisted. Review rulings: managed/personal auth, policy/entitlement/refresh, native UI, other platforms/runtimes and OS network isolation are unverified; proxy settings are not a sandbox. #30 stays open. Exact hosted CI/publication follow.
+
+Previous release 0.12.29 / 13f8147 passed exact Verify 44073146422; preview and three runtime archive assets were published; #29 remains open for owner acceptance.
+
 ### 0.12.29 — #29, owner desktop acceptance preparation
 
 Published a concise owner-run matrix with environment/result template, disposable/synthetic setup, allowance-marked steps and explicit expectations across installation/update/restart, catalog/managed policy, rewrite/send/cancel, attachments, saves/native close, History, rules, connection recovery, widths/zoom/text sizes, keyboard/AT, pause and usage. Every native/account row is pending; no owner installation is changed and no model is called. Historical audit results remain historical. See [desktop acceptance](../../desktop-acceptance.md).
