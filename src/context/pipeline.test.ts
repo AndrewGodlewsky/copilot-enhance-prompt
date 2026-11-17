@@ -259,3 +259,34 @@ test('an unavailable project directory supplies no files instead of failing the 
     assert.deepEqual(parts.items, [])
   })
 })
+
+test('explicit safe paths beyond traversal limits reach every code context route while exclusions still win',async()=>{
+  const target='a/b/c/d/e/f/g/h/認証.ts'
+  await fixture({[target]:'export const evidence = "EXPLICIT_SAFE_TARGET"','README.md':'Project fixture'},async({host})=>{
+    for(const level of ['deep','max','ai-test'] as const){
+      const gathered=await gatherContext(host,{...options,level,prompt:`Inspect \`${target}\``,allowGit:false,pickFiles:async()=>[]})
+      assert.ok(gathered.items.some(item=>item.id===`file:${target}`&&item.content.includes('EXPLICIT_SAFE_TARGET')))
+      assert.ok(gathered.notes.some(note=>note.code==='note.discovery_partial'))
+      if(level==='ai-test')assert.ok(gathered.files?.includes(target))
+      const omitted=await gatherContext(host,{...options,level,prompt:`Inspect \`${target}\``,allowGit:false,excludePatterns:'a/'})
+      assert.ok(!omitted.items.some(item=>item.content.includes('EXPLICIT_SAFE_TARGET')))
+      assert.ok(omitted.notes.some(note=>note.code==='note.explicit_omitted'))
+    }
+  })
+})
+
+test('nonexistent dotted identifiers cannot consume the slots for actual relevant source files',async()=>{
+  await fixture({'handler.ts':'export const evidence = "api.one api.two api.three api.four api.five api.six"'},async({host})=>{
+    const gathered=await gatherContext(host,{...options,prompt:'Fix api.one api.two api.three api.four api.five api.six',allowGit:false})
+    assert.ok(gathered.items.some(item=>item.id==='file:handler.ts'))
+    assert.equal(gathered.notes.filter(note=>note.code==='note.explicit_unreadable').length,1)
+  })
+})
+
+test('enumerated empty or binary named files do not displace actual readable evidence',async()=>{
+  const files=Object.fromEntries(['one','two','three','four','five','six'].map(name=>[`api.${name}`,'\0binary']))
+  await fixture({...files,'handler.ts':'export const evidence = "api.one api.two api.three api.four api.five api.six"'},async({host})=>{
+    const gathered=await gatherContext(host,{...options,prompt:'Fix api.one api.two api.three api.four api.five api.six',allowGit:false})
+    assert.ok(gathered.items.some(item=>item.id==='file:handler.ts'))
+  })
+})

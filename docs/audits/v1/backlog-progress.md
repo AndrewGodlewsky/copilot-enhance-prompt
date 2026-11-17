@@ -12,13 +12,29 @@ Security and correctness: delivered; see versions below.
 
 Distribution/maintenance: #11 (manual/maintainer confirmation pending), #33 (runtime package prepared; stable channel/manual gates pending).
 
-Efficiency: #12/#13/#15/#19 shipped and closed. #14 saving implementation shipped (native-close/manual gate remains); #20 in verification, then #21, #32, #34.
+Efficiency: #12/#13/#15/#19/#20 shipped and closed. #14 saving implementation shipped (native-close/manual gate remains); #21 in verification, then #32, #34.
 
 Usability: #24, #25, #26, #27.
 
 Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and concrete choices; do independent work while an answer is pending. Never consume the owner's Copilot credits or control desktop/browser UI.
 
 ## Current work
+
+### 0.12.22 — #21, context coverage and explicit paths
+
+Filename discovery now reports counts, partial limits and unavailable reads; Git uses NUL-framed names. Safe explicit relative candidates precede ordinary/AI selection within unchanged six/ten-file limits, including paths beyond scan depth/count. Exclusions and confined final reads still win; candidate names do not imply existence. Partial discovery falls back to per-file content reads instead of Git grep with an incomplete refusal list. Unicode keywords, early/latest hit retention and separated snippet regions improve evidence without increasing character/model budgets. Budget markers count toward their limits.
+
+Regression tests first failed for absent coverage operations, missed explicit targets and late-hit retention, then passed. Tests cover every code context route, policy exclusion, incomplete Git records, Unicode/unusual names, inaccessible/depth/file limits, source redaction and strict excerpt/total budgets. Typecheck and 54 focused tests pass; scale measurement, full rebuilt checks and final review follow before publication.
+
+Ruling: counts describe inspected names/eligible candidates, not total project size or files read. Complete discovery is scoped by privacy. Only relative paths are prioritized; absolute/external input is left to explicit attachments. At most twelve named candidates, six/ten snippets and existing budgets remain. Fixed-space hit retention favors early/latest evidence and cannot guarantee every match. Historical exact-output benchmarks reproduce their recorded versions; this release intentionally changes evidence selection. Preview 0.12.21 shipped at 190ee12 after exact Verify 44057318517 succeeded, with all three archive assets; #20 is closed.
+
+Full-suite evidence first exposed a source-preservation regression: selecting one representative per hit cluster omitted a matched return statement. The existing privacy test failed, then passed after prioritizing distinct centers followed by all matched lines and then neighboring lines. Redaction still precedes excerpt selection.
+
+Independent review found unreadable dotted candidates could consume all snippet slots. Missing and existing-binary fixtures both failed before bounded confined text probes removed unreadable candidates from selection. The review's punctuation finding is regraded important: silently reading a different sibling violates explicit-path identity, not just presentation. A quoted comma-ending filename regression failed before literal quoted parsing fixed it. Final focused coverage/pipeline/privacy: 39 passed. No deferred minor findings; one review/fix pass, followed by rebuilt full verification and refreshed scale hashes.
+
+Review rulings: executor verifies final artifacts/runtime/CI/publication and reruns measurements after code changes. Endpoint RSS/tiny-file tests are not peak or production performance; Windows fixtures do not prove all Unix filenames/Unicode folding. Desktop/account/accessibility gates remain manual. Bounded scans/matches are not exhaustive or transactionally consistent. Rewrite sets, usage and send implementations remain unchanged; existing full/runtime fixtures cover their regressions without paid inference.
+
+Final verification: typecheck/build, all 515 tests, package/diff checks and the disposable runtime-only archive fixture pass. Three final paired 30,001-file samples find the named target in every current run and none of the old runs; exclusion is verified. Median collection 1539.4→1507.0 ms, emitted content 476→491 characters, below unchanged 28,000. This is coverage evidence, not a significant speed claim. Source hashes match the final tested code. SDK/CLI 1.0.106-8.unstable.r43566476370.g869eef3, Node24.22.1, Windows x64; no paid models or owner installation changes. Exact hosted CI and publication are recorded in issue/release evidence before closure.
 
 ### 0.12.21 — #20, coalesced context discovery
 

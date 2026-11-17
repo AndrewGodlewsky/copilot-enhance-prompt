@@ -120,18 +120,21 @@ export async function filterAllowed(paths: string[], allow: FileFilter, signal?:
   return result
 }
 
-export async function walkFiles(root: string, maxFiles = 8000, maxDepth = 6, signal?: AbortSignal, allow: FileFilter = () => true): Promise<string[]> {
+export type FileListing = {files:string[];scanned:number;limits:string[];unavailable:boolean}
+
+export async function walkListing(root: string, maxFiles = 8000, maxDepth = 6, signal?: AbortSignal, allow: FileFilter = () => true): Promise<FileListing> {
   const out: string[] = []
+  const limits=new Set<string>();let scanned=0,unavailable=false
   async function visit(dir: string, depth: number): Promise<void> {
     signal?.throwIfAborted()
-    if (out.length >= maxFiles || depth > maxDepth) {
-      return
-    }
+    if (out.length >= maxFiles) {limits.add('file limit');return}
+    if (depth > maxDepth) {limits.add('depth limit');return}
     let entries
     await allow.beforeRead?.()
     try {
       entries = await readdir(dir, { withFileTypes: true })
     } catch {
+      limits.add('unreadable directory');if(dir===root)unavailable=true
       return
     }
     for (const entry of entries) {
@@ -139,6 +142,7 @@ export async function walkFiles(root: string, maxFiles = 8000, maxDepth = 6, sig
       await allow.beforeRead?.()
       signal?.throwIfAborted()
       if (out.length >= maxFiles) {
+        limits.add('file limit')
         return
       }
       const path = relative(root, join(dir, entry.name)).split(sep).join('/')
@@ -146,15 +150,20 @@ export async function walkFiles(root: string, maxFiles = 8000, maxDepth = 6, sig
         if (await allow(`${path}/`) && !WALK_SKIP.has(entry.name) && (!entry.name.startsWith('.') || path === '.github' || path === '.cursor')) {
           await visit(join(dir, entry.name), depth + 1)
         }
-      } else if (entry.isFile() && await allow(path)) {
-        out.push(path)
+      } else if (entry.isFile()) {
+        scanned++
+        if(await allow(path))out.push(path)
       }
     }
   }
   await visit(root, 0)
   signal?.throwIfAborted()
   await allow.beforeRead?.()
-  return out
+  return {files:out,scanned,limits:[...limits],unavailable}
+}
+
+export async function walkFiles(root:string,maxFiles=8000,maxDepth=6,signal?:AbortSignal,allow:FileFilter=()=>true):Promise<string[]> {
+  return (await walkListing(root,maxFiles,maxDepth,signal,allow)).files
 }
 
 /** Directories (depth <= 2) with file counts, plus top-level files: a compact map of the repo. */
@@ -193,33 +202,34 @@ export async function readText(root: string, path: string, maxBytes = 200_000, a
   return text === undefined || text.includes('\u0000') ? null : text
 }
 
+/** Keep early and late evidence in fixed space instead of losing every later region. */
+export function rememberHit(hits:number[],line:number):void {
+  if(hits.at(-1)===line)return
+  if(hits.length===20)hits.splice(10,1)
+  hits.push(line)
+}
+
 /** Lines around each hit (or the head of the file), numbered, within `maxChars`. */
 export function snippet(text: string, hits: number[], maxChars: number): string {
+  if(maxChars<=0)return ''
   const lines = text.split(/\r?\n/)
-  const keep = new Set<number>()
-  if (hits.length === 0) {
-    for (let i = 0; i < Math.min(lines.length, 40); i++) keep.add(i)
-  } else {
-    for (const hit of hits.slice(0, 6)) {
-      // `hit` is 1-based: keep 4 lines above it, the line itself and 2 below.
-      for (let i = Math.max(0, hit - 5); i < Math.min(lines.length, hit + 2); i++) keep.add(i)
-    }
+  const valid=[...new Set(hits.filter(hit=>Number.isInteger(hit)&&hit>0&&hit<=lines.length))].sort((a,b)=>a-b)
+  const regions=valid.filter((hit,index)=>index===0||hit-valid[index-1]>7)
+  const centers=regions.length<=6?regions:Array.from({length:6},(_,i)=>regions[Math.round(i*(regions.length-1)/5)])
+  // Give each distinct hit region a line before spending the budget on neighbors.
+  const order=centers.length?[...centers.map(hit=>hit-1),...valid.map(hit=>hit-1),...[-1,1,-2,2,-3,-4].flatMap(offset=>valid.map(hit=>hit-1+offset))]:Array.from({length:Math.min(lines.length,40)},(_,i)=>i)
+  const width=Math.max(0,Math.min(240,Math.floor(maxChars/Math.max(1,centers.length))-12))
+  const cut=(value:string,length:number)=>{const end=value.slice(0,Math.max(0,length));return /[\uD800-\uDBFF]$/.test(end)?end.slice(0,-1):end}
+  const display=(i:number)=>`${i+1}: ${lines[i].length>width?cut(lines[i],width)+'…':lines[i]}`
+  const render=(indices:Set<number>)=>{let last=-2;const out:string[]=[];for(const i of [...indices].sort((a,b)=>a-b)){if(out.length&&i!==last+1)out.push('…');out.push(display(i));last=i}return out.join('\n')}
+  const keep=new Set<number>();let omitted=false
+  for(const i of order){
+    if(i<0||i>=lines.length||keep.has(i))continue
+    const proposed=new Set([...keep,i])
+    if(render(proposed).length<=maxChars)keep.add(i)
+    else omitted=true
   }
-  const out: string[] = []
-  let last = -2
-  let size = 0
-  for (const i of [...keep].sort((a, b) => a - b)) {
-    const line = `${i + 1}: ${lines[i].slice(0, 240)}`
-    if (size + line.length > maxChars) {
-      out.push('…')
-      break
-    }
-    if (i !== last + 1 && out.length > 0) {
-      out.push('…')
-    }
-    out.push(line)
-    size += line.length + 1
-    last = i
-  }
-  return out.join('\n')
+  const out=render(keep)
+  if(!out)return '…'.slice(0,maxChars)
+  return omitted&&out.length+2<=maxChars?out+'\n…':out
 }

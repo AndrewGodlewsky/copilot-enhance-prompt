@@ -1957,6 +1957,13 @@ var MESSAGES = {
   // Text from outside the plugin (a provider's error, a file name) stays verbatim.
   raw: "{text}",
   // Context notes: why something was left out.
+  "note.discovery_complete": "File discovery complete within the permitted scope: {scanned} names inspected, {eligible} eligible. Context still uses selected excerpts, not every file.",
+  "note.discovery_partial": "File discovery is partial: {scanned} names inspected, {eligible} eligible. Limits: {reasons}. Name a project-relative file path to consider it directly.",
+  "note.discovery_unavailable": "Project file discovery was unavailable. Context may lack project evidence; check access and refresh.",
+  "note.explicit_omitted": "{count} explicitly named path(s) were omitted by file-access or privacy rules. Exclusions still apply.",
+  "note.explicit_unreadable": "An explicitly named file could not supply text: it may be missing, empty, binary, changed, linked outside the project, or unreadable.",
+  "note.context_budget": "Some eligible context was trimmed or omitted to stay within this context level\u2019s character budget.",
+  "why.explicit": "explicitly named in the request",
   "note.no_workspace": "No focused workspace.",
   "note.workspace_unknown": "Could not tell which folder the workspace is in; project files skipped.",
   "note.remote": "Remote (SSH/WSL) workspace: project files are not readable from the plugin.",
@@ -2264,11 +2271,18 @@ async function filterAllowed(paths, allow, signal) {
   }
   return result;
 }
-async function walkFiles(root, maxFiles = 8e3, maxDepth = 6, signal, allow = () => true) {
+async function walkListing(root, maxFiles = 8e3, maxDepth = 6, signal, allow = () => true) {
   const out = [];
+  const limits = /* @__PURE__ */ new Set();
+  let scanned = 0, unavailable3 = false;
   async function visit(dir, depth) {
     signal?.throwIfAborted();
-    if (out.length >= maxFiles || depth > maxDepth) {
+    if (out.length >= maxFiles) {
+      limits.add("file limit");
+      return;
+    }
+    if (depth > maxDepth) {
+      limits.add("depth limit");
       return;
     }
     let entries;
@@ -2276,6 +2290,8 @@ async function walkFiles(root, maxFiles = 8e3, maxDepth = 6, signal, allow = () 
     try {
       entries = await readdir(dir, { withFileTypes: true });
     } catch {
+      limits.add("unreadable directory");
+      if (dir === root) unavailable3 = true;
       return;
     }
     for (const entry of entries) {
@@ -2283,6 +2299,7 @@ async function walkFiles(root, maxFiles = 8e3, maxDepth = 6, signal, allow = () 
       await allow.beforeRead?.();
       signal?.throwIfAborted();
       if (out.length >= maxFiles) {
+        limits.add("file limit");
         return;
       }
       const path = relative2(root, join(dir, entry.name)).split(sep2).join("/");
@@ -2290,15 +2307,16 @@ async function walkFiles(root, maxFiles = 8e3, maxDepth = 6, signal, allow = () 
         if (await allow(`${path}/`) && !WALK_SKIP.has(entry.name) && (!entry.name.startsWith(".") || path === ".github" || path === ".cursor")) {
           await visit(join(dir, entry.name), depth + 1);
         }
-      } else if (entry.isFile() && await allow(path)) {
-        out.push(path);
+      } else if (entry.isFile()) {
+        scanned++;
+        if (await allow(path)) out.push(path);
       }
     }
   }
   await visit(root, 0);
   signal?.throwIfAborted();
   await allow.beforeRead?.();
-  return out;
+  return { files: out, scanned, limits: [...limits], unavailable: unavailable3 };
 }
 function treeSummary(files, maxLines = 70) {
   const dirs = /* @__PURE__ */ new Map();
@@ -2332,33 +2350,45 @@ async function readText(root, path, maxBytes = 2e5, allow = () => true) {
   const text = result?.data.toString("utf8");
   return text === void 0 || text.includes("\0") ? null : text;
 }
+function rememberHit(hits, line) {
+  if (hits.at(-1) === line) return;
+  if (hits.length === 20) hits.splice(10, 1);
+  hits.push(line);
+}
 function snippet(text, hits, maxChars) {
+  if (maxChars <= 0) return "";
   const lines = text.split(/\r?\n/);
+  const valid = [...new Set(hits.filter((hit) => Number.isInteger(hit) && hit > 0 && hit <= lines.length))].sort((a, b) => a - b);
+  const regions = valid.filter((hit, index) => index === 0 || hit - valid[index - 1] > 7);
+  const centers = regions.length <= 6 ? regions : Array.from({ length: 6 }, (_, i) => regions[Math.round(i * (regions.length - 1) / 5)]);
+  const order = centers.length ? [...centers.map((hit) => hit - 1), ...valid.map((hit) => hit - 1), ...[-1, 1, -2, 2, -3, -4].flatMap((offset) => valid.map((hit) => hit - 1 + offset))] : Array.from({ length: Math.min(lines.length, 40) }, (_, i) => i);
+  const width = Math.max(0, Math.min(240, Math.floor(maxChars / Math.max(1, centers.length)) - 12));
+  const cut = (value, length) => {
+    const end = value.slice(0, Math.max(0, length));
+    return /[\uD800-\uDBFF]$/.test(end) ? end.slice(0, -1) : end;
+  };
+  const display = (i) => `${i + 1}: ${lines[i].length > width ? cut(lines[i], width) + "\u2026" : lines[i]}`;
+  const render2 = (indices) => {
+    let last = -2;
+    const out2 = [];
+    for (const i of [...indices].sort((a, b) => a - b)) {
+      if (out2.length && i !== last + 1) out2.push("\u2026");
+      out2.push(display(i));
+      last = i;
+    }
+    return out2.join("\n");
+  };
   const keep = /* @__PURE__ */ new Set();
-  if (hits.length === 0) {
-    for (let i = 0; i < Math.min(lines.length, 40); i++) keep.add(i);
-  } else {
-    for (const hit of hits.slice(0, 6)) {
-      for (let i = Math.max(0, hit - 5); i < Math.min(lines.length, hit + 2); i++) keep.add(i);
-    }
+  let omitted = false;
+  for (const i of order) {
+    if (i < 0 || i >= lines.length || keep.has(i)) continue;
+    const proposed = /* @__PURE__ */ new Set([...keep, i]);
+    if (render2(proposed).length <= maxChars) keep.add(i);
+    else omitted = true;
   }
-  const out = [];
-  let last = -2;
-  let size = 0;
-  for (const i of [...keep].sort((a, b) => a - b)) {
-    const line = `${i + 1}: ${lines[i].slice(0, 240)}`;
-    if (size + line.length > maxChars) {
-      out.push("\u2026");
-      break;
-    }
-    if (i !== last + 1 && out.length > 0) {
-      out.push("\u2026");
-    }
-    out.push(line);
-    size += line.length + 1;
-    last = i;
-  }
-  return out.join("\n");
+  const out = render2(keep);
+  if (!out) return "\u2026".slice(0, maxChars);
+  return omitted && out.length + 2 <= maxChars ? out + "\n\u2026" : out;
 }
 
 // src/context/git.ts
@@ -2496,9 +2526,23 @@ function maskedStart(text, maxChars) {
   }
   return redactCode(spare.slice(0, end)).slice(0, maxChars);
 }
-async function gitFiles(root, signal, ensureAccess) {
-  const out = await git(root, ["ls-files", "-co", "--exclude-standard"], { maxBytes: 16e6, timeoutMs: 6e3, signal, ensureAccess });
-  return out === null ? null : out.split("\n").filter(Boolean).slice(0, 5e4);
+function parseGitListing(text, maxFiles = 5e4) {
+  const end = text.lastIndexOf("\0"), files = [...new Set(text.slice(0, end + 1).split("\0").filter(Boolean))];
+  const limits = [];
+  if (text && !text.endsWith("\0")) limits.push("incomplete output");
+  if (files.length > maxFiles) limits.push("file limit");
+  return { files: files.slice(0, maxFiles), scanned: files.length, limits, unavailable: false };
+}
+async function gitListing(root, signal, ensureAccess) {
+  signal?.throwIfAborted();
+  await ensureAccess?.();
+  const result = await gitResult(root, ["ls-files", "-z", "-co", "--exclude-standard"], { maxBytes: 16e6, timeoutMs: 6e3, signal, ensureAccess });
+  signal?.throwIfAborted();
+  await ensureAccess?.();
+  const parsed = parseGitListing(result.text);
+  if (result.limited) parsed.limits.push("Git output or time limit");
+  if (result.unavailable) parsed.limits.push("Git listing unavailable");
+  return { ...parsed, unavailable: result.unavailable };
 }
 function parseGrepMatches(text, words) {
   const counts = words.map(() => /* @__PURE__ */ new Map()), hits = /* @__PURE__ */ new Map();
@@ -2526,7 +2570,7 @@ function parseGrepMatches(text, words) {
     });
     if (matched) {
       const list = hits.get(path) ?? [];
-      if (list.length < 20) list.push(line);
+      rememberHit(list, line);
       hits.set(path, list);
     }
   }
@@ -2590,7 +2634,7 @@ function createEnumerationPool(read) {
         if (!current.subscribers.delete(subscriber)) return;
         options.signal?.removeEventListener("abort", abort);
         if (!value) reject(error ?? new Error("Project discovery failed."));
-        else resolve5({ files: [...value.files], refused: [...value.refused], isGit: value.isGit });
+        else resolve5({ ...value, files: [...value.files], refused: [...value.refused], ...value.coverage ? { coverage: { ...value.coverage, limits: [...value.coverage.limits] } } : {} });
         if (!current.subscribers.size) {
           if (jobs.get(key) === current) jobs.delete(key);
           current.controller.abort();
@@ -2631,11 +2675,14 @@ function createEnumerationPool(read) {
 var pool = createEnumerationPool(async (root, policy, signal, ensureAccess) => {
   const access = { ...policy, ensureAccess }, allow = await projectFileAllowed(root, access);
   const isGit = policy.allowGit && await isGitRepo(root, signal, ensureAccess);
-  const listed = (isGit ? await gitFiles(root, signal, ensureAccess) : null) ?? await walkFiles(root, void 0, void 0, signal, allow);
+  const git2 = isGit ? await gitListing(root, signal, ensureAccess) : null;
+  const listing = git2 && !git2.unavailable ? git2 : await walkListing(root, void 0, void 0, signal, allow);
+  if (git2?.unavailable) listing.limits.push("Git listing unavailable; used filesystem walk");
+  const listed = listing.files;
   signal.throwIfAborted();
   await ensureAccess();
   const files = await filterAllowed([...new Set(listed)], allow, signal), permitted = new Set(files);
-  return { files, refused: listed.filter((path) => !permitted.has(path)), isGit };
+  return { files, refused: listed.filter((path) => !permitted.has(path)), isGit, coverage: { scanned: listing.scanned, eligible: files.length, limits: listing.limits, unavailable: listing.unavailable, source: listing === git2 ? "git" : "walk" } };
 });
 async function enumerateProject(root, allowGit, policy = {}, signal, fresh = false) {
   signal?.throwIfAborted();
@@ -2643,7 +2690,7 @@ async function enumerateProject(root, allowGit, policy = {}, signal, fresh = fal
   const canonical = await realpath3(root).catch(() => null);
   signal?.throwIfAborted();
   await policy.ensureAccess?.();
-  if (!canonical) return { files: [], refused: [], isGit: false };
+  if (!canonical) return { files: [], refused: [], isGit: false, coverage: { scanned: 0, eligible: 0, limits: ["project unavailable"], unavailable: true, source: "walk" } };
   return pool(canonical, { ...policy, allowGit }, { signal, ensureAccess: policy.ensureAccess, fresh });
 }
 
@@ -2720,22 +2767,34 @@ async function readRuleFiles(root, fileList, extra, budget, allow = () => true) 
 var STOP = new Set(
   "the a an and or for with from into onto this that these those then than when where what which who how why add fix make update change create remove delete use using please need want should could would can will not all any some more less new old get set put run test tests code file files function page bug issue have has had are was were been be is it its to of in on at by as do does done so if else also just like cho c\u1EE7a v\xE0 v\u1EDBi c\xE1c nh\u1EEFng m\u1ED9t n\xE0y kia \u0111\xF3 khi th\xEC l\xE0 \u0111\u01B0\u1EE3c kh\xF4ng c\xF3 \u0111\u1EC3 trong ngo\xE0i l\xEAn xu\u1ED1ng s\u1EEDa th\xEAm xo\xE1 x\xF3a l\xE0m gi\xFAp m\xECnh t\xF4i b\u1EA1n c\xE1i n\xE0o g\xEC sao v\u1EADy nh\xE9 \u0111i r\u1ED3i l\u1EA1i c\u1EA7n mu\u1ED1n ph\u1EA3i n\xEAn h\xE3y v\xE0o ra trang l\u1ED7i ch\u1EE9c n\u0103ng".split(/\s+/)
 );
+function explicitPaths(prompt, max = 12) {
+  const paths = [];
+  for (const match of prompt.matchAll(/`([^`\r\n]+)`|"([^"\r\n]+)"|'([^'\r\n]+)'|([^\s`"'<>()[\]{},;!?]+)/gu)) {
+    const quoted = match[4] === void 0, token = match[1] ?? match[2] ?? match[3] ?? match[4];
+    const path = (quoted ? token : token.replace(/[.,:、。]+$/u, "")).replace(/\\/g, "/").replace(/^\.\//, "");
+    if (!path || path.length > 240 || /[\0\r\n]/.test(path) || path.includes("://") || path.split("/").includes("..") || path.startsWith("/") || /^[A-Za-z]:/.test(path)) continue;
+    if (!path.includes("/") && !(quoted ? /\.[^/]+$/u : /\.[\p{L}\p{N}]{1,12}$/u).test(path)) continue;
+    if (!paths.includes(path)) paths.push(path);
+    if (paths.length >= max) break;
+  }
+  return paths;
+}
 function weightedKeywords(prompt, max = 12) {
   const found = /* @__PURE__ */ new Map();
   const add = (word, weight) => {
     const key = word.toLowerCase();
-    if (key.length < 3 || STOP.has(key) || /^\d+$/.test(key)) return;
+    if (key.length < (/[\u0080-\uFFFF]/.test(key) ? 2 : 3) || STOP.has(key) || /^\d+$/.test(key)) return;
     found.set(key, Math.max(found.get(key) ?? 0, weight));
   };
   for (const match of prompt.matchAll(/`([^`]{2,80})`/g)) add(match[1].trim(), 5);
-  for (const match of prompt.matchAll(/[\w@.-]*[/\\][\w@./\\-]+/g)) {
-    add(match[0].replace(/\\/g, "/").replace(/^\.\//, ""), 5);
-    add(match[0].split(/[/\\]/).pop() ?? "", 4);
+  for (const path of explicitPaths(prompt)) {
+    add(path, 5);
+    add(path.split("/").pop() ?? "", 4);
   }
   for (const match of prompt.matchAll(/\b[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*){1,4}\b/g)) {
     if (!/\.(ts|tsx|js|jsx|py|go|rs|java|kt|rb|php|cs|vue|svelte|css|scss|md|json|ya?ml|toml|sql)$/i.test(match[0])) add(match[0], 5);
   }
-  for (const match of prompt.matchAll(/\b[A-Za-z_$][\w$]*\b/g)) {
+  for (const match of prompt.matchAll(/[\p{L}_$][\p{L}\p{N}\p{M}_$]*/gu)) {
     const word = match[0];
     if (/[a-z][A-Z]|_|^[A-Z][a-z]+[A-Z]/.test(word)) {
       add(word, 4);
@@ -2908,7 +2967,7 @@ async function searchFiles(root, files, words, allow, signal) {
           matched = true;
         }
       });
-      if (matched && lines.length < 20) lines.push(index + 1);
+      if (matched) rememberHit(lines, index + 1);
     });
     if (lines.length) hits.set(file, lines);
   }
@@ -3054,7 +3113,7 @@ async function staticParts(root, extraFiles2, fresh = false, allowGit = true, si
   const key = staticKey(extraFiles2, allowGit, policy);
   const allow = await projectFileAllowed(root, policy);
   onProgress(0.15);
-  const { files, refused, isGit } = await enumerateProject(root, allowGit, policy, signal, fresh);
+  const { files, refused, isGit, coverage } = await enumerateProject(root, allowGit, policy, signal, fresh);
   stopIfCancelled(signal);
   onProgress(0.5);
   const items = [];
@@ -3067,11 +3126,11 @@ async function staticParts(root, extraFiles2, fresh = false, allowGit = true, si
   if (files.length > 0 && !policy.exclude?.has("tree")) items.push(item("tree", "tree", msg("label.tree", { count: files.length }), redactSecrets(treeSummary(files))));
   stopIfCancelled(signal);
   await policy.ensureAccess?.();
-  const parts = { at: Date.now(), key, files, refused, isGit, items };
+  const parts = { at: Date.now(), key, files, refused, isGit, items, coverage };
   for (const [path, entry] of staticCache) if (Date.now() - entry.at >= STATIC_TTL_MS) staticCache.delete(path);
   staticCache.delete(root);
   while (staticCache.size >= 32) staticCache.delete(staticCache.keys().next().value);
-  staticCache.set(root, { at: parts.at, key, files: [...files], refused: [...refused], isGit });
+  staticCache.set(root, { at: parts.at, key, files: [...files], refused: [...refused], isGit, coverage });
   return parts;
 }
 async function gatherContext(host, options) {
@@ -3114,6 +3173,24 @@ async function gatherContext(host, options) {
   if (root) {
     stopIfCancelled(signal);
     const parts = await staticParts(root, options.extraFiles, options.fresh === true, options.allowGit !== false, signal, (fraction) => step("project", "running", void 0, fraction), options);
+    if (parts.coverage) {
+      const coverage = parts.coverage;
+      notes.push(msg(coverage.unavailable ? "note.discovery_unavailable" : coverage.limits.length ? "note.discovery_partial" : "note.discovery_complete", { scanned: coverage.scanned, eligible: coverage.eligible, reasons: coverage.limits.join(", ") }));
+    }
+    if (atLeast(level, "deep")) {
+      const requested = explicitPaths(options.prompt), allow = await projectFileAllowed(root, options);
+      const permitted = await filterAllowed(requested, allow, signal);
+      if (permitted.length < requested.length) notes.push(msg("note.explicit_omitted", { count: requested.length - permitted.length }));
+      const readable2 = [];
+      for (const path of permitted) {
+        stopIfCancelled(signal);
+        if ((await readText(root, path, void 0, allow))?.trim()) readable2.push(path);
+      }
+      if (readable2.length < permitted.length) notes.push(msg("note.explicit_unreadable"));
+      const key = (path) => process.platform === "win32" ? path.toLowerCase() : path;
+      const considered = new Set(permitted.map(key));
+      parts.files = [.../* @__PURE__ */ new Set([...readable2, ...parts.files.filter((path) => !considered.has(key(path)))])];
+    }
     if (level === "ai-test") researchFiles = parts.files;
     items.push(...parts.items);
     step("project", "done", String(parts.files.length));
@@ -3153,7 +3230,9 @@ async function gatherContext(host, options) {
   }
   stopIfCancelled(signal);
   await options.ensureAccess?.();
-  return { items: fitBudget(items.filter((entry) => !options.exclude.has(entry.id)), BUDGET[level]), notes, root, ...researchFiles ? { files: researchFiles } : {} };
+  const eligible2 = items.filter((entry) => !options.exclude.has(entry.id)), fitted = fitBudget(eligible2, BUDGET[level]);
+  if (fitted.length < eligible2.length || fitted.some((entry) => entry.why?.code === "why.trimmed")) notes.push(msg("note.context_budget"));
+  return { items: fitted, notes, root, ...researchFiles ? { files: researchFiles } : {} };
 }
 function relativeTo(root, path) {
   const norm = (value) => value.replace(/\\/g, "/").replace(/\/+$/, "");
@@ -3167,10 +3246,11 @@ async function dynamicParts(root, parts, options, notes, saved = []) {
   const out = [];
   const allow = await projectFileAllowed(root, options);
   const alreadyIncluded = new Set(parts.items.filter((entry) => entry.kind === "rules").map((entry) => entry.label));
+  const explicit = explicitPaths(options.prompt).filter((path) => parts.files.includes(path));
   const isProse = (file) => /\.(md|mdx|rst|txt)$/i.test(file);
   const files = (await filterAllowed(parts.files, allow, options.signal)).filter((file) => {
     if (alreadyIncluded.has(file)) return false;
-    return !isProse(file) || file.startsWith("docs/");
+    return explicit.includes(file) || !isProse(file) || file.startsWith("docs/");
   });
   let changed = /* @__PURE__ */ new Set();
   const step = options.onStep ?? (() => void 0);
@@ -3221,9 +3301,9 @@ ${diff.diff}`));
   step("search", "running");
   const weighted = weightedKeywords(options.prompt);
   const keywords = weighted.map((entry) => entry.word);
-  const grepTargets = weighted.filter((entry) => entry.word.length >= 4).slice(0, 8);
+  const grepTargets = weighted.filter((entry) => entry.word.length >= 4 || /[^\x00-\x7F]/.test(entry.word)).slice(0, 8);
   const grepWords = grepTargets.map((entry) => entry.word);
-  const useGitSearch = parts.isGit && parts.refused.join("").length < 5e3 && parts.refused.length < 100;
+  const useGitSearch = parts.isGit && !parts.coverage?.limits.length && parts.refused.join("").length < 5e3 && parts.refused.length < 100;
   const likely = scoreFiles(files, weighted, /* @__PURE__ */ new Map(), changed, true).map((entry) => entry.path);
   const local = !useGitSearch ? await searchFiles(root, [.../* @__PURE__ */ new Set([...likely, ...files])], grepWords, allow, signal) : null;
   if (local?.limited) notes.push(msg("note.search_limited"));
@@ -3236,16 +3316,17 @@ ${diff.diff}`));
   const content = contentScores(perWord, files.length, grepTargets.map((entry) => entry.weight));
   const mentionsTests = /\btest|spec|kiểm thử/i.test(options.prompt);
   const scored = scoreFiles(files, weighted, content, changed, mentionsTests);
-  let picked = scored.slice(0, RELEVANT_FILES[options.level]).map((entry) => ({ path: entry.path, hits: [], why: msg("why.keyword") }));
+  const named = explicit.filter((path) => files.includes(path)).slice(0, RELEVANT_FILES[options.level]);
+  let picked = [...named.map((path) => ({ path, hits: [], why: msg("why.explicit") })), ...scored.filter((entry) => !named.includes(entry.path)).map((entry) => ({ path: entry.path, hits: [], why: msg("why.keyword") }))].slice(0, RELEVANT_FILES[options.level]);
   step("search", "done", String(picked.length));
   if (options.level === "max" && (!options.pickFiles || files.length === 0)) step("pick", "skipped");
   if (options.level === "max" && options.pickFiles && files.length > 0) {
     step("pick", "running");
     try {
-      const shortlist = [.../* @__PURE__ */ new Set([...scored.slice(0, 150).map((s) => s.path), ...files])].slice(0, 600);
+      const shortlist = [.../* @__PURE__ */ new Set([...named, ...scored.slice(0, 150).map((s) => s.path), ...files])].slice(0, 600);
       const chosen = await options.pickFiles(shortlist, options.prompt);
       const ai = [...new Set(chosen.filter((path) => files.includes(path)))].slice(0, 8);
-      picked = [...ai.map((path) => ({ path, hits: [], why: msg("why.ai") })), ...picked.filter((entry) => !ai.includes(entry.path))].slice(0, RELEVANT_FILES.max);
+      picked = [...picked.filter((entry) => named.includes(entry.path)), ...ai.filter((path) => !named.includes(path)).map((path) => ({ path, hits: [], why: msg("why.ai") })), ...picked.filter((entry) => !named.includes(entry.path) && !ai.includes(entry.path))].slice(0, RELEVANT_FILES.max);
       step("pick", "done", String(picked.length));
     } catch (error) {
       stopIfCancelled(signal);
@@ -3263,7 +3344,10 @@ ${diff.diff}`));
   for (const entry of picked) {
     if (options.exclude.has(`file:${entry.path}`)) continue;
     const text = await readText(root, entry.path, void 0, allow);
-    if (!text) continue;
+    if (!text) {
+      if (named.includes(entry.path)) notes.push(msg("note.explicit_unreadable"));
+      continue;
+    }
     out.push(item(`file:${entry.path}`, "file", raw(entry.path), snippet(redactCode(text), entry.hits, perFile), entry.why));
   }
   if (keywords.length > 0 && picked.length === 0) {
@@ -3315,8 +3399,8 @@ function fitBudget(items, budget) {
       out.push(entry);
       used += entry.chars;
     } else if (budget - used > 400) {
-      const content = `${entry.content.slice(0, budget - used)}
-\u2026(trimmed to fit)`;
+      const marker = "\n\u2026(trimmed to fit)";
+      const content = `${entry.content.slice(0, budget - used - marker.length)}${marker}`;
       out.push({ ...entry, content, chars: content.length, note: english(msg("why.trimmed")), why: msg("why.trimmed") });
       used = budget;
     }
@@ -6049,7 +6133,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.21";
+var VERSION = "0.12.22";
 
 // src/worker-host.ts
 import { EventEmitter } from "node:events";

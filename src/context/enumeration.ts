@@ -1,8 +1,9 @@
 import {realpath} from 'node:fs/promises'
-import {filterAllowed,projectFileAllowed,walkFiles,type FilePolicy} from './files.ts'
-import {gitFiles,isGitRepo} from './git.ts'
+import {filterAllowed,projectFileAllowed,walkListing,type FilePolicy,type FileListing} from './files.ts'
+import {gitListing,isGitRepo} from './git.ts'
 
-export type Enumeration = {files:string[];refused:string[];isGit:boolean}
+export type Coverage = Omit<FileListing,'files'> & {eligible:number;source:'git'|'walk'}
+export type Enumeration = {files:string[];refused:string[];isGit:boolean;coverage?:Coverage}
 type Policy = {allowGit:boolean;excludePatterns?:string;exclude?:ReadonlySet<string>}
 type Options = {signal?:AbortSignal;ensureAccess?:()=>Promise<void>;fresh?:boolean}
 type Reader = (root:string,policy:Policy,signal:AbortSignal,ensureAccess:()=>Promise<void>)=>Promise<Enumeration>
@@ -30,7 +31,7 @@ export function createEnumerationPool(read:Reader) {
         if(!current.subscribers.delete(subscriber)) return
         options.signal?.removeEventListener('abort',abort)
         if(!value) reject(error??new Error('Project discovery failed.'))
-        else resolve({files:[...value.files],refused:[...value.refused],isGit:value.isGit})
+        else resolve({...value,files:[...value.files],refused:[...value.refused],...(value.coverage?{coverage:{...value.coverage,limits:[...value.coverage.limits]}}:{})})
         if(!current.subscribers.size) {
           if(jobs.get(key)===current) jobs.delete(key)
           current.controller.abort()
@@ -66,16 +67,19 @@ export function createEnumerationPool(read:Reader) {
 const pool=createEnumerationPool(async(root,policy,signal,ensureAccess)=>{
   const access={...policy,ensureAccess},allow=await projectFileAllowed(root,access)
   const isGit=policy.allowGit&&await isGitRepo(root,signal,ensureAccess)
-  const listed=(isGit?await gitFiles(root,signal,ensureAccess):null)??await walkFiles(root,undefined,undefined,signal,allow)
+  const git=isGit?await gitListing(root,signal,ensureAccess):null
+  const listing=git&&!git.unavailable?git:await walkListing(root,undefined,undefined,signal,allow)
+  if(git?.unavailable)listing.limits.push('Git listing unavailable; used filesystem walk')
+  const listed=listing.files
   signal.throwIfAborted();await ensureAccess()
   const files=await filterAllowed([...new Set(listed)],allow,signal),permitted=new Set(files)
-  return {files,refused:listed.filter(path=>!permitted.has(path)),isGit}
+  return {files,refused:listed.filter(path=>!permitted.has(path)),isGit,coverage:{scanned:listing.scanned,eligible:files.length,limits:listing.limits,unavailable:listing.unavailable,source:listing===git?'git':'walk'}}
 })
 
 export async function enumerateProject(root:string,allowGit:boolean,policy:FilePolicy={},signal?:AbortSignal,fresh=false):Promise<Enumeration> {
   signal?.throwIfAborted();await policy.ensureAccess?.()
   const canonical=await realpath(root).catch(()=>null)
   signal?.throwIfAborted();await policy.ensureAccess?.()
-  if(!canonical) return {files:[],refused:[],isGit:false}
+  if(!canonical) return {files:[],refused:[],isGit:false,coverage:{scanned:0,eligible:0,limits:['project unavailable'],unavailable:true,source:'walk'}}
   return pool(canonical,{...policy,allowGit},{signal,ensureAccess:policy.ensureAccess,fresh})
 }

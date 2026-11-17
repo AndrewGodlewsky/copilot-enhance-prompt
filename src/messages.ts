@@ -6,6 +6,13 @@ export const MESSAGES = {
   raw: '{text}',
 
   // Context notes: why something was left out.
+  'note.discovery_complete': 'File discovery complete within the permitted scope: {scanned} names inspected, {eligible} eligible. Context still uses selected excerpts, not every file.',
+  'note.discovery_partial': 'File discovery is partial: {scanned} names inspected, {eligible} eligible. Limits: {reasons}. Name a project-relative file path to consider it directly.',
+  'note.discovery_unavailable': 'Project file discovery was unavailable. Context may lack project evidence; check access and refresh.',
+  'note.explicit_omitted': '{count} explicitly named path(s) were omitted by file-access or privacy rules. Exclusions still apply.',
+  'note.explicit_unreadable': 'An explicitly named file could not supply text: it may be missing, empty, binary, changed, linked outside the project, or unreadable.',
+  'note.context_budget': 'Some eligible context was trimmed or omitted to stay within this context level’s character budget.',
+  'why.explicit': 'explicitly named in the request',
   'note.no_workspace': 'No focused workspace.',
   'note.workspace_unknown': 'Could not tell which folder the workspace is in; project files skipped.',
   'note.remote': 'Remote (SSH/WSL) workspace: project files are not readable from the plugin.',

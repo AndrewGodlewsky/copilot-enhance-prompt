@@ -1,0 +1,149 @@
+{
+  "version": "0.12.22",
+  "baselineCommit": "190ee12600160be9345ac43f3379955f87d1eb70",
+  "at": "2026-11-17T09:51:47.697Z",
+  "node": "v24.22.1",
+  "platform": "win32",
+  "syntheticOnly": true,
+  "modelCalls": 0,
+  "files": 30001,
+  "method": "Three alternating production Deep gathers on a non-Git 30,001-file project. First sample cold within process; later samples warm. Fixture creation/bundling excluded. Target explicitly named beyond the 8,000-file traversal cap. No increased payload budget. RSS/heap at completion are not peaks.",
+  "sourceHashes": {
+    "src/context/index.ts": "b37b16afc266ed4c6c53840763de0fe8f80c50b98dcc17a6c43dd92dbea82711",
+    "src/context/enumeration.ts": "21374bd6d30c885675b2a0b6ca3a0781617c5294a30ff855abfb542916ba6810",
+    "src/context/files.ts": "f148505ee2aad346e858b230290c6e9583cbfa4aa06b202f31797dbc302c7b15",
+    "src/context/git.ts": "cd1d75f38d500a8b0415b824fbcca9c8172a4bc717e21026ff495ecd5555bb81",
+    "src/context/search.ts": "f679d15e2e0bcfd1343fb8faa665a4812fa6b8083986304d96f114a69ff4d805",
+    "src/context/relevance.ts": "933f083937e8550c47f76e1f1ced934a357083241d45b5a3fcac6ab14fb77bba",
+    "scripts/audit/context-coverage.mjs": "c211027b2d00cb297386bdc16d2e15ae2f0a8a6aaff0676a8a4245df418b9594"
+  },
+  "samples": [
+    {
+      "sample": 1,
+      "label": "prior",
+      "ms": 1646.06,
+      "targetFound": false,
+      "chars": 476,
+      "notes": [
+        {
+          "code": "note.git_off"
+        },
+        {
+          "code": "note.search_limited"
+        }
+      ],
+      "heapUsed": 18034688,
+      "rss": 116015104
+    },
+    {
+      "sample": 1,
+      "label": "current",
+      "ms": 1494.464,
+      "targetFound": true,
+      "chars": 491,
+      "notes": [
+        {
+          "code": "note.discovery_partial",
+          "params": {
+            "scanned": 8000,
+            "eligible": 8000,
+            "reasons": "file limit"
+          }
+        },
+        {
+          "code": "note.git_off"
+        },
+        {
+          "code": "note.search_limited"
+        }
+      ],
+      "heapUsed": 33882656,
+      "rss": 146894848
+    },
+    {
+      "sample": 2,
+      "label": "prior",
+      "ms": 1492.287,
+      "targetFound": false,
+      "chars": 476,
+      "notes": [
+        {
+          "code": "note.git_off"
+        },
+        {
+          "code": "note.search_limited"
+        }
+      ],
+      "heapUsed": 37985088,
+      "rss": 159559680
+    },
+    {
+      "sample": 2,
+      "label": "current",
+      "ms": 1528.19,
+      "targetFound": true,
+      "chars": 491,
+      "notes": [
+        {
+          "code": "note.discovery_partial",
+          "params": {
+            "scanned": 8000,
+            "eligible": 8000,
+            "reasons": "file limit"
+          }
+        },
+        {
+          "code": "note.git_off"
+        },
+        {
+          "code": "note.search_limited"
+        }
+      ],
+      "heapUsed": 37163632,
+      "rss": 161722368
+    },
+    {
+      "sample": 3,
+      "label": "prior",
+      "ms": 1539.381,
+      "targetFound": false,
+      "chars": 476,
+      "notes": [
+        {
+          "code": "note.git_off"
+        },
+        {
+          "code": "note.search_limited"
+        }
+      ],
+      "heapUsed": 56453272,
+      "rss": 195371008
+    },
+    {
+      "sample": 3,
+      "label": "current",
+      "ms": 1507.004,
+      "targetFound": true,
+      "chars": 491,
+      "notes": [
+        {
+          "code": "note.discovery_partial",
+          "params": {
+            "scanned": 8000,
+            "eligible": 8000,
+            "reasons": "file limit"
+          }
+        },
+        {
+          "code": "note.git_off"
+        },
+        {
+          "code": "note.search_limited"
+        }
+      ],
+      "heapUsed": 64290520,
+      "rss": 214745088
+    }
+  ],
+  "exclusionVerified": true
+}

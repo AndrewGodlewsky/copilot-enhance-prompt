@@ -11,9 +11,9 @@ import type { ContextItemView, ContextLevel } from '../presets.ts'
 import type { StepReporter } from '../progress.ts'
 import { projectFileAllowed, filterAllowed, isSensitive, readText, snippet, treeSummary, type FilePolicy } from './files.ts'
 import { changedPaths, gitDiff, gitGrepCounts, gitLog, gitStatus, statusLinePaths } from './git.ts'
-import { enumerateProject } from './enumeration.ts'
+import { enumerateProject, type Coverage } from './enumeration.ts'
 import { readRuleFiles } from './instructions.ts'
-import { contentScores, scoreFiles, weightedKeywords } from './relevance.ts'
+import { contentScores, scoreFiles, weightedKeywords, explicitPaths } from './relevance.ts'
 import { detectStack } from './stack.ts'
 import { searchFiles } from './search.ts'
 import { agentsSummary, MAX_SESSIONS, otherAgents, readSession, SESSION_LINES } from './agents.ts'
@@ -241,7 +241,7 @@ export async function focusedProject(host: EnhanceWorker, hint?: string | readon
 
 // ---- prompt-independent parts: share discovery, always reread file contents ----
 
-type StaticParts = { at: number; key: string; files: string[]; refused: string[]; isGit: boolean; items: ContextItem[] }
+type StaticParts = { at: number; key: string; files: string[]; refused: string[]; isGit: boolean; items: ContextItem[]; coverage?:Coverage }
 const staticCache = new Map<string, Omit<StaticParts,'items'>>()
 const STATIC_TTL_MS = 90_000
 
@@ -267,7 +267,7 @@ export async function staticParts(
   const key = staticKey(extraFiles, allowGit, policy)
   const allow = await projectFileAllowed(root, policy)
   onProgress(0.15)
-  const {files,refused,isGit} = await enumerateProject(root,allowGit,policy,signal,fresh)
+  const {files,refused,isGit,coverage} = await enumerateProject(root,allowGit,policy,signal,fresh)
   stopIfCancelled(signal)
   onProgress(0.5)
   const items: ContextItem[] = []
@@ -280,12 +280,12 @@ export async function staticParts(
   if (files.length > 0 && !policy.exclude?.has('tree')) items.push(item('tree', 'tree', msg('label.tree', { count: files.length }), redactSecrets(treeSummary(files))))
   stopIfCancelled(signal)
   await policy.ensureAccess?.()
-  const parts = { at: Date.now(), key, files, refused, isGit, items }
+  const parts = { at: Date.now(), key, files, refused, isGit, items,coverage }
   // Bounded diagnostic facts only; normal gathering never reuses completed lists.
   for(const [path,entry] of staticCache) if(Date.now()-entry.at>=STATIC_TTL_MS) staticCache.delete(path)
   staticCache.delete(root)
   while(staticCache.size>=32) staticCache.delete(staticCache.keys().next().value!)
-  staticCache.set(root, {at:parts.at,key,files:[...files],refused:[...refused],isGit})
+  staticCache.set(root, {at:parts.at,key,files:[...files],refused:[...refused],isGit,coverage})
   return parts
 }
 
@@ -341,6 +341,26 @@ export async function gatherContext(host: EnhanceWorker, options: GatherOptions)
   if (root) {
     stopIfCancelled(signal)
     const parts = await staticParts(root, options.extraFiles, options.fresh === true, options.allowGit !== false, signal, (fraction) => step('project', 'running', undefined, fraction), options)
+    if(parts.coverage){
+      const coverage=parts.coverage
+      notes.push(msg(coverage.unavailable?'note.discovery_unavailable':coverage.limits.length?'note.discovery_partial':'note.discovery_complete',{scanned:coverage.scanned,eligible:coverage.eligible,reasons:coverage.limits.join(', ')}))
+    }
+    if(atLeast(level,'deep')){
+      const requested=explicitPaths(options.prompt),allow=await projectFileAllowed(root,options)
+      const permitted=await filterAllowed(requested,allow,signal)
+      if(permitted.length<requested.length)notes.push(msg('note.explicit_omitted',{count:requested.length-permitted.length}))
+      // Dotted symbols may look like paths. Verify readable text before reserving
+      // one of the six/ten excerpt slots; final reads remain fresh and confined.
+      const readable:string[]=[]
+      for(const path of permitted){
+        stopIfCancelled(signal)
+        if((await readText(root,path,undefined,allow))?.trim())readable.push(path)
+      }
+      if(readable.length<permitted.length)notes.push(msg('note.explicit_unreadable'))
+      const key=(path:string)=>process.platform==='win32'?path.toLowerCase():path
+      const considered=new Set(permitted.map(key))
+      parts.files=[...new Set([...readable,...parts.files.filter(path=>!considered.has(key(path)))])]
+    }
     if (level === 'ai-test') researchFiles = parts.files
     items.push(...parts.items)
     step('project', 'done', String(parts.files.length))
@@ -388,7 +408,9 @@ export async function gatherContext(host: EnhanceWorker, options: GatherOptions)
 
   stopIfCancelled(signal)
   await options.ensureAccess?.()
-  return { items: fitBudget(items.filter((entry) => !options.exclude.has(entry.id)), BUDGET[level]), notes, root, ...(researchFiles ? { files: researchFiles } : {}) }
+  const eligible=items.filter(entry=>!options.exclude.has(entry.id)),fitted=fitBudget(eligible,BUDGET[level])
+  if(fitted.length<eligible.length||fitted.some(entry=>entry.why?.code==='why.trimmed'))notes.push(msg('note.context_budget'))
+  return { items:fitted, notes, root, ...(researchFiles ? { files: researchFiles } : {}) }
 }
 
 /** A path inside `root`, relative to it with forward slashes; null for a path outside it. */
@@ -412,11 +434,12 @@ async function dynamicParts(
   const out: ContextItem[] = []
   const allow = await projectFileAllowed(root, options)
   const alreadyIncluded = new Set(parts.items.filter((entry) => entry.kind === 'rules').map((entry) => entry.label))
+  const explicit=explicitPaths(options.prompt).filter(path=>parts.files.includes(path))
   // Prose files compete with code only when they live under docs/; rule files are already in.
   const isProse = (file: string) => /\.(md|mdx|rst|txt)$/i.test(file)
   const files = (await filterAllowed(parts.files, allow, options.signal)).filter((file) => {
     if (alreadyIncluded.has(file)) return false
-    return !isProse(file) || file.startsWith('docs/')
+    return explicit.includes(file) || !isProse(file) || file.startsWith('docs/')
   })
   let changed = new Set<string>()
   const step: StepReporter = options.onStep ?? (() => undefined)
@@ -471,10 +494,10 @@ async function dynamicParts(
   step('search', 'running')
   const weighted = weightedKeywords(options.prompt)
   const keywords = weighted.map((entry) => entry.word)
-  const grepTargets = weighted.filter((entry) => entry.word.length >= 4).slice(0, 8)
+  const grepTargets = weighted.filter((entry) => entry.word.length >= 4 || /[^\x00-\x7F]/.test(entry.word)).slice(0, 8)
   const grepWords = grepTargets.map((entry) => entry.word)
   // Avoid oversized Windows argument lists. The fallback reads only permitted files.
-  const useGitSearch = parts.isGit && parts.refused.join('').length < 5000 && parts.refused.length < 100
+  const useGitSearch = parts.isGit && !parts.coverage?.limits.length && parts.refused.join('').length < 5000 && parts.refused.length < 100
   const likely = scoreFiles(files, weighted, new Map(), changed, true).map(entry => entry.path)
   const local = !useGitSearch ? await searchFiles(root, [...new Set([...likely, ...files])], grepWords, allow, signal) : null
   if (local?.limited) notes.push(msg('note.search_limited'))
@@ -487,19 +510,18 @@ async function dynamicParts(
   const content = contentScores(perWord, files.length, grepTargets.map((entry) => entry.weight))
   const mentionsTests = /\btest|spec|kiểm thử/i.test(options.prompt)
   const scored = scoreFiles(files, weighted, content, changed, mentionsTests)
-  let picked: { path: string; hits: number[]; why: Message }[] = scored
-    .slice(0, RELEVANT_FILES[options.level])
-    .map((entry) => ({ path: entry.path, hits: [], why: msg('why.keyword') }))
+  const named=explicit.filter(path=>files.includes(path)).slice(0,RELEVANT_FILES[options.level])
+  let picked: { path: string; hits: number[]; why: Message }[] = [...named.map(path=>({path,hits:[] as number[],why:msg('why.explicit')})),...scored.filter(entry=>!named.includes(entry.path)).map(entry=>({path:entry.path,hits:[] as number[],why:msg('why.keyword')}))].slice(0,RELEVANT_FILES[options.level])
 
   step('search', 'done', String(picked.length))
   if (options.level === 'max' && (!options.pickFiles || files.length === 0)) step('pick', 'skipped')
   if (options.level === 'max' && options.pickFiles && files.length > 0) {
     step('pick', 'running')
     try {
-      const shortlist = [...new Set([...scored.slice(0, 150).map((s) => s.path), ...files])].slice(0, 600)
+      const shortlist = [...new Set([...named,...scored.slice(0, 150).map((s) => s.path), ...files])].slice(0, 600)
       const chosen = await options.pickFiles(shortlist, options.prompt)
       const ai = [...new Set(chosen.filter(path => files.includes(path)))].slice(0, 8)
-      picked = [...ai.map(path => ({ path, hits: [] as number[], why: msg('why.ai') })), ...picked.filter(entry => !ai.includes(entry.path))].slice(0, RELEVANT_FILES.max)
+      picked = [...picked.filter(entry=>named.includes(entry.path)),...ai.filter(path=>!named.includes(path)).map(path => ({ path, hits: [] as number[], why: msg('why.ai') })), ...picked.filter(entry => !named.includes(entry.path)&&!ai.includes(entry.path))].slice(0, RELEVANT_FILES.max)
       step('pick', 'done', String(picked.length))
     } catch (error) {
       stopIfCancelled(signal)
@@ -520,7 +542,7 @@ async function dynamicParts(
   for (const entry of picked) {
     if (options.exclude.has(`file:${entry.path}`)) continue
     const text = await readText(root, entry.path, undefined, allow)
-    if (!text) continue
+    if (!text) {if(named.includes(entry.path))notes.push(msg('note.explicit_unreadable'));continue}
     // A key that sits in a source file is masked where it is certainly one; the code around it
     // stays. Before the lines are picked and cut to width: a key the cut would split is not
     // recognised (a masked value keeps its line breaks, so the line numbers still hold).
@@ -584,7 +606,8 @@ export function fitBudget(items: ContextItem[], budget: number): ContextItem[] {
       out.push(entry)
       used += entry.chars
     } else if (budget - used > 400) {
-      const content = `${entry.content.slice(0, budget - used)}\n…(trimmed to fit)`
+      const marker='\n…(trimmed to fit)'
+      const content = `${entry.content.slice(0, budget - used-marker.length)}${marker}`
       out.push({ ...entry, content, chars: content.length, note: english(msg('why.trimmed')), why: msg('why.trimmed') })
       used = budget
     }

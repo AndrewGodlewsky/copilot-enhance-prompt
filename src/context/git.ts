@@ -1,6 +1,6 @@
 // Read-only git helpers. Fixed argument arrays, no shell; every call has a timeout and size cap.
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
-import { isSensitive, filterAllowed, type FileFilter } from './files.ts'
+import { isSensitive, filterAllowed, rememberHit, type FileFilter, type FileListing } from './files.ts'
 import { redactCode } from './secrets.ts'
 
 type GitOptions = { timeoutMs?: number; maxBytes?: number; signal?: AbortSignal; ensureAccess?: () => Promise<void> }
@@ -197,8 +197,26 @@ export function maskedStart(text: string, maxChars: number): string {
 }
 
 export async function gitFiles(root: string, signal?: AbortSignal, ensureAccess?: () => Promise<void>): Promise<string[] | null> {
-  const out = await git(root, ['ls-files', '-co', '--exclude-standard'], { maxBytes: 16_000_000, timeoutMs: 6000, signal, ensureAccess })
-  return out === null ? null : out.split('\n').filter(Boolean).slice(0, 50_000)
+  const result=await gitListing(root,signal,ensureAccess)
+  return result.unavailable?null:result.files
+}
+
+export function parseGitListing(text:string,maxFiles=50_000):FileListing {
+  const end=text.lastIndexOf('\0'), files=[...new Set(text.slice(0,end+1).split('\0').filter(Boolean))]
+  const limits=[]
+  if(text && !text.endsWith('\0'))limits.push('incomplete output')
+  if(files.length>maxFiles)limits.push('file limit')
+  return {files:files.slice(0,maxFiles),scanned:files.length,limits,unavailable:false}
+}
+
+export async function gitListing(root:string,signal?:AbortSignal,ensureAccess?:()=>Promise<void>):Promise<FileListing> {
+  signal?.throwIfAborted();await ensureAccess?.()
+  const result=await gitResult(root,['ls-files','-z','-co','--exclude-standard'],{maxBytes:16_000_000,timeoutMs:6000,signal,ensureAccess})
+  signal?.throwIfAborted();await ensureAccess?.()
+  const parsed=parseGitListing(result.text)
+  if(result.limited)parsed.limits.push('Git output or time limit')
+  if(result.unavailable)parsed.limits.push('Git listing unavailable')
+  return {...parsed,unavailable:result.unavailable}
 }
 
 /** Per file, how many lines contain `word` (case-insensitive, fixed string). */
@@ -235,7 +253,7 @@ export function parseGrepMatches(text: string, words: string[]): GitSearch {
     patterns.forEach((pattern,index)=>{
       if (pattern.test(content)) { counts[index].set(path,(counts[index].get(path)??0)+1); matched = true }
     })
-    if (matched) { const list=hits.get(path)??[];if(list.length<20) list.push(line);hits.set(path,list) }
+    if (matched) { const list=hits.get(path)??[];rememberHit(list,line);hits.set(path,list) }
   }
   return {counts,hits,limited,unavailable:false}
 }

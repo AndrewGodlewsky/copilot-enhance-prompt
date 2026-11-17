@@ -1,5 +1,12 @@
 # Changes
 
+## [0.12.22] - 2026-11-17
+
+### Improved
+- Context notes now distinguish complete file discovery, partial scans and unavailable project access, with inspected/eligible counts and limit explanations.
+- Relevant code, AI-assisted and AI Test consider safe project-relative paths named in your request even beyond ordinary scan limits. Exclusions still win; unreadable requested files are reported.
+- Unicode keywords and filenames are searchable. Excerpts cover separated matching regions and visibly mark truncated lines without increasing the context budget.
+
 ## [0.12.21] - 2026-11-17
 
 ### Improved

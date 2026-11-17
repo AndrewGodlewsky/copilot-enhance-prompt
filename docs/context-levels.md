@@ -115,6 +115,8 @@ additional context justifies the extra time and usage.
 
 ## Copilot availability
 
+[Coverage notes and explicit file paths](context-coverage.md) explain scan limits, eligible counts, omitted requested files and excerpt selection. Complete discovery is not a claim that every file was read or sent.
+
 Overlapping requests can share filename discovery while keeping cancellation and privacy checks separate. Instructions and source contents are always reread. [Freshness, Refresh and measured concurrency](context-discovery.md).
 
 Terminal output, other agents' sessions, editor-save events and agent activity are

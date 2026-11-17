@@ -17,24 +17,38 @@ export function extractKeywords(prompt: string, max = 12): string[] {
   return weightedKeywords(prompt, max).map((entry) => entry.word)
 }
 
+/** Explicit local path candidates only. Permission/confinement and existence are checked by readers. */
+export function explicitPaths(prompt:string,max=12):string[] {
+  const paths:string[]=[]
+  for(const match of prompt.matchAll(/`([^`\r\n]+)`|"([^"\r\n]+)"|'([^'\r\n]+)'|([^\s`"'<>()[\]{},;!?]+)/gu)) {
+    const quoted=match[4]===undefined,token=match[1]??match[2]??match[3]??match[4]
+    const path=(quoted?token:token.replace(/[.,:、。]+$/u,'')).replace(/\\/g,'/').replace(/^\.\//,'')
+    if(!path||path.length>240||/[\0\r\n]/.test(path)||path.includes('://')||path.split('/').includes('..')||path.startsWith('/')||/^[A-Za-z]:/.test(path))continue
+    if(!path.includes('/')&&!(quoted?/\.[^/]+$/u:/\.[\p{L}\p{N}]{1,12}$/u).test(path))continue
+    if(!paths.includes(path))paths.push(path)
+    if(paths.length>=max)break
+  }
+  return paths
+}
+
 /** Same, with weights: 5 paths/backticks/dotted names, 4 identifiers/file names, 2 long words, 1 short words. */
 export function weightedKeywords(prompt: string, max = 12): { word: string; weight: number }[] {
   const found = new Map<string, number>()
   const add = (word: string, weight: number) => {
     const key = word.toLowerCase()
-    if (key.length < 3 || STOP.has(key) || /^\d+$/.test(key)) return
+    if (key.length < (/[\u0080-\uFFFF]/.test(key)?2:3) || STOP.has(key) || /^\d+$/.test(key)) return
     found.set(key, Math.max(found.get(key) ?? 0, weight))
   }
   for (const match of prompt.matchAll(/`([^`]{2,80})`/g)) add(match[1].trim(), 5)
-  for (const match of prompt.matchAll(/[\w@.-]*[/\\][\w@./\\-]+/g)) {
-    add(match[0].replace(/\\/g, '/').replace(/^\.\//, ''), 5)
-    add(match[0].split(/[/\\]/).pop() ?? '', 4)
+  for (const path of explicitPaths(prompt)) {
+    add(path, 5)
+    add(path.split('/').pop() ?? '', 4)
   }
   // Dotted names such as `agent.prompt.before` or `user.profile.update`: exact strings to grep for.
   for (const match of prompt.matchAll(/\b[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*){1,4}\b/g)) {
     if (!/\.(ts|tsx|js|jsx|py|go|rs|java|kt|rb|php|cs|vue|svelte|css|scss|md|json|ya?ml|toml|sql)$/i.test(match[0])) add(match[0], 5)
   }
-  for (const match of prompt.matchAll(/\b[A-Za-z_$][\w$]*\b/g)) {
+  for (const match of prompt.matchAll(/[\p{L}_$][\p{L}\p{N}\p{M}_$]*/gu)) {
     const word = match[0]
     if (/[a-z][A-Z]|_|^[A-Z][a-z]+[A-Z]/.test(word)) {
       add(word, 4)
