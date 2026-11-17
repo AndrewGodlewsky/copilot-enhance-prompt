@@ -1,5 +1,11 @@
 var e=`# Changes
 
+## [0.11.2] - 2026-11-16
+
+### Added
+- Click the version number in the footer to browse versions and their release notes. Choose **What's new** to see just the current version's changes.
+- New versions will include short notes explaining what changed for users. Existing historical notes are kept as recorded.
+
 ## [0.11.1] - 2026-11-15
 
 ### Added

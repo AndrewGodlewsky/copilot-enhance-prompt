@@ -1,10 +1,11 @@
 import { formatText } from '../../src/format.ts'
 // What's new and the changelog, from the English CHANGELOG.md (bundled as text, loaded when
 // the dialog opens).
-// The version is plain footer text; after an update the changelog opens once by itself.
+// The footer version opens all releases; after an update, show the current release once.
 import { useEffect, useState, type ReactNode } from 'react'
 import { VERSION } from '../../src/version.ts'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import { Segmented } from './common'
 
 type Release = { version: string; date: string; body: string }
@@ -82,9 +83,13 @@ const versionHidden = import.meta.env.DEV && new URLSearchParams(location.search
 export function WhatsNew() {
   const [loaded, setLoaded] = useState<Release[] | null>(null)
   const [open, setOpen] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
   useEffect(() => {
-    if (open && loaded === null) void loadChangelog().then(setLoaded)
-  }, [open, loaded])
+    if (!open || loaded !== null || loadFailed) return
+    let alive = true
+    void loadChangelog().then(value => { if (alive) setLoaded(value) }).catch(() => { if (alive) setLoadFailed(true) })
+    return () => { alive = false }
+  }, [open, loaded, loadFailed])
   const releases = loaded ?? []
   const [view, setView] = useState('new')
   // After an update (not on the first install), show what changed once.
@@ -97,26 +102,32 @@ export function WhatsNew() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {versionHidden ? null : (
-        <span className="text-muted-foreground inline-flex min-h-8 items-center px-1 text-xs">
-          {`v${VERSION}`}
-        </span>
+        <DialogTrigger asChild>
+          <button type="button" className="inline-flex min-h-8 items-center rounded px-1 text-xs text-blue-700 underline-offset-4 hover:underline dark:text-blue-400" aria-label={`v${VERSION}: view release history`} title="View release history" onClick={() => { setView('all'); setLoadFailed(false) }}>
+            {`v${VERSION}`}
+          </button>
+        </DialogTrigger>
       )}
       <DialogContent className="flex max-h-[85vh] max-w-[calc(100vw-24px)] flex-col gap-3 p-4">
         <DialogHeader>
-          <DialogTitle>{view === 'new' ? formatText("What's new in {version}", { version: latest?.version ?? VERSION }) : 'Changelog'}</DialogTitle>
-          <DialogDescription className="sr-only">{'Changelog'}</DialogDescription>
+          <DialogTitle>{view === 'new' ? formatText("What's new in {version}", { version: latest?.version ?? VERSION }) : 'Release history'}</DialogTitle>
+          <DialogDescription>Versions included with this installation and what changed for users.</DialogDescription>
         </DialogHeader>
         <Segmented
-          label={'Changelog'}
+          label="Release notes view"
           value={view}
           options={[
             { value: 'new', label: "What's new" },
-            { value: 'all', label: 'Changelog' }
+            { value: 'all', label: 'All versions' }
           ]}
           onChange={setView}
         />
         <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
-          {view === 'new' && latest ? (
+          {loadFailed ? (
+            <div className="flex flex-col items-start gap-2"><p role="alert">Release notes could not be loaded.</p><Button size="sm" variant="outline" onClick={() => setLoadFailed(false)}>Retry</Button></div>
+          ) : loaded === null ? (
+            <p role="status" className="text-sm text-muted-foreground">Loading release notes…</p>
+          ) : view === 'new' && latest ? (
             <ReleaseBody body={latest.body} />
           ) : (
             <div className="flex flex-col gap-4">

@@ -49,6 +49,8 @@ Build after changing backend, panel or release notes. Run the final tests after 
 
 Keep `plugin.json`, `src/version.ts`, and the English `CHANGELOG.md` in sync. Rebuild and check the generated package. Do not commit scratch scripts, test data, private logs or credentials.
 
+Starting with 0.11.2, every version bump must prepend a dated `## [X.Y.Z] - YYYY-MM-DD` entry to `CHANGELOG.md` with short, user-oriented bullets: what changed, where users find it, and any action they need to take. This file supplies the footer version's Release history and What's new views; rebuild it with each version. Preserve older entries as recorded; backfilling or rewriting historical notes is outside scope.
+
 Commit and push completed, verified work to `main` unless the owner requests otherwise. Never force-push. Tagging and creating releases remain separate owner decisions; the build/check scripts publish nothing.
 
 For this project, every completion report must state the plugin version, whether changes were pushed, the destination branch and commit, and any verification still pending.

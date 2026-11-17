@@ -4,7 +4,7 @@ The header switches between Enhance, History, Models, Rules and Settings. The in
 
 The Quiet Desk banner changes its still illustration with the current draft and enhancement status. Its window shows morning (05:00–11:59), afternoon (12:00–17:59), or night (18:00–04:59), using your local clock when the panel opens or regains focus. There is no animation. A finished page means a prompt is ready to review, not that it has been sent or verified.
 
-Use the single theme button at the banner's top right to switch the entire panel between light and dark. It initially follows the system, then remembers your choice across canvases and sessions. Time of day changes the artwork independently. The plugin version at the bottom is plain text; release notes appear once after an update.
+Use the single theme button at the banner's top right to switch the entire panel between light and dark. It initially follows the system, then remembers your choice across canvases and sessions. Time of day changes the artwork independently. Click the plugin version at the bottom to open **Release history**. **All versions** lists version numbers, dates and notes, newest first; **What's new** shows the current version's changes. The notes are bundled with your installation and can be read offline. This view does not check for newer versions; use **Settings → Plugin updates** for that. Release notes still appear once after an update.
 
 ## Footer and support logs
 

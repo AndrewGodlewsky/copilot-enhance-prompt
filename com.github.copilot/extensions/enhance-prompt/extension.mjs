@@ -5252,7 +5252,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.11.1";
+var VERSION = "0.11.2";
 
 // src/worker-host.ts
 import { EventEmitter as EventEmitter2 } from "node:events";

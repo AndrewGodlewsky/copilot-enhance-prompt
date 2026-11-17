@@ -3,11 +3,15 @@ import { assert, test } from '#testing'
 import { VERSION } from './version.ts'
 
 test('the English changelog and manifest begin with the current plugin version', () => {
-  const versions = [...readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8').matchAll(/^## \[([^\]]+)\]/gm)].map(match => match[1])
+  const changelog = readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8')
+  const versions = [...changelog.matchAll(/^## \[([^\]]+)\]/gm)].map(match => match[1])
   assert.equal(versions[0], VERSION)
   assert.equal(JSON.parse(readFileSync(new URL('../plugin.json', import.meta.url), 'utf8')).version, VERSION)
   assert.equal(new Set(versions).size, versions.length)
   assert.ok(versions.includes('0.2.4'), 'Keep historical English release notes')
+  const current = changelog.split(/^## /m)[1]
+  assert.match(current, /^\[[^\]]+\] - \d{4}-\d{2}-\d{2}\r?\n/, 'The current release needs a date')
+  assert.match(current, /^- \S.+/m, 'The current release needs user-facing change notes for the footer history')
 })
 
 test('the built panel has only the English release notes, with no stale translated chunks', () => {
