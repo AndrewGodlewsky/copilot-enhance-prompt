@@ -20,6 +20,18 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
+### 0.12.31 — #31, frozen paired quality study
+
+Added eight new public synthetic holdout cases and offline preparation of 48 actual original/enhanced production inputs across three target model/reasoning tiers. Exact shared user/context, distinct system text, hashes and semantic/literal criteria are stored in SQLite; a zero call ceiling and unapproved route prevent generation. Preparation refuses an existing output directory. The new quality-gate protocol separates rewriting, reasoning, context replay, actual retrieval and downstream completion, with predefined scoring, failures, missing pairs, budget and no-proxy rules. Production prompts, defaults and independent context depth are unchanged.
+
+Regression first failed on the absent staging module, then passes for 24 exact pairs, Unicode, original builder fidelity, target identities, saved hashes, no claimed generations, zero-budget refusal and no overwrite. A real offline preparation creates 48 pending rows; only its sanitized protocol/hash manifest is committed. No inference or judging was performed.
+
+Ruling: this is preparation, not evidence of quality improvement. #31 remains open for a permitted route/budget, actual model availability and paired/downstream results. A different subscription model cannot be relabeled GPT-6.1 Sol. The historical runner remains unchanged; a future authorized executor must consume frozen payloads rather than rerender old candidates. Existing prompt preferences stay intact.
+
+Final verification: typecheck, build, 543 final tests, package/diff checks and disposable installed-runtime archive fixture pass. Independent final review reproduced both staging tests and input/source hashes, finding no blockers. Its minor request for exact score aggregation and hard-failure adjudication was regraded Important for a predeclared evidence protocol: those rules are now explicit, unresolved disputes are inconclusive, and the method document is hashed in the manifest. A missing-method-hash regression failed then passed; the final full suite and offline preparation were rerun. No minor remains deferred for this release. Review rulings: no actual target access/reasoning, quality, downstream success, statistical generalization, future executor/blinding/retry implementation, retrieval evaluation or human ground truth is established. The retained preparation was additionally reproduced locally; raw SQLite remains ignored. Exact hosted CI/publication follow; #31 remains open.
+
+Previous release 0.12.30 / d7b9595 passed exact Verify 44074230567; preview and three runtime archive assets were published; #30 remains open for managed-account evidence.
+
 ### 0.12.30 — #30, managed-account contract evidence
 
 Published current official/installed authentication research and an opt-in credential-free runtime observation probe. It imports only the installed SDK, uses an owned empty home/workspace, strips inherited credentials, disables stored/CLI fallback, blocks proxy-aware outbound access, never sends/model-tests, bounds calls and stops only its own runtime. Raw published evidence has only version/hash/boolean outcomes. Both control and managed-settings-enabled sessions are accepted unauthenticated on the installed runtime, differing from the declaration's expected missing-token rejection. This is not a successful policy or inference test. Production account/catalog/isolation checks remain unchanged; 21 model regressions passed separately.

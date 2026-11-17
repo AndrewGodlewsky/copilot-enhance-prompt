@@ -1,0 +1,15 @@
+{
+  "id": "v1-paired-screen-1",
+  "callCeiling": 0,
+  "executionAuthorized": false,
+  "rows": 48,
+  "pluginVersion": "0.12.31",
+  "preparedHash": "652ce9df379999d00599141daf3e0bd39325763383a7819e8d1ef0a1787e2996",
+  "sourceHashes": {
+    "src/prompts.ts": "d247590cb1729e3f0a9eb5e193c61096f4f245816a032062eab15cb430586ae7",
+    "src/prompt-sets.ts": "42b40bd54ace4b4add82679ae4f29acfa75132c8adc5943e6f63bed0f02c23eb",
+    "scripts/eval/v1-cases.mjs": "8c98d09a431d09238fca22fde070a10174d1f310fd52e04ad0702a99d2c65b2b",
+    "scripts/eval/v1-prepare.mjs": "58e4107c3dedf31a1c4efd53e6a29f28e1a3fcc9ef4beb6f1d89bf0c7a958297",
+    "docs/research/v1-quality-gate.md": "3d13134454189cfef0ace3ca42af6c65c88b828b451de4b458c6be37fa3a4581"
+  }
+}

@@ -14,6 +14,8 @@ The enhanced set addresses the failure classes identified in the [research](rese
 
 These are revised instructions for users to try, not a claim of proven model-quality improvement. The rejected compact and open-choice research candidates are not used. The new set needs live output review; deterministic tests establish selection, persistence, payload construction and compatibility, not model obedience. No Copilot allowance is used by the automated tests.
 
+The [v1 paired evaluation gate](research/v1-quality-gate.md) prepares new held-out comparisons of both actual prompt sets without making model calls. Its live trials and downstream outcomes remain pending; preparation alone does not establish a better default.
+
 ## Implementation boundary
 
 The existing `src/prompts.ts` remains the original implementation. `src/prompt-sets.ts` owns the separate enhanced policy and nine style definitions, and chooses a builder using the worker's saved `useEnhancedPrompts` setting. Request/context serialization and literal content are shared unchanged. The research runner continues to use the original builder so its historical baseline stays reproducible.

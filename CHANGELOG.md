@@ -1,5 +1,10 @@
 # Changes
 
+## [0.12.31] - 2026-11-17
+
+### Verification
+- Prepared a reproducible original-versus-enhanced prompt evaluation with eight new synthetic cases and a zero-call SQLite ledger. Model trials remain pending approval; prompt defaults and context behavior are unchanged.
+
 ## [0.12.30] - 2026-11-17
 
 ### Verification
