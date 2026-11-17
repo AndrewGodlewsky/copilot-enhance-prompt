@@ -1,5 +1,10 @@
 var e=`# Changes
 
+## [0.12.28] - 2026-11-17
+
+### Verification
+- Added real Usage Insights consumer measurements and a compatibility guide for retained Enhance Prompt accounting. Repeated refreshes, recovered receipts and duplicates are tested without deleting usage or changing either plugin's behavior.
+
 ## [0.12.27] - 2026-11-17
 
 ### Verification

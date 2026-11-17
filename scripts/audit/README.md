@@ -11,7 +11,11 @@ node scripts/audit/v1-benchmark.mjs context
 node scripts/audit/v1-benchmark.mjs search
 node scripts/audit/v1-benchmark.mjs animation
 node scripts/audit/concurrency-scale.mjs
+$env:USAGE_INSIGHTS_REPO = 'C:/path/to/trusted/clean/copilot-usage-insights'
+node scripts/audit/usage-consumer.mjs
 ```
+
+`usage-consumer.mjs` imports the actual scanner/report builder from the explicitly supplied trusted clean checkout, without modifying it. It creates 10,000 temporary production-recorder sessions, checks exact accounting across refresh/recovery/replacement/duplicate scenarios, and records only sanitized metrics. Allow several minutes; it cleans its owned temporary root. See [results and limitations](../../docs/audits/v1/usage-consumer.md) and the [cross-plugin contract](../../docs/usage-consumer-contract.md). This is opt-in and makes no model calls.
 
 `concurrency-scale.mjs` is a separate opt-in workload. It creates and removes only its own temporary root, launches owned fixture children, waits 31 seconds for an interrupted writer's stale lock, and commits sanitized measurements to `docs/audits/v1/concurrency-scale-measurements.json`. Allow a few minutes and roughly 100 MiB of scratch disk; parent memory is measured but is not an enforced cap. It runs six 120,000-edit samples and 1,200 cross-process transactions, then gathers context from 10,004 tracked files. See [method, results and limits](../../docs/audits/v1/concurrency-scale.md). It is not part of ordinary `npm test` and must run separately when these contracts change. Do not run competing benchmarks while collecting timings.
 

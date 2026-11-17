@@ -1,0 +1,825 @@
+{
+  "version": "0.12.28",
+  "at": "2026-11-17T11:12:46.874Z",
+  "node": "v24.22.1",
+  "platform": "win32",
+  "consumerCommit": "7579014ddb925efda304199dc1218141d6b0beed",
+  "syntheticOnly": true,
+  "modelCalls": 0,
+  "sessions": 10000,
+  "receipts": 20000,
+  "method": "Actual clean Usage Insights scanner and all/90d report builder imported from the explicitly supplied checkout. 10000 production-recorder sessions with 2 receipts each spread across120days. Producer creation timed separately. One cold and3 warm then3 forced scans, with three all/90d report samples. Mutation scenarios are single samples with exact count/integer credit assertions; no browser, WSL, VSCode, account or SQLite fixture. No cache flush/warm-up; memory endpoints are this process including fixtures/consumer, not peaks or desktop totals.",
+  "sourceHashes": {
+    "src/copilot/usage.ts": "c5a33086bb66759533193b1d869f97a891c0bb4ec03e7ef5801011b60c95631a",
+    "scripts/audit/usage-consumer.mjs": "98fff516d21d7231a4ffca36d5d0528466f6f7f761b3ffaa0588aac7419a0c2d"
+  },
+  "consumerHashes": {
+    "src/node/copilot-source.mjs": "02c9cc950a5eff29c65b7ba829240c7b1bf34952808eee4cbfa4daa0306d1b7c",
+    "src/node/read-queue.mjs": "7cdd864304cbf84d57d6782b03c07fc92095289e2c206d66af091b3c30c8a94c",
+    "src/core/copilot.mjs": "60fdcfbca881b72e6a47b9b0c3c3d75d0401820c5531353c28248bd5c8cba34c",
+    "src/core/copilot-report.mjs": "634664b194ff08be31decf26150e434e0b8dc974f60bb67c9ccdf3b0d84b30ba",
+    "src/core/query.mjs": "57ed27a6bf3601e7726ec91cf0837d53cc65f8af1a0f9c5b9f4c18056c0dab19",
+    "src/core/prompt-credits.mjs": "c0f874db99b4c8e89ff762f4384f24545bb2e2fd608689966c9cdb4cb533e046"
+  },
+  "scans": [
+    {
+      "label": "cold",
+      "ms": 1813.986,
+      "records": 20000,
+      "nanoAiu": 30000000,
+      "sameResult": false,
+      "metrics": [
+        {
+          "operation": "history.journals",
+          "ms": 1781.143,
+          "filesRead": 10000,
+          "filesReused": 0,
+          "filesAppended": 0,
+          "bytesRead": 9350000,
+          "bytesHashed": 0,
+          "folders": 10000
+        },
+        {
+          "operation": "history.copilot",
+          "ms": 1781.985
+        },
+        {
+          "operation": "history.merge",
+          "ms": 15.905
+        },
+        {
+          "operation": "history.names",
+          "ms": 0.552
+        },
+        {
+          "operation": "history.finalize",
+          "ms": 8.654,
+          "records": 20000
+        }
+      ],
+      "memory": {
+        "rss": 341737472,
+        "heapTotal": 217284608,
+        "heapUsed": 146983192,
+        "external": 75120973,
+        "arrayBuffers": 65758016
+      }
+    },
+    {
+      "label": "warm-1",
+      "ms": 174.361,
+      "records": 20000,
+      "nanoAiu": 30000000,
+      "sameResult": true,
+      "metrics": [
+        {
+          "operation": "history.journals",
+          "ms": 151.47,
+          "filesRead": 0,
+          "filesReused": 10000,
+          "filesAppended": 0,
+          "bytesRead": 0,
+          "bytesHashed": 0,
+          "folders": 10000
+        },
+        {
+          "operation": "history.copilot",
+          "ms": 158.932
+        },
+        {
+          "operation": "history.merge",
+          "ms": 0.003
+        },
+        {
+          "operation": "history.names",
+          "ms": 0.224
+        },
+        {
+          "operation": "history.finalize",
+          "ms": 6.049,
+          "records": 20000
+        }
+      ],
+      "memory": {
+        "rss": 291807232,
+        "heapTotal": 226336768,
+        "heapUsed": 113674424,
+        "external": 17152594,
+        "arrayBuffers": 7789637
+      }
+    },
+    {
+      "label": "warm-2",
+      "ms": 156.624,
+      "records": 20000,
+      "nanoAiu": 30000000,
+      "sameResult": true,
+      "metrics": [
+        {
+          "operation": "history.journals",
+          "ms": 141.668,
+          "filesRead": 0,
+          "filesReused": 10000,
+          "filesAppended": 0,
+          "bytesRead": 0,
+          "bytesHashed": 0,
+          "folders": 10000
+        },
+        {
+          "operation": "history.copilot",
+          "ms": 142.158
+        },
+        {
+          "operation": "history.merge",
+          "ms": 0.004
+        },
+        {
+          "operation": "history.names",
+          "ms": 0.248
+        },
+        {
+          "operation": "history.finalize",
+          "ms": 6.333,
+          "records": 20000
+        }
+      ],
+      "memory": {
+        "rss": 299352064,
+        "heapTotal": 232587264,
+        "heapUsed": 133978056,
+        "external": 17900818,
+        "arrayBuffers": 8537861
+      }
+    },
+    {
+      "label": "warm-3",
+      "ms": 156.731,
+      "records": 20000,
+      "nanoAiu": 30000000,
+      "sameResult": true,
+      "metrics": [
+        {
+          "operation": "history.journals",
+          "ms": 143.275,
+          "filesRead": 0,
+          "filesReused": 10000,
+          "filesAppended": 0,
+          "bytesRead": 0,
+          "bytesHashed": 0,
+          "folders": 10000
+        },
+        {
+          "operation": "history.copilot",
+          "ms": 143.809
+        },
+        {
+          "operation": "history.merge",
+          "ms": 0.004
+        },
+        {
+          "operation": "history.names",
+          "ms": 0.326
+        },
+        {
+          "operation": "history.finalize",
+          "ms": 5.433,
+          "records": 20000
+        }
+      ],
+      "memory": {
+        "rss": 301649920,
+        "heapTotal": 233111552,
+        "heapUsed": 146945080,
+        "external": 18638242,
+        "arrayBuffers": 9275285
+      }
+    },
+    {
+      "label": "forced-1",
+      "ms": 1732.437,
+      "records": 20000,
+      "nanoAiu": 30000000,
+      "sameResult": false,
+      "metrics": [
+        {
+          "operation": "history.journals",
+          "ms": 1702.056,
+          "filesRead": 10000,
+          "filesReused": 0,
+          "filesAppended": 0,
+          "bytesRead": 9350000,
+          "bytesHashed": 0,
+          "folders": 10000
+        },
+        {
+          "operation": "history.copilot",
+          "ms": 1702.676
+        },
+        {
+          "operation": "history.merge",
+          "ms": 15.742
+        },
+        {
+          "operation": "history.names",
+          "ms": 0.285
+        },
+        {
+          "operation": "history.finalize",
+          "ms": 7.007,
+          "records": 20000
+        }
+      ],
+      "memory": {
+        "rss": 367005696,
+        "heapTotal": 251772928,
+        "heapUsed": 170434952,
+        "external": 62218837,
+        "arrayBuffers": 52855880
+      }
+    },
+    {
+      "label": "forced-2",
+      "ms": 1656.858,
+      "records": 20000,
+      "nanoAiu": 30000000,
+      "sameResult": false,
+      "metrics": [
+        {
+          "operation": "history.journals",
+          "ms": 1624.8,
+          "filesRead": 10000,
+          "filesReused": 0,
+          "filesAppended": 0,
+          "bytesRead": 9350000,
+          "bytesHashed": 0,
+          "folders": 10000
+        },
+        {
+          "operation": "history.copilot",
+          "ms": 1628.26
+        },
+        {
+          "operation": "history.merge",
+          "ms": 14.995
+        },
+        {
+          "operation": "history.names",
+          "ms": 0.333
+        },
+        {
+          "operation": "history.finalize",
+          "ms": 7.24,
+          "records": 20000
+        }
+      ],
+      "memory": {
+        "rss": 443764736,
+        "heapTotal": 321609728,
+        "heapUsed": 231447776,
+        "external": 40694062,
+        "arrayBuffers": 31331105
+      }
+    },
+    {
+      "label": "forced-3",
+      "ms": 1575.957,
+      "records": 20000,
+      "nanoAiu": 30000000,
+      "sameResult": false,
+      "metrics": [
+        {
+          "operation": "history.journals",
+          "ms": 1550.953,
+          "filesRead": 10000,
+          "filesReused": 0,
+          "filesAppended": 0,
+          "bytesRead": 9350000,
+          "bytesHashed": 0,
+          "folders": 10000
+        },
+        {
+          "operation": "history.copilot",
+          "ms": 1551.489
+        },
+        {
+          "operation": "history.merge",
+          "ms": 13.086
+        },
+        {
+          "operation": "history.names",
+          "ms": 0.269
+        },
+        {
+          "operation": "history.finalize",
+          "ms": 6.494,
+          "records": 20000
+        }
+      ],
+      "memory": {
+        "rss": 522502144,
+        "heapTotal": 397213696,
+        "heapUsed": 298982080,
+        "external": 29569349,
+        "arrayBuffers": 20206392
+      }
+    }
+  ],
+  "reports": [
+    {
+      "sample": 1,
+      "range": "all",
+      "ms": 187.346,
+      "requests": 20000,
+      "credits": 0.03,
+      "memory": {
+        "rss": 562778112,
+        "heapTotal": 427954176,
+        "heapUsed": 307516584,
+        "external": 17984293,
+        "arrayBuffers": 8621336
+      }
+    },
+    {
+      "sample": 1,
+      "range": "90d",
+      "ms": 86.86,
+      "requests": 15020,
+      "credits": 0.02253,
+      "memory": {
+        "rss": 570159104,
+        "heapTotal": 434257920,
+        "heapUsed": 363520576,
+        "external": 17984293,
+        "arrayBuffers": 8621336
+      }
+    },
+    {
+      "sample": 2,
+      "range": "all",
+      "ms": 90.199,
+      "requests": 20000,
+      "credits": 0.03,
+      "memory": {
+        "rss": 583688192,
+        "heapTotal": 447021056,
+        "heapUsed": 375130992,
+        "external": 17984293,
+        "arrayBuffers": 8621336
+      }
+    },
+    {
+      "sample": 2,
+      "range": "90d",
+      "ms": 63.617,
+      "requests": 15020,
+      "credits": 0.02253,
+      "memory": {
+        "rss": 590721024,
+        "heapTotal": 454021120,
+        "heapUsed": 371582136,
+        "external": 17984293,
+        "arrayBuffers": 8621336
+      }
+    },
+    {
+      "sample": 3,
+      "range": "all",
+      "ms": 72.619,
+      "requests": 20000,
+      "credits": 0.03,
+      "memory": {
+        "rss": 606298112,
+        "heapTotal": 469209088,
+        "heapUsed": 386085136,
+        "external": 17984293,
+        "arrayBuffers": 8621336
+      }
+    },
+    {
+      "sample": 3,
+      "range": "90d",
+      "ms": 83.438,
+      "requests": 15020,
+      "credits": 0.02253,
+      "memory": {
+        "rss": 618508288,
+        "heapTotal": 482238464,
+        "heapUsed": 388743048,
+        "external": 17984293,
+        "arrayBuffers": 8621336
+      }
+    }
+  ],
+  "mutations": [
+    {
+      "label": "duplicate-identity",
+      "ms": 169.279,
+      "records": 20000,
+      "nanoAiu": 30000000,
+      "sameResult": false,
+      "metrics": [
+        {
+          "operation": "history.journals",
+          "ms": 146.953,
+          "filesRead": 0,
+          "filesReused": 9999,
+          "filesAppended": 1,
+          "bytesRead": 362,
+          "bytesHashed": 935,
+          "folders": 10000
+        },
+        {
+          "operation": "history.copilot",
+          "ms": 147.378
+        },
+        {
+          "operation": "history.merge",
+          "ms": 13.53
+        },
+        {
+          "operation": "history.names",
+          "ms": 0.336
+        },
+        {
+          "operation": "history.finalize",
+          "ms": 4.743,
+          "records": 20000
+        }
+      ],
+      "memory": {
+        "rss": 637648896,
+        "heapTotal": 502415360,
+        "heapUsed": 391690128,
+        "external": 18112597,
+        "arrayBuffers": 8749640
+      }
+    },
+    {
+      "label": "append-new-receipt",
+      "ms": 153.616,
+      "records": 20001,
+      "nanoAiu": 30000500,
+      "sameResult": false,
+      "metrics": [
+        {
+          "operation": "history.journals",
+          "ms": 128.649,
+          "filesRead": 0,
+          "filesReused": 9999,
+          "filesAppended": 1,
+          "bytesRead": 363,
+          "bytesHashed": 1297,
+          "folders": 10000
+        },
+        {
+          "operation": "history.copilot",
+          "ms": 129.122
+        },
+        {
+          "operation": "history.merge",
+          "ms": 12.757
+        },
+        {
+          "operation": "history.names",
+          "ms": 0.289
+        },
+        {
+          "operation": "history.finalize",
+          "ms": 5.183,
+          "records": 20001
+        }
+      ],
+      "memory": {
+        "rss": 644186112,
+        "heapTotal": 508911616,
+        "heapUsed": 418410640,
+        "external": 19561381,
+        "arrayBuffers": 10198424
+      }
+    },
+    {
+      "label": "atomic-replacement-correction",
+      "ms": 182.781,
+      "records": 20001,
+      "nanoAiu": 30001200,
+      "sameResult": false,
+      "metrics": [
+        {
+          "operation": "history.journals",
+          "ms": 162.602,
+          "filesRead": 1,
+          "filesReused": 9999,
+          "filesAppended": 0,
+          "bytesRead": 1660,
+          "bytesHashed": 0,
+          "folders": 10000
+        },
+        {
+          "operation": "history.copilot",
+          "ms": 163.098
+        },
+        {
+          "operation": "history.merge",
+          "ms": 10.768
+        },
+        {
+          "operation": "history.names",
+          "ms": 0.247
+        },
+        {
+          "operation": "history.finalize",
+          "ms": 4.519,
+          "records": 20001
+        }
+      ],
+      "memory": {
+        "rss": 648122368,
+        "heapTotal": 512204800,
+        "heapUsed": 400229880,
+        "external": 20591269,
+        "arrayBuffers": 8650856
+      }
+    },
+    {
+      "label": "late-producer-recovery",
+      "ms": 170.237,
+      "records": 20002,
+      "nanoAiu": 30002100,
+      "sameResult": false,
+      "metrics": [
+        {
+          "operation": "history.journals",
+          "ms": 146.005,
+          "filesRead": 1,
+          "filesReused": 9999,
+          "filesAppended": 0,
+          "bytesRead": 1660,
+          "bytesHashed": 0,
+          "folders": 10000
+        },
+        {
+          "operation": "history.copilot",
+          "ms": 146.446
+        },
+        {
+          "operation": "history.merge",
+          "ms": 12.149
+        },
+        {
+          "operation": "history.names",
+          "ms": 0.272
+        },
+        {
+          "operation": "history.finalize",
+          "ms": 5.262,
+          "records": 20002
+        }
+      ],
+      "memory": {
+        "rss": 655306752,
+        "heapTotal": 518864896,
+        "heapUsed": 437460568,
+        "external": 19518469,
+        "arrayBuffers": 10155512
+      }
+    },
+    {
+      "label": "copied-journal",
+      "ms": 150.518,
+      "records": 20002,
+      "nanoAiu": 30002100,
+      "sameResult": false,
+      "metrics": [
+        {
+          "operation": "history.journals",
+          "ms": 126.381,
+          "filesRead": 0,
+          "filesReused": 10000,
+          "filesAppended": 0,
+          "bytesRead": 0,
+          "bytesHashed": 0,
+          "folders": 10000
+        },
+        {
+          "operation": "history.journals",
+          "ms": 1.805,
+          "filesRead": 1,
+          "filesReused": 0,
+          "filesAppended": 0,
+          "bytesRead": 1660,
+          "bytesHashed": 0,
+          "folders": 1
+        },
+        {
+          "operation": "history.copilot",
+          "ms": 129.341
+        },
+        {
+          "operation": "history.merge",
+          "ms": 13.288
+        },
+        {
+          "operation": "history.names",
+          "ms": 0.182
+        },
+        {
+          "operation": "history.finalize",
+          "ms": 3.413,
+          "records": 20002
+        }
+      ],
+      "memory": {
+        "rss": 657534976,
+        "heapTotal": 520847360,
+        "heapUsed": 412286192,
+        "external": 18354747,
+        "arrayBuffers": 8980057
+      }
+    },
+    {
+      "label": "partial-tail",
+      "ms": 158.707,
+      "records": 20002,
+      "nanoAiu": 30002100,
+      "sameResult": false,
+      "metrics": [
+        {
+          "operation": "history.journals",
+          "ms": 136.051,
+          "filesRead": 0,
+          "filesReused": 9999,
+          "filesAppended": 1,
+          "bytesRead": 361,
+          "bytesHashed": 1660,
+          "folders": 10000
+        },
+        {
+          "operation": "history.copilot",
+          "ms": 136.499
+        },
+        {
+          "operation": "history.merge",
+          "ms": 11.091
+        },
+        {
+          "operation": "history.names",
+          "ms": 0.276
+        },
+        {
+          "operation": "history.finalize",
+          "ms": 4.62,
+          "records": 20002
+        }
+      ],
+      "memory": {
+        "rss": 658812928,
+        "heapTotal": 522141696,
+        "heapUsed": 436922024,
+        "external": 19675786,
+        "arrayBuffers": 10301096
+      }
+    },
+    {
+      "label": "truncated-partial-tail",
+      "ms": 181.588,
+      "records": 20002,
+      "nanoAiu": 30002100,
+      "sameResult": false,
+      "metrics": [
+        {
+          "operation": "history.journals",
+          "ms": 157.097,
+          "filesRead": 1,
+          "filesReused": 9999,
+          "filesAppended": 0,
+          "bytesRead": 1660,
+          "bytesHashed": 0,
+          "folders": 10000
+        },
+        {
+          "operation": "history.copilot",
+          "ms": 157.59
+        },
+        {
+          "operation": "history.merge",
+          "ms": 12.219
+        },
+        {
+          "operation": "history.names",
+          "ms": 0.254
+        },
+        {
+          "operation": "history.finalize",
+          "ms": 4.504,
+          "records": 20002
+        }
+      ],
+      "memory": {
+        "rss": 661958656,
+        "heapTotal": 524746752,
+        "heapUsed": 411482160,
+        "external": 18255946,
+        "arrayBuffers": 8881256
+      }
+    },
+    {
+      "label": "conflicting-duplicate-first-wins",
+      "ms": 174.815,
+      "records": 20002,
+      "nanoAiu": 30002100,
+      "sameResult": false,
+      "metrics": [
+        {
+          "operation": "history.journals",
+          "ms": 153.406,
+          "filesRead": 0,
+          "filesReused": 9999,
+          "filesAppended": 1,
+          "bytesRead": 362,
+          "bytesHashed": 1660,
+          "folders": 10000
+        },
+        {
+          "operation": "history.copilot",
+          "ms": 153.807
+        },
+        {
+          "operation": "history.merge",
+          "ms": 11.375
+        },
+        {
+          "operation": "history.names",
+          "ms": 0.198
+        },
+        {
+          "operation": "history.finalize",
+          "ms": 4.479,
+          "records": 20002
+        }
+      ],
+      "memory": {
+        "rss": 668950528,
+        "heapTotal": 531406848,
+        "heapUsed": 442615352,
+        "external": 19443946,
+        "arrayBuffers": 10069256
+      }
+    },
+    {
+      "label": "forced-reconciliation",
+      "ms": 1655.112,
+      "records": 20002,
+      "nanoAiu": 30002100,
+      "sameResult": false,
+      "metrics": [
+        {
+          "operation": "history.journals",
+          "ms": 1630.488,
+          "filesRead": 10000,
+          "filesReused": 0,
+          "filesAppended": 0,
+          "bytesRead": 9351087,
+          "bytesHashed": 0,
+          "folders": 10000
+        },
+        {
+          "operation": "history.copilot",
+          "ms": 1630.955
+        },
+        {
+          "operation": "history.merge",
+          "ms": 13.316
+        },
+        {
+          "operation": "history.names",
+          "ms": 0.203
+        },
+        {
+          "operation": "history.finalize",
+          "ms": 4.694,
+          "records": 20002
+        }
+      ],
+      "memory": {
+        "rss": 639373312,
+        "heapTotal": 271396864,
+        "heapUsed": 156638752,
+        "external": 27211238,
+        "arrayBuffers": 17836548
+      }
+    }
+  ],
+  "producer": {
+    "ms": 30230.837,
+    "memory": {
+      "rss": 84819968,
+      "heapTotal": 21291008,
+      "heapUsed": 13627096,
+      "external": 9839911,
+      "arrayBuffers": 471319
+    }
+  },
+  "restartReconciled": true,
+  "conflictingDuplicatePolicy": "first observed identity wins; append is not a correction protocol",
+  "concurrentRefreshSameSnapshot": true
+}

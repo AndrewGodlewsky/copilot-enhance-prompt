@@ -12,13 +12,25 @@ Security and correctness: delivered; see versions below.
 
 Distribution/maintenance: #11 (manual/maintainer confirmation pending), #33 (runtime package prepared; stable channel/manual gates pending).
 
-Efficiency: #12/#13/#15/#19/#20 shipped and closed. #14 saving implementation shipped (native-close/manual gate remains); #21 shipped and closed; #32 and #34 follow the usability fixes.
+Efficiency: #12/#13/#15/#19/#20/#21/#32 shipped and closed. #14 saving implementation shipped (native-close/manual gate remains); #34 actual consumer evidence is in final verification.
 
 Usability: #24/#25/#26/#27 shipped and closed.
 
 Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and concrete choices; do independent work while an answer is pending. Never consume the owner's Copilot credits or control desktop/browser UI.
 
 ## Current work
+
+### 0.12.28 — #34, actual accounting consumer
+
+Added an opt-in harness importing the clean Usage Insights scanner/report builder read-only. 10,000 production-recorder sessions / 20,000 synthetic receipts verify exact totals across cached/forced refresh, new/duplicate receipts, canonical replacement, production late recovery, copied journals, partial/truncated tails, restart and concurrent refresh. All-time and 90-day reports are checked separately. Raw sanitized evidence and a producer/consumer compatibility contract are committed; no other repository or production behavior changes.
+
+Final measured initial scan is 1,814ms; warm median 157ms with zero journal bytes reread; forced median 1,657ms; all-time report median 90ms; 90-day report median 83ms. Production fixture creation is separate at 30.2s. Final totals are 20,002 receipts / 30,002,100 nano-AIU. This identifies existing incremental behavior, not an optimization delivered by this release. Rebuild, full verification and one independent final review follow.
+
+Ruling: keep accounting durable and retained. No global producer manifest, delayed writes, expiry or consumer repository change is justified at this measured size. An optional future consumer-owned derived index is specified with replacement/prefix/identity reconciliation. Conflicting appended duplicate identities are first-wins, not corrections; don't invent a correction protocol. No paid models, owner data/profile access, desktop automation or real-account billing claim. SQLite/WSL/VS Code, other platforms, cold disks, UI memory and long soak remain unclaimed.
+
+Review: no blockers. Regraded timing/copy-semantics accuracy as important for published evidence: a failing synchronous-stage assertion led to a sync-preserving diagnostics timer; the entire measured workload was rerun. Clarified first-wins per receipt, with distinct receipts merged across copied journals. No deferred minor. Full rebuilt suite and runtime archive fixture pass (541 tests). Review rulings: timings were not independently rerun; recorded source hashes/fixtures establish only this environment. No live billing, native UI/memory, SQLite/WSL/VS Code, slow disks, other OS, soak, peak/tail latency, full crash lifecycle or future index/batching proof. Imported checkout must be trusted. Exact hosted CI and publication follow before closure.
+
+Previous release 0.12.27 / 8ff50a4 passed exact Verify 44069903778; preview and three runtime archive assets were published, and #32 is closed.
 
 ### 0.12.27 — #32, concurrent writers and interrupted persistence
 
