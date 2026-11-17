@@ -36,6 +36,25 @@ Legacy PID-only records, unsupported platforms, permission failures and unavaila
 
 The adapter recognizes Copilot’s `installed-plugins/<marketplace>/<plugin>` and `installed-plugins/_direct/<source>` cache layout. It derives the profile from this package’s actual location, cross-checks the attached session inventory, and reads only the installation/source fields of its managed `config.json` and marketplace registration in `settings.json`. It does not edit either file. These files and the inventory API are experimental. Managed-only marketplace registrations that cannot be verified against this profile are unsupported. Unknown layouts or contracts fail closed. Commented JSON is supported; unsupported configuration syntax produces an unavailable result.
 
+### Branch movement and verification scope
+
+The installed SDK `1.0.106-8.unstable.r43566476370.g869eef3` declares `PluginsUpdateRequest` with only `name`; its result reports versions and a skill count, not a commit or digest. The [current CLI reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference) also documents updating by installed name, with no exact-artifact option. The plugin therefore cannot bind the host's installation to the commit shown in View changes. It does not replace files itself, change pins, use an alternative installer, or claim signed provenance.
+
+Each metadata check reads the manifest and changelog at one resolved commit. Update rechecks metadata and provenance before calling Copilot, but the configured branch can move after that check. Outcomes are deliberately limited:
+
+| Observed result | Outcome |
+| --- | --- |
+| Same installation/source, expected version | Installed; restart guidance. This verifies source and version, not exact bytes. |
+| Same source, version newer than checked | Installed; notice names the actual newer version and the checked version. |
+| Version below the checked version, including an older prerelease | Verification failed even if it is newer than the running canvas. |
+| Source/fork/ref changes or inventory/disk disagree | Verification failed; no automatic alternate route or rollback. |
+| Marketplace redirects before dispatch | Refuse installation; review the configured source in Copilot. |
+| Branch changes bytes without changing its version | Not detectable as an integrity mismatch with this host contract. |
+
+Verification failures retain their expected source fingerprint and version across polling, source cache changes and reopening, including interrupted-install recovery. A later verified managed repair clears the warning. Alternatively, after reviewing the installation in Copilot, a successful explicit **Check for updates** acknowledges the currently configured source and version metadata; automatic checks never perform that acknowledgement. This is not a retroactive proof that the earlier installation matched.
+
+Controlled fixtures cover these cases without moving the owner's remote branches or changing their installation. The disposable runtime fixture verifies name-based execution and lifecycle. A stronger digest/pinned-artifact contract remains dependent on host support and the separate stable-distribution decision (#33/#35); preview release tags do not silently change branch-following installs into pinned installs.
+
 ## Network, state and diagnostics
 
 Checks make credential-free HTTPS GET requests only to `api.github.com` and `raw.githubusercontent.com`: repository default-branch metadata, selected branch refs (and tag ambiguity checks), the marketplace catalog when applicable, and this plugin’s manifest at the resolved commit. A HEAD checks for `CHANGELOG.md`; View changes links to that same commit on `github.com`. Redirects are refused, individual requests time out after eight seconds, JSON responses are capped at 128 KB, and a check has a 60-second overall deadline. A commit SHA in a branch response fixes the metadata snapshot; an installation’s source fingerprint is not mistaken for a Git commit.

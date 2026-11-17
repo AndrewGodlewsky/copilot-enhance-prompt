@@ -1,5 +1,12 @@
 var e=`# Changes
 
+## [0.12.11] - 2026-11-17
+
+### Fixed
+- Update verification failures stay visible when Copilot installs an unexpected source or a version below the one checked. Reopening the plugin no longer replaces those failures with a misleading restart notice.
+- When a source branch advances during an update, the notice identifies the newer version actually installed. Review a mismatch in Copilot, then use **Check for updates** to acknowledge the current source.
+- Update controls explain that Copilot follows your configured source; release notes do not pin the installed files to an exact commit.
+
 ## [0.12.10] - 2026-11-17
 
 ### Fixed

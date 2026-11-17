@@ -5670,6 +5670,10 @@ function createUpdates(options) {
   const inspect2 = () => deadline(options.installation(), 8e3);
   const record = options.record ?? (() => {
   });
+  const matches2 = (installation, scope, version) => {
+    const comparison = compareVersions(installation?.installed, version);
+    return !!installation?.source && !!installation.target && !!scope && installation.scope === scope && comparison !== null && comparison >= 0;
+  };
   let checking;
   const view2 = (state2, installation) => {
     const base = {
@@ -5683,8 +5687,9 @@ function createUpdates(options) {
       canUpdate: false
     };
     if (state2.pending) return { ...base, status: "updating", message: now() - state2.pending.started > 9e4 ? "Copilot has not confirmed the update yet. Inspect Customize \u2192 Installed and restart Copilot before retrying. Reopening will verify the installed version." : "Copilot is updating Enhance Prompt. If the connection closes, reopen the plugin to verify the result. Do not start another update." };
+    if (state2.verification) return { ...base, status: "failed", message: state2.verification.message };
     const running = compareVersions(installation.installed, options.running);
-    if (installation.source && installation.target && running !== null && running > 0) return { ...base, status: "reload", message: RELOAD_MESSAGE };
+    if (installation.source && installation.target && running !== null && running > 0) return { ...base, status: "reload", message: (compareVersions(installation.installed, state2.available?.version) === 1 ? `Copilot installed ${installation.installed}, newer than the checked version ${state2.available.version}. ` : "") + RELOAD_MESSAGE };
     if (!installation.source || !installation.target || state2.unavailable) return { ...base, status: "unavailable", message: installation.reason ?? state2.error ?? "Automatic updating is unavailable for this installation." };
     if (state2.check) return { ...base, status: "checking", message: "Checking for updates\u2026" };
     if (state2.error) return { ...base, status: "failed", message: state2.error };
@@ -5697,13 +5702,24 @@ function createUpdates(options) {
   async function reconcile(installation) {
     return mutate(async (state2) => {
       if (installation.source && installation.target && state2.scope !== installation.scope && !state2.pending) {
-        state2 = { automatic: state2.automatic, scope: installation.scope, work: state2.work };
+        state2 = { automatic: state2.automatic, scope: installation.scope, work: state2.work, verification: state2.verification };
       }
       if (state2.check && state2.check.until <= now()) delete state2.check;
       if (state2.pending && !await living(state2.pending)) {
-        const installed = compareVersions(installation.installed, state2.pending.version);
-        state2.error = installed !== null && installed >= 0 ? void 0 : "The previous update was interrupted or could not be verified. Review the installed version, then check again before retrying.";
+        if (!matches2(installation, state2.scope, state2.pending.version)) state2.verification = {
+          scope: state2.scope,
+          version: state2.pending.version,
+          message: "The previous update was interrupted or could not be verified against its expected source and version. Review the installation in Copilot, then check again before retrying."
+        };
+        else {
+          delete state2.verification;
+          delete state2.error;
+        }
         delete state2.pending;
+      }
+      if (state2.verification && matches2(installation, state2.verification.scope, state2.verification.version)) {
+        delete state2.verification;
+        delete state2.error;
       }
       await put(state2);
       return state2;
@@ -5723,7 +5739,7 @@ function createUpdates(options) {
       const sharedResult = !changedSource && state2.completedCheck !== previous.completedCheck || state2.checkedAt !== void 0 && now() - state2.checkedAt < 5e3;
       const notDue = !manual && (state2.automatic === false || (state2.nextCheck ?? 0) > now()) || (state2.retryAt ?? 0) > now();
       if (state2.pending || state2.check || sharedResult || notDue) return false;
-      if (!installation.source || compareVersions(installation.installed, options.running) === 1) return false;
+      if (!installation.source || compareVersions(installation.installed, options.running) === 1 && !(manual && state2.verification)) return false;
       state2.check = { id: id2, until: now() + 12e4 };
       state2.nextCheck = now() + DAY;
       state2.error = void 0;
@@ -5742,6 +5758,7 @@ function createUpdates(options) {
         state2.completedCheck = id2;
         state2.failures = 0;
         state2.retryAt = 0;
+        if (manual) delete state2.verification;
         delete state2.check;
         delete state2.error;
         await put(state2);
@@ -5770,9 +5787,12 @@ function createUpdates(options) {
     }
     await mutate(async (state2) => {
       if (state2.pending?.id !== pending.id) return;
-      const comparison = compareVersions(after?.installed, pending.version);
-      const verified = !!after?.source && !!after.target && after.scope === installation.scope && comparison !== null && comparison >= 0;
-      state2.error = verified ? void 0 : failed ? "Copilot did not complete this update. A policy refusal or required confirmation must be resolved in Copilot. No alternate installation route was used." : "Copilot returned, but the installed version does not match the update. Review the installation in Copilot and check again.";
+      const verified = matches2(after, installation.scope, pending.version);
+      const message = failed ? "Copilot did not complete this update. A policy refusal or required confirmation must be resolved in Copilot. No alternate installation route was used." : "Copilot returned, but the installed source or version does not match the update. Review the installation in Copilot and check again.";
+      if (verified) {
+        delete state2.verification;
+        delete state2.error;
+      } else state2.verification = { scope: installation.scope, version: pending.version, message };
       delete state2.pending;
       await put(state2);
       record("updates.install", verified ? "ok" : "failed", verified ? void 0 : "action_failed");
@@ -5795,6 +5815,7 @@ function createUpdates(options) {
       state2.pending = pending;
       state2.available = available;
       delete state2.error;
+      delete state2.verification;
       await put(state2);
       return true;
     });
@@ -5868,7 +5889,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.10";
+var VERSION = "0.12.11";
 
 // src/worker-host.ts
 import { EventEmitter as EventEmitter2 } from "node:events";

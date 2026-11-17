@@ -20,9 +20,17 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- Next: #39, moving-source update verification.
+- Next: #9, redistributed dependency notices and runtime inventory.
 
 ## Delivered versions
+
+### 0.12.11 ? #39, moving-source update verification
+
+Verification failures now retain expected source fingerprint/version across reopening and source-cache resets, before any reload notice. Interrupted journals require source as well as version. Newer same-source installs identify the actual installed version; Update explains that notes do not pin installation bytes.
+
+Verified: three failing regressions reproduced misleading reload outcomes and missing version detail. Typecheck/build, 451 final tests, package checks, clean diff and disposable installed-runtime update fixture pass. Independent review passed 20 focused updater tests without blockers. Fixtures cover source redirects, older/prerelease mismatches, same-source advancement, metadata commit snapshots and interrupted recovery. SDK declarations and current official CLI documentation expose name-based updating only. No paid calls, owner branch changes, live installation changes or UI automation.
+
+Ruling: a successful explicit check after the user reviews Copilot acknowledges current provenance; automatic checks cannot do so. Same-version changed bytes cannot be verified by this host contract. No alternate installer, silent pin/source change, signature claim or automatic rollback is introduced. Stronger stable artifacts remain #33/#35. Issue #39 records commit/release.
 
 ### 0.12.10 ? #37, confined file reads
 

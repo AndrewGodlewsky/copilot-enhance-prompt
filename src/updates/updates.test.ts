@@ -50,6 +50,25 @@ test('metadata HTTP requests are bounded, credential-free, reject redirects and 
   await assert.rejects(metadataReader(async (_url, init) => new Promise((_, reject) => init!.signal!.addEventListener('abort', () => reject(new Error('timeout')))), 5)('https://api.github.com/repos/a/b'), /timed out/)
 })
 
+test('one metadata check holds a commit snapshot even if its branch moves during reads', async () => {
+  const first = 'a'.repeat(40), second = 'b'.repeat(40), urls: string[] = []
+  let head = first
+  const read = async (url: string) => {
+    urls.push(url)
+    if (url.includes('/tags/')) throw new UpdateError('missing', 'not_found')
+    if (url.includes('/heads/')) return { object: { sha: head, type: 'commit' } }
+    head = second
+    return { name: 'enhance-prompt', version: '1.1.0' }
+  }
+  const installation = { scope: 'fork-beta', canUpdate: true, source: { repo: 'owner/fork', ref: 'beta' } }
+  const firstCheck = await remoteMetadata(read)(installation)
+  assert.ok(firstCheck.changes?.includes(first))
+  assert.ok(urls.filter(url => url.includes('raw.')).every(url => url.includes(first)))
+  const secondCheck = await remoteMetadata(read)(installation)
+  assert.ok(secondCheck.changes?.includes(second))
+  assert.equal(firstCheck.version, secondCheck.version, 'same-version changed bytes are not a signature or integrity guarantee')
+})
+
 async function fixture(run: (f: ReturnType<typeof setup>) => Promise<void>) {
   const dir = await mkdtemp(join(tmpdir(), 'enhance-updates-test-'))
   try { await run(setup(dir)) } finally { await rm(dir, { recursive: true, force: true, maxRetries: 5 }) }
@@ -143,6 +162,48 @@ test('timed-out installation remains reserved until its real completion is verif
   finish()
   for (let i = 0; i < 50 && (await client.state()).status === 'updating'; i++) await new Promise(resolve => setTimeout(resolve, 5))
   assert.equal((await client.state()).status, 'reload')
+}))
+
+test('branch movement accepts a newer same-source install but reports its actual version', async () => fixture(async f => {
+  await f.service.check(true)
+  f.update(async target => { assert.equal(target, 'enhance-prompt@fixture'); f.installation({ installed: '1.2.0' }) })
+  const result = await f.service.install()
+  assert.equal(result.status, 'reload')
+  assert.equal(result.installed, '1.2.0'); assert.equal(result.available, '1.1.0')
+  assert.match(result.message, /1\.2\.0.*newer than.*1\.1\.0/)
+}))
+
+test('a newer version cannot hide failed verification or a changed source after installation', async () => {
+  for (const change of [{ installed: '1.0.5' }, { installed: '1.1.0-rc.1' }, { installed: '1.1.0', scope: 'fork', source: { repo: 'other/fork', ref: 'beta' } }]) {
+    await fixture(async f => {
+      await f.service.check(true)
+      f.update(async () => { f.installation(change) })
+      assert.equal((await f.service.install()).status, 'failed')
+      assert.equal((await createUpdates(f.options).state()).status, 'failed', 'polling/reopening cannot hide verification failure')
+      assert.equal((await f.service.check(false)).status, 'failed', 'automatic checks cannot acknowledge a mismatch')
+      // A later managed repair to the expected installation can be reconciled without reinstalling.
+      f.installation({ scope: 'same', installed: '1.1.0', source: { repo: 'owner/repo' } })
+      assert.equal((await f.service.state()).status, 'reload')
+    })
+  }
+})
+
+test('interrupted updates must retain the expected source during recovery', async () => fixture(async f => {
+  await f.store.set('state', { scope: 'same', pending: { id: 'interrupted', pid: 99, started: 1, version: '1.1.0' } })
+  f.installation({ scope: 'fork', installed: '1.1.0', source: { repo: 'other/fork' } })
+  assert.equal((await f.service.state()).status, 'failed')
+  assert.equal((await f.service.state()).status, 'failed')
+  f.advance(5001)
+  // An explicit successful check acknowledges the currently configured source, without installing anything.
+  assert.equal((await f.service.check(true)).status, 'reload')
+  assert.equal(f.updates, 0)
+}))
+
+test('a moving marketplace that redirects to another fork is refused before installation', async () => fixture(async f => {
+  await f.service.check(true)
+  f.metadata(async () => { throw new UpdateError('The marketplace changed this plugin’s source.', 'source_changed') })
+  await assert.rejects(f.service.install(), /changed/)
+  assert.equal(f.updates, 0)
 }))
 
 test('recycled PIDs do not own old work or an interrupted installer; uncertain identities stay reserved', async () => fixture(async f => {

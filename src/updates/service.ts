@@ -12,6 +12,7 @@ type State = {
   scope?: string; automatic?: boolean; checkedAt?: number; nextCheck?: number; retryAt?: number; failures?: number
   available?: Available; dismissed?: string; error?: string; unavailable?: boolean
   completedCheck?: string
+  verification?: { scope?: string; version: string; message: string }
   check?: { id: string; until: number }; pending?: Pending; work?: Record<string, number | Owner>
 }
 type Options = {
@@ -64,6 +65,10 @@ export function createUpdates(options: Options): UpdateClient & { withWork<T>(ru
   const mutate = <T>(fn: (state: State) => Promise<T>) => options.store.transaction(async () => fn(await get()))
   const inspect = () => deadline(options.installation(), 8_000)
   const record = options.record ?? (() => {})
+  const matches = (installation: Installation | undefined, scope: string | undefined, version: string) => {
+    const comparison = compareVersions(installation?.installed, version)
+    return !!installation?.source && !!installation.target && !!scope && installation.scope === scope && comparison !== null && comparison >= 0
+  }
   let checking: Promise<UpdateView> | undefined
   const view = (state: State, installation: Installation): UpdateView => {
     const base = { running: options.running, installed: installation.installed, available: state.available?.version, changes: state.available?.changes,
@@ -71,8 +76,11 @@ export function createUpdates(options: Options): UpdateClient & { withWork<T>(ru
     if (state.pending) return { ...base, status: 'updating', message: now() - state.pending.started > 90_000
       ? 'Copilot has not confirmed the update yet. Inspect Customize → Installed and restart Copilot before retrying. Reopening will verify the installed version.'
       : 'Copilot is updating Enhance Prompt. If the connection closes, reopen the plugin to verify the result. Do not start another update.' }
+    if (state.verification) return { ...base, status: 'failed', message: state.verification.message }
     const running = compareVersions(installation.installed, options.running)
-    if (installation.source && installation.target && running !== null && running > 0) return { ...base, status: 'reload', message: RELOAD_MESSAGE }
+    if (installation.source && installation.target && running !== null && running > 0) return { ...base, status: 'reload', message:
+      (compareVersions(installation.installed, state.available?.version) === 1
+        ? `Copilot installed ${installation.installed}, newer than the checked version ${state.available!.version}. ` : '') + RELOAD_MESSAGE }
     if (!installation.source || !installation.target || state.unavailable) return { ...base, status: 'unavailable', message: installation.reason ?? state.error ?? 'Automatic updating is unavailable for this installation.' }
     if (state.check) return { ...base, status: 'checking', message: 'Checking for updates…' }
     if (state.error) return { ...base, status: 'failed', message: state.error }
@@ -85,14 +93,16 @@ export function createUpdates(options: Options): UpdateClient & { withWork<T>(ru
   async function reconcile(installation: Installation) {
     return mutate(async state => {
       if (installation.source && installation.target && state.scope !== installation.scope && !state.pending) {
-        state = { automatic: state.automatic, scope: installation.scope, work: state.work }
+        state = { automatic: state.automatic, scope: installation.scope, work: state.work, verification: state.verification }
       }
       if (state.check && state.check.until <= now()) delete state.check
       if (state.pending && !await living(state.pending)) {
-        const installed = compareVersions(installation.installed, state.pending.version)
-        state.error = installed !== null && installed >= 0 ? undefined : 'The previous update was interrupted or could not be verified. Review the installed version, then check again before retrying.'
+        if (!matches(installation, state.scope, state.pending.version)) state.verification = { scope: state.scope, version: state.pending.version,
+          message: 'The previous update was interrupted or could not be verified against its expected source and version. Review the installation in Copilot, then check again before retrying.' }
+        else { delete state.verification; delete state.error }
         delete state.pending
       }
+      if (state.verification && matches(installation, state.verification.scope, state.verification.version)) { delete state.verification; delete state.error }
       await put(state)
       return state
     })
@@ -108,7 +118,7 @@ export function createUpdates(options: Options): UpdateClient & { withWork<T>(ru
       const sharedResult = !changedSource && state.completedCheck !== previous.completedCheck || state.checkedAt !== undefined && now() - state.checkedAt < 5000
       const notDue = !manual && (state.automatic === false || (state.nextCheck ?? 0) > now()) || (state.retryAt ?? 0) > now()
       if (state.pending || state.check || sharedResult || notDue) return false
-      if (!installation.source || compareVersions(installation.installed, options.running) === 1) return false
+      if (!installation.source || compareVersions(installation.installed, options.running) === 1 && !(manual && state.verification)) return false
       state.check = { id, until: now() + 120_000 }; state.nextCheck = now() + DAY; state.error = undefined; state.unavailable = false
       await put(state); return true
     })
@@ -119,6 +129,9 @@ export function createUpdates(options: Options): UpdateClient & { withWork<T>(ru
       await mutate(async state => {
         if (state.check?.id !== id || state.scope !== installation.scope) return
         state.available = available; state.checkedAt = now(); state.completedCheck = id; state.failures = 0; state.retryAt = 0
+        // A successful explicit check acknowledges the currently configured source after repair/review.
+        // Automatic checks must never hide a failed installation verification.
+        if (manual) delete state.verification
         delete state.check; delete state.error; await put(state)
       })
       record('updates.check', 'ok')
@@ -140,11 +153,12 @@ export function createUpdates(options: Options): UpdateClient & { withWork<T>(ru
     try { after = await inspect() } catch {}
     await mutate(async state => {
       if (state.pending?.id !== pending.id) return
-      const comparison = compareVersions(after?.installed, pending.version)
-      const verified = !!after?.source && !!after.target && after.scope === installation.scope && comparison !== null && comparison >= 0
-      state.error = verified ? undefined : failed
+      const verified = matches(after, installation.scope, pending.version)
+      const message = failed
         ? 'Copilot did not complete this update. A policy refusal or required confirmation must be resolved in Copilot. No alternate installation route was used.'
-        : 'Copilot returned, but the installed version does not match the update. Review the installation in Copilot and check again.'
+        : 'Copilot returned, but the installed source or version does not match the update. Review the installation in Copilot and check again.'
+      if (verified) { delete state.verification; delete state.error }
+      else state.verification = { scope: installation.scope, version: pending.version, message }
       delete state.pending
       await put(state)
       record('updates.install', verified ? 'ok' : 'failed', verified ? undefined : 'action_failed')
@@ -165,7 +179,7 @@ export function createUpdates(options: Options): UpdateClient & { withWork<T>(ru
       state.work = await liveWork(state.work)
       if (options.busy?.() || Object.keys(state.work).length) throw new UpdateError('Finish active plugin work in all open canvases, then retry Update.')
       if (compareVersions(available.version, installation.installed) !== 1 || compareVersions(installation.installed, options.running) === 1) return false
-      state.pending = pending; state.available = available; delete state.error; await put(state); return true
+      state.pending = pending; state.available = available; delete state.error; delete state.verification; await put(state); return true
     })
     if (!reserved) return state()
     record('updates.install', 'started')

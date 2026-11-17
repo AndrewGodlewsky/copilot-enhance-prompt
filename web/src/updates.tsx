@@ -35,6 +35,7 @@ function Actions({ value }: { value: UpdateView }) {
     {!!read(busy) && !read(updating) && <p className="text-xs text-muted-foreground">Finish the current operation before updating.</p>}
     {uploading && <p className="text-xs text-muted-foreground">Wait for attachments to finish uploading before updating.</p>}
     {!value.canUpdate && <p className="text-xs text-muted-foreground">Use Copilot → Customize → Installed → Update for this installation.</p>}
+    <p className="text-xs text-muted-foreground">Copilot updates from your configured source. Its branch can change after these release notes were checked; the installed version is verified afterward.</p>
   </>
 }
 export function UpdateNotice() {
