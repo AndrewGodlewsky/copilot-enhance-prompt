@@ -4,12 +4,14 @@ import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vite'
+// @ts-expect-error Build-only JavaScript module; it is never included in the panel.
+import { frontendInventory } from '../scripts/distribution.mjs'
 
 export default defineConfig({
   root: path.resolve(import.meta.dirname),
   // Copilot serves the panel from the plugin folder: every asset path must be relative.
   base: './',
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), frontendInventory()],
   // '#panel' is the panel-runtime module the panel's state uses; in the frame it is panel-runtime.ts.
   resolve: { alias: { '@': path.resolve(import.meta.dirname, 'src'), '#panel': path.resolve(import.meta.dirname, '../src/runtime.ts') } },
   server: { port: 5174, fs: { allow: ['..'] } },

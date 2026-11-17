@@ -1,5 +1,11 @@
 # Changes
 
+## [0.12.12] - 2026-11-17
+
+### Added
+- Downloads now include complete third-party notices and a generated inventory of bundled libraries, styles and artwork. Find both from the README's License and attribution section.
+- Package checks detect dependency, license and asset drift so maintainers can review what users receive. The original author's MIT license remains unchanged; no extra runtime download is added.
+
 ## [0.12.11] - 2026-11-17
 
 ### Fixed

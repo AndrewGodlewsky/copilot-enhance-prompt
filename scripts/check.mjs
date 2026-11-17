@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readFile, readdir, access } from 'node:fs/promises'
 import { execFileSync, spawnSync } from 'node:child_process'
 import path from 'node:path'
+import { checkDistribution } from './distribution.mjs'
 
 for (const config of ['.', 'web']) {
   const result = spawnSync(process.execPath, ['node_modules/typescript/bin/tsc', '-p', config], { stdio: 'inherit' })
@@ -33,6 +34,7 @@ async function compare(folder, target) {
   }
 }
 await compare('src/web-dist', `${built}/web`)
+await checkDistribution()
 const retiredHost = new RegExp(String.fromCharCode(111, 114, 99, 97), 'i')
 // Preserve source attribution while rejecting references to the retired host integration.
 const upstreamAttribution = 'https://github.com/cattfan/orca-enhance-prompt'

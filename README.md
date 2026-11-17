@@ -187,4 +187,6 @@ This is a fork of [Enhance Prompt](https://github.com/cattfan/orca-enhance-promp
 
 This fork is distributed under the [MIT License](LICENSE). The complete original license, including `Copyright (c) 2026 cattfan`, is preserved unchanged. Include that license with copies or distributions of this plugin, including packaged builds.
 
+Bundled dependencies and copied UI components have separate [third-party notices](THIRD_PARTY_NOTICES.md). Keep those notices and the [generated runtime inventory](runtime-inventory.json) with distributions. [Component provenance and maintenance instructions](docs/distribution-components.md) explain what ships and how to review dependency changes.
+
 This fork is not affiliated with GitHub or the model providers. [Report an issue](https://github.com/AndrewGodlewsky/copilot-enhance-prompt/issues).

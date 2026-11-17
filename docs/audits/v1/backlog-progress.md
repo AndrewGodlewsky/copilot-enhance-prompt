@@ -10,7 +10,7 @@ Current baseline: 0.12.1 / 4104c29. Tracking issue: [#40](https://github.com/And
 
 Security and correctness: #39.
 
-Distribution/maintenance: #9, #10, #11, #33.
+Distribution/maintenance: #10, #11, #33.
 
 Efficiency: #12, #13, #14, #15, #19, #20, #21, #32, #34.
 
@@ -20,9 +20,17 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- Next: #9, redistributed dependency notices and runtime inventory.
+- Next: #10, clean-build CI and dependency monitoring.
 
 ## Delivered versions
+
+### 0.12.12 ? #9, distribution notices and inventory
+
+Builds trace four backend and 54 frontend emitted JS packages, plus two reviewed CSS packages, to locked versions and full license/copyright/notice texts. Root THIRD_PARTY_NOTICES.md and runtime-inventory.json ship with the unchanged original MIT license. Copied shadcn/ReUI source notices and art/font provenance are documented. No additional runtime dependency/download is added.
+
+Verified: typecheck/build, 453 final tests, package checks and clean diff pass. Repeated generation produced identical inventory/notices. Drift checks cover locks, sources, artifacts, assets and full notices; test coverage verifies runtime-vs-build classification, copied/icon notices, missing/empty licenses and newline stability. Independent review found omitted CSS source hashes; a failing regression was added and the omission fixed before rebuilding and rerunning the suite. No paid inference or UI automation.
+
+Ruling: react-remove-scroll-bar 2.3.8 omits its LICENSE and its npm gitHead is unavailable upstream. A version-scoped official current MIT snapshot is retained with the author and provenance explicitly documented, without claiming historical byte identity. Future versions fail until licensed/reviewed. Canonical text hashes normalize CRLF to LF and are not exact archive digests. Exact copied component versions were not recorded upstream; retain both shadcn/ReUI notices conservatively. Issue #9 records commit/release.
 
 ### 0.12.11 ? #39, moving-source update verification
 
