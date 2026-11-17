@@ -115,6 +115,8 @@ additional context justifies the extra time and usage.
 
 ## Copilot availability
 
+Overlapping requests can share filename discovery while keeping cancellation and privacy checks separate. Instructions and source contents are always reread. [Freshness, Refresh and measured concurrency](context-discovery.md).
+
 Terminal output, other agents' sessions, editor-save events and agent activity are
 unavailable in the installed canvas SDK and contribute no context. Remote sessions
 provide no local project files; the extension never substitutes its own directory.

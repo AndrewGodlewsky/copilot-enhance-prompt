@@ -1,0 +1,235 @@
+{
+  "version": "0.12.21",
+  "at": "2026-11-17T09:30:54.623Z",
+  "baselineCommit": "999bcc6f46df3c2963e946a8fa8d97a10ce0fd43",
+  "node": "v24.22.1",
+  "git": "git version 2.55.0.windows.3",
+  "platform": "win32",
+  "syntheticOnly": true,
+  "modelCalls": 0,
+  "method": "Three alternating samples of concurrent prior/current production Standard gathers over 1,001 and 30,001 tiny files; two and four simultaneous callers. Count real git ls-files launches and compare every emitted item. Fixture creation/bundling excluded. Endpoint memory is not peak RSS. Same extension process only; no sequential-cache speed claim.",
+  "sourceHashes": {
+    "src/context/enumeration.ts": "99a5509729f5354ea3f8f31a902ae3c50aaaa0c0357c42693c8efaa09a1fcdae",
+    "src/context/index.ts": "3633bcf18fc9125a1ad17c6b44decf5fdb12546789378ee4e0291ec6af3338cf",
+    "scripts/audit/context-enumeration.mjs": "d6ce55b8215090db4d6b6df7d94e885b1828120ba0ff93767d8689bb6785f639"
+  },
+  "measurements": [
+    {
+      "label": "prior",
+      "files": 1001,
+      "owners": 2,
+      "ms": 97.278,
+      "listings": 2,
+      "heapUsed": 15427584,
+      "rss": 87666688
+    },
+    {
+      "label": "current",
+      "files": 1001,
+      "owners": 2,
+      "ms": 75.818,
+      "listings": 1,
+      "heapUsed": 17765656,
+      "rss": 89018368
+    },
+    {
+      "label": "prior",
+      "files": 1001,
+      "owners": 2,
+      "ms": 101.223,
+      "listings": 2,
+      "heapUsed": 21586400,
+      "rss": 96239616
+    },
+    {
+      "label": "current",
+      "files": 1001,
+      "owners": 2,
+      "ms": 75.886,
+      "listings": 1,
+      "heapUsed": 20594512,
+      "rss": 96866304
+    },
+    {
+      "label": "prior",
+      "files": 1001,
+      "owners": 2,
+      "ms": 103.935,
+      "listings": 2,
+      "heapUsed": 17436568,
+      "rss": 97939456
+    },
+    {
+      "label": "current",
+      "files": 1001,
+      "owners": 2,
+      "ms": 80.315,
+      "listings": 1,
+      "heapUsed": 22489352,
+      "rss": 98484224
+    },
+    {
+      "label": "prior",
+      "files": 1001,
+      "owners": 4,
+      "ms": 147.231,
+      "listings": 4,
+      "heapUsed": 21674952,
+      "rss": 113631232
+    },
+    {
+      "label": "current",
+      "files": 1001,
+      "owners": 4,
+      "ms": 98.422,
+      "listings": 1,
+      "heapUsed": 21555464,
+      "rss": 113737728
+    },
+    {
+      "label": "prior",
+      "files": 1001,
+      "owners": 4,
+      "ms": 151.437,
+      "listings": 4,
+      "heapUsed": 27006120,
+      "rss": 115892224
+    },
+    {
+      "label": "current",
+      "files": 1001,
+      "owners": 4,
+      "ms": 74.585,
+      "listings": 1,
+      "heapUsed": 27102856,
+      "rss": 116109312
+    },
+    {
+      "label": "prior",
+      "files": 1001,
+      "owners": 4,
+      "ms": 124.365,
+      "listings": 4,
+      "heapUsed": 32728728,
+      "rss": 117809152
+    },
+    {
+      "label": "current",
+      "files": 1001,
+      "owners": 4,
+      "ms": 74.045,
+      "listings": 1,
+      "heapUsed": 32599432,
+      "rss": 118128640
+    },
+    {
+      "label": "prior",
+      "files": 30001,
+      "owners": 2,
+      "ms": 1480.386,
+      "listings": 2,
+      "heapUsed": 46519144,
+      "rss": 221892608
+    },
+    {
+      "label": "current",
+      "files": 30001,
+      "owners": 2,
+      "ms": 845.551,
+      "listings": 1,
+      "heapUsed": 113472512,
+      "rss": 241168384
+    },
+    {
+      "label": "prior",
+      "files": 30001,
+      "owners": 2,
+      "ms": 1650.987,
+      "listings": 2,
+      "heapUsed": 78966864,
+      "rss": 241045504
+    },
+    {
+      "label": "current",
+      "files": 30001,
+      "owners": 2,
+      "ms": 961.734,
+      "listings": 1,
+      "heapUsed": 53746728,
+      "rss": 233406464
+    },
+    {
+      "label": "prior",
+      "files": 30001,
+      "owners": 2,
+      "ms": 1547.402,
+      "listings": 2,
+      "heapUsed": 94538080,
+      "rss": 238780416
+    },
+    {
+      "label": "current",
+      "files": 30001,
+      "owners": 2,
+      "ms": 866.52,
+      "listings": 1,
+      "heapUsed": 105014472,
+      "rss": 244285440
+    },
+    {
+      "label": "prior",
+      "files": 30001,
+      "owners": 4,
+      "ms": 2851.074,
+      "listings": 4,
+      "heapUsed": 74571376,
+      "rss": 256593920
+    },
+    {
+      "label": "current",
+      "files": 30001,
+      "owners": 4,
+      "ms": 831.996,
+      "listings": 1,
+      "heapUsed": 98770800,
+      "rss": 275382272
+    },
+    {
+      "label": "prior",
+      "files": 30001,
+      "owners": 4,
+      "ms": 2843.388,
+      "listings": 4,
+      "heapUsed": 78665160,
+      "rss": 289591296
+    },
+    {
+      "label": "current",
+      "files": 30001,
+      "owners": 4,
+      "ms": 873.491,
+      "listings": 1,
+      "heapUsed": 23780232,
+      "rss": 275791872
+    },
+    {
+      "label": "prior",
+      "files": 30001,
+      "owners": 4,
+      "ms": 2784.279,
+      "listings": 4,
+      "heapUsed": 83339432,
+      "rss": 289107968
+    },
+    {
+      "label": "current",
+      "files": 30001,
+      "owners": 4,
+      "ms": 833.309,
+      "listings": 1,
+      "heapUsed": 112339856,
+      "rss": 302145536
+    }
+  ],
+  "everyContextItemVerified": true
+}

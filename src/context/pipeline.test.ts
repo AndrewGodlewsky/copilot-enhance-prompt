@@ -15,6 +15,21 @@ import { msg } from '../messages.ts'
 const token = ['ghp', 'abcdefghijklmnopqrstuvwxyz0123456789'].join('_')
 const options = { level: 'deep' as const, prompt: 'Fix validateSession', terminalId: 'fixture', terminalLines: 0, extraFiles: [], excludePatterns: '', exclude: new Set<string>(), allowTerminal: false }
 
+test('completed discovery never caches project contents or hides edits from later ordinary gathers',async()=>{
+  await fixture({'README.md':'Before content','src/old.ts':'old'},async({root,host})=>{
+    const first=await gatherContext(host,{...options,level:'standard'})
+    assert.ok(first.items.some(item=>item.content.includes('Before content')))
+    assert.equal(Object.hasOwn(cachedStatic(root)!,'items'),false)
+    await writeFile(join(root,'README.md'),'After content')
+    await unlink(join(root,'src/old.ts'));await writeFile(join(root,'src/new.ts'),'new')
+    const next=await gatherContext(host,{...options,level:'standard'})
+    assert.ok(next.items.some(item=>item.content.includes('After content')))
+    assert.ok(!next.items.some(item=>item.content.includes('Before content')))
+    assert.ok(cachedStatic(root)!.files.includes('src/new.ts'))
+    assert.ok(!cachedStatic(root)!.files.includes('src/old.ts'))
+  })
+})
+
 async function fixture(files: Record<string, string>, check: (f: {
   root: string; services: ReturnType<typeof createServices>; host: ReturnType<typeof createWorkerHost>['api'];
   calls: { system: string; user: string }[]; git: (...args: string[]) => void

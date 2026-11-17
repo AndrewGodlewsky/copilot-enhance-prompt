@@ -9,8 +9,9 @@ import { LlmError, messageOf } from '../llm.ts'
 import { english, msg, raw, type Message } from '../messages.ts'
 import type { ContextItemView, ContextLevel } from '../presets.ts'
 import type { StepReporter } from '../progress.ts'
-import { projectFileAllowed, filterAllowed, isSensitive, readText, snippet, treeSummary, walkFiles, type FilePolicy } from './files.ts'
-import { changedPaths, gitDiff, gitFiles, gitGrepCounts, gitLog, gitStatus, isGitRepo, statusLinePaths } from './git.ts'
+import { projectFileAllowed, filterAllowed, isSensitive, readText, snippet, treeSummary, type FilePolicy } from './files.ts'
+import { changedPaths, gitDiff, gitGrepCounts, gitLog, gitStatus, statusLinePaths } from './git.ts'
+import { enumerateProject } from './enumeration.ts'
 import { readRuleFiles } from './instructions.ts'
 import { contentScores, scoreFiles, weightedKeywords } from './relevance.ts'
 import { detectStack } from './stack.ts'
@@ -45,6 +46,8 @@ export const isLocalWorkspace = (workspace: { hostId: string | null }) => worksp
 
 export type GatherOptions = {
   ensureAccess?: () => Promise<void>
+  /** Explicit Refresh bypasses even overlapping equivalent discovery. */
+  fresh?: boolean
   level: ContextLevel
   prompt: string
   terminalId?: string | null
@@ -236,15 +239,15 @@ export async function focusedProject(host: EnhanceWorker, hint?: string | readon
   return { workspace: focused.displayName, project: await projectNameOf(host, focused, await findFocusedWorkspace(host, focused, hint)) }
 }
 
-// ---- prompt-independent parts, cached per workspace root ----
+// ---- prompt-independent parts: share discovery, always reread file contents ----
 
 type StaticParts = { at: number; key: string; files: string[]; refused: string[]; isGit: boolean; items: ContextItem[] }
-const staticCache = new Map<string, StaticParts>()
+const staticCache = new Map<string, Omit<StaticParts,'items'>>()
 const STATIC_TTL_MS = 90_000
 
 const staticKey = (extraFiles: string[], allowGit: boolean, policy: FilePolicy) => JSON.stringify([extraFiles, allowGit, policy.excludePatterns ?? '', [...policy.exclude ?? []].sort()])
 
-export function cachedStatic(root: string, settings?: { extraContextFiles: string[]; privacy: { allowGit: boolean }; excludePatterns: string }): StaticParts | null {
+export function cachedStatic(root: string, settings?: { extraContextFiles: string[]; privacy: { allowGit: boolean }; excludePatterns: string }): Omit<StaticParts,'items'> | null {
   const hit = staticCache.get(root)
   const key = settings && staticKey(settings.extraContextFiles, settings.privacy.allowGit, settings)
   return hit && (!key || hit.key === key) && Date.now() - hit.at < STATIC_TTL_MS ? hit : null
@@ -262,18 +265,11 @@ export async function staticParts(
 ): Promise<StaticParts> {
   await policy.ensureAccess?.()
   const key = staticKey(extraFiles, allowGit, policy)
-  const hit = staticCache.get(root)
-  if (hit?.key === key && !fresh && Date.now() - hit.at < STATIC_TTL_MS) return hit
   const allow = await projectFileAllowed(root, policy)
-  const isGit = allowGit && (await isGitRepo(root, signal, policy.ensureAccess))
   onProgress(0.15)
-  const listed = (isGit ? await gitFiles(root, signal, policy.ensureAccess) : null) ?? (await walkFiles(root, undefined, undefined, signal, allow))
-  // A cancelled read is incomplete: never cache it.
+  const {files,refused,isGit} = await enumerateProject(root,allowGit,policy,signal,fresh)
   stopIfCancelled(signal)
   onProgress(0.5)
-  const files = await filterAllowed([...new Set(listed)], allow, signal)
-  const permitted = new Set(files)
-  const refused = listed.filter(path => !permitted.has(path))
   const items: ContextItem[] = []
   for (const rule of await readRuleFiles(root, files, extraFiles, 9000, allow)) {
     items.push(item(`rules:${rule.name}`, 'rules', raw(rule.name), rule.content))
@@ -285,7 +281,11 @@ export async function staticParts(
   stopIfCancelled(signal)
   await policy.ensureAccess?.()
   const parts = { at: Date.now(), key, files, refused, isGit, items }
-  staticCache.set(root, parts)
+  // Bounded diagnostic facts only; normal gathering never reuses completed lists.
+  for(const [path,entry] of staticCache) if(Date.now()-entry.at>=STATIC_TTL_MS) staticCache.delete(path)
+  staticCache.delete(root)
+  while(staticCache.size>=32) staticCache.delete(staticCache.keys().next().value!)
+  staticCache.set(root, {at:parts.at,key,files:[...files],refused:[...refused],isGit})
   return parts
 }
 
@@ -340,7 +340,7 @@ export async function gatherContext(host: EnhanceWorker, options: GatherOptions)
 
   if (root) {
     stopIfCancelled(signal)
-    const parts = await staticParts(root, options.extraFiles, true, options.allowGit !== false, signal, (fraction) => step('project', 'running', undefined, fraction), options)
+    const parts = await staticParts(root, options.extraFiles, options.fresh === true, options.allowGit !== false, signal, (fraction) => step('project', 'running', undefined, fraction), options)
     if (level === 'ai-test') researchFiles = parts.files
     items.push(...parts.items)
     step('project', 'done', String(parts.files.length))

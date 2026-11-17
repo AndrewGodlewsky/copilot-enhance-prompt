@@ -646,13 +646,14 @@ function registerRunHandlers(host: EnhanceWorker): void {
   host.panels.handle('prompt.enhance', async (input, { signal, panel }) => enhanceRequest(host, input, signal, panel.id))
   host.panels.handle('enhance.progress.get', async ({ runId }, { panel }) => progressOf(runId, panel.id))
 
-  host.panels.handle('context.preview', async ({ prompt, terminalId, level, exclude, workspaceId }, { signal }) => {
+  host.panels.handle('context.preview', async ({ prompt, terminalId, level, exclude, workspaceId, fresh }, { signal }) => {
     const settings = await readSettings(host)
     const ensureAccess = contextAccess(host, settings, signal)
     const requested: ContextLevel = isContextLevel(level) ? level : settings.contextLevel
     // Preview reads exactly what a run would: the same Privacy switches apply.
     const allowed = allowedLevel(requested, settings)
     const gathered = await gatherContext(host, {
+      fresh: fresh === true,
       level: allowed,
       prompt,
       terminalId: terminalId ?? null,

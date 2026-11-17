@@ -27,7 +27,7 @@ export function cancelContextPreview(): void {
   set(contextLoading, false)
 }
 
-export async function previewContext(): Promise<void> {
+export async function previewContext(fresh = true): Promise<void> {
   cancelContextPreview()
   const controller = new AbortController()
   pending = controller
@@ -38,7 +38,7 @@ export async function previewContext(): Promise<void> {
   const current = () => pending === controller && !controller.signal.aborted && key === contextKey()
   try {
     const answer = await plugin.request('context.preview', {
-      prompt: read(draft), level: read(effectiveLevel), terminalId: read(target), exclude: read(excluded), ...knownWorkspaceId()
+      prompt: read(draft), level: read(effectiveLevel), terminalId: read(target), exclude: read(excluded), fresh, ...knownWorkspaceId()
     }, { timeoutMs: 60_000, signal: controller.signal })
     if (current()) showContext(answer.context, answer.notes, key)
   } catch (error) {
@@ -74,7 +74,7 @@ export function watchContextPreview(): () => void {
       return
     }
     if (read(contextLoading) || read(contextFor) === key || timer) return
-    timer = setTimeout(() => { timer = undefined; void previewContext() }, 300)
+    timer = setTimeout(() => { timer = undefined; void previewContext(false) }, 300)
   }
   const unsubscribe = subscribe(changed)
   changed()

@@ -1,0 +1,13 @@
+# Context discovery and freshness
+
+Equivalent context requests in the same extension process share file discovery only while it is running. This avoids duplicate Git listings, directory walks and filename-policy checks when several canvases gather context together. The key includes the canonical project directory, Git permission, exclusion patterns and unchecked context IDs.
+
+Each caller owns its cancellation and current privacy checks. Revoking access or closing one canvas detaches that caller. Discovery stops when all callers leave. Every caller gets separate result arrays and rereads its own instructions, stack metadata and source excerpts through the existing confined, redacting file reader. No prompt, instruction text or source content is cached by this feature.
+
+**Refresh context** starts a new discovery even when another request is still running. Existing owners may finish their older discovery; they cannot replace the new generation. A normal request after discovery completes also enumerates again, so added/deleted files and edited instructions are not hidden by a time-based cache. Source evidence is not a transactionally consistent filesystem snapshot; detected replacements can require another refresh.
+
+There is deliberately no sequential preview-to-enhancement cache. Reliably invalidating every nested file, ignore rule and policy change would need additional machinery. A preview that finishes before Enhance starts does not accelerate that later request. Separate desktop processes do not share this pool. At most 32 discovery jobs and 64 waiting callers per job are retained; excess requests receive retry guidance. Diagnostic filename summaries expire after 90 seconds and are capped at 32 projects; normal gathering never uses them as evidence.
+
+`node scripts/audit/context-enumeration.mjs` compares the prior production gather at `999bcc6` with this implementation, using two/four simultaneous Standard requests and 1,001/30,001 synthetic files. It counts real Git listing launches, compares every emitted context item and records three samples, source hashes and endpoint memory in [the measurements](audits/v1/context-enumeration-measurements.json). It does not invoke a model or touch the owner's projects. Endpoint memory is not a peak-memory measurement. Existing search limits still apply; see [content search](context-search.md).
+
+On the recorded Windows fixture, median time for four callers over 30,001 files changed from 2,843.388 ms to 833.309 ms (about 71% less), with Git listings reduced from four to one. Two callers changed from 1,547.402 ms to 866.520 ms, with two listings reduced to one. These are same-process synthetic measurements, not a promise for every repository.

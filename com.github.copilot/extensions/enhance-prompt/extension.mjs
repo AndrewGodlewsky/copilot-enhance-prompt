@@ -2267,7 +2267,8 @@ async function filterAllowed(paths, allow, signal) {
 async function walkFiles(root, maxFiles = 8e3, maxDepth = 6, signal, allow = () => true) {
   const out = [];
   async function visit(dir, depth) {
-    if (out.length >= maxFiles || depth > maxDepth || signal?.aborted) {
+    signal?.throwIfAborted();
+    if (out.length >= maxFiles || depth > maxDepth) {
       return;
     }
     let entries;
@@ -2278,6 +2279,9 @@ async function walkFiles(root, maxFiles = 8e3, maxDepth = 6, signal, allow = () 
       return;
     }
     for (const entry of entries) {
+      signal?.throwIfAborted();
+      await allow.beforeRead?.();
+      signal?.throwIfAborted();
       if (out.length >= maxFiles) {
         return;
       }
@@ -2292,6 +2296,8 @@ async function walkFiles(root, maxFiles = 8e3, maxDepth = 6, signal, allow = () 
     }
   }
   await visit(root, 0);
+  signal?.throwIfAborted();
+  await allow.beforeRead?.();
   return out;
 }
 function treeSummary(files, maxLines = 70) {
@@ -2556,6 +2562,89 @@ function killTree(child) {
   } catch {
     child.kill();
   }
+}
+
+// src/context/enumeration.ts
+import { realpath as realpath3 } from "node:fs/promises";
+function createEnumerationPool(read) {
+  const jobs = /* @__PURE__ */ new Map();
+  let active = 0;
+  return async (root, policy, options = {}) => {
+    const snapshot2 = { allowGit: policy.allowGit, excludePatterns: policy.excludePatterns ?? "", exclude: new Set(policy.exclude) };
+    options.signal?.throwIfAborted();
+    await options.ensureAccess?.();
+    options.signal?.throwIfAborted();
+    const key = JSON.stringify([root, snapshot2.allowGit, snapshot2.excludePatterns, [...snapshot2.exclude].sort()]);
+    let job = options.fresh ? void 0 : jobs.get(key), start = false;
+    if (!job) {
+      if (active >= 32) throw Error("Project discovery is busy. Wait for active requests and retry.");
+      job = { controller: new AbortController(), subscribers: /* @__PURE__ */ new Set() };
+      jobs.set(key, job);
+      active++;
+      start = true;
+    }
+    const current = job;
+    if (current.subscribers.size >= 64) throw Error("Too many requests are waiting for this project. Wait and retry.");
+    const promise = new Promise((resolve5, reject) => {
+      const subscriber = { check: options.ensureAccess, finish(value, error) {
+        if (!current.subscribers.delete(subscriber)) return;
+        options.signal?.removeEventListener("abort", abort);
+        if (!value) reject(error ?? new Error("Project discovery failed."));
+        else resolve5({ files: [...value.files], refused: [...value.refused], isGit: value.isGit });
+        if (!current.subscribers.size) {
+          if (jobs.get(key) === current) jobs.delete(key);
+          current.controller.abort();
+        }
+      } };
+      const abort = () => subscriber.finish(void 0, options.signal?.reason ?? new Error("Project discovery was aborted."));
+      current.subscribers.add(subscriber);
+      options.signal?.addEventListener("abort", abort, { once: true });
+    });
+    if (start) {
+      const guard = async () => {
+        current.controller.signal.throwIfAborted();
+        const owners2 = [...current.subscribers];
+        const checks = await Promise.allSettled(owners2.map((owner2) => Promise.resolve().then(() => owner2.check?.())));
+        checks.forEach((check, index) => {
+          if (check.status === "rejected") owners2[index].finish(void 0, check.reason);
+        });
+        current.controller.signal.throwIfAborted();
+      };
+      void (async () => {
+        try {
+          await guard();
+          const result = await read(root, snapshot2, current.controller.signal, guard);
+          if (jobs.get(key) === current) jobs.delete(key);
+          await guard();
+          for (const owner2 of [...current.subscribers]) owner2.finish(result);
+        } catch (error) {
+          for (const owner2 of [...current.subscribers]) owner2.finish(void 0, error);
+        } finally {
+          active--;
+          if (jobs.get(key) === current) jobs.delete(key);
+        }
+      })();
+    }
+    return promise;
+  };
+}
+var pool = createEnumerationPool(async (root, policy, signal, ensureAccess) => {
+  const access = { ...policy, ensureAccess }, allow = await projectFileAllowed(root, access);
+  const isGit = policy.allowGit && await isGitRepo(root, signal, ensureAccess);
+  const listed = (isGit ? await gitFiles(root, signal, ensureAccess) : null) ?? await walkFiles(root, void 0, void 0, signal, allow);
+  signal.throwIfAborted();
+  await ensureAccess();
+  const files = await filterAllowed([...new Set(listed)], allow, signal), permitted = new Set(files);
+  return { files, refused: listed.filter((path) => !permitted.has(path)), isGit };
+});
+async function enumerateProject(root, allowGit, policy = {}, signal, fresh = false) {
+  signal?.throwIfAborted();
+  await policy.ensureAccess?.();
+  const canonical = await realpath3(root).catch(() => null);
+  signal?.throwIfAborted();
+  await policy.ensureAccess?.();
+  if (!canonical) return { files: [], refused: [], isGit: false };
+  return pool(canonical, { ...policy, allowGit }, { signal, ensureAccess: policy.ensureAccess, fresh });
 }
 
 // src/context/instructions.ts
@@ -2963,17 +3052,11 @@ var staticKey = (extraFiles2, allowGit, policy) => JSON.stringify([extraFiles2, 
 async function staticParts(root, extraFiles2, fresh = false, allowGit = true, signal, onProgress = () => void 0, policy = {}) {
   await policy.ensureAccess?.();
   const key = staticKey(extraFiles2, allowGit, policy);
-  const hit = staticCache.get(root);
-  if (hit?.key === key && !fresh && Date.now() - hit.at < STATIC_TTL_MS) return hit;
   const allow = await projectFileAllowed(root, policy);
-  const isGit = allowGit && await isGitRepo(root, signal, policy.ensureAccess);
   onProgress(0.15);
-  const listed = (isGit ? await gitFiles(root, signal, policy.ensureAccess) : null) ?? await walkFiles(root, void 0, void 0, signal, allow);
+  const { files, refused, isGit } = await enumerateProject(root, allowGit, policy, signal, fresh);
   stopIfCancelled(signal);
   onProgress(0.5);
-  const files = await filterAllowed([...new Set(listed)], allow, signal);
-  const permitted = new Set(files);
-  const refused = listed.filter((path) => !permitted.has(path));
   const items = [];
   for (const rule of await readRuleFiles(root, files, extraFiles2, 9e3, allow)) {
     items.push(item(`rules:${rule.name}`, "rules", raw(rule.name), rule.content));
@@ -2985,7 +3068,10 @@ async function staticParts(root, extraFiles2, fresh = false, allowGit = true, si
   stopIfCancelled(signal);
   await policy.ensureAccess?.();
   const parts = { at: Date.now(), key, files, refused, isGit, items };
-  staticCache.set(root, parts);
+  for (const [path, entry] of staticCache) if (Date.now() - entry.at >= STATIC_TTL_MS) staticCache.delete(path);
+  staticCache.delete(root);
+  while (staticCache.size >= 32) staticCache.delete(staticCache.keys().next().value);
+  staticCache.set(root, { at: parts.at, key, files: [...files], refused: [...refused], isGit });
   return parts;
 }
 async function gatherContext(host, options) {
@@ -3027,7 +3113,7 @@ async function gatherContext(host, options) {
   const saved = root && workspace && options.allowEditorSaves === true && atLeast(level, "deep") ? savedFiles(workspace).map((path) => relativeTo(root, path)).filter((path) => path !== null && !isSensitive(path)) : [];
   if (root) {
     stopIfCancelled(signal);
-    const parts = await staticParts(root, options.extraFiles, true, options.allowGit !== false, signal, (fraction) => step("project", "running", void 0, fraction), options);
+    const parts = await staticParts(root, options.extraFiles, options.fresh === true, options.allowGit !== false, signal, (fraction) => step("project", "running", void 0, fraction), options);
     if (level === "ai-test") researchFiles = parts.files;
     items.push(...parts.items);
     step("project", "done", String(parts.files.length));
@@ -3551,7 +3637,7 @@ ${missing2.map((image) => `- ${image.path}`).join("\n")}`;
 
 // src/attachments.ts
 var import_proper_lockfile = __toESM(require_proper_lockfile(), 1);
-import { lstat as lstat2, mkdir, open as open2, readdir as readdir2, realpath as realpath3, rename, rmdir, unlink } from "node:fs/promises";
+import { lstat as lstat2, mkdir, open as open2, readdir as readdir2, realpath as realpath4, rename, rmdir, unlink } from "node:fs/promises";
 import { constants as constants2 } from "node:fs";
 import { createHash, randomUUID } from "node:crypto";
 import { tmpdir } from "node:os";
@@ -3569,8 +3655,8 @@ var validId = (id2) => /^[a-z0-9-]{6,40}$/.test(id2);
 async function directory(path) {
   const info = await lstat2(path);
   if (!info.isDirectory() || info.isSymbolicLink()) throw bad();
-  const expected = join2(await realpath3(tmpdir()), relative3(tmpdir(), path));
-  if (await realpath3(path) !== expected) throw bad();
+  const expected = join2(await realpath4(tmpdir()), relative3(tmpdir(), path));
+  if (await realpath4(path) !== expected) throw bad();
 }
 async function uploadDirectory(id2) {
   if (!validId(id2)) throw bad();
@@ -3581,8 +3667,8 @@ async function uploadDirectory(id2) {
 }
 async function verifiedFile(path, writable2 = false) {
   const before = await lstat2(path, { bigint: true });
-  const expected = join2(await realpath3(tmpdir()), relative3(tmpdir(), path));
-  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || await realpath3(path) !== expected) throw bad();
+  const expected = join2(await realpath4(tmpdir()), relative3(tmpdir(), path));
+  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || await realpath4(path) !== expected) throw bad();
   const file = await open2(path, (writable2 ? constants2.O_RDWR : constants2.O_RDONLY) | (constants2.O_NOFOLLOW ?? 0));
   try {
     const info = await file.stat({ bigint: true });
@@ -4949,12 +5035,13 @@ async function enhanceRequest(host, input, signal, panelId) {
 function registerRunHandlers(host) {
   host.panels.handle("prompt.enhance", async (input, { signal, panel }) => enhanceRequest(host, input, signal, panel.id));
   host.panels.handle("enhance.progress.get", async ({ runId }, { panel }) => progressOf(runId, panel.id));
-  host.panels.handle("context.preview", async ({ prompt, terminalId, level, exclude, workspaceId }, { signal }) => {
+  host.panels.handle("context.preview", async ({ prompt, terminalId, level, exclude, workspaceId, fresh }, { signal }) => {
     const settings = await readSettings(host);
     const ensureAccess = contextAccess(host, settings, signal);
     const requested = isContextLevel(level) ? level : settings.contextLevel;
     const allowed = allowedLevel(requested, settings);
     const gathered = await gatherContext(host, {
+      fresh: fresh === true,
       level: allowed,
       prompt,
       terminalId: terminalId ?? null,
@@ -5432,7 +5519,7 @@ function persistentStore(directory2, name = "state.json") {
 }
 
 // src/copilot/update-installation.ts
-import { readFile as readFile2, realpath as realpath4, stat } from "node:fs/promises";
+import { readFile as readFile2, realpath as realpath5, stat } from "node:fs/promises";
 import { basename as basename3, dirname as dirname3, join as join4 } from "node:path";
 import { createHash as createHash2 } from "node:crypto";
 
@@ -5609,7 +5696,7 @@ function installationReader(session2, packageRoot2, name = "enhance-prompt") {
     const unsupported = (reason, installed) => ({ scope, installed, canUpdate: false, reason });
     if (!session2.rpc.plugins?.list) return unsupported("This Copilot runtime does not expose plugin inventory. Update through Customize \u2192 Installed.");
     try {
-      const root = await realpath4(packageRoot2);
+      const root = await realpath5(packageRoot2);
       const cache = dirname3(dirname3(root));
       const disk = await json(join4(root, "plugin.json"));
       if (basename3(cache) !== "installed-plugins" || root.startsWith("\\\\") || disk.name !== name) return unsupported("This is a local or development installation. Update its source files and start a new Copilot session.", disk.version);
@@ -5617,7 +5704,7 @@ function installationReader(session2, packageRoot2, name = "enhance-prompt") {
       const records = (await json(join4(home, "config.json"))).installedPlugins;
       if (!Array.isArray(records)) return unsupported("Copilot installation provenance is unavailable.", disk.version);
       const matches2 = [];
-      for (const row of records) if (row?.name === name && typeof row.cache_path === "string" && await realpath4(row.cache_path).catch(() => "") === root) matches2.push(row);
+      for (const row of records) if (row?.name === name && typeof row.cache_path === "string" && await realpath5(row.cache_path).catch(() => "") === root) matches2.push(row);
       if (matches2.length !== 1) return unsupported("This package cannot be matched uniquely to Copilot\u2019s installation records.", disk.version);
       const record = matches2[0];
       const inventory = await session2.rpc.plugins.list();
@@ -5962,7 +6049,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.20";
+var VERSION = "0.12.21";
 
 // src/worker-host.ts
 import { EventEmitter } from "node:events";
@@ -6328,7 +6415,7 @@ async function partitionSessions(directory2, data) {
 
 // src/copilot/session.ts
 import { basename as basename4, isAbsolute as isAbsolute3 } from "node:path";
-import { realpath as realpath5, stat as stat2 } from "node:fs/promises";
+import { realpath as realpath6, stat as stat2 } from "node:fs/promises";
 var unavailable = (message) => Object.assign(new Error(message), { code: "unavailable" });
 async function bounded(request) {
   let timer;
@@ -6347,7 +6434,7 @@ function sessionAdapter(session2) {
     try {
       const info = await bounded(session2.rpc.metadata.snapshot());
       if (!info || info.isRemote !== false || typeof info.workingDirectory !== "string" || !isAbsolute3(info.workingDirectory)) return null;
-      const path = await realpath5(info.workingDirectory);
+      const path = await realpath6(info.workingDirectory);
       if (!(await stat2(path)).isDirectory()) return null;
       return { id: `copilot::${path}`, path, name: basename4(path) };
     } catch {
@@ -6413,7 +6500,7 @@ function sessionAdapter(session2) {
 var UNSUPPORTED_SETTINGS = /* @__PURE__ */ new Set(["allowTerminalRead", "allowOtherAgents", "allowAgentActivity", "allowEditorSaves", "allowOpenFiles"]);
 
 // src/copilot/session-activity.ts
-import { lstat as lstat3, mkdir as mkdir3, realpath as realpath6 } from "node:fs/promises";
+import { lstat as lstat3, mkdir as mkdir3, realpath as realpath7 } from "node:fs/promises";
 import { join as join7 } from "node:path";
 var scopeName2 = (scope) => {
   if (!/^[a-f0-9]{24}$/.test(scope)) throw Error("Invalid session identity.");
@@ -6431,13 +6518,13 @@ var processAlive = (pid) => {
 async function storageDirectory(root, ...parts) {
   const initial = await lstat3(root).catch(() => null);
   if (!initial?.isDirectory() || initial.isSymbolicLink()) return;
-  let path = await realpath6(root).catch(() => void 0);
+  let path = await realpath7(root).catch(() => void 0);
   if (!path) return;
   for (const part of parts) {
     if (!/^[a-z-]+$/.test(part)) return;
     path = join7(path, part);
     const info = await lstat3(path).catch(() => null);
-    if (!info?.isDirectory() || info.isSymbolicLink() || await realpath6(path).catch(() => void 0) !== path) return;
+    if (!info?.isDirectory() || info.isSymbolicLink() || await realpath7(path).catch(() => void 0) !== path) return;
   }
   return path;
 }
@@ -6484,7 +6571,7 @@ async function registerSessionUse(root, scope) {
 
 // src/copilot/retained-data.ts
 import { createHash as createHash3, randomUUID as randomUUID4 } from "node:crypto";
-import { lstat as lstat4, opendir, realpath as realpath7 } from "node:fs/promises";
+import { lstat as lstat4, opendir, realpath as realpath8 } from "node:fs/promises";
 import { join as join8, relative as relative4, sep as sep3 } from "node:path";
 
 // src/panel-storage.ts
@@ -6642,7 +6729,7 @@ function createRetainedData(root, currentScope, options = {}) {
           unsafe(size);
           return;
         }
-        const base = await realpath7(path).catch(() => void 0);
+        const base = await realpath8(path).catch(() => void 0);
         if (!base) {
           unsafe(size);
           return;
@@ -6655,7 +6742,7 @@ function createRetainedData(root, currentScope, options = {}) {
           }
           entries++;
           const info = await lstat4(file).catch(() => null);
-          if (!info || info.isSymbolicLink() || await realpath7(file).catch(() => void 0) !== file) {
+          if (!info || info.isSymbolicLink() || await realpath8(file).catch(() => void 0) !== file) {
             unsafe(size);
             return;
           }
@@ -6920,7 +7007,7 @@ function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_D
 // src/copilot/server.ts
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
-import { realpath as realpath8 } from "node:fs/promises";
+import { realpath as realpath9 } from "node:fs/promises";
 import { extname } from "node:path";
 var MODEL_WRITES = /* @__PURE__ */ new Set(["models.save", "models.delete", "models.move", "models.roles", "consent.set", "rules.save"]);
 var PANEL_KEYS = /* @__PURE__ */ new Set(["tab", "style", "level", "effort", "structureChoice", "terminalWorkspaces", "optionsOpen", "draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked", "sendAfterEnhance", "historyScope"]);
@@ -6971,7 +7058,7 @@ async function createCanvasServer(options) {
   const canvases = /* @__PURE__ */ new Map();
   let pending = 0, streams = 0;
   let origin = "";
-  const assets = await realpath8(options.assets);
+  const assets = await realpath9(options.assets);
   const json3 = (res, status, value) => {
     res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
     res.end(JSON.stringify(value ?? null));
@@ -7208,7 +7295,7 @@ async function createCanvasServer(options) {
 }
 
 // src/copilot/models.ts
-import { mkdtemp, mkdir as mkdir6, realpath as realpath11, rm as rm2 } from "node:fs/promises";
+import { mkdtemp, mkdir as mkdir6, realpath as realpath12, rm as rm2 } from "node:fs/promises";
 import { basename as basename6, isAbsolute as isAbsolute5, join as join12, relative as relative6 } from "node:path";
 import { tmpdir as tmpdir3 } from "node:os";
 import { randomUUID as randomUUID7 } from "node:crypto";
@@ -7217,14 +7304,14 @@ import { randomUUID as randomUUID7 } from "node:crypto";
 import { randomUUID as randomUUID6 } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { homedir as homedir2 } from "node:os";
-import { lstat as lstat6, mkdir as mkdir5, open as open4, realpath as realpath10, rename as rename4, writeFile as writeFile3 } from "node:fs/promises";
+import { lstat as lstat6, mkdir as mkdir5, open as open4, realpath as realpath11, rename as rename4, writeFile as writeFile3 } from "node:fs/promises";
 import { join as join11 } from "node:path";
 import { StringDecoder } from "node:string_decoder";
 
 // src/copilot/usage-recovery.ts
 var import_proper_lockfile3 = __toESM(require_proper_lockfile(), 1);
 import { randomUUID as randomUUID5 } from "node:crypto";
-import { lstat as lstat5, mkdir as mkdir4, open as open3, readdir as readdir4, realpath as realpath9, rename as rename3, rm, rmdir as rmdir2, unlink as unlink2, writeFile as writeFile2 } from "node:fs/promises";
+import { lstat as lstat5, mkdir as mkdir4, open as open3, readdir as readdir4, realpath as realpath10, rename as rename3, rm, rmdir as rmdir2, unlink as unlink2, writeFile as writeFile2 } from "node:fs/promises";
 import { basename as basename5, isAbsolute as isAbsolute4, join as join10, relative as relative5, resolve as resolve4 } from "node:path";
 import { tmpdir as tmpdir2 } from "node:os";
 var uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -7254,8 +7341,8 @@ async function json2(file) {
 }
 async function identity(directory2) {
   const info = await lstat5(directory2, { bigint: true });
-  const canonical = await realpath9(directory2);
-  const temp = await realpath9(tmpdir2());
+  const canonical = await realpath10(directory2);
+  const temp = await realpath10(tmpdir2());
   if (!info.isDirectory() || info.isSymbolicLink() || canonical !== resolve4(directory2) || !within(temp, canonical) || !basename5(canonical).startsWith("enhance-copilot-")) throw generic();
   return { directory: canonical, dev: String(info.dev), ino: String(info.ino) };
 }
@@ -7287,7 +7374,7 @@ async function cleanup(record) {
 }
 async function registerUsageJournal(root, sessionId, directory2) {
   if (!uuid.test(sessionId)) throw generic();
-  const record = { sessionId, ...await identity(await realpath9(directory2)), token: randomUUID5() };
+  const record = { sessionId, ...await identity(await realpath10(directory2)), token: randomUUID5() };
   const registry = join10(root, "recovery"), file = join10(registry, `${sessionId}.json`);
   await mkdir4(registry, { recursive: true, mode: 448 });
   await writeFile2(join10(record.directory, ownerFile), JSON.stringify({ token: record.token, sessionId, state: "running" }), { flag: "wx", mode: 384 });
@@ -7322,7 +7409,7 @@ async function journal(record) {
   for (const component of ["home", "session-state", record.sessionId, "events.jsonl"]) {
     path = join10(path, component);
     const info = await lstat5(path);
-    if (info.isSymbolicLink() || await realpath9(path) !== path || (component === "events.jsonl" ? !info.isFile() || info.nlink !== 1 : !info.isDirectory())) throw generic();
+    if (info.isSymbolicLink() || await realpath10(path) !== path || (component === "events.jsonl" ? !info.isFile() || info.nlink !== 1 : !info.isDirectory())) throw generic();
   }
   return path;
 }
@@ -7332,9 +7419,9 @@ async function recoverUsageJournals(root, consume, options = {}) {
   try {
     const rootInfo = await lstat5(root);
     if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink()) throw generic();
-    registry = join10(await realpath9(root), "recovery");
+    registry = join10(await realpath10(root), "recovery");
     const info = await lstat5(registry);
-    if (!info.isDirectory() || info.isSymbolicLink() || await realpath9(registry) !== registry) throw generic();
+    if (!info.isDirectory() || info.isSymbolicLink() || await realpath10(registry) !== registry) throw generic();
   } catch (error) {
     if (missing(error)) return status;
     throw generic();
@@ -7534,8 +7621,8 @@ async function createUsageRecorder(sessionId, root = usageHome(), options = {}) 
     return accounting ? `${sessionId}:${accounting.usageId}` : `event:${receipt2.id}`;
   };
   if (options.resume) {
-    const canonical = await realpath10(root);
-    if (await realpath10(directory2) !== join11(canonical, "session-state", sessionId)) throw new Error("Unable to reopen usage accounting.");
+    const canonical = await realpath11(root);
+    if (await realpath11(directory2) !== join11(canonical, "session-state", sessionId)) throw new Error("Unable to reopen usage accounting.");
     const before = await lstat6(file, { bigint: true });
     if (!before.isFile() || before.nlink !== 1n || before.size > 64n * 1024n * 1024n) throw new Error("Unable to reopen usage accounting.");
     const handle = await open4(file, "r");
@@ -7633,7 +7720,7 @@ async function desktopRuntime(probe) {
     probe?.stage("runtime_identity");
     const executable = hostRuntime(void 0, void 0, void 0, void 0, probe);
     probe?.stage("runtime_path");
-    const path = await realpath11(executable);
+    const path = await realpath12(executable);
     probe?.check("runtimePathResolved", true);
     loadingSdk = true;
     probe?.stage("sdk_import");
@@ -7834,7 +7921,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       checkReasoning(parentModel, input.reasoningEffort);
       checkReasoning(model, input.reasoningEffort);
       stage("copilot.workspace");
-      if (metadata.isRemote !== false || await realpath11(metadata.workingDirectory) !== await realpath11(workspace)) throw unavailable2();
+      if (metadata.isRemote !== false || await realpath12(metadata.workingDirectory) !== await realpath12(workspace)) throw unavailable2();
       stage("copilot.tools");
       await withDeadline(session2.rpc.tools.initializeAndValidate(), 15e3);
       const [tools, selected] = await withDeadline(Promise.all([session2.rpc.tools.getCurrentMetadata(), session2.rpc.model.getCurrent()]), 15e3);

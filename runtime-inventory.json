@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "plugin": "enhance-prompt",
-  "version": "0.12.20",
+  "version": "0.12.21",
   "hostProvided": [
     "@github/copilot-sdk",
     "@github/copilot-sdk/extension",
@@ -1199,20 +1199,20 @@
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/extension.mjs",
-      "bytes": 374079,
-      "sha256": "0eb401754113e93b6b356275b4b0aab8952f4214d51ae67256573bdfc96136b7",
+      "bytes": 378249,
+      "sha256": "aad093cca37933a5b3c17adf5e75565664a253e9eae15315c3b4496542c87178",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/CHANGELOG.js",
-      "bytes": 34556,
-      "sha256": "d3ea6cd251f5f8c99942643b58d983e27f8193936717b79521d3f6d113d7fb74",
+      "bytes": 34913,
+      "sha256": "24c3880ff99c7a5083306902af1a5d0902c0c31baa4b4ce855f6f79fdd64e6c1",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/app.js",
-      "bytes": 549057,
-      "sha256": "a291752e432bea7d0ebdab18271ff7b1852b660185f49999dd8b3a6d3e5520d8",
+      "bytes": 549071,
+      "sha256": "2b20491471bd3df28161368ce17a884ea051d96ebd58fb7a3f1c69e537373422",
       "normalization": "lf"
     },
     {
@@ -1260,7 +1260,7 @@
     {
       "path": "plugin.json",
       "bytes": 422,
-      "sha256": "8582a015bf89906c1c7138d59683d333cdb0bc471e2de7082d43df7b85912ddd",
+      "sha256": "9328e46ceded3f999f0ba0183c9cd8f90ef1eb600c18de1749642d1ba0289d70",
       "normalization": "lf"
     }
   ],
@@ -1281,8 +1281,8 @@
   "inputs": [
     {
       "path": "CHANGELOG.md",
-      "bytes": 34520,
-      "sha256": "b0bee4bd5c32546e436659a67881037f2e767e60a7a4c139c826e725a582e919",
+      "bytes": 34877,
+      "sha256": "cfd077fa1afa86dc1fcc65516e88d7cda732ef276625dc06ae0fcbce3fc71110",
       "normalization": "lf"
     },
     {
@@ -1442,9 +1442,15 @@
       "normalization": "lf"
     },
     {
+      "path": "src/context/enumeration.ts",
+      "bytes": 4687,
+      "sha256": "99a5509729f5354ea3f8f31a902ae3c50aaaa0c0357c42693c8efaa09a1fcdae",
+      "normalization": "lf"
+    },
+    {
       "path": "src/context/files.ts",
-      "bytes": 9025,
-      "sha256": "ce1bfdde933e86139bd116cba3f7b2c631ea306a210ca6def47786df02611947",
+      "bytes": 9186,
+      "sha256": "52e54e2d19468347904e726dae8c81230b4650420499fc4afa09811219af8527",
       "normalization": "lf"
     },
     {
@@ -1455,8 +1461,8 @@
     },
     {
       "path": "src/context/index.ts",
-      "bytes": 31073,
-      "sha256": "3a96612669d80857d539e312e2e4e5fc412675c405f8f89b5a6799b691b96ff0",
+      "bytes": 31122,
+      "sha256": "3633bcf18fc9125a1ad17c6b44decf5fdb12546789378ee4e0291ec6af3338cf",
       "normalization": "lf"
     },
     {
@@ -1671,8 +1677,8 @@
     },
     {
       "path": "src/panel/context-preview.ts",
-      "bytes": 3131,
-      "sha256": "e6f297aa48c231bf981d718fa29324ac4ec3b453bd14cec6d0c3ef0a4572bb81",
+      "bytes": 3155,
+      "sha256": "e2c854dc54b9f668dcc98676c8ee385ff3cb538972a70e246a65788c37f0e7f2",
       "normalization": "lf"
     },
     {
@@ -1761,8 +1767,8 @@
     },
     {
       "path": "src/protocol.ts",
-      "bytes": 8843,
-      "sha256": "cb25146920498e54ed51838932ffd69e36188040037022430db7ff34914f873a",
+      "bytes": 8860,
+      "sha256": "ce343d1476863f78bc4269b1187a460cfea5b92c6edbe7e2f9ebe292f784018c",
       "normalization": "lf"
     },
     {
@@ -1822,7 +1828,7 @@
     {
       "path": "src/version.ts",
       "bytes": 93,
-      "sha256": "3507735c932854a0851d7e77b31d1172e5e39df7c27463991ee532a9faa05652",
+      "sha256": "48bf530a4f70b12f794e25f24d20603a2c90c2099c748fd4a6b11abb60fb5f80",
       "normalization": "lf"
     },
     {
@@ -1833,8 +1839,8 @@
     },
     {
       "path": "src/worker.ts",
-      "bytes": 52513,
-      "sha256": "2c6f35ddefb38b980385482e0564ba4d6a7a06c88c4be5a54a10be33f0eccb99",
+      "bytes": 52549,
+      "sha256": "476ffc163b0efcac2050e84b84fbd405b1a7f4f8f11e5d59c00eda481e228067",
       "normalization": "lf"
     },
     {
@@ -2940,6 +2946,7 @@
     "src/confined-read.ts",
     "src/context/activity.ts",
     "src/context/agents.ts",
+    "src/context/enumeration.ts",
     "src/context/files.ts",
     "src/context/git.ts",
     "src/context/index.ts",
@@ -3187,6 +3194,7 @@
     "src/confined-read.ts",
     "src/context/activity.ts",
     "src/context/agents.ts",
+    "src/context/enumeration.ts",
     "src/context/files.ts",
     "src/context/git.ts",
     "src/context/index.ts",

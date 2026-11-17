@@ -1,5 +1,11 @@
 var e=`# Changes
 
+## [0.12.21] - 2026-11-17
+
+### Improved
+- Simultaneous context requests for the same project and privacy choices share file discovery, reducing duplicate work across open canvases.
+- Refresh context always starts fresh discovery. Later requests reread project files and instructions; cancelling one canvas does not cancel another canvas's context request.
+
 ## [0.12.20] - 2026-11-17
 
 ### Improved

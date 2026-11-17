@@ -172,7 +172,7 @@ async function run(mode) {
     const host = mockHost({ results: { 'workspace.readContext': { displayName: 'audit', branch: '', workspaceId: 'audit' }, 'workspace.list': { workspaces: [workspace] } } })
     const parts = await measure('context.enumerateAndReadRules.git', () => staticParts(root, [], true, true), { filesOnDisk: count + 1 })
     assert.equal(parts.files.length, count + 1)
-    await measure('context.staticCacheHit', () => staticParts(root, [], false, true), { filesOnDisk: count + 1 })
+    await measure('context.repeatedStaticFreshRead', () => staticParts(root, [], false, true), { filesOnDisk: count + 1 })
     for (const level of ['off', 'standard', 'deep', 'max', 'ai-test']) {
       const result = await measure(`context.gather.${level}`, () => gatherContext(host, { level, prompt: 'Investigate validateSession14999 source-14999.ts',
         terminalLines: 0, exclude: new Set(), extraFiles: [], excludePatterns: '', allowTerminal: false,

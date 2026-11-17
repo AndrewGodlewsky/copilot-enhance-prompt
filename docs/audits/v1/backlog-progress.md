@@ -12,13 +12,27 @@ Security and correctness: delivered; see versions below.
 
 Distribution/maintenance: #11 (manual/maintainer confirmation pending), #33 (runtime package prepared; stable channel/manual gates pending).
 
-Efficiency: #12/#13/#15 shipped and closed. #14 saving implementation shipped (native-close/manual gate remains); #19 in verification, then #20, #21, #32, #34.
+Efficiency: #12/#13/#15/#19 shipped and closed. #14 saving implementation shipped (native-close/manual gate remains); #20 in verification, then #21, #32, #34.
 
 Usability: #24, #25, #26, #27.
 
 Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and concrete choices; do independent work while an answer is pending. Never consume the owner's Copilot credits or control desktop/browser UI.
 
 ## Current work
+
+### 0.12.21 — #20, coalesced context discovery
+
+Equivalent overlapping requests share only file discovery keyed by canonical project, Git permission and exclusion policy. Privacy and cancellation belong to each caller; all owners leaving aborts discovery. Manual Refresh starts a new generation. Each request rereads instructions/stack/source through existing policy readers. Diagnostic filename summaries are bounded to 32 roots/90 seconds and contain no project text; completed discoveries never supply later evidence.
+
+Focused tests cover independent arrays, cancellation and privacy revocation, all-owner cancellation, refresh generations, project/policy boundaries, failure/capacity recovery, fresh edited/added/deleted files, and automatic versus manual preview intent. An undefined rejection first reproduced an uncaught failure; the fix now rejects every owner and permits retry. The focused 27-test suite passes. Full rebuilt verification and independent review are recorded before publication.
+
+Three paired samples compare production Standard gathering at 999bcc6 with this version. All output items match. At 30,001 files, median four-caller latency falls 2,843.388→833.309 ms and listings 4→1; two callers 1,547.402→866.520 ms, listings 2→1. The committed measurement includes 1,001-file runs, source hashes and endpoint memory (not peak RSS). No paid calls, owner data or UI automation.
+
+Ruling: do not add a completed discovery cache whose invalidation cannot cover all nested files/ignore rules. Sequential preview→Enhance remains fresh and gets no claimed cache acceleration. Sharing is process-local and is not a filesystem snapshot; these limits are explicit in docs/context-discovery.md. Issue #19 shipped as 999bcc6, preview 0.12.20, exact Verify 44054689752 successful.
+
+Independent review found a fallback walker that only checked cancellation on directory entry. A real flat-directory regression first failed, then passed after per-entry cancellation/access checks; the final access check also covers a one-entry directory. No minor findings. Full verification is rerun after this correction; the Git-based benchmark is unaffected. Review rulings: sequential caching, cross-process sharing and transactional snapshots are intentionally unclaimed; desktop interaction remains manual, paid-account performance is not authorized, endpoint memory is not a peak-memory claim. The executor verifies full build/tests/runtime/publication separately; none is inferred from the focused review.
+
+Final verification: typecheck, rebuild, all 508 tests, package and diff checks pass. The disposable runtime-only archive registers/serves the built canvas, checks all context levels and fresh edits through the adapter, and retains synthetic stored data across its local metadata update. SDK/CLI 1.0.106-8.unstable.r43566476370.g869eef3, Windows x64, Node 24.22.1. Hosted Verify must pass the exact pushed commit before publication; issue/release evidence records that result.
 
 - #15 shipped in 0.12.19 / ef6f55c (Verify 44052500782), preview and runtime archive published, issue closed. #19 batched repository search is in verification for 0.12.20. #14/#11/#33 owner gates remain open.
 

@@ -123,7 +123,8 @@ export async function filterAllowed(paths: string[], allow: FileFilter, signal?:
 export async function walkFiles(root: string, maxFiles = 8000, maxDepth = 6, signal?: AbortSignal, allow: FileFilter = () => true): Promise<string[]> {
   const out: string[] = []
   async function visit(dir: string, depth: number): Promise<void> {
-    if (out.length >= maxFiles || depth > maxDepth || signal?.aborted) {
+    signal?.throwIfAborted()
+    if (out.length >= maxFiles || depth > maxDepth) {
       return
     }
     let entries
@@ -134,6 +135,9 @@ export async function walkFiles(root: string, maxFiles = 8000, maxDepth = 6, sig
       return
     }
     for (const entry of entries) {
+      signal?.throwIfAborted()
+      await allow.beforeRead?.()
+      signal?.throwIfAborted()
       if (out.length >= maxFiles) {
         return
       }
@@ -148,6 +152,8 @@ export async function walkFiles(root: string, maxFiles = 8000, maxDepth = 6, sig
     }
   }
   await visit(root, 0)
+  signal?.throwIfAborted()
+  await allow.beforeRead?.()
   return out
 }
 

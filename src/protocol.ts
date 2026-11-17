@@ -64,7 +64,7 @@ export interface PluginRequests {
     }
     /** What context would be sent, without calling a model (no AI file picking). */
     'context.preview': {
-      input: { prompt: string; terminalId?: string | null; level?: string; exclude?: string[]; workspaceId?: string }
+      input: { prompt: string; terminalId?: string | null; level?: string; exclude?: string[]; workspaceId?: string; fresh?: boolean }
       output: { context: ContextItemView[]; notes: Message[]; chars: number }
     }
     /** Types `text` into an agent terminal. */
