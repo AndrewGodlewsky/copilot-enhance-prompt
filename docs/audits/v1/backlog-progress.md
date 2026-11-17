@@ -34,6 +34,8 @@ Independent review found a fallback walker that only checked cancellation on dir
 
 Final verification: typecheck, rebuild, all 508 tests, package and diff checks pass. The disposable runtime-only archive registers/serves the built canvas, checks all context levels and fresh edits through the adapter, and retains synthetic stored data across its local metadata update. SDK/CLI 1.0.106-8.unstable.r43566476370.g869eef3, Windows x64, Node 24.22.1. Hosted Verify must pass the exact pushed commit before publication; issue/release evidence records that result.
 
+Initial hosted Verify 44056939915 passed 507/508 tests. Its Windows temporary directory alias differed from the canonical root returned by gathering; the new diagnostic assertion incorrectly queried the alias. The test now checks the returned canonical root. Production context items were correct, and runtime behavior is unchanged. Final full local/hosted verification is required again before publication.
+
 - #15 shipped in 0.12.19 / ef6f55c (Verify 44052500782), preview and runtime archive published, issue closed. #19 batched repository search is in verification for 0.12.20. #14/#11/#33 owner gates remain open.
 
 ## Delivered versions

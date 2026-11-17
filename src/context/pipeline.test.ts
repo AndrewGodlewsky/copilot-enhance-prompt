@@ -19,14 +19,14 @@ test('completed discovery never caches project contents or hides edits from late
   await fixture({'README.md':'Before content','src/old.ts':'old'},async({root,host})=>{
     const first=await gatherContext(host,{...options,level:'standard'})
     assert.ok(first.items.some(item=>item.content.includes('Before content')))
-    assert.equal(Object.hasOwn(cachedStatic(root)!,'items'),false)
+    assert.equal(Object.hasOwn(cachedStatic(first.root!)!,'items'),false)
     await writeFile(join(root,'README.md'),'After content')
     await unlink(join(root,'src/old.ts'));await writeFile(join(root,'src/new.ts'),'new')
     const next=await gatherContext(host,{...options,level:'standard'})
     assert.ok(next.items.some(item=>item.content.includes('After content')))
     assert.ok(!next.items.some(item=>item.content.includes('Before content')))
-    assert.ok(cachedStatic(root)!.files.includes('src/new.ts'))
-    assert.ok(!cachedStatic(root)!.files.includes('src/old.ts'))
+    assert.ok(cachedStatic(next.root!)!.files.includes('src/new.ts'))
+    assert.ok(!cachedStatic(next.root!)!.files.includes('src/old.ts'))
   })
 })
 
