@@ -1,6 +1,6 @@
 # History and feature-cost decision before v1
 
-**Recommendation: keep bounded recent History for v1, preserve all usage accounting, and treat a long-term prompt archive as a separate opt-in feature. The owner's decision is pending.** Nothing in this document changes retention, defaults or features. Track the decision in [#35](https://github.com/AndrewGodlewsky/copilot-enhance-prompt/issues/35).
+**Approved on 2026-11-17: keep bounded recent History for v1, preserve all usage accounting, and leave a long-term archive outside v1.** Nothing in this decision changes existing retention, defaults or features. Track the decision in [#35](https://github.com/AndrewGodlewsky/copilot-enhance-prompt/issues/35).
 
 ## What exists today
 
@@ -41,4 +41,4 @@ This is a design outline, not approved implementation or a promise of 100k suppo
 
 ## Decision record
 
-Status: **Awaiting owner response**. No implicit choice is made by publishing this document. Record the chosen v1 scope, reasons, export/retention/recovery expectations and any unsupported promise in #35. If an archive is requested, create a separately scoped design issue and leave implementation unapproved until its storage/privacy contract is reviewed.
+Status: **Approved by the owner on 2026-11-17**. Keep the current bounded recent-prompts list for v1 because the measured workloads support these limits; an archive would need a separate storage, privacy, export and recovery design. Existing filtered Markdown export and one-minute Undo remain the available copy/recovery features; no importable backup, exhaustive 90-day recall or long-term retention is promised. Usage accounting and session drafts remain separate and do not gain automatic expiry. If an archive is requested later, create a separately scoped design issue before changing the bounds.

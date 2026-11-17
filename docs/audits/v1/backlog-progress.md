@@ -16,9 +16,17 @@ Efficiency: #12/#13/#15/#19/#20/#21/#32 shipped and closed. #14 saving implement
 
 Usability: #24/#25/#26/#27 shipped and closed.
 
-Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and concrete choices; do independent work while an answer is pending. Never consume the owner's Copilot credits or control desktop/browser UI.
+Evidence/owner decisions: #23, #29, #30, #31. The owner resolved #35 by keeping bounded History for v1 (0.12.33). Runtime-only marketplace preparation is approved under #33; manual and live-model gates remain pending. Never consume the owner's Copilot credits or control desktop/browser UI.
 
 ## Current work
+
+### 0.12.33 — owner decisions and #35 completion
+
+Owner accepted bounded recent History for v1: existing count/text limits, filtered Markdown export and Undo remain, with no archive/import/long-term guarantee. #35 can close after verification/publication. The owner approved AndrewGodlewsky's best-effort seven-calendar-day private-report acknowledgement target without a guaranteed response or fix deadline. Manual disable/restart/re-enable and notification delivery remain open in #11. The current save indicator, immediate attempts, Retry and best-effort close flush are accepted; native observations remain #14/#29. New live evaluations remain pending by explicit choice; the zero-call study stays prepared, unchanged. The owner selected a separate runtime-only marketplace branch; its preparation/migration testing is the next #33 delivery, not an automatic source switch.
+
+Ruling: these answers resolve product choices, not missing test evidence. No paid calls, automatic expiry, owner installation changes or desktop control are authorized. This release records the decisions and closes only #35.
+
+Verified: typecheck, build, 543 final tests, package/diff checks and disposable installed-runtime archive fixture pass. Independent review found no blockers and checked 30 relative links and version-only runtime changes. Corrected its current-queue inconsistency so #35 is no longer listed as pending; historical entries remain intact. No new behavior/test was added for these documentation decisions. Native checks, private-report delivery, account policy, live evaluations, next-release branch implementation and historical external/CI evidence were outside this review. Exact hosted CI/publication follow.
 
 ### 0.12.32 — #35, archive and feature-cost decision
 

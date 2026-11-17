@@ -1,5 +1,12 @@
 var e=`# Changes
 
+## [0.12.33] - 2026-11-17
+
+### Verification
+- Confirmed bounded recent History for v1. Existing limits, filtered Markdown export and Undo remain; a long-term archive is outside v1.
+- Set the security-report acknowledgement target to seven calendar days, best effort, owned by AndrewGodlewsky. Manual pause checks and live model evaluations remain pending.
+- Recorded the approved save indicator and best-effort close flush. Wait for Saved before closing; native desktop checks remain open.
+
 ## [0.12.32] - 2026-11-17
 
 ### Verification

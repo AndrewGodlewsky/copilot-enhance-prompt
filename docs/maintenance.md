@@ -1,6 +1,6 @@
 # Maintainer checks and dependency monitoring
 
-AndrewGodlewsky owns advisory triage and release review. Review GitHub security alerts, private vulnerability reports and failed scheduled audits at least weekly; prioritize a reachable runtime vulnerability or credential/privacy issue as soon as it is reported. These are maintainer procedures, not a guaranteed response SLA. Keep public issues free of credentials and private prompt content; follow the [security policy and recovery guidance](../SECURITY.md). Private reporting is enabled; verify security-alert notification subscriptions and delivery as the owner (pending #11). Do not test delivery by publishing fake advisories.
+AndrewGodlewsky owns advisory triage and release review. Review GitHub security alerts, private vulnerability reports and failed scheduled audits at least weekly; prioritize a reachable runtime vulnerability or credential/privacy issue as soon as it is reported. The approved best-effort target is acknowledgement of private vulnerability reports within seven calendar days, with no guaranteed response or fix deadline. Keep public issues free of credentials and private prompt content; follow the [security policy and recovery guidance](../SECURITY.md). Private reporting is enabled; verify security-alert notification subscriptions and delivery as the owner (pending #11). Do not test delivery by publishing fake advisories.
 
 ## Automated checks
 
