@@ -1,0 +1,3932 @@
+{
+  "schema": 1,
+  "plugin": "enhance-prompt",
+  "version": "0.12.34",
+  "hostProvided": [
+    "@github/copilot-sdk",
+    "@github/copilot-sdk/extension",
+    "Copilot executable",
+    "Node built-ins",
+    "system fonts"
+  ],
+  "packages": [
+    {
+      "name": "graceful-fs",
+      "version": "4.2.12",
+      "license": "BlueOak-1.0.0",
+      "directory": "node_modules/graceful-fs",
+      "integrity": "sha512-iuyGF2E4oafQfPsRrG2wtY2ILupMhvtdrhzrxB+0VcjsPpSPttpfYdjnGFGsTi5MaJFjI1jOKHPQ6UTbTj9TAw==",
+      "kind": "backend-js",
+      "files": [
+        "node_modules/graceful-fs/clone.js",
+        "node_modules/graceful-fs/graceful-fs.js",
+        "node_modules/graceful-fs/legacy-streams.js",
+        "node_modules/graceful-fs/polyfills.js"
+      ],
+      "notices": [
+        {
+          "path": "node_modules/graceful-fs/LICENSE.md",
+          "sha256": "1a9975c75cfc205b54615d0f0daad869a240f5e348eb1a3d431fc7644dd5fd67"
+        }
+      ]
+    },
+    {
+      "name": "proper-lockfile",
+      "version": "4.1.2",
+      "license": "MIT",
+      "directory": "node_modules/proper-lockfile",
+      "integrity": "sha512-TjNPblN4BwAWMXU8s9AEz4JmQxnD1NNL7bNOY/AKUzyamc379FWASUhc/K1pL2noVb+XmZKLL68cjzLsiOAMaA==",
+      "kind": "backend-js",
+      "files": [
+        "node_modules/proper-lockfile/index.js",
+        "node_modules/proper-lockfile/lib/adapter.js",
+        "node_modules/proper-lockfile/lib/lockfile.js",
+        "node_modules/proper-lockfile/lib/mtime-precision.js"
+      ],
+      "notices": [
+        {
+          "path": "node_modules/proper-lockfile/LICENSE",
+          "sha256": "5e7b89989b946961a7f3a87fc689adf92798f4322e2a27f1852c94ff2f9fa7f6"
+        }
+      ]
+    },
+    {
+      "name": "retry",
+      "version": "0.12.0",
+      "license": "MIT",
+      "directory": "node_modules/retry",
+      "integrity": "sha512-9LkiTwjUh6rT555DtE9rTX+BKByPfrMzEAtnlEtdEwr3Nkffwiihqe2bWADg+OQRjt9gl6ICdmB/ZFDCGAtSow==",
+      "kind": "backend-js",
+      "files": [
+        "node_modules/retry/index.js",
+        "node_modules/retry/lib/retry.js",
+        "node_modules/retry/lib/retry_operation.js"
+      ],
+      "notices": [
+        {
+          "path": "node_modules/retry/License",
+          "sha256": "1418710b026fba5ae364100975702fddc0867d17b13940e3779a62cea33258d4"
+        }
+      ]
+    },
+    {
+      "name": "signal-exit",
+      "version": "3.0.7",
+      "license": "ISC",
+      "directory": "node_modules/signal-exit",
+      "integrity": "sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ==",
+      "kind": "backend-js",
+      "files": [
+        "node_modules/signal-exit/index.js",
+        "node_modules/signal-exit/signals.js"
+      ],
+      "notices": [
+        {
+          "path": "node_modules/signal-exit/LICENSE.txt",
+          "sha256": "fc5c72a172de77431df114615be9f47310fd93797dd741a1258552d116704e33"
+        }
+      ]
+    },
+    {
+      "name": "@base-ui/react",
+      "version": "1.9.0",
+      "license": "MIT",
+      "directory": "web/node_modules/@base-ui/react",
+      "integrity": "sha512-S8CSYosASBKtpL8SWUfS78rFElfLijiCgA7oHOK22jCJ95FULsYyKwBNFOgudt0RA+/7yNc7F81bOvQnRgbBiQ==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@base-ui/react/internals/getStateAttributesProps.mjs",
+        "web/node_modules/@base-ui/react/internals/useRenderElement.mjs",
+        "web/node_modules/@base-ui/react/merge-props/mergeProps.mjs",
+        "web/node_modules/@base-ui/react/use-render/useRender.mjs",
+        "web/node_modules/@base-ui/react/utils/resolveClassName.mjs",
+        "web/node_modules/@base-ui/react/utils/resolveStyle.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@base-ui/react/LICENSE",
+          "sha256": "4d7b6f2bb93f201d54fda66d00f9e9a31dddc14aff509a59536a9a57d11b0597"
+        }
+      ]
+    },
+    {
+      "name": "@base-ui/utils",
+      "version": "0.5.0",
+      "license": "MIT",
+      "directory": "web/node_modules/@base-ui/utils",
+      "integrity": "sha512-dYGGcEttjkYiMoa5nHm8vLaJ2UcuTWxo3BFAwOYXeRg/q7UVVvA6cacEIXEs3FgBfK1CGtW1ptElqs7wsx+t9A==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@base-ui/utils/empty.mjs",
+        "web/node_modules/@base-ui/utils/getReactElementRef.mjs",
+        "web/node_modules/@base-ui/utils/mergeObjects.mjs",
+        "web/node_modules/@base-ui/utils/reactVersion.mjs",
+        "web/node_modules/@base-ui/utils/useMergedRefs.mjs",
+        "web/node_modules/@base-ui/utils/useRefWithInit.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@base-ui/utils/LICENSE",
+          "sha256": "4d7b6f2bb93f201d54fda66d00f9e9a31dddc14aff509a59536a9a57d11b0597"
+        }
+      ]
+    },
+    {
+      "name": "@floating-ui/core",
+      "version": "1.8.0",
+      "license": "MIT",
+      "directory": "web/node_modules/@floating-ui/core",
+      "integrity": "sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@floating-ui/core/dist/floating-ui.core.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@floating-ui/core/LICENSE",
+          "sha256": "6c1117dc530c1ffcffb309e6bd53f333c2620453285327bde5ce91516eee1011"
+        }
+      ]
+    },
+    {
+      "name": "@floating-ui/dom",
+      "version": "1.8.0",
+      "license": "MIT",
+      "directory": "web/node_modules/@floating-ui/dom",
+      "integrity": "sha512-yXSrzeHZBTZadLOlfyhCkJHNeLJnHRnRInwdZ40L7ZiaAtrBwoYlsDrX3v5zB1Utk7CLfzcOVnVVWoXEky7Ceg==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@floating-ui/dom/dist/floating-ui.dom.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@floating-ui/dom/LICENSE",
+          "sha256": "6c1117dc530c1ffcffb309e6bd53f333c2620453285327bde5ce91516eee1011"
+        }
+      ]
+    },
+    {
+      "name": "@floating-ui/react-dom",
+      "version": "2.1.9",
+      "license": "MIT",
+      "directory": "web/node_modules/@floating-ui/react-dom",
+      "integrity": "sha512-JDjEFGCpImxDCA7JJKviA0M9+RtmJdj0m/NVU5IMgBK+AmZouAQQ7/+2GLH0GXXY0YMw9oXPB8hKdbPYg5QLYg==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@floating-ui/react-dom/dist/floating-ui.react-dom.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@floating-ui/react-dom/LICENSE",
+          "sha256": "6c1117dc530c1ffcffb309e6bd53f333c2620453285327bde5ce91516eee1011"
+        }
+      ]
+    },
+    {
+      "name": "@floating-ui/utils",
+      "version": "0.2.12",
+      "license": "MIT",
+      "directory": "web/node_modules/@floating-ui/utils",
+      "integrity": "sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@floating-ui/utils/dist/floating-ui.utils.dom.mjs",
+        "web/node_modules/@floating-ui/utils/dist/floating-ui.utils.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@floating-ui/utils/LICENSE",
+          "sha256": "6c1117dc530c1ffcffb309e6bd53f333c2620453285327bde5ce91516eee1011"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/number",
+      "version": "1.1.3",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/number",
+      "integrity": "sha512-Road2bidD0uu/1BGDOWNdPI06g0lIRy6IF9GZcIrDK2KGItfor8IQwQa+yM2ERgHM1MmHxaxpTzk0/Jp42lNfA==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/number/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/number/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/primitive",
+      "version": "1.2.0",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/primitive",
+      "integrity": "sha512-KABY+VMIRPJL+Vyzv/335FEhXXD/xDv8BMb1kl48/aXJZMH0LtHCTx5ga5RnxaEP3nZHtmTLf1P9vanmFX46bw==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/primitive/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/primitive/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-arrow",
+      "version": "1.1.17",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-arrow",
+      "integrity": "sha512-67jjcVvxjXCCStnTW3Z+M7jmaFMuMR7M2JgpDzH4w7JSRrikmzhjfYgP/09ECb8n7whnsgh1ifJ+Ie96qEj+pQ==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-arrow/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-arrow/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-checkbox",
+      "version": "1.4.1",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-checkbox",
+      "integrity": "sha512-KWtwhh+98ML3seZ9vO9yRY2OwaQG90dCiDAxjpSNY2AaZ3Hik3B0dsk6m0ILywo/no3A9/SozadyPMNweVT8yw==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-checkbox/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-checkbox/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-collection",
+      "version": "1.2.0",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-collection",
+      "integrity": "sha512-+yiQzqcc7Sy7/5s0jrMCjpPRFB3538VNrXPWdTLZhE/SCfgEws4aI6lHWN/vvcnyhHndROWBzqmqB4QBrITZ9Q==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-collection/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-collection/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-compose-refs",
+      "version": "1.1.5",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-compose-refs",
+      "integrity": "sha512-+48PbAAbq3didjJxa+OaWY2ZwgAKsNiRGyeHKszblZMQ+kcpd9pAaT11cMkGEie0vsOi3QdeTE6d5Fe3Gn61kA==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-compose-refs/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-compose-refs/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-context",
+      "version": "1.3.0",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-context",
+      "integrity": "sha512-v5AYEocMISkbJ+1fTXzZpiFv7NRr3D2WiYbLIKf+FkmJ8VkP6d503eV2n34MFussHXY1pcoq3yfJiQH77dc4Mg==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-context/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-context/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-dialog",
+      "version": "1.3.1",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-dialog",
+      "integrity": "sha512-+0E4qvVTwjAWra9sEhJ+9BTsvHE00zkUuNw1VGh7S+Gc13dfYk+S1PVQdchWDj+XYHhAai7Z7IpzXVDCGsDplg==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-dialog/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-dialog/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-direction",
+      "version": "1.2.0",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-direction",
+      "integrity": "sha512-FtRA52a/r+LKStFT+neLUm+8vSe7wbzkbQGGeU8ixFiwC8NU14Evoq9ATECqL3eGbcUzJR4fyfA4KkK/q6dfqg==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-direction/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-direction/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-dismissable-layer",
+      "version": "1.2.1",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-dismissable-layer",
+      "integrity": "sha512-KIfDcAsx+oVylFZ4xryVKusJUrLLhTQmfnJW4kwk4Km5myvhHCrj04hnWWUC166+xD4DHdH8tQGylwYX1h6+Pg==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-dismissable-layer/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-dismissable-layer/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-dropdown-menu",
+      "version": "2.2.1",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-dropdown-menu",
+      "integrity": "sha512-XsHcmYG2AcqnvTqrOXXWcMrhquEIlqucizuDH1MV/qMRW+DndpBCMvNeTRXOxqmG1H5j89M/+I0/34Zdd+zDcQ==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-dropdown-menu/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-dropdown-menu/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-focus-guards",
+      "version": "1.2.0",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-focus-guards",
+      "integrity": "sha512-MPm5R0iRGUDrDnPNxmLBkv+X7pN4XKzt+MbWJEuJQsH3NFH4omrbpXpucyYCCKTSt+na/ZxGhEWQrWTZ0285cA==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-focus-guards/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-focus-guards/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-focus-scope",
+      "version": "1.3.1",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-focus-scope",
+      "integrity": "sha512-ugeMhbXt4y5S2T1GnIqbWDKEN962PDwnX1fN0eKOOgf5f63Dh2mn8F1FUySlgW0iF6GiVsRF32DzuDIWTUyQJg==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-focus-scope/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-focus-scope/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-id",
+      "version": "1.1.4",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-id",
+      "integrity": "sha512-TMQp2llA+RYn7JcjnrMnz7wN4pcVttPZnRZo52PLQsoLVKzNlVwUeHmfePgTgRluXFvlD3GD5g5MOVVTJCO0qA==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-id/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-id/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-menu",
+      "version": "2.2.1",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-menu",
+      "integrity": "sha512-G34BsU90SBj5foYpz8pQqq/Q0Dlfyyl6KitWEfRwXC0QvfwhWNAwS49DWP2+rRJ0iwv20Z2Qx7Sk+T03bGo5JA==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-menu/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-menu/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-popper",
+      "version": "1.4.0",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-popper",
+      "integrity": "sha512-yCWRvLeGv9Pz3+efwHqGPp70mZ56r3kfIgQVF56Oj2aAa4uP/Tb+IE59wNcc+758rctqbCKx4LbK8II/r7Bn0Q==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-popper/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-popper/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-portal",
+      "version": "1.2.0",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-portal",
+      "integrity": "sha512-StX7xXnaRU41VvFtMm9zlhVGz8XF6GmWWTXftkQaY+tqVkbs/R9UmAp5mLzHHapk5hM9RMZQvO/3usyIP/g42g==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-portal/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-portal/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-presence",
+      "version": "1.1.11",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-presence",
+      "integrity": "sha512-Z7/atlkab36Z8hm+V8zYc79r0W+tiOB1o0tun1By94JyadkekLQmtEAnBSP9XKXBNQsStoStS4+gX10JpS5akA==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-presence/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-presence/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-primitive",
+      "version": "2.2.0",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-primitive",
+      "integrity": "sha512-HCTSPMNqv55Qk0IX4geJbpyXazmqulcimwuyjxTkKi29v+QZbG2Zho9BnbBq4YS2PF+KlNb2CXoLz66uUmblkg==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-primitive/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-primitive/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-progress",
+      "version": "1.2.1",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-progress",
+      "integrity": "sha512-yQBiM6J3YM8Ums1orkEFpbznK47geKxa0igikzcaS1xHgdba3DdAQBsGbCTt5BVfR8zhEvgxQ0poGcINaD3lvw==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-progress/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-progress/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-roving-focus",
+      "version": "1.2.1",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-roving-focus",
+      "integrity": "sha512-UwraORzVUeEPMclhO1p0vz0qI+TbdDLO9i+FiOqhJyHKwdpCRCck9yVEscUnAMIzCiuNoQa8D4A9bIpOPXGt6Q==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-roving-focus/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-roving-focus/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-select",
+      "version": "2.4.1",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-select",
+      "integrity": "sha512-888ZwW0Md6GyptuqYABRX9nLKgoYfcooCyBBvVaX5Jp3e+8Jp2i4Zo/Uy50Hm+Ysn2JfloQXstW4U36w8teVtg==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-select/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-select/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-slot",
+      "version": "1.5.0",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-slot",
+      "integrity": "sha512-tyYd9ddPXAysAbdbD9eYxgwpCSv6f3PncqVSNKQFSR5lcJVLz3cb/pANDoYrLiHBpXv7skortyUgGUWsYuPPFQ==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-slot/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-slot/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-switch",
+      "version": "1.4.1",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-switch",
+      "integrity": "sha512-NpBGwc40rY02ZmSvuyeKk0Bvc8ZsNeTMi4qHvJ+ZH4EiYCv0zIXEgdCW4bVdzgIUeP9xxbLJSxKOUfqITYNmkA==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-switch/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-switch/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-tooltip",
+      "version": "1.4.1",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-tooltip",
+      "integrity": "sha512-NxLFGSFtZ78zVfcoOhTwR1xwqo5qx1Jh8Pw6FMZ9McCaqfRzz7/gIRahs2Oy5XlPgQ+8QkUcKbN5B0U44J/kCg==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-tooltip/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-tooltip/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-use-callback-ref",
+      "version": "1.1.5",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-use-callback-ref",
+      "integrity": "sha512-Y5GBf4NKeADoXI1geiMlMuMoURT3k9MizzzKhGb/m55H94aGigZ01PIpkvsO6lML13BA6XYAXSJ6gza7vTn5nw==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-use-callback-ref/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-use-callback-ref/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-use-controllable-state",
+      "version": "1.3.0",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-use-controllable-state",
+      "integrity": "sha512-TAcBI7bw2ljYCbv4+zuTSd6zICu8pRt6SDN2vJ/Z06K2MXh6I9WYFe/A9ovlFDtR5HVHGm5iDxDoABm/++dbKg==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-use-controllable-state/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-use-controllable-state/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-use-effect-event",
+      "version": "0.0.5",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-use-effect-event",
+      "integrity": "sha512-7cshFL8HGS/7HEiHH+9kL9HBwp2sa9yX18Knwek6KYWmXwM7pegMgta2AXMQKI+rq3JnfSj9x8wYqFMTdG1Jgg==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-use-effect-event/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-use-effect-event/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-use-is-hydrated",
+      "version": "0.1.3",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-use-is-hydrated",
+      "integrity": "sha512-umO/aJ+82CpOnhDZUTbILCQf7kU/g0iv+oGs/Q8jw7IkhWBzaEP4sA268PhFAJTFetbwp3ICc6ktpI4TqtxcIw==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-use-is-hydrated/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-use-is-hydrated/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-use-layout-effect",
+      "version": "1.1.4",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-use-layout-effect",
+      "integrity": "sha512-K20DkRkUwDnxEYMBPcg3Y6voLkEy5p5QQmszZgLngKKiC7dzBR/aEuK3w1qlx2JWDUNH6FluahYdgR3BP+QbYw==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-use-layout-effect/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-use-layout-effect/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-use-size",
+      "version": "1.1.5",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-use-size",
+      "integrity": "sha512-V1McDQkMGzgivwqdu7u96APs7oi0Jvj9LTzgq3WWrDZqxWdAqU9yZnZQqk5OizGFR8badUQwZsrlao7MOlWYOA==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-use-size/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-use-size/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "@radix-ui/react-visually-hidden",
+      "version": "1.2.13",
+      "license": "MIT",
+      "directory": "web/node_modules/@radix-ui/react-visually-hidden",
+      "integrity": "sha512-feijiN1oPk4rck4u9Dm9tsU4mT6Wp9oeEEhaz1WUEs1VuqLf8xzsFG+Qk+uWq6TnMH9O+WRECRg0NftyP9E4Fw==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/@radix-ui/react-visually-hidden/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/@radix-ui/react-visually-hidden/LICENSE",
+          "sha256": "74144f6a3a6cb5150f30b4c09011121201349ea0b2d2a0ec3f0bad1399c0e559"
+        }
+      ]
+    },
+    {
+      "name": "aria-hidden",
+      "version": "1.2.6",
+      "license": "MIT",
+      "directory": "web/node_modules/aria-hidden",
+      "integrity": "sha512-ik3ZgC9dY/lYVVM++OISsaYDeg1tb0VtP5uL3ouh1koGOaUMDPpbFIei4JkFimWUFPn90sbMNMXQAIVOlnYKJA==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/aria-hidden/dist/es2015/index.js"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/aria-hidden/LICENSE",
+          "sha256": "07dfb46d2e36d9987c2ed339eb9be60c16819f90d467ccb6777a88c87f23a317"
+        }
+      ]
+    },
+    {
+      "name": "class-variance-authority",
+      "version": "0.7.1",
+      "license": "Apache-2.0",
+      "directory": "web/node_modules/class-variance-authority",
+      "integrity": "sha512-Ka+9Trutv7G8M6WT6SeiRWz792K5qEqIGEGzXKhAE6xOWAY6pPH8U+9IY3oCMv6kqTmLsv7Xh/2w2RigkePMsg==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/class-variance-authority/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/class-variance-authority/LICENSE",
+          "sha256": "be61dfc96bbff04feb039bddcab80efae9b5640d45ac2e17a82ef2f5e674785a"
+        }
+      ]
+    },
+    {
+      "name": "clsx",
+      "version": "2.1.1",
+      "license": "MIT",
+      "directory": "web/node_modules/clsx",
+      "integrity": "sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/clsx/dist/clsx.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/clsx/license",
+          "sha256": "3d5b63706380c8c746b862cba2ff5eb9fefd7fc81fbfac2964006c3f319573d2"
+        }
+      ]
+    },
+    {
+      "name": "get-nonce",
+      "version": "1.0.1",
+      "license": "MIT",
+      "directory": "web/node_modules/get-nonce",
+      "integrity": "sha512-FJhYRoDaiatfEkUK8HKlicmu/3SGFD51q3itKDGoSTysQJBnfOcxU5GxnhE1E6soB76MbT0MBtnKJuXyAx+96Q==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/get-nonce/dist/es2015/index.js"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/get-nonce/LICENSE",
+          "sha256": "a05c505267a8736ef8af08d800132d98d47b18cb374891438d1fcb104f494949"
+        }
+      ]
+    },
+    {
+      "name": "lucide-react",
+      "version": "1.70.0",
+      "license": "ISC",
+      "directory": "web/node_modules/lucide-react",
+      "integrity": "sha512-gCTPPN1MlQUBtUgdsUv+0CAUj+X8hifRUiRBw4E5v7lvDIOIpx0EZezdGQMSimS8pKA6esvullJub4GYr0mCHA==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/lucide-react/dist/esm/Icon.mjs",
+        "web/node_modules/lucide-react/dist/esm/context.mjs",
+        "web/node_modules/lucide-react/dist/esm/createLucideIcon.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/arrow-down.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/arrow-up-to-line.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/arrow-up.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/book-open.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/bot.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/check.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/chevron-down.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/chevron-right.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/chevron-up.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/circle-check.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/contrast.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/copy.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/download.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/ellipsis-vertical.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/ellipsis.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/external-link.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/file-text.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/folder.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/info.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/loader-circle.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/panel-left-close.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/panel-left-open.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/paperclip.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/pencil.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/plug-zap.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/plus.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/refresh-cw.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/rotate-ccw.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/scroll-text.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/search.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/send.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/settings-2.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/settings.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/sliders-horizontal.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/sparkles.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/square.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/trash.mjs",
+        "web/node_modules/lucide-react/dist/esm/icons/x.mjs",
+        "web/node_modules/lucide-react/dist/esm/shared/src/build/buildLucideIconForReact.mjs",
+        "web/node_modules/lucide-react/dist/esm/shared/src/build/buildLucideIconNode.mjs",
+        "web/node_modules/lucide-react/dist/esm/shared/src/build/defaultAttributes.mjs",
+        "web/node_modules/lucide-react/dist/esm/shared/src/utils/hasA11yProp.mjs",
+        "web/node_modules/lucide-react/dist/esm/shared/src/utils/mergeClasses.mjs",
+        "web/node_modules/lucide-react/dist/esm/shared/src/utils/toCamelCase.mjs",
+        "web/node_modules/lucide-react/dist/esm/shared/src/utils/toKebabCase.mjs",
+        "web/node_modules/lucide-react/dist/esm/shared/src/utils/toLucideIconData.mjs",
+        "web/node_modules/lucide-react/dist/esm/shared/src/utils/toPascalCase.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/lucide-react/LICENSE",
+          "sha256": "ee35498e6684b30c9efaae009415884772f4450b3f6a3ae49103cd550a2c8ceb"
+        }
+      ]
+    },
+    {
+      "name": "react",
+      "version": "19.3.1",
+      "license": "MIT",
+      "directory": "web/node_modules/react",
+      "integrity": "sha512-QNhWdt7nrgVWWQG58QuGsAR3jv3Hbe4mb4vz7w2csnHavciZJgda1CPNaldF6eVxv90ud3jUXpKlHL69gO38yw==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/react/cjs/react-jsx-runtime.production.js",
+        "web/node_modules/react/cjs/react.production.js",
+        "web/node_modules/react/index.js",
+        "web/node_modules/react/jsx-runtime.js"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/react/LICENSE",
+          "sha256": "cf9b17822d1fcd4ff32ccbe14183386fb3adf6f2ff92dc184130823f7fc28173"
+        }
+      ]
+    },
+    {
+      "name": "react-dom",
+      "version": "19.3.1",
+      "license": "MIT",
+      "directory": "web/node_modules/react-dom",
+      "integrity": "sha512-Y0bARz53lhEC1NMCASs0/j+faB/zqt3R8hpvg1e8+61ZVJ4UL0UdC4cBbXfZMcIuhrfgeILTLe+ZeBCavQPtKQ==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/react-dom/cjs/react-dom-client.production.js",
+        "web/node_modules/react-dom/cjs/react-dom.production.js",
+        "web/node_modules/react-dom/client.js",
+        "web/node_modules/react-dom/index.js"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/react-dom/LICENSE",
+          "sha256": "cf9b17822d1fcd4ff32ccbe14183386fb3adf6f2ff92dc184130823f7fc28173"
+        }
+      ]
+    },
+    {
+      "name": "react-remove-scroll",
+      "version": "2.7.2",
+      "license": "MIT",
+      "directory": "web/node_modules/react-remove-scroll",
+      "integrity": "sha512-Iqb9NjCCTt6Hf+vOdNIZGdTiH1QSqr27H/Ek9sv/a97gfueI/5h1s3yRi1nngzMUaOOToin5dI1dXKdXiF+u0Q==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/react-remove-scroll/dist/es2015/Combination.js",
+        "web/node_modules/react-remove-scroll/dist/es2015/SideEffect.js",
+        "web/node_modules/react-remove-scroll/dist/es2015/UI.js",
+        "web/node_modules/react-remove-scroll/dist/es2015/aggresiveCapture.js",
+        "web/node_modules/react-remove-scroll/dist/es2015/handleScroll.js",
+        "web/node_modules/react-remove-scroll/dist/es2015/medium.js",
+        "web/node_modules/react-remove-scroll/dist/es2015/sidecar.js"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/react-remove-scroll/LICENSE",
+          "sha256": "07dfb46d2e36d9987c2ed339eb9be60c16819f90d467ccb6777a88c87f23a317"
+        }
+      ]
+    },
+    {
+      "name": "react-remove-scroll-bar",
+      "version": "2.3.8",
+      "license": "MIT",
+      "directory": "web/node_modules/react-remove-scroll-bar",
+      "integrity": "sha512-9r+yi9+mgU33AKcj6IbT9oRCO78WriSj6t/cF8DWBZJ9aOGPOTEDvdUDz1FwKim7QXWwmHqtdHnRJfhAxEG46Q==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/react-remove-scroll-bar/dist/es2015/component.js",
+        "web/node_modules/react-remove-scroll-bar/dist/es2015/constants.js",
+        "web/node_modules/react-remove-scroll-bar/dist/es2015/utils.js"
+      ],
+      "notices": [
+        {
+          "path": "licenses/react-remove-scroll-bar-2.3.8.txt",
+          "sha256": "ceedc02ca6ecc228bec601367e8d3905331c33cd74f7131d4d45ad2562d23bb4"
+        }
+      ]
+    },
+    {
+      "name": "react-style-singleton",
+      "version": "2.2.3",
+      "license": "MIT",
+      "directory": "web/node_modules/react-style-singleton",
+      "integrity": "sha512-b6jSvxvVnyptAiLjbkWLE/lOnR4lfTtDAl+eUC7RZy+QQWc6wRzIV2CE6xBuMmDxc2qIihtDCZD5NPOFl7fRBQ==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/react-style-singleton/dist/es2015/component.js",
+        "web/node_modules/react-style-singleton/dist/es2015/hook.js",
+        "web/node_modules/react-style-singleton/dist/es2015/singleton.js"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/react-style-singleton/LICENSE",
+          "sha256": "07dfb46d2e36d9987c2ed339eb9be60c16819f90d467ccb6777a88c87f23a317"
+        }
+      ]
+    },
+    {
+      "name": "scheduler",
+      "version": "0.28.0",
+      "license": "MIT",
+      "directory": "web/node_modules/scheduler",
+      "integrity": "sha512-juorfCmIkIw8tT+p5BXSm6PJjQF/ycEYmKyzURCIt/RaZIhL+PulbQ9Yu2z1HdOJDdqDTlxA1+xKBmHXJsczAw==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/scheduler/cjs/scheduler.production.js",
+        "web/node_modules/scheduler/index.js"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/scheduler/LICENSE",
+          "sha256": "cf9b17822d1fcd4ff32ccbe14183386fb3adf6f2ff92dc184130823f7fc28173"
+        }
+      ]
+    },
+    {
+      "name": "sonner",
+      "version": "2.0.8",
+      "license": "MIT",
+      "directory": "web/node_modules/sonner",
+      "integrity": "sha512-UM/ByIoFra8yzV75n1o0Puu0bw5U/9UNnDacrJNspekBewIfsQ3D6ez1nvlWpt7aTsO6rujQtifBpycwIivqlg==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/sonner/dist/index.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/sonner/LICENSE.md",
+          "sha256": "834c4b77166b09fe155e2e3a13050d6858739970afeae7879de040ebe40ff146"
+        }
+      ]
+    },
+    {
+      "name": "tailwind-merge",
+      "version": "3.7.0",
+      "license": "MIT",
+      "directory": "web/node_modules/tailwind-merge",
+      "integrity": "sha512-XPPUyAc+cvspz3lHTcR/QgPfW2A0lv/xQNIjX3HGhLR+Nq2lHaLq5MtTesHn8GUr3W3DguT2KT5x3NVgRtYwmA==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/tailwind-merge/dist/bundle-mjs.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/tailwind-merge/LICENSE.md",
+          "sha256": "b25c1d68b3530dcc000a7bfa7780656ecab42a5d217a9c04301e022d88560344"
+        }
+      ]
+    },
+    {
+      "name": "tailwindcss",
+      "version": "4.3.5",
+      "license": "MIT",
+      "directory": "web/node_modules/tailwindcss",
+      "integrity": "sha512-FcQk9BuffmEHJP2G0XmB2SplU1aLTI7j07Kunk+U74Ny+XiWOtzXz9aujFZ/avntw1e2cOv/3PkgzflQ7gX2vQ==",
+      "kind": "css",
+      "files": [
+        "web/node_modules/tailwindcss/index.css",
+        "web/node_modules/tailwindcss/preflight.css",
+        "web/node_modules/tailwindcss/theme.css",
+        "web/node_modules/tailwindcss/utilities.css"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/tailwindcss/LICENSE",
+          "sha256": "fdd854c84f367147ac4376837dee5002b0d2db39e8effed810ebc48f9bb70318"
+        }
+      ]
+    },
+    {
+      "name": "tslib",
+      "version": "2.9.1",
+      "license": "0BSD",
+      "directory": "web/node_modules/tslib",
+      "integrity": "sha512-a4Ux9VKuIMHsOS7ENbEq6hK2ZGYIT27Rtl0E4eD9KqwxhKiQeMZE/9xb3IdYwWaSOyIBQLExhQgXDTYoiCxnWA==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/tslib/tslib.es6.mjs"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/tslib/CopyrightNotice.txt",
+          "sha256": "7932ec89afeb0991d60e50b13194a73eeefba8976f37a03d3e6b64670f833855"
+        },
+        {
+          "path": "web/node_modules/tslib/LICENSE.txt",
+          "sha256": "0e8d2550baea17eb3072c4f919b36fbf9852bb49dba948549872e713863c0834"
+        }
+      ]
+    },
+    {
+      "name": "tw-animate-css",
+      "version": "1.4.0",
+      "license": "MIT",
+      "directory": "web/node_modules/tw-animate-css",
+      "integrity": "sha512-7bziOlRqH0hJx80h/3mbicLW7o8qLsH5+RaLR2t+OHM3D0JlWGODQKQ4cxbK7WlvmUxpcj6Kgu6EKqjrGFe3QQ==",
+      "kind": "css",
+      "files": [
+        "web/node_modules/tw-animate-css/dist/tw-animate-prefix.css",
+        "web/node_modules/tw-animate-css/dist/tw-animate.css"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/tw-animate-css/LICENSE",
+          "sha256": "0757353b681700c270d927226ef210b74b5e7ba932898f80d68c9163843455e1"
+        }
+      ]
+    },
+    {
+      "name": "use-callback-ref",
+      "version": "1.3.3",
+      "license": "MIT",
+      "directory": "web/node_modules/use-callback-ref",
+      "integrity": "sha512-jQL3lRnocaFtu3V00JToYz/4QkNWswxijDaCVNZRiRTO3HQDLsdu1ZtmIUvV4yPp+rvWm5j0y0TG/S61cuijTg==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/use-callback-ref/dist/es2015/assignRef.js",
+        "web/node_modules/use-callback-ref/dist/es2015/useMergeRef.js",
+        "web/node_modules/use-callback-ref/dist/es2015/useRef.js"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/use-callback-ref/LICENSE",
+          "sha256": "07dfb46d2e36d9987c2ed339eb9be60c16819f90d467ccb6777a88c87f23a317"
+        }
+      ]
+    },
+    {
+      "name": "use-sidecar",
+      "version": "1.1.3",
+      "license": "MIT",
+      "directory": "web/node_modules/use-sidecar",
+      "integrity": "sha512-Fedw0aZvkhynoPYlA5WXrMCAMm+nSWdZt6lzJQ7Ok8S6Q+VsHmHpRWndVRJ8Be0ZbkfPc5LRYH+5XrzXcEeLRQ==",
+      "kind": "frontend-js",
+      "files": [
+        "web/node_modules/use-sidecar/dist/es2015/exports.js",
+        "web/node_modules/use-sidecar/dist/es2015/medium.js"
+      ],
+      "notices": [
+        {
+          "path": "web/node_modules/use-sidecar/LICENSE",
+          "sha256": "07dfb46d2e36d9987c2ed339eb9be60c16819f90d467ccb6777a88c87f23a317"
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "path": "assets/art/cover-art.jpg",
+      "bytes": 72881,
+      "sha256": "3c491ebad814bb232e6e190ba64ff36558011075efd905bbb9e43240295950b1",
+      "normalization": "none"
+    },
+    {
+      "path": "assets/art/logo-512.png",
+      "bytes": 98722,
+      "sha256": "b3b91fa402ef7014f25bc98aa2f07967ce7f68c5b088dff7bf4a8aebb94215e1",
+      "normalization": "none"
+    },
+    {
+      "path": "assets/art/logo-64.png",
+      "bytes": 2250,
+      "sha256": "24e40d2680731c7f3788e7b651f94b0c328dd01a6e77cf1b0c1237a93f1e28a2",
+      "normalization": "none"
+    },
+    {
+      "path": "assets/art/logo-source.jpg",
+      "bytes": 82318,
+      "sha256": "1ca5dee04e0239919c3609b1555299983f5e0e3fa4e181e3d16704f55ab48f9c",
+      "normalization": "none"
+    },
+    {
+      "path": "assets/icon.png",
+      "bytes": 34148,
+      "sha256": "5aafc41183b123645496bb65761b74c2c812f1ed0c6055b01d35cc52ab0a11fa",
+      "normalization": "none"
+    },
+    {
+      "path": "assets/icon.svg",
+      "bytes": 557,
+      "sha256": "da33f84df56d072fbaaa199c61ff7d7f55e7853c733d672b32371f04fb9dc765",
+      "normalization": "lf"
+    },
+    {
+      "path": "docs/assets/prompt-workflow.svg",
+      "bytes": 12610,
+      "sha256": "cd22189664d83c977c7d7aba774ba4b23f7da614f57e37abd56cffe076e18b04",
+      "normalization": "lf"
+    },
+    {
+      "path": "docs/design/word-crew/character-concepts.png",
+      "bytes": 1380783,
+      "sha256": "c94e164fff88ce9960fe9b7f73ce44b61242d8a9bab8037bdb32a09c7148fc78",
+      "normalization": "none"
+    },
+    {
+      "path": "docs/design/word-crew/stick-figure-variations.png",
+      "bytes": 1490365,
+      "sha256": "08db466e585b0987c1c498c2d205b68301cff05ffce6f4a8340b9ebd4fe7b12c",
+      "normalization": "none"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "LICENSE",
+      "bytes": 1064,
+      "sha256": "f687f417959130555840c0d277a865272920d501dbc2f6746bc82f4e35ee5f51",
+      "normalization": "lf"
+    },
+    {
+      "path": "assets/icon.svg",
+      "bytes": 557,
+      "sha256": "da33f84df56d072fbaaa199c61ff7d7f55e7853c733d672b32371f04fb9dc765",
+      "normalization": "lf"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/extension.mjs",
+      "bytes": 386777,
+      "sha256": "0067d958f9c04772de615e6d6b0333e671038e10b1c252304fa080a81f9ea5a5",
+      "normalization": "lf"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/assets/CHANGELOG.js",
+      "bytes": 39593,
+      "sha256": "3722f9b1c95b01ee885dfd2d45861fbaa60fb15f977867a1a7914048ed47aba8",
+      "normalization": "lf"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/assets/app.js",
+      "bytes": 556505,
+      "sha256": "a0479803c84caae40d48d722494db92bf9884a3d827b59daa627ae1008fce1d8",
+      "normalization": "lf"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/assets/dropdown-menu.js",
+      "bytes": 18373,
+      "sha256": "2de2c85248a3e57184bce75be89d931e54d13488f119548b420b35f6b62ea998",
+      "normalization": "lf"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/assets/history.css",
+      "bytes": 6260,
+      "sha256": "736dcd8fe85cfe4801fdb3ff05887e6d54e8637c4b38f2126353c17bec459ecf",
+      "normalization": "lf"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/assets/history.js",
+      "bytes": 10419,
+      "sha256": "039497c51e7fb79faa50b8f54e01e790ec766b589ed5fbd2422f8d0824f24d4a",
+      "normalization": "lf"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/assets/icon.png",
+      "bytes": 34148,
+      "sha256": "5aafc41183b123645496bb65761b74c2c812f1ed0c6055b01d35cc52ab0a11fa",
+      "normalization": "none"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/assets/index.css",
+      "bytes": 61719,
+      "sha256": "da85c30110ff5ae7893d1230be51a724e0c4f356a63e69bfddeedf8f1934a297",
+      "normalization": "lf"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/assets/sections.js",
+      "bytes": 33555,
+      "sha256": "52177f5bd5fa473dbd42f833ea6b19781d023cda23777bd0a43d5aa5edfd6d8c",
+      "normalization": "lf"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/index.html",
+      "bytes": 447,
+      "sha256": "c9357e89132d548a04a77ad77dfbcf87d492eaa9e9a888602177c115417aa27c",
+      "normalization": "lf"
+    },
+    {
+      "path": "plugin.json",
+      "bytes": 422,
+      "sha256": "6f3d2cdb72b6f606270d7414d32ee4f36e69f60a0f788f1149a394e4e3a0dc3b",
+      "normalization": "lf"
+    }
+  ],
+  "locks": [
+    {
+      "path": "package-lock.json",
+      "bytes": 18006,
+      "sha256": "04d3b42d9d2cbb1a2eb0115d79aa9b9add46084adfa159f781ec8b3337c38b90",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/package-lock.json",
+      "bytes": 117661,
+      "sha256": "5806cfca4444bb5ba7c75e55e3e6ae785d2e28b6f14ce3fec008cbfb15140209",
+      "normalization": "lf"
+    }
+  ],
+  "inputs": [
+    {
+      "path": "CHANGELOG.md",
+      "bytes": 39557,
+      "sha256": "a362c9d5d15fd47dd9dd2da5536a30a3eeb794c8f77faaae0521e0d75c7472b8",
+      "normalization": "lf"
+    },
+    {
+      "path": "docs/distribution-components.md",
+      "bytes": 7197,
+      "sha256": "f09747c4f70abda070da985ef6c0e1d5e4cde9d05cfcc91499cbb25c6bd7915a",
+      "normalization": "lf"
+    },
+    {
+      "path": "licenses/react-remove-scroll-bar-2.3.8.txt",
+      "bytes": 1093,
+      "sha256": "a79aae0c0f21990d9d963bb3c5a79cdcea9a46f8523ba55c58d7fe776b6ebc84",
+      "normalization": "lf"
+    },
+    {
+      "path": "licenses/reui.txt",
+      "bytes": 1071,
+      "sha256": "09592ffefa6512b68dd7aa9031bc50d5d39cfcc9da08288f5eb1f9d236baca66",
+      "normalization": "lf"
+    },
+    {
+      "path": "licenses/shadcn.txt",
+      "bytes": 1063,
+      "sha256": "1564074e13439397221ffd522e2e504d56561994a23d371aa5e3ad43e4f5423f",
+      "normalization": "lf"
+    },
+    {
+      "path": "node_modules/graceful-fs/clone.js",
+      "bytes": 496,
+      "sha256": "7258eca52e65d69845759503f9fdd66c252f40e5eafb76db5d481172e31ac9ed",
+      "normalization": "lf"
+    },
+    {
+      "path": "node_modules/graceful-fs/graceful-fs.js",
+      "bytes": 12680,
+      "sha256": "7da35669b6b6b0e4aafee31674c033f2cebb0c8f9ae010f709dcc185d3f17786",
+      "normalization": "lf"
+    },
+    {
+      "path": "node_modules/graceful-fs/legacy-streams.js",
+      "bytes": 2655,
+      "sha256": "60a6a7ecf7c3e55a3ffaae13433b6cff388b7205bba6daf393c863f77a949e36",
+      "normalization": "lf"
+    },
+    {
+      "path": "node_modules/graceful-fs/polyfills.js",
+      "bytes": 10141,
+      "sha256": "66ea1687ed5edf39d67296d26edccc8da695d9a869303a78d0e580cd770aca27",
+      "normalization": "lf"
+    },
+    {
+      "path": "node_modules/proper-lockfile/index.js",
+      "bytes": 1025,
+      "sha256": "c11869aa340b61757c2e7a6739a1d423495fe627ac0a54cb44f8c47c393e2fdd",
+      "normalization": "lf"
+    },
+    {
+      "path": "node_modules/proper-lockfile/lib/adapter.js",
+      "bytes": 1898,
+      "sha256": "c95e2408b91b70e02c625a9b1a42e0c793140dbe6c1bff8cc183bb88bc267c6c",
+      "normalization": "lf"
+    },
+    {
+      "path": "node_modules/proper-lockfile/lib/lockfile.js",
+      "bytes": 10845,
+      "sha256": "c517a976f7a31c8b1768cb8e7ac9936aee70299ae762548495016a79d64a6434",
+      "normalization": "lf"
+    },
+    {
+      "path": "node_modules/proper-lockfile/lib/mtime-precision.js",
+      "bytes": 1366,
+      "sha256": "eb5adf91a21715b50f39438cdcda52043d551ccb5fe530681364c474c7206218",
+      "normalization": "lf"
+    },
+    {
+      "path": "node_modules/retry/index.js",
+      "bytes": 40,
+      "sha256": "003f04e5fb5913675c886ac938e9b7bbd33754eb17ee8f00e074e1bf888bec1e",
+      "normalization": "lf"
+    },
+    {
+      "path": "node_modules/retry/lib/retry.js",
+      "bytes": 2298,
+      "sha256": "4388d78729faa0dea430e2a7fa572aee6a15a407da05097b41ee44106d336616",
+      "normalization": "lf"
+    },
+    {
+      "path": "node_modules/retry/lib/retry_operation.js",
+      "bytes": 3657,
+      "sha256": "eaca13037da35523326c8870e39c4fd236c4f38b5822a2af0f33d0f4e0b21d02",
+      "normalization": "lf"
+    },
+    {
+      "path": "node_modules/signal-exit/index.js",
+      "bytes": 5708,
+      "sha256": "7cc6f6a1e14dec79dc23f6afd7caca1319189747144e1a33af77616c21d9e9de",
+      "normalization": "lf"
+    },
+    {
+      "path": "node_modules/signal-exit/signals.js",
+      "bytes": 1295,
+      "sha256": "ae538fdae683d6fa2e14579da06df10fb7a66378cfa50971956fb68c2c86c727",
+      "normalization": "lf"
+    },
+    {
+      "path": "scripts/build.mjs",
+      "bytes": 2097,
+      "sha256": "b4eed1d13066dd32c0df7b741356c5b6401bd98d8d485e17385eb889eced7d3d",
+      "normalization": "lf"
+    },
+    {
+      "path": "scripts/distribution.mjs",
+      "bytes": 9581,
+      "sha256": "d23ba667357b2e8765416fdb5d7d0ecda343db7d5f57b256e678089a8d3fab3d",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/attachments.ts",
+      "bytes": 16616,
+      "sha256": "1fce4380d66562d2c5eb4c81061a3d601079f2108b8c4484f4c1d870d07e1c0c",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/brand.ts",
+      "bytes": 199,
+      "sha256": "8ea069322992a29896c06bcd14a18b0e92244dd24b6d278a8d57f50fd804a1eb",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/canvas-events.ts",
+      "bytes": 2970,
+      "sha256": "734521c2925115f477187479328f57500920d74eaaf10c404b667907285eea5b",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/capabilities.ts",
+      "bytes": 236,
+      "sha256": "5e90c48ff528001da56d4290d6bec56028f5549f8bb79948d7b8ec38670fa86d",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/clipboard.ts",
+      "bytes": 2304,
+      "sha256": "3ac63b03fcdc622d689f5a14784ec4c2c17d2dd3405a20c74114ac07a1210e62",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/confined-read.ts",
+      "bytes": 3340,
+      "sha256": "fb937c4c0d8021b6159e9a59be1b4dcd03004fe24695f769dcb48923e1b5c8df",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/context/activity.ts",
+      "bytes": 5343,
+      "sha256": "1f57e9305767d69b2548ff5de5b8b51ffa2e16539e169c7ec60753e34ebefc96",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/context/agents.ts",
+      "bytes": 3482,
+      "sha256": "e143c5dfb019b4e918028e5f436131bfcc75f2c01a7145ec0be4ec11af112089",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/context/enumeration.ts",
+      "bytes": 5294,
+      "sha256": "21374bd6d30c885675b2a0b6ca3a0781617c5294a30ff855abfb542916ba6810",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/context/files.ts",
+      "bytes": 10785,
+      "sha256": "f148505ee2aad346e858b230290c6e9583cbfa4aa06b202f31797dbc302c7b15",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/context/git.ts",
+      "bytes": 15590,
+      "sha256": "cd1d75f38d500a8b0415b824fbcca9c8172a4bc717e21026ff495ecd5555bb81",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/context/index.ts",
+      "bytes": 33305,
+      "sha256": "b37b16afc266ed4c6c53840763de0fe8f80c50b98dcc17a6c43dd92dbea82711",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/context/instructions.ts",
+      "bytes": 3290,
+      "sha256": "8870e81979e87b3d0b5ab896581ba379ad739389a04e6faf1676b737ca0a8af8",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/context/relevance.ts",
+      "bytes": 6360,
+      "sha256": "933f083937e8550c47f76e1f1ced934a357083241d45b5a3fcac6ab14fb77bba",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/context/research.ts",
+      "bytes": 13251,
+      "sha256": "867fdea0a6fdc7b27c0f3af3a3010ec746f4ffe6d0b847ee926dacae30321f1c",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/context/search.ts",
+      "bytes": 1307,
+      "sha256": "f679d15e2e0bcfd1343fb8faa665a4812fa6b8083986304d96f114a69ff4d805",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/context/secrets.ts",
+      "bytes": 4539,
+      "sha256": "fe6d55999d316933e36096e26266164285f616b058ca18dad14de2d6bd1173d4",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/context/stack.ts",
+      "bytes": 5322,
+      "sha256": "0875e333b3d6c0528c3a30823d7480d76ee8fc36f4c1fe6b28bbf779fbd82aa4",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/context/terminals.ts",
+      "bytes": 3950,
+      "sha256": "2d4c45b7e57adcb7a7f5e9ec86317839217336eff4ff4bb8b674441e4d352716",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/copilot/extension.ts",
+      "bytes": 3986,
+      "sha256": "fb8252bf0e1ff74c806d745e3351d11f06e4429a18a2d54bcbd85c0877fa075d",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/copilot/models.ts",
+      "bytes": 20239,
+      "sha256": "20a0f2fd00271b2f230b67f04b4be931113afdb1c5b163d7d711a87fefee0992",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/copilot/retained-data.ts",
+      "bytes": 12629,
+      "sha256": "bc83a71b1baab30d594e3a2f6c972d31b207b7f526f42ab2e93b22359898618c",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/copilot/server.ts",
+      "bytes": 16361,
+      "sha256": "1b1a0fb26ddb90efbcc73589218f3c66d7b5447135233e26f6a7cdc58e0c2d10",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/copilot/services.ts",
+      "bytes": 10374,
+      "sha256": "04b56fea78995ddb023f5fb441f3b7960686d594c4aaff35e82581ca458411fc",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/copilot/session-activity.ts",
+      "bytes": 3742,
+      "sha256": "272b5a89c2000048114900acae4a0503780cb725074af167ed19af1a193810db",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/copilot/session-storage.ts",
+      "bytes": 3342,
+      "sha256": "582e335337571cc6594be9919d3fd80c5c79eee189f555a60d5130c0ef603523",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/copilot/session.ts",
+      "bytes": 5111,
+      "sha256": "868f18cb4668a3135afbed173eda0f6dcaf26bbb227f48d6e276dfc6db91062b",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/copilot/storage.ts",
+      "bytes": 3643,
+      "sha256": "bdb2b891b08e93137eedc3a5bcdccd91a0cca126280edbc1737c885e156b6adb",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/copilot/store-observer.ts",
+      "bytes": 3175,
+      "sha256": "83624f144724d8cb2f7e2880166c4a32b1cf4c00e2f1fb55b92e7a20227a44e5",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/copilot/update-installation.ts",
+      "bytes": 6290,
+      "sha256": "161e9a1df8b76686a0a27f7a4512ac1f83027b8d514f6d5b837644dc3059619d",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/copilot/usage-recovery.ts",
+      "bytes": 9130,
+      "sha256": "82dbbb4a6fd6b20b2f1771934bb7a38ea3c7c3bc9e90f788fec77d4039be8f4f",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/copilot/usage.ts",
+      "bytes": 9833,
+      "sha256": "c5a33086bb66759533193b1d869f97a891c0bb4ec03e7ef5801011b60c95631a",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/defaults.ts",
+      "bytes": 1197,
+      "sha256": "94b63705e0e094f508644a7908e9653a79759e8429ddb9a2120e0d03e4aaf4c3",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/diagnostics.ts",
+      "bytes": 6570,
+      "sha256": "a809a2f01f18448e0dd0cdf2e3856937438dbde4cecf708dcd502655d7a39ee4",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/effort.ts",
+      "bytes": 5384,
+      "sha256": "14a8e76c63ef42c0878e4aa3846725f1d7408b5dbbe764924047d904d2c35e76",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/format.ts",
+      "bytes": 332,
+      "sha256": "1fa6c253499668d85b8ec12ff46b0e785db029f6e45b6f167daa1922c0e79dfd",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/history.ts",
+      "bytes": 3076,
+      "sha256": "1e464f688797f3c27e225c1f3217f0775228518df934776dc9c54459d413bb08",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/image-limits.ts",
+      "bytes": 1751,
+      "sha256": "8d3215a96698db5ddf2f09e109e4999be9dd921464b9454a8ab11fcec1eadae8",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/images.ts",
+      "bytes": 2161,
+      "sha256": "31d60fcd6992bb53b2c7a3afd16b758f04d36b43c88b092d476bda6b7322baba",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/limits.ts",
+      "bytes": 4331,
+      "sha256": "00624054e2bef30d0a12197d19243b8156097197f10435d12468bb6262bbf661",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/llm.ts",
+      "bytes": 1465,
+      "sha256": "6231fd0f3226acb097d6cf30bfa2554d6fa7accbd7c0edc73ee66212610bc6ed",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/messages.ts",
+      "bytes": 11564,
+      "sha256": "3f645cdf0abf5131413a320490df511284c71e6640b8525210a7a230a85b94aa",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/models.ts",
+      "bytes": 7623,
+      "sha256": "72f131b24644426b564d8567b3ef1399b6318d0781e6e8fac418bea1c973ece4",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/panel-storage.ts",
+      "bytes": 332,
+      "sha256": "6634210817063a4bf4bf4e50e330db2ea34731ae4bd55779530c09f00baebd9a",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/panel/actions.ts",
+      "bytes": 44809,
+      "sha256": "e748cf24de70f796924f7de2aa7594d1cf3a7877b710c91b0bd0ffca99652651",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/panel/appearance.ts",
+      "bytes": 1877,
+      "sha256": "b33d852ab40c3564f24cc19fa344028d4ebf416b9c8f85a2f8927601aca2bd6c",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/panel/attach.ts",
+      "bytes": 5990,
+      "sha256": "1aedf69b36537aa199ea10116db82d7df06acb64a56820a80d8389a11a3cc471",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/panel/context-preview.ts",
+      "bytes": 3155,
+      "sha256": "e2c854dc54b9f668dcc98676c8ee385ff3cb538972a70e246a65788c37f0e7f2",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/panel/copilot-status.ts",
+      "bytes": 5328,
+      "sha256": "c97b3a8c24a8231aee491ef0be69c439edead6e5bb8e859e5394045818c94f06",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/panel/diagnostics.ts",
+      "bytes": 2347,
+      "sha256": "32f256799600e97b62fc420f2004ca7fde72d3cff1f3abf6b668c7b0b99144ff",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/panel/expiry.ts",
+      "bytes": 807,
+      "sha256": "58a76c2119f9758a84003f884111c290dbc57e6f252885b5bb64fd58ae4e1724",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/panel/history-recovery.ts",
+      "bytes": 815,
+      "sha256": "5927ac83c2e9f8d8c870172b50fe0103c89c0a4183a9e6bc275f694a37fe6156",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/panel/history.ts",
+      "bytes": 4868,
+      "sha256": "ba445f728d12165b2e800c80f0fe4b296256cc7d9fe78ac0682a9b116de2c0fd",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/panel/setup.ts",
+      "bytes": 2366,
+      "sha256": "b682f5b7e00d9cda7fe673c830ac81a93c96c25ac8b6c790cb4f329e2fc896f9",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/panel/state.ts",
+      "bytes": 13149,
+      "sha256": "d383fa48d8d5ad66f5b0670151f79ffeedb8db9955270f5458b55c8fd0edc7ba",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/panel/uploads.ts",
+      "bytes": 2112,
+      "sha256": "d9a99f67520381d72efc116a13f1d53be35d437d3b13d2f7e1561fdf0c1aa48b",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/panel/view.ts",
+      "bytes": 23317,
+      "sha256": "6a719f8b560d4484855e35e05321f97796d2da73ba83a6a799e5774a029c3832",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/panel/word-crew.ts",
+      "bytes": 11504,
+      "sha256": "4525a276d4b11ee964a127aacf4fd65aa65c0e9430895aebde2a0833bc79b80e",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/presets.ts",
+      "bytes": 4253,
+      "sha256": "8b27df5a875c52c05f5078a4983330b0efb1a8c0278e349f2178146c8fbd6682",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/privacy.ts",
+      "bytes": 3737,
+      "sha256": "6a58411207f8936b31eb98cb89e9c4f60e255baffd37165901004bdc6d593326",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/progress.ts",
+      "bytes": 6531,
+      "sha256": "82885e4def082de9251dbed04df44650fea8f9540fa6e7f93db580f05f0026da",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/project-identity.ts",
+      "bytes": 352,
+      "sha256": "2a943db6cec9315087f661ddac1c113aca2af06bb6ad2e59432c4ff858d91aa0",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/prompt-sets.ts",
+      "bytes": 12606,
+      "sha256": "42b40bd54ace4b4add82679ae4f29acfa75132c8adc5943e6f63bed0f02c23eb",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/prompts.ts",
+      "bytes": 21119,
+      "sha256": "d247590cb1729e3f0a9eb5e193c61096f4f245816a032062eab15cb430586ae7",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/protocol.ts",
+      "bytes": 9251,
+      "sha256": "edee904da07b45413cd46dade51b052ae44b4f09ff10eee70bb21a22e2127bf6",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/release-history.ts",
+      "bytes": 880,
+      "sha256": "159f03127038ac37e11c53f73d130301427cbb06bb9cc59769e7c0ecce9d07ee",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/rules.ts",
+      "bytes": 6783,
+      "sha256": "73f27c2a3eaec8bf6fe6e5fe36c84f633a1e519132006a7c2090fed4296d135b",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/runtime.ts",
+      "bytes": 9349,
+      "sha256": "9f317bd6106b4f4f577001c7fd9b206fd4b92176f416ac7df2b463d9af8c3e4a",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/save-batches.ts",
+      "bytes": 1354,
+      "sha256": "3c923afdca6d8d1a1935b6b6835b933c71ca25346487f95abf96a693df90c669",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/save-queue.ts",
+      "bytes": 3825,
+      "sha256": "3295dd5294c6f0d801fe7db81e20efd0cd530eb6842d5b408b8842fd049eb3ef",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/text-size.ts",
+      "bytes": 201,
+      "sha256": "6e9bb25428c929cb30858c2c604086e4dbfacd60446a6fa3b142737ea429aec8",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/updates/metadata.ts",
+      "bytes": 7597,
+      "sha256": "da61b76a5129c0118f1d8858567efa7ec4b5c2ccd602a5d770e7261108680ffe",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/updates/process-owner.ts",
+      "bytes": 1822,
+      "sha256": "fe9800224cd3e7ac5f094d0a4f77b7733335e432a6a688a19ad555dfb7db41ad",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/updates/service.ts",
+      "bytes": 15511,
+      "sha256": "f25c55bf49b518e57c5dc68e1ec0e22c82f208cba66367a48d30d418f7c9871c",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/updates/version.ts",
+      "bytes": 1443,
+      "sha256": "b55885db2c0e650b3e3c6c8d95d4a91794a1de5b9926df4c2ad89fb8bf2971af",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/version.ts",
+      "bytes": 93,
+      "sha256": "25ae362683e2a357d9e133c3bee30d0f2093d2d9a313374ab6647a7e922d2b33",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/worker-host.ts",
+      "bytes": 7055,
+      "sha256": "03ddce1cc2acd45e0f2ad025b1a1055d6e8c780cfedc5a67a79f8ce984b09a40",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/worker.ts",
+      "bytes": 54096,
+      "sha256": "a0f66c18c51cc8f8effc33cf3c19844d742ee0b704aa9aa3b5f1ae87b5d2ee6b",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/workspaces.ts",
+      "bytes": 3003,
+      "sha256": "a76bf22ababdbf5dade819a5c3f7bb2d72eea822d3f76a1eb47e3403a1cea181",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/components.json",
+      "bytes": 502,
+      "sha256": "869457b37fd056a73b8ecc2ea3fe2eddbdde56c531ca50697d045636d60e9c4d",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@base-ui/react/internals/getStateAttributesProps.mjs",
+      "bytes": 580,
+      "sha256": "4f4875695d017fbf7d606ade90331001156b82b2d870dbc05c492f1079741c89",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@base-ui/react/internals/useRenderElement.mjs",
+      "bytes": 7835,
+      "sha256": "21c8dfe7a44516ecbdeb85ed42e12db1ba1ae417a8427d280b8ed627d006d0a4",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@base-ui/react/merge-props/mergeProps.mjs",
+      "bytes": 7116,
+      "sha256": "85c9b7afe4b9392f731e8ad4cef6dbcb3da4e7367c81fa478929cf6e6c7f9a9e",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@base-ui/react/use-render/useRender.mjs",
+      "bytes": 234,
+      "sha256": "1fb18c2987b0c792fac55da824ec78528a22793462d7e0571ba5b01b33803f35",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@base-ui/react/utils/resolveClassName.mjs",
+      "bytes": 341,
+      "sha256": "03eee8826b34c8863e313b62c495c437f3e5596277b3464691f38483462a939e",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@base-ui/react/utils/resolveStyle.mjs",
+      "bytes": 310,
+      "sha256": "a9d016d80a54ed09949cb9095d3fd6854c9a3bcdd000ab094ac24eab418743d1",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@base-ui/utils/empty.mjs",
+      "bytes": 381,
+      "sha256": "22158d7dba2fd30d6ef5c95db1ac8be26b3214a27ef5b7af2e90a6d597e17299",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@base-ui/utils/getReactElementRef.mjs",
+      "bytes": 462,
+      "sha256": "88f349905b8ff1c2d0704b2c7bc279cb7dc95820c91fb5a0cc308d4ef8446d6c",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@base-ui/utils/mergeObjects.mjs",
+      "bytes": 191,
+      "sha256": "3cda66677f81f516b9301eb3d5a717950be194e6099358a30c18e2f1e5f187de",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@base-ui/utils/reactVersion.mjs",
+      "bytes": 190,
+      "sha256": "eb874d943f20542eb5847ba29727fa42b8c7c3ecbfc9788b7b09ee2cbc5df1a9",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@base-ui/utils/useMergedRefs.mjs",
+      "bytes": 3189,
+      "sha256": "af2bf169f819dad3dd7749dc9dc210837d7c46f81d502ff66068ebe90cc7e241",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@base-ui/utils/useRefWithInit.mjs",
+      "bytes": 519,
+      "sha256": "9a56b296c711e519f44067b53164b404e06ecad1debb0ef7624cd32be6f05e6f",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@floating-ui/core/dist/floating-ui.core.mjs",
+      "bytes": 36290,
+      "sha256": "c6c359d91fbc6636f6143aae9ff47105eeacea869b14afe7d54e120444ab8f37",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@floating-ui/dom/dist/floating-ui.dom.mjs",
+      "bytes": 27950,
+      "sha256": "a1c916ed18ed8bb2c586079f7946d35797b45bc79eafae1d99ec6f812672ef54",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@floating-ui/react-dom/dist/floating-ui.react-dom.mjs",
+      "bytes": 11185,
+      "sha256": "2f39fd6f12c3989fa13d9ac5104e7739e5f15cc8dee01d63fc06e0f44bba8771",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@floating-ui/utils/dist/floating-ui.utils.dom.mjs",
+      "bytes": 5818,
+      "sha256": "b6658b1eac47e2917e6d10ebbeefb9c4ac9a166f0052bed6e08c871ed848b680",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@floating-ui/utils/dist/floating-ui.utils.mjs",
+      "bytes": 4435,
+      "sha256": "f53b3ea1eec15af77ca9def295b8f40f6d65706acfc5aaac4801ca3ca21ef7bd",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/number/dist/index.mjs",
+      "bytes": 310,
+      "sha256": "6ca4c4b633451a8a7d0078b6195a13ceeb4bef277633a66c3fc75561b8ceb5b7",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/primitive/dist/index.mjs",
+      "bytes": 1997,
+      "sha256": "76c2ee4c9e784f66766f1fa37ec6419387edaea9f4ec2f581472571a4f50c303",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-arrow/dist/index.mjs",
+      "bytes": 889,
+      "sha256": "ddf5c395135f2eedb590f2bb85f4c18060e49fd562e70a233b6d3ae5350f7fbd",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-checkbox/dist/index.mjs",
+      "bytes": 10659,
+      "sha256": "4ab463270ae7972dab91f3c4a7325e9bb51cd7cf9d61a59bad700adc7ccfb7f6",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-collection/dist/index.mjs",
+      "bytes": 22143,
+      "sha256": "52a6719c7c1a7a5202ab5ae58bb552f0d7853965a0833cf0e71749ac580e349f",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-compose-refs/dist/index.mjs",
+      "bytes": 1218,
+      "sha256": "b2d325c2cb3f942349c49a45c3dd61b343624c08ec9d3d44bdfaabd8639a78c2",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-context/dist/index.mjs",
+      "bytes": 4295,
+      "sha256": "adacd67aa2bb5fc3e8304b7d64500e5d47e506560692731f1a9956a42e75ab9d",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-dialog/dist/index.mjs",
+      "bytes": 14132,
+      "sha256": "e32c21a189358f22749c171f666bddea31ae2ebe5e8c4d6c5c8aedd3916a04d7",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-direction/dist/index.mjs",
+      "bytes": 836,
+      "sha256": "ec9a462b54c3dcb2ec749f21efd17f7c64c750f7721e48fccd6280781b5b1fa6",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-dismissable-layer/dist/index.mjs",
+      "bytes": 14935,
+      "sha256": "4d5ddbc02c123327c4779c8bcb501ed3a1edeb56141542208eaac21fcef431bd",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-dropdown-menu/dist/index.mjs",
+      "bytes": 12595,
+      "sha256": "3ee86cc3ee58b471c8d0ff69b402049ac26d9b998d1789d09fcc2844fec2a90d",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-focus-guards/dist/index.mjs",
+      "bytes": 1488,
+      "sha256": "352e0ddb4aa82deaa5cbcde3a47cdff740f96fc08b6548bbe88e97a59fb7780c",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-focus-scope/dist/index.mjs",
+      "bytes": 11246,
+      "sha256": "52da53d1da1626ab3bde726e5195e1f5062a6f170755131991225517dc980957",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-id/dist/index.mjs",
+      "bytes": 678,
+      "sha256": "d763c4f45606a4d55b73ddbbae84fb3d37b714e2b3b7a1d478ac431657271c46",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-menu/dist/index.mjs",
+      "bytes": 37476,
+      "sha256": "f6d4b183dc245904379f66aa6ba9cf212b73117c16a824a639c123c2a9cdaba0",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-popper/dist/index.mjs",
+      "bytes": 14370,
+      "sha256": "474e34a4926d198d25aca38464d31b0d3847f239fdda1bb0d67c50d92b7cb244",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-portal/dist/index.mjs",
+      "bytes": 989,
+      "sha256": "cb3a9b4e9b7b49626fcb854131f7e209dcfbb254767e5b34b47082913b3ebb22",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-presence/dist/index.mjs",
+      "bytes": 6615,
+      "sha256": "1707d09ce8f6c4829d23cd94291f6db131b83c7e7a00ccb5a4088defcd7b1f36",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-primitive/dist/index.mjs",
+      "bytes": 1322,
+      "sha256": "afc3f2101e8c1522cb29d1c8d234390237af5c0faacf589007e813d9499c7fc4",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-progress/dist/index.mjs",
+      "bytes": 4187,
+      "sha256": "ef3506701298a29a6e2b428d4f87f232f74b0cf6900029311835bb54dfa1a4e9",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-roving-focus/dist/index.mjs",
+      "bytes": 10456,
+      "sha256": "166fc653de0607e1665c09c1bbb1a69ba12993d6990903aad3d7ef9bbf460517",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-select/dist/index.mjs",
+      "bytes": 56256,
+      "sha256": "03f3fb1eaf7e720bed915ff637490253e71ad9fe25294e028a89dd90ea14b71f",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-slot/dist/index.mjs",
+      "bytes": 6848,
+      "sha256": "de9e52b78cdb8c5e5d5e79ccbe97ddbb44f875e17114c6db1ac48201a4527850",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-switch/dist/index.mjs",
+      "bytes": 9534,
+      "sha256": "418cb2c63597399884addbbfb4974188702632584b3a84033ff4079ac3de50df",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-tooltip/dist/index.mjs",
+      "bytes": 21177,
+      "sha256": "2012ba836dddc510a16b1b2fccab20609a54c42b2cae21ce03346a18072bf876",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-use-callback-ref/dist/index.mjs",
+      "bytes": 835,
+      "sha256": "968c0cbeba49151fb433ce3b1b45e27bc364614183d965ab664006ed3d6e1dce",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-use-controllable-state/dist/index.mjs",
+      "bytes": 5355,
+      "sha256": "b6d63311993e2b9e788ae3ed8703c90b35493436a6c360520ba235509ee65e0e",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-use-effect-event/dist/index.mjs",
+      "bytes": 1044,
+      "sha256": "20eff37b454e6a2e3833b2a936418d2cb1c21141fa1e0b71970e351decc3be2a",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-use-is-hydrated/dist/index.mjs",
+      "bytes": 1112,
+      "sha256": "4538ac5465812cd374797f810d8210b8349963f874fe61763b9090d7554b55b6",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-use-layout-effect/dist/index.mjs",
+      "bytes": 227,
+      "sha256": "0536577f323396a80926162d987638f33b296386b62c6275b4373a2070a41c7d",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-use-size/dist/index.mjs",
+      "bytes": 1638,
+      "sha256": "e40f768fb4838b5694bd5681f384ac426a8c38f2cfe3d4ae2b89ed468ddf66ff",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/@radix-ui/react-visually-hidden/dist/index.mjs",
+      "bytes": 1074,
+      "sha256": "05165547e71874f1363e61dafbbd49a5fd9e0b0286e77167acf5332a741fa4af",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/aria-hidden/dist/es2015/index.js",
+      "bytes": 6871,
+      "sha256": "6a644a5eb6f1a5a59948f72f0a5c8dd08ae882420d520a63609b1ce9e13a4c22",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/class-variance-authority/dist/index.mjs",
+      "bytes": 3048,
+      "sha256": "3e9deb809896235089fd6719c56631f25bd67878100d5fa771a4864bfbd0e299",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/clsx/dist/clsx.mjs",
+      "bytes": 388,
+      "sha256": "d949e5cdbfebc76a6642b1901095e900fc3f2262d8dc0373aa44850a9bc75522",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/get-nonce/dist/es2015/index.js",
+      "bytes": 300,
+      "sha256": "d5cb2be55660881877c04ab543e44c5fc6d099d244073e00f6277888954a943d",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/Icon.mjs",
+      "bytes": 2061,
+      "sha256": "95c0fd0c53d80858ca9253aab0b0a4b956748586a52d875b6c73d6abe40a695c",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/context.mjs",
+      "bytes": 903,
+      "sha256": "2a619fad4658055502900da599923f28298e9dc0f30c511b15bb9e438a4e692b",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/createLucideIcon.mjs",
+      "bytes": 961,
+      "sha256": "813a7b716bc598f4071ac1da9c73c8c143b11b4ceeb9f9291daa80771a2221df",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/arrow-down.mjs",
+      "bytes": 554,
+      "sha256": "d4d7d3f467e8cc2417b4bb9ecaed6645a7e143b1a5bf93df3ebc018fc23bce92",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/arrow-up-to-line.mjs",
+      "bytes": 621,
+      "sha256": "16165bf4b287b6fe0312c7229030285db4f0e7179a4248cda6e4169507926077",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/arrow-up.mjs",
+      "bytes": 545,
+      "sha256": "7f2fd4500d298d8293153c6ffc0b68595f65020e7a38e6f0d75bb3c67924ce5f",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/book-open.mjs",
+      "bytes": 715,
+      "sha256": "20508198edd9f473e653fd432bc855e5d66b7415f69d3de149d16da5cd075627",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/bot.mjs",
+      "bytes": 750,
+      "sha256": "5554eba99092bf110d04080d90e16fd98bb44b0a69d027acbf02d2b0e154f15e",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/check.mjs",
+      "bytes": 481,
+      "sha256": "f81a82ce3391a7eec2114a2de211936848ffc1cfed2d4f955ed0ce561f45731c",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/chevron-down.mjs",
+      "bytes": 504,
+      "sha256": "7e60b265f3cd378f215684f8d7ee683c1ae90e25184b3234b8d98699647d8b30",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/chevron-right.mjs",
+      "bytes": 509,
+      "sha256": "893561697ea4cd29c5efa9da2c761d7cc40d2258d769117e515594882a41dab5",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/chevron-up.mjs",
+      "bytes": 498,
+      "sha256": "074e778a25960c850e29a2cfa3a28dc55fa92fba3afde80a764e2c4b86c31c68",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/circle-check.mjs",
+      "bytes": 613,
+      "sha256": "12ce734122b045e1dd23bcaf758b38bf3cb2aa621246cba87b5a23ee39d8dd96",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/contrast.mjs",
+      "bytes": 575,
+      "sha256": "e91cbcd26e4c9ac81044c8533cd4716edb8666f23b02c4452ad3eeb4aae611ab",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/copy.mjs",
+      "bytes": 619,
+      "sha256": "ba629e70a666332c681cdf7e54b2de19b985f7d3944bbb83a191cf36f01fbd02",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/download.mjs",
+      "bytes": 628,
+      "sha256": "60c9f7ae65d9c9b59d732db9e8703c7acd41a24b2c0757659c9f53d34370b40b",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/ellipsis-vertical.mjs",
+      "bytes": 698,
+      "sha256": "938618f38f1da037e47481ef4c8af281868f310e50afdc314c60813d4979eacc",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/ellipsis.mjs",
+      "bytes": 666,
+      "sha256": "0f42ac8d1da8404164844289868cc5b395fc2676341059b85bb2e1b58b307062",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/external-link.mjs",
+      "bytes": 660,
+      "sha256": "3c71c9fd6dc9ad8cb46a782027ce2d5b5efc0c4a6ae25168066bd5f8ef11fc7d",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/file-text.mjs",
+      "bytes": 844,
+      "sha256": "8868479c8f4d24df33015347fe7e53c99a226f535fe3fefeaca4f167a7be089a",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/folder.mjs",
+      "bytes": 636,
+      "sha256": "230491cb00f1be96dde531ca9fffa443a065860fdef9346c24770153373c1c74",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/info.mjs",
+      "bytes": 592,
+      "sha256": "d9bc9247521f0287318407a1ef6185806ccc0fa9b36f37ef2858f87b34bd6546",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/loader-circle.mjs",
+      "bytes": 548,
+      "sha256": "da6c3e3886bceafdf2f147df0001d0bc7d89064a66a618d901930655e1f3ef21",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/panel-left-close.mjs",
+      "bytes": 690,
+      "sha256": "d1fe564ba6a3d1dc76e09769d7c7268b98f832c9772384f127b0d269d8813c5a",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/panel-left-open.mjs",
+      "bytes": 684,
+      "sha256": "d80d8266d70383985f6ecc0b525b04e06d5c568a8c76588e3676a00c56ac5ad3",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/paperclip.mjs",
+      "bytes": 650,
+      "sha256": "3520993428909ebcaf3ae4810bba90cd7f1d4145791553ef9a73cccd2894c1ee",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/pencil.mjs",
+      "bytes": 695,
+      "sha256": "05febdccae3a423c1afca6ce740c339597dba2eab03e058047821fd85609aeca",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/plug-zap.mjs",
+      "bytes": 814,
+      "sha256": "3d01e7603ca1ca05d5351da75d2019431839433abbb7014999dafd44398bbf42",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/plus.mjs",
+      "bytes": 526,
+      "sha256": "2ef094fedfc6a3d96b5cfe5600797fc91259f39ad1dcb63ad9c1a3c41c183ed0",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/refresh-cw.mjs",
+      "bytes": 732,
+      "sha256": "291ec951fecdf474b5f6dffe5ee3207edd4f65afa450c3095659a4b794df8c39",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/rotate-ccw.mjs",
+      "bytes": 589,
+      "sha256": "008ded4138666e1874b32e02c24a4a3b504b0e94afef45a6c8a8573880e96800",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/scroll-text.mjs",
+      "bytes": 803,
+      "sha256": "2a84c041676718adb48a3cf8d41a2b4548d6cb62ef8e584ba59fa05fb584c76b",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/search.mjs",
+      "bytes": 557,
+      "sha256": "ae303e56e442392ae1237ce48f15eacca47cad3d22249a8c467b15b6c93245a6",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/send.mjs",
+      "bytes": 703,
+      "sha256": "fd96c374c79fcc07a6169c05a5bd0e9446a1ae66b0475f2f93e1a9c388b756ee",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/settings-2.mjs",
+      "bytes": 671,
+      "sha256": "3763ebb17ec056f2ff35ed125874b24e1c10a1db3b5a73252b64046f3aae7c52",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/settings.mjs",
+      "bytes": 916,
+      "sha256": "eda378c6b6086abd384f50c01ec6a8a431d359b85df23490686a8bdc2b833c10",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/sliders-horizontal.mjs",
+      "bytes": 914,
+      "sha256": "3d6a4581bbcb7c30ca9a186da17d40a6cb154985e65283c3856ef2fc87b732bb",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/sparkles.mjs",
+      "bytes": 967,
+      "sha256": "39e36266962c5b20e79300dee3da82584a79158dae1ee0b39cef7110105866ef",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/square.mjs",
+      "bytes": 515,
+      "sha256": "69b0a47e1042829b2881ed0242733ae6f9b1d27d09ca3a919db0209aeb56dded",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/trash.mjs",
+      "bytes": 759,
+      "sha256": "ba564bcc0e758200343a35b6c5fd8a3173c73d1e6d382183ca98fb1072786872",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/icons/x.mjs",
+      "bytes": 518,
+      "sha256": "1a1366d44b3e0e7b3eadcd6134838502e3c636171ef27a5ea54443b0467797cc",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/shared/src/build/buildLucideIconForReact.mjs",
+      "bytes": 695,
+      "sha256": "d36e18648cb6841e7843f7e0b24f0082f86ce69dd5d90411396204cf21adabd0",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/shared/src/build/buildLucideIconNode.mjs",
+      "bytes": 3004,
+      "sha256": "33866e574aec2aba1f8c09b675770ea6ddd17a41296f5ab46411eadb3cb6fa3a",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/shared/src/build/defaultAttributes.mjs",
+      "bytes": 504,
+      "sha256": "54106908094438b9d30cbca9fa49660d6b2f055bab664f99521f4a37b44e1837",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/shared/src/utils/hasA11yProp.mjs",
+      "bytes": 425,
+      "sha256": "86b5b850a122d917b9b96940495571d0cf758a81f86b190251803a927842c972",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/shared/src/utils/mergeClasses.mjs",
+      "bytes": 439,
+      "sha256": "6b0ab62de2309a1e28259a4a1df07989f69aa495367b569ea78422ff60827bae",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/shared/src/utils/toCamelCase.mjs",
+      "bytes": 618,
+      "sha256": "b6742818e63b86ddfda30470006b3cc1700309b655b0cc18a1026d69b15bbedf",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/shared/src/utils/toKebabCase.mjs",
+      "bytes": 333,
+      "sha256": "f94677043273a09c640cc568ca342ac556549241f2f35b75fe3cf87edbce4b83",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/shared/src/utils/toLucideIconData.mjs",
+      "bytes": 599,
+      "sha256": "8716093057b0ee32a547a59585109546fb2ce32b3c7a1a445323f0df4be99b22",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/lucide-react/dist/esm/shared/src/utils/toPascalCase.mjs",
+      "bytes": 435,
+      "sha256": "1803a56f608efc7229b678599ef8ec85ddb3f2ded0668874feb8a2d874bb6fdb",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react-dom/cjs/react-dom-client.production.js",
+      "bytes": 625168,
+      "sha256": "a319b413b7a19ee34422d9a12a8e7afd003c07846716d278ba1a0898e8cb6251",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react-dom/cjs/react-dom.production.js",
+      "bytes": 7326,
+      "sha256": "7a05d7f7bb2b02aae84018a88d4815a2181eef48d2cb8172d403eaa2b131eefd",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react-dom/client.js",
+      "bytes": 1373,
+      "sha256": "00e348ab3d6bc2eef908345d0bc4e008c95bcfecec060dfda5c4967953761396",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react-dom/index.js",
+      "bytes": 1359,
+      "sha256": "ba1a3e33489f868371561777607e3ee5091df0f7ea3f1a10f789d6b86e4c1505",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react-remove-scroll-bar/dist/es2015/component.js",
+      "bytes": 3395,
+      "sha256": "3baec61523006aedf14321423427b0c50aa17bfe48faf344bebff9d883149f29",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react-remove-scroll-bar/dist/es2015/constants.js",
+      "bytes": 375,
+      "sha256": "1c73582ef730bbca1d536a6995c7eea438dcd0632fee2856337627e44b5872e2",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react-remove-scroll-bar/dist/es2015/utils.js",
+      "bytes": 998,
+      "sha256": "2c4105ab772a5cbf4b3d1e54f49e94d03fde867d20767b46bb3e5c27f4d82f00",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react-remove-scroll/dist/es2015/Combination.js",
+      "bytes": 392,
+      "sha256": "1e77baa7c90a3d778f966ea437224d1db9e9563f7706ce89b78d5fd3e8c11dcf",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react-remove-scroll/dist/es2015/SideEffect.js",
+      "bytes": 8000,
+      "sha256": "fafe1422512c0a1a3e16ebccce79adb65c8bde0528fc3edeb6b812dfc1e9f67e",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react-remove-scroll/dist/es2015/UI.js",
+      "bytes": 2240,
+      "sha256": "1c8fa6e52fe34cf310aeafa0f350cbb5a688f71c0f1f03d2bd0407bfe32a2500",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react-remove-scroll/dist/es2015/aggresiveCapture.js",
+      "bytes": 568,
+      "sha256": "5563523a66337f256c031a78799d75c76c2b806aeab77c95a1d1eac867e414ba",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react-remove-scroll/dist/es2015/handleScroll.js",
+      "bytes": 4519,
+      "sha256": "8a6f2349eedb298b4751ce806291c7b9a4f8ecb9f50d5d69a1a0f2dfa47cae0f",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react-remove-scroll/dist/es2015/medium.js",
+      "bytes": 97,
+      "sha256": "59a1090d4a50eabff072d99bf5aad24894c21bfc337c717075458c7b0b9f9a87",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react-remove-scroll/dist/es2015/sidecar.js",
+      "bytes": 197,
+      "sha256": "88f0930aaced0dfc35ac1aa6d3b29eca5f80f4344c27df7d244d0e645b26e8f0",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react-style-singleton/dist/es2015/component.js",
+      "bytes": 602,
+      "sha256": "c1598f96587abdbc79c3b78e9c1217e295488572c6a293877bbbe93d71e643ee",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react-style-singleton/dist/es2015/hook.js",
+      "bytes": 630,
+      "sha256": "c5a6c5f2ccc72b3361b32b1c85ccb9e148a696a5f48962e7af8373344a87f297",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react-style-singleton/dist/es2015/singleton.js",
+      "bytes": 1286,
+      "sha256": "95c7ffcbdac6ebf19e85ea723995e153b90182b34843ed6b1bfc3d896081e51d",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react/cjs/react-jsx-runtime.production.js",
+      "bytes": 976,
+      "sha256": "1e46f15002696985e80c61d47aaa30dabb03c954270a690f5f7dfbbacfa9002b",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react/cjs/react.production.js",
+      "bytes": 18040,
+      "sha256": "0b5529981841afa1b58c76ba85c29bb681ff5f07cd8cde6a10b967d3915b8e1c",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react/index.js",
+      "bytes": 186,
+      "sha256": "60caffdecbdc5db3bc4ec4e83df9488345ccb271d07533b9210bf5750918d97e",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/react/jsx-runtime.js",
+      "bytes": 210,
+      "sha256": "b392951a77d0a2e6a6bd017e49d768481ae5b63c4109c6c31f622cf7b2433edc",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/scheduler/cjs/scheduler.production.js",
+      "bytes": 10181,
+      "sha256": "679adff761d31e9426604f80c0e99be44a3e6f4c6834b0218ecf0312a67c171f",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/scheduler/index.js",
+      "bytes": 194,
+      "sha256": "145965504d60007bc25486ab930b0367867dcd5d579ccd343c148d69349a7cfb",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/sonner/dist/index.mjs",
+      "bytes": 69795,
+      "sha256": "f04470f1daac31d00185b2361b4da0c7b25e51dbec0f13f785ce8ccc68211a9a",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/tailwind-merge/dist/bundle-mjs.mjs",
+      "bytes": 106124,
+      "sha256": "4a952fc10c828632c608dd103b7d8bcab097d9c6f32bfc343a2d9e0822c86116",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/tailwindcss/index.css",
+      "bytes": 29786,
+      "sha256": "175f88737ecb7e033059eac4a3b22a3b5f971d5a05d9fd50811610a0714633b2",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/tailwindcss/preflight.css",
+      "bytes": 8489,
+      "sha256": "ace8310eed6dc5568a56fc16e1d695cf58da7528d81d66d81649e93cce644df6",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/tailwindcss/theme.css",
+      "bytes": 19586,
+      "sha256": "443d7af364200f8ec8352dc78e39485a118a1840d498c97967bf0ae402b39167",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/tailwindcss/utilities.css",
+      "bytes": 21,
+      "sha256": "0e5844ec75de2fb4a76097b26bb624bf8f9d9cf59f6d947855b743dd25f920fb",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/tslib/tslib.es6.mjs",
+      "bytes": 18116,
+      "sha256": "2497254650a79bbf970717b93a2d21591cce264bfef88264ccdad546003b0460",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/tw-animate-css/dist/tw-animate-prefix.css",
+      "bytes": 14720,
+      "sha256": "abe99f91179b9df0261a2e21ee3ae7be6b80f549fdeb907c3364e90f3c6c8a73",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/tw-animate-css/dist/tw-animate.css",
+      "bytes": 14880,
+      "sha256": "6035b41301945cd65eb233b4653965e3c235338faae51b0f55676d591daaef23",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/use-callback-ref/dist/es2015/assignRef.js",
+      "bytes": 556,
+      "sha256": "ac1344fd33c84d6761c8b3c51f67987ae272444bcdf7a3e885ffb7a0171f62f2",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/use-callback-ref/dist/es2015/useMergeRef.js",
+      "bytes": 1782,
+      "sha256": "b757ddc05f723a98101a9b1418c8f5859d6d5c27113fb4d7a641a2b7375a79b7",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/use-callback-ref/dist/es2015/useRef.js",
+      "bytes": 1211,
+      "sha256": "120f5ed0fc43ae85c2bb96e3ee97b32aab810477d2fcf9446f67ecbd95344164",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/use-sidecar/dist/es2015/exports.js",
+      "bytes": 597,
+      "sha256": "002eda36f3c946855797e598429da198b73156718975ebc7d2a5bebad7397d10",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/node_modules/use-sidecar/dist/es2015/medium.js",
+      "bytes": 2579,
+      "sha256": "3243bdc31511a7dcee873538d5970126ea57390070303c0bea5797cf0e6260c6",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/canvas-connection.tsx",
+      "bytes": 1689,
+      "sha256": "e45e8dcd01e35e61c9f8b0caa5a8d7992c746792949d9c0016a77b7211878747",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/common.tsx",
+      "bytes": 8841,
+      "sha256": "103f23c1a1b7fa6b430c82c228e3ce3d5fd5b6b77b5b11a1a8a6d6304c776450",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/components/reui/alert.tsx",
+      "bytes": 2517,
+      "sha256": "91d4462e7d6a34508d4126af6c11dab1b5407be170acf596e67727b4e3f89da8",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/components/reui/badge.tsx",
+      "bytes": 4202,
+      "sha256": "6d5cae8eb7d143d1155dfcb0e2bf172fac86a29a03b32bb440340d6e3240e572",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/components/ui/button.tsx",
+      "bytes": 2338,
+      "sha256": "12f897a21d5bbc5fd2a00a2580e0a27644bf3cfed92988074736650c9f95d825",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/components/ui/checkbox.tsx",
+      "bytes": 1181,
+      "sha256": "f554fbe742efcc7de7293fc35c045ceed38fc6b2173e65dc298c34aa3a1ce002",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/components/ui/dialog.tsx",
+      "bytes": 4314,
+      "sha256": "af780ea7e705ddc2a644c6ad9699d77e550770922622a0e1b4b0612172b176ef",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/components/ui/dropdown-menu.tsx",
+      "bytes": 8401,
+      "sha256": "f84dce47c41a52ec0ebd253955fee7eb69cf9221e1e1d5063ac9ce2b545bc3bc",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/components/ui/input.tsx",
+      "bytes": 918,
+      "sha256": "e6b05ac670aa727f94fce902956317e5316fd2e9557b0f3cb36a4ebe8f106cbb",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/components/ui/progress.tsx",
+      "bytes": 773,
+      "sha256": "700f9ad420eaa116e01bc1150226f105a3e6fda4fcad65df7523440a231a0d5d",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/components/ui/select.tsx",
+      "bytes": 6308,
+      "sha256": "f280576b58a3d6cb03fd49fd443886bc121f759be50688f31d506831c7797399",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/components/ui/spinner.tsx",
+      "bytes": 332,
+      "sha256": "e1a6b049a96b3588e1c499d51f1292ad914fbf3972940b1b14a092c37c22a191",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/components/ui/switch.tsx",
+      "bytes": 1216,
+      "sha256": "c28d5b2fb079d2f960ad97e1649573f273ee13cb8169bd13b98daba45546837d",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/components/ui/textarea.tsx",
+      "bytes": 715,
+      "sha256": "39a05a79456b3e8f033a1989580aa946e8669beeeafa6024a6e5c73dea8f9dde",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/components/ui/tooltip.tsx",
+      "bytes": 1815,
+      "sha256": "8b1a0c07f276ccc4982134938e6989d60b2e31f5e661a9e19b1d551d30b8ed93",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/copilot-connection.tsx",
+      "bytes": 2564,
+      "sha256": "1e907fc47ade5822a3f7b8970afc442d282372ca0095b0440b21f81635a3f232",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/effort-models.tsx",
+      "bytes": 2822,
+      "sha256": "73c27b85ac8a030931cf933a1c1a4798c0391703c21ebf468139cd71baec1eef",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/enhance.tsx",
+      "bytes": 27753,
+      "sha256": "b9e40176ba1c65bee8ce9e1af10f5d38ead1c1a20fb2be08679a36b077e49e8c",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/footer.tsx",
+      "bytes": 856,
+      "sha256": "5aa7d188b1ae531f39259ea4f7afaf9bedc6d542ff31884bd82145917314546a",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/history-recovery.tsx",
+      "bytes": 3582,
+      "sha256": "4ab188011edd6b2a78872f10a19c81c3f3c3fcbdfb97aa3db2994ed4a1056434",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/history.css",
+      "bytes": 7062,
+      "sha256": "03a0cc368453a0de055d7f455a162ea06ee4322eb19d407822a9509da8462b0f",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/history.tsx",
+      "bytes": 12488,
+      "sha256": "538420a3081cd72284ec397559bc4e9e0c974cdff5613bbce156637527ce7ea6",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/index.css",
+      "bytes": 9266,
+      "sha256": "b99e3021d346f25e97536c091c33f640c96a411c9f2537ea675d33b084ae9b16",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/lib/utils.ts",
+      "bytes": 166,
+      "sha256": "e46429536f43f5910f5b2b0c50bb2769b510a4558bb4b5d20a3b0a9091dbf7c3",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/logs.tsx",
+      "bytes": 3543,
+      "sha256": "d0540e0616e1268c13a314c2b8d95169d757a981e92082e3c576da782ead2ba1",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/main.tsx",
+      "bytes": 10018,
+      "sha256": "19a1a2d5a0e046d14d962f30bc40c271ca3c957102040b51f0cdbc85bad47201",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/panel-runtime.ts",
+      "bytes": 227,
+      "sha256": "eb6790480d85eb2a4cc60458326cf4a4eeb29563beeca46ffcb5617ae48aaeac",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/preferences.tsx",
+      "bytes": 4234,
+      "sha256": "6b4b9c7826aa7cff8338a5e46353daa2578e85dba1313ea2753a6b115bdb5634",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/quiet-desk.tsx",
+      "bytes": 5609,
+      "sha256": "c3dd0822f7db52dc07fbdbbdddf7ac1cf4ccd870cecdb739731dd6fd0fd99d23",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/retained-data.tsx",
+      "bytes": 6806,
+      "sha256": "7d47787b41356110dfe8a5cf8293e75d41bc1287397b4cccfa713b5840958f19",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/save-status.tsx",
+      "bytes": 1079,
+      "sha256": "6884f471502713ea31879d53dd0a594bd3be1c0f1cda4e9a603de49a6660bd18",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/section-recovery.tsx",
+      "bytes": 1568,
+      "sha256": "1a47c059b99e0cefdf7d4ae43467809b06239b664d93147ec0041443b8af55ed",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/sections.tsx",
+      "bytes": 32579,
+      "sha256": "ed0c1e22f95ac7e51a32a2ea204a0c43dcb93d6c1c4d4f853f99176a6c5a836f",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/theme.ts",
+      "bytes": 775,
+      "sha256": "0d2cb8dd377f46f229c9b68f497108819b6b89ff82370d2a244c503c011d703c",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/transport.ts",
+      "bytes": 7385,
+      "sha256": "50776266a801d230d54d4b8a97ab336f4713a43b1079b88528e8eed48b3f324b",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/updates.tsx",
+      "bytes": 5756,
+      "sha256": "79cadfdea35451a8b9e9101280e120deb77628607bf9fd1634aeee14ea7012b4",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/usage-recovery.tsx",
+      "bytes": 2233,
+      "sha256": "646f0a794b7c138ac89ae667476d59bb940b0731e0c4df34652c34f7794a49be",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/use-word-crew.ts",
+      "bytes": 4228,
+      "sha256": "57cb5335054672ad67e236b32f0f15394a3eb7e5cdbdf2af0347f44846080c41",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/whats-new.tsx",
+      "bytes": 6999,
+      "sha256": "bdc73fe4828978e41c1c122c6db9340e5176aea11fe6fbc45487854a94cdc68b",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/src/word-crew.ts",
+      "bytes": 8115,
+      "sha256": "963eb8073af6ba813698048f725979f28446ac26a2151d1452fa738b5f231b31",
+      "normalization": "lf"
+    },
+    {
+      "path": "web/vite.config.ts",
+      "bytes": 1554,
+      "sha256": "a58e575d45b57b5e155671de40413b6a5d53bed8950e849407fc0ca89240d7e7",
+      "normalization": "lf"
+    }
+  ],
+  "tracedInputs": [
+    "CHANGELOG.md",
+    "node_modules/graceful-fs/clone.js",
+    "node_modules/graceful-fs/graceful-fs.js",
+    "node_modules/graceful-fs/legacy-streams.js",
+    "node_modules/graceful-fs/polyfills.js",
+    "node_modules/proper-lockfile/index.js",
+    "node_modules/proper-lockfile/lib/adapter.js",
+    "node_modules/proper-lockfile/lib/lockfile.js",
+    "node_modules/proper-lockfile/lib/mtime-precision.js",
+    "node_modules/retry/index.js",
+    "node_modules/retry/lib/retry.js",
+    "node_modules/retry/lib/retry_operation.js",
+    "node_modules/signal-exit/index.js",
+    "node_modules/signal-exit/signals.js",
+    "src/attachments.ts",
+    "src/brand.ts",
+    "src/canvas-events.ts",
+    "src/capabilities.ts",
+    "src/clipboard.ts",
+    "src/confined-read.ts",
+    "src/context/activity.ts",
+    "src/context/agents.ts",
+    "src/context/enumeration.ts",
+    "src/context/files.ts",
+    "src/context/git.ts",
+    "src/context/index.ts",
+    "src/context/instructions.ts",
+    "src/context/relevance.ts",
+    "src/context/research.ts",
+    "src/context/search.ts",
+    "src/context/secrets.ts",
+    "src/context/stack.ts",
+    "src/context/terminals.ts",
+    "src/copilot/extension.ts",
+    "src/copilot/models.ts",
+    "src/copilot/retained-data.ts",
+    "src/copilot/server.ts",
+    "src/copilot/services.ts",
+    "src/copilot/session-activity.ts",
+    "src/copilot/session-storage.ts",
+    "src/copilot/session.ts",
+    "src/copilot/storage.ts",
+    "src/copilot/store-observer.ts",
+    "src/copilot/update-installation.ts",
+    "src/copilot/usage-recovery.ts",
+    "src/copilot/usage.ts",
+    "src/defaults.ts",
+    "src/diagnostics.ts",
+    "src/effort.ts",
+    "src/format.ts",
+    "src/history.ts",
+    "src/image-limits.ts",
+    "src/images.ts",
+    "src/limits.ts",
+    "src/llm.ts",
+    "src/messages.ts",
+    "src/models.ts",
+    "src/panel-storage.ts",
+    "src/panel/actions.ts",
+    "src/panel/appearance.ts",
+    "src/panel/attach.ts",
+    "src/panel/context-preview.ts",
+    "src/panel/copilot-status.ts",
+    "src/panel/diagnostics.ts",
+    "src/panel/expiry.ts",
+    "src/panel/history-recovery.ts",
+    "src/panel/history.ts",
+    "src/panel/setup.ts",
+    "src/panel/state.ts",
+    "src/panel/uploads.ts",
+    "src/panel/view.ts",
+    "src/panel/word-crew.ts",
+    "src/presets.ts",
+    "src/privacy.ts",
+    "src/progress.ts",
+    "src/project-identity.ts",
+    "src/prompt-sets.ts",
+    "src/prompts.ts",
+    "src/protocol.ts",
+    "src/release-history.ts",
+    "src/rules.ts",
+    "src/runtime.ts",
+    "src/save-batches.ts",
+    "src/save-queue.ts",
+    "src/text-size.ts",
+    "src/updates/metadata.ts",
+    "src/updates/process-owner.ts",
+    "src/updates/service.ts",
+    "src/updates/version.ts",
+    "src/version.ts",
+    "src/worker-host.ts",
+    "src/worker.ts",
+    "src/workspaces.ts",
+    "web/node_modules/@base-ui/react/internals/getStateAttributesProps.mjs",
+    "web/node_modules/@base-ui/react/internals/useRenderElement.mjs",
+    "web/node_modules/@base-ui/react/merge-props/mergeProps.mjs",
+    "web/node_modules/@base-ui/react/use-render/useRender.mjs",
+    "web/node_modules/@base-ui/react/utils/resolveClassName.mjs",
+    "web/node_modules/@base-ui/react/utils/resolveStyle.mjs",
+    "web/node_modules/@base-ui/utils/empty.mjs",
+    "web/node_modules/@base-ui/utils/getReactElementRef.mjs",
+    "web/node_modules/@base-ui/utils/mergeObjects.mjs",
+    "web/node_modules/@base-ui/utils/reactVersion.mjs",
+    "web/node_modules/@base-ui/utils/useMergedRefs.mjs",
+    "web/node_modules/@base-ui/utils/useRefWithInit.mjs",
+    "web/node_modules/@floating-ui/core/dist/floating-ui.core.mjs",
+    "web/node_modules/@floating-ui/dom/dist/floating-ui.dom.mjs",
+    "web/node_modules/@floating-ui/react-dom/dist/floating-ui.react-dom.mjs",
+    "web/node_modules/@floating-ui/utils/dist/floating-ui.utils.dom.mjs",
+    "web/node_modules/@floating-ui/utils/dist/floating-ui.utils.mjs",
+    "web/node_modules/@radix-ui/number/dist/index.mjs",
+    "web/node_modules/@radix-ui/primitive/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-arrow/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-checkbox/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-collection/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-compose-refs/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-context/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-dialog/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-direction/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-dismissable-layer/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-dropdown-menu/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-focus-guards/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-focus-scope/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-id/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-menu/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-popper/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-portal/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-presence/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-primitive/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-progress/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-roving-focus/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-select/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-slot/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-switch/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-tooltip/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-use-callback-ref/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-use-controllable-state/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-use-effect-event/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-use-is-hydrated/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-use-layout-effect/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-use-size/dist/index.mjs",
+    "web/node_modules/@radix-ui/react-visually-hidden/dist/index.mjs",
+    "web/node_modules/aria-hidden/dist/es2015/index.js",
+    "web/node_modules/class-variance-authority/dist/index.mjs",
+    "web/node_modules/clsx/dist/clsx.mjs",
+    "web/node_modules/get-nonce/dist/es2015/index.js",
+    "web/node_modules/lucide-react/dist/esm/Icon.mjs",
+    "web/node_modules/lucide-react/dist/esm/context.mjs",
+    "web/node_modules/lucide-react/dist/esm/createLucideIcon.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/arrow-down.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/arrow-up-to-line.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/arrow-up.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/book-open.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/bot.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/check.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/chevron-down.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/chevron-right.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/chevron-up.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/circle-check.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/contrast.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/copy.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/download.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/ellipsis-vertical.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/ellipsis.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/external-link.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/file-text.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/folder.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/info.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/loader-circle.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/panel-left-close.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/panel-left-open.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/paperclip.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/pencil.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/plug-zap.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/plus.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/refresh-cw.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/rotate-ccw.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/scroll-text.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/search.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/send.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/settings-2.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/settings.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/sliders-horizontal.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/sparkles.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/square.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/trash.mjs",
+    "web/node_modules/lucide-react/dist/esm/icons/x.mjs",
+    "web/node_modules/lucide-react/dist/esm/shared/src/build/buildLucideIconForReact.mjs",
+    "web/node_modules/lucide-react/dist/esm/shared/src/build/buildLucideIconNode.mjs",
+    "web/node_modules/lucide-react/dist/esm/shared/src/build/defaultAttributes.mjs",
+    "web/node_modules/lucide-react/dist/esm/shared/src/utils/hasA11yProp.mjs",
+    "web/node_modules/lucide-react/dist/esm/shared/src/utils/mergeClasses.mjs",
+    "web/node_modules/lucide-react/dist/esm/shared/src/utils/toCamelCase.mjs",
+    "web/node_modules/lucide-react/dist/esm/shared/src/utils/toKebabCase.mjs",
+    "web/node_modules/lucide-react/dist/esm/shared/src/utils/toLucideIconData.mjs",
+    "web/node_modules/lucide-react/dist/esm/shared/src/utils/toPascalCase.mjs",
+    "web/node_modules/react-dom/cjs/react-dom-client.production.js",
+    "web/node_modules/react-dom/cjs/react-dom.production.js",
+    "web/node_modules/react-dom/client.js",
+    "web/node_modules/react-dom/index.js",
+    "web/node_modules/react-remove-scroll-bar/dist/es2015/component.js",
+    "web/node_modules/react-remove-scroll-bar/dist/es2015/constants.js",
+    "web/node_modules/react-remove-scroll-bar/dist/es2015/utils.js",
+    "web/node_modules/react-remove-scroll/dist/es2015/Combination.js",
+    "web/node_modules/react-remove-scroll/dist/es2015/SideEffect.js",
+    "web/node_modules/react-remove-scroll/dist/es2015/UI.js",
+    "web/node_modules/react-remove-scroll/dist/es2015/aggresiveCapture.js",
+    "web/node_modules/react-remove-scroll/dist/es2015/handleScroll.js",
+    "web/node_modules/react-remove-scroll/dist/es2015/medium.js",
+    "web/node_modules/react-remove-scroll/dist/es2015/sidecar.js",
+    "web/node_modules/react-style-singleton/dist/es2015/component.js",
+    "web/node_modules/react-style-singleton/dist/es2015/hook.js",
+    "web/node_modules/react-style-singleton/dist/es2015/singleton.js",
+    "web/node_modules/react/cjs/react-jsx-runtime.production.js",
+    "web/node_modules/react/cjs/react.production.js",
+    "web/node_modules/react/index.js",
+    "web/node_modules/react/jsx-runtime.js",
+    "web/node_modules/scheduler/cjs/scheduler.production.js",
+    "web/node_modules/scheduler/index.js",
+    "web/node_modules/sonner/dist/index.mjs",
+    "web/node_modules/tailwind-merge/dist/bundle-mjs.mjs",
+    "web/node_modules/tslib/tslib.es6.mjs",
+    "web/node_modules/use-callback-ref/dist/es2015/assignRef.js",
+    "web/node_modules/use-callback-ref/dist/es2015/useMergeRef.js",
+    "web/node_modules/use-callback-ref/dist/es2015/useRef.js",
+    "web/node_modules/use-sidecar/dist/es2015/exports.js",
+    "web/node_modules/use-sidecar/dist/es2015/medium.js",
+    "web/src/canvas-connection.tsx",
+    "web/src/common.tsx",
+    "web/src/components/reui/alert.tsx",
+    "web/src/components/reui/badge.tsx",
+    "web/src/components/ui/button.tsx",
+    "web/src/components/ui/checkbox.tsx",
+    "web/src/components/ui/dialog.tsx",
+    "web/src/components/ui/dropdown-menu.tsx",
+    "web/src/components/ui/input.tsx",
+    "web/src/components/ui/progress.tsx",
+    "web/src/components/ui/select.tsx",
+    "web/src/components/ui/spinner.tsx",
+    "web/src/components/ui/switch.tsx",
+    "web/src/components/ui/textarea.tsx",
+    "web/src/components/ui/tooltip.tsx",
+    "web/src/copilot-connection.tsx",
+    "web/src/effort-models.tsx",
+    "web/src/enhance.tsx",
+    "web/src/footer.tsx",
+    "web/src/history-recovery.tsx",
+    "web/src/history.css",
+    "web/src/history.tsx",
+    "web/src/lib/utils.ts",
+    "web/src/logs.tsx",
+    "web/src/main.tsx",
+    "web/src/panel-runtime.ts",
+    "web/src/preferences.tsx",
+    "web/src/quiet-desk.tsx",
+    "web/src/retained-data.tsx",
+    "web/src/save-status.tsx",
+    "web/src/section-recovery.tsx",
+    "web/src/sections.tsx",
+    "web/src/theme.ts",
+    "web/src/transport.ts",
+    "web/src/updates.tsx",
+    "web/src/usage-recovery.tsx",
+    "web/src/use-word-crew.ts",
+    "web/src/whats-new.tsx",
+    "web/src/word-crew.ts"
+  ],
+  "projectInputs": [
+    "CHANGELOG.md",
+    "src/attachments.ts",
+    "src/brand.ts",
+    "src/canvas-events.ts",
+    "src/capabilities.ts",
+    "src/clipboard.ts",
+    "src/confined-read.ts",
+    "src/context/activity.ts",
+    "src/context/agents.ts",
+    "src/context/enumeration.ts",
+    "src/context/files.ts",
+    "src/context/git.ts",
+    "src/context/index.ts",
+    "src/context/instructions.ts",
+    "src/context/relevance.ts",
+    "src/context/research.ts",
+    "src/context/search.ts",
+    "src/context/secrets.ts",
+    "src/context/stack.ts",
+    "src/context/terminals.ts",
+    "src/copilot/extension.ts",
+    "src/copilot/models.ts",
+    "src/copilot/retained-data.ts",
+    "src/copilot/server.ts",
+    "src/copilot/services.ts",
+    "src/copilot/session-activity.ts",
+    "src/copilot/session-storage.ts",
+    "src/copilot/session.ts",
+    "src/copilot/storage.ts",
+    "src/copilot/store-observer.ts",
+    "src/copilot/update-installation.ts",
+    "src/copilot/usage-recovery.ts",
+    "src/copilot/usage.ts",
+    "src/defaults.ts",
+    "src/diagnostics.ts",
+    "src/effort.ts",
+    "src/format.ts",
+    "src/history.ts",
+    "src/image-limits.ts",
+    "src/images.ts",
+    "src/limits.ts",
+    "src/llm.ts",
+    "src/messages.ts",
+    "src/models.ts",
+    "src/panel-storage.ts",
+    "src/panel/actions.ts",
+    "src/panel/appearance.ts",
+    "src/panel/attach.ts",
+    "src/panel/context-preview.ts",
+    "src/panel/copilot-status.ts",
+    "src/panel/diagnostics.ts",
+    "src/panel/expiry.ts",
+    "src/panel/history-recovery.ts",
+    "src/panel/history.ts",
+    "src/panel/setup.ts",
+    "src/panel/state.ts",
+    "src/panel/uploads.ts",
+    "src/panel/view.ts",
+    "src/panel/word-crew.ts",
+    "src/presets.ts",
+    "src/privacy.ts",
+    "src/progress.ts",
+    "src/project-identity.ts",
+    "src/prompt-sets.ts",
+    "src/prompts.ts",
+    "src/protocol.ts",
+    "src/release-history.ts",
+    "src/rules.ts",
+    "src/runtime.ts",
+    "src/save-batches.ts",
+    "src/save-queue.ts",
+    "src/text-size.ts",
+    "src/updates/metadata.ts",
+    "src/updates/process-owner.ts",
+    "src/updates/service.ts",
+    "src/updates/version.ts",
+    "src/version.ts",
+    "src/worker-host.ts",
+    "src/worker.ts",
+    "src/workspaces.ts",
+    "web/src/canvas-connection.tsx",
+    "web/src/common.tsx",
+    "web/src/components/reui/alert.tsx",
+    "web/src/components/reui/badge.tsx",
+    "web/src/components/ui/button.tsx",
+    "web/src/components/ui/checkbox.tsx",
+    "web/src/components/ui/dialog.tsx",
+    "web/src/components/ui/dropdown-menu.tsx",
+    "web/src/components/ui/input.tsx",
+    "web/src/components/ui/progress.tsx",
+    "web/src/components/ui/select.tsx",
+    "web/src/components/ui/spinner.tsx",
+    "web/src/components/ui/switch.tsx",
+    "web/src/components/ui/textarea.tsx",
+    "web/src/components/ui/tooltip.tsx",
+    "web/src/copilot-connection.tsx",
+    "web/src/effort-models.tsx",
+    "web/src/enhance.tsx",
+    "web/src/footer.tsx",
+    "web/src/history-recovery.tsx",
+    "web/src/history.css",
+    "web/src/history.tsx",
+    "web/src/lib/utils.ts",
+    "web/src/logs.tsx",
+    "web/src/main.tsx",
+    "web/src/panel-runtime.ts",
+    "web/src/preferences.tsx",
+    "web/src/quiet-desk.tsx",
+    "web/src/retained-data.tsx",
+    "web/src/save-status.tsx",
+    "web/src/section-recovery.tsx",
+    "web/src/sections.tsx",
+    "web/src/theme.ts",
+    "web/src/transport.ts",
+    "web/src/updates.tsx",
+    "web/src/usage-recovery.tsx",
+    "web/src/use-word-crew.ts",
+    "web/src/whats-new.tsx",
+    "web/src/word-crew.ts"
+  ],
+  "nonEmittedPackages": [
+    {
+      "directory": "node_modules/@esbuild/aix-ppc64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/android-arm",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/android-arm64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/android-x64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/darwin-arm64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/darwin-x64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/freebsd-arm64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/freebsd-x64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/linux-arm",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/linux-arm64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/linux-ia32",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/linux-loong64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/linux-mips64el",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/linux-ppc64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/linux-riscv64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/linux-s390x",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/linux-x64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/netbsd-arm64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/netbsd-x64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/openbsd-arm64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/openbsd-x64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/openharmony-arm64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/sunos-x64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/win32-arm64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/win32-ia32",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@esbuild/win32-x64",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/@types/node",
+      "version": "22.20.5"
+    },
+    {
+      "directory": "node_modules/@types/proper-lockfile",
+      "version": "4.1.4"
+    },
+    {
+      "directory": "node_modules/@types/retry",
+      "version": "0.12.5"
+    },
+    {
+      "directory": "node_modules/esbuild",
+      "version": "0.25.12"
+    },
+    {
+      "directory": "node_modules/typescript",
+      "version": "5.9.3"
+    },
+    {
+      "directory": "node_modules/undici-types",
+      "version": "6.21.0"
+    },
+    {
+      "directory": "web/node_modules/@babel/runtime",
+      "version": "8.1.0"
+    },
+    {
+      "directory": "web/node_modules/@jridgewell/gen-mapping",
+      "version": "0.3.13"
+    },
+    {
+      "directory": "web/node_modules/@jridgewell/remapping",
+      "version": "2.3.5"
+    },
+    {
+      "directory": "web/node_modules/@jridgewell/resolve-uri",
+      "version": "3.1.2"
+    },
+    {
+      "directory": "web/node_modules/@jridgewell/sourcemap-codec",
+      "version": "1.6.0"
+    },
+    {
+      "directory": "web/node_modules/@jridgewell/trace-mapping",
+      "version": "0.3.31"
+    },
+    {
+      "directory": "web/node_modules/@oxc-project/types",
+      "version": "0.156.0"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-accessible-icon",
+      "version": "1.2.0"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-accordion",
+      "version": "1.3.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-alert-dialog",
+      "version": "1.2.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-aspect-ratio",
+      "version": "1.2.0"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-avatar",
+      "version": "1.3.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-collapsible",
+      "version": "1.2.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-context-menu",
+      "version": "2.4.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-form",
+      "version": "0.3.0"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-hover-card",
+      "version": "1.2.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-label",
+      "version": "2.1.17"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-menubar",
+      "version": "1.2.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-navigation-menu",
+      "version": "1.4.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-one-time-password-field",
+      "version": "0.2.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-password-toggle-field",
+      "version": "0.2.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-popover",
+      "version": "1.3.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-radio-group",
+      "version": "1.5.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-scroll-area",
+      "version": "1.4.0"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-separator",
+      "version": "1.2.0"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-slider",
+      "version": "1.6.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-tabs",
+      "version": "1.2.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-toast",
+      "version": "1.3.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-toggle",
+      "version": "1.2.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-toggle-group",
+      "version": "1.2.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-toolbar",
+      "version": "1.2.1"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-use-escape-keydown",
+      "version": "1.1.6"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-use-previous",
+      "version": "1.1.4"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/react-use-rect",
+      "version": "1.1.4"
+    },
+    {
+      "directory": "web/node_modules/@radix-ui/rect",
+      "version": "1.1.3"
+    },
+    {
+      "directory": "web/node_modules/@rolldown/binding-android-arm-eabi",
+      "version": "1.2.16"
+    },
+    {
+      "directory": "web/node_modules/@rolldown/binding-android-arm64",
+      "version": "1.2.16"
+    },
+    {
+      "directory": "web/node_modules/@rolldown/binding-darwin-arm64",
+      "version": "1.2.16"
+    },
+    {
+      "directory": "web/node_modules/@rolldown/binding-darwin-x64",
+      "version": "1.2.16"
+    },
+    {
+      "directory": "web/node_modules/@rolldown/binding-freebsd-x64",
+      "version": "1.2.16"
+    },
+    {
+      "directory": "web/node_modules/@rolldown/binding-linux-arm-gnueabihf",
+      "version": "1.2.16"
+    },
+    {
+      "directory": "web/node_modules/@rolldown/binding-linux-arm64-gnu",
+      "version": "1.2.16"
+    },
+    {
+      "directory": "web/node_modules/@rolldown/binding-linux-arm64-musl",
+      "version": "1.2.16"
+    },
+    {
+      "directory": "web/node_modules/@rolldown/binding-linux-ppc64-gnu",
+      "version": "1.2.16"
+    },
+    {
+      "directory": "web/node_modules/@rolldown/binding-linux-s390x-gnu",
+      "version": "1.2.16"
+    },
+    {
+      "directory": "web/node_modules/@rolldown/binding-linux-x64-gnu",
+      "version": "1.2.16"
+    },
+    {
+      "directory": "web/node_modules/@rolldown/binding-linux-x64-musl",
+      "version": "1.2.16"
+    },
+    {
+      "directory": "web/node_modules/@rolldown/binding-openharmony-arm64",
+      "version": "1.2.16"
+    },
+    {
+      "directory": "web/node_modules/@rolldown/binding-win32-arm64-msvc",
+      "version": "1.2.16"
+    },
+    {
+      "directory": "web/node_modules/@rolldown/binding-win32-x64-msvc",
+      "version": "1.2.16"
+    },
+    {
+      "directory": "web/node_modules/@rolldown/pluginutils",
+      "version": "1.0.1"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/node",
+      "version": "4.3.5"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide",
+      "version": "4.3.5"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-android-arm64",
+      "version": "4.3.5"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-darwin-arm64",
+      "version": "4.3.5"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-darwin-x64",
+      "version": "4.3.5"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-freebsd-x64",
+      "version": "4.3.5"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-linux-arm-gnueabihf",
+      "version": "4.3.5"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-linux-arm64-gnu",
+      "version": "4.3.5"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-linux-arm64-musl",
+      "version": "4.3.5"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-linux-x64-gnu",
+      "version": "4.3.5"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-linux-x64-musl",
+      "version": "4.3.5"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-wasm32-wasi",
+      "version": "4.3.5"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/@emnapi/core",
+      "version": "1.11.3"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/@emnapi/runtime",
+      "version": "1.11.3"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/@emnapi/wasi-threads",
+      "version": "1.2.3"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/@napi-rs/wasm-runtime",
+      "version": "1.2.2"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/@tybys/wasm-util",
+      "version": "0.10.3"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-wasm32-wasi/node_modules/tslib",
+      "version": "2.8.1"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-win32-arm64-msvc",
+      "version": "4.3.5"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/oxide-win32-x64-msvc",
+      "version": "4.3.5"
+    },
+    {
+      "directory": "web/node_modules/@tailwindcss/vite",
+      "version": "4.3.5"
+    },
+    {
+      "directory": "web/node_modules/@types/node",
+      "version": "26.6.6"
+    },
+    {
+      "directory": "web/node_modules/@types/react",
+      "version": "19.3.0"
+    },
+    {
+      "directory": "web/node_modules/@types/react-dom",
+      "version": "19.3.0"
+    },
+    {
+      "directory": "web/node_modules/@vitejs/plugin-react",
+      "version": "6.3.0"
+    },
+    {
+      "directory": "web/node_modules/csstype",
+      "version": "3.2.3"
+    },
+    {
+      "directory": "web/node_modules/detect-libc",
+      "version": "2.1.2"
+    },
+    {
+      "directory": "web/node_modules/detect-node-es",
+      "version": "1.1.0"
+    },
+    {
+      "directory": "web/node_modules/enhanced-resolve",
+      "version": "5.26.1"
+    },
+    {
+      "directory": "web/node_modules/fdir",
+      "version": "6.5.0"
+    },
+    {
+      "directory": "web/node_modules/fsevents",
+      "version": "2.3.3"
+    },
+    {
+      "directory": "web/node_modules/graceful-fs",
+      "version": "4.2.11"
+    },
+    {
+      "directory": "web/node_modules/jiti",
+      "version": "2.7.0"
+    },
+    {
+      "directory": "web/node_modules/lightningcss",
+      "version": "1.33.0"
+    },
+    {
+      "directory": "web/node_modules/lightningcss-android-arm64",
+      "version": "1.33.0"
+    },
+    {
+      "directory": "web/node_modules/lightningcss-darwin-arm64",
+      "version": "1.33.0"
+    },
+    {
+      "directory": "web/node_modules/lightningcss-darwin-x64",
+      "version": "1.33.0"
+    },
+    {
+      "directory": "web/node_modules/lightningcss-freebsd-x64",
+      "version": "1.33.0"
+    },
+    {
+      "directory": "web/node_modules/lightningcss-linux-arm-gnueabihf",
+      "version": "1.33.0"
+    },
+    {
+      "directory": "web/node_modules/lightningcss-linux-arm64-gnu",
+      "version": "1.33.0"
+    },
+    {
+      "directory": "web/node_modules/lightningcss-linux-arm64-musl",
+      "version": "1.33.0"
+    },
+    {
+      "directory": "web/node_modules/lightningcss-linux-x64-gnu",
+      "version": "1.33.0"
+    },
+    {
+      "directory": "web/node_modules/lightningcss-linux-x64-musl",
+      "version": "1.33.0"
+    },
+    {
+      "directory": "web/node_modules/lightningcss-win32-arm64-msvc",
+      "version": "1.33.0"
+    },
+    {
+      "directory": "web/node_modules/lightningcss-win32-x64-msvc",
+      "version": "1.33.0"
+    },
+    {
+      "directory": "web/node_modules/magic-string",
+      "version": "1.4.5"
+    },
+    {
+      "directory": "web/node_modules/nanoid",
+      "version": "3.3.20"
+    },
+    {
+      "directory": "web/node_modules/picocolors",
+      "version": "1.1.1"
+    },
+    {
+      "directory": "web/node_modules/picomatch",
+      "version": "4.0.7"
+    },
+    {
+      "directory": "web/node_modules/postcss",
+      "version": "8.5.32"
+    },
+    {
+      "directory": "web/node_modules/radix-ui",
+      "version": "1.8.1"
+    },
+    {
+      "directory": "web/node_modules/reselect",
+      "version": "5.3.0"
+    },
+    {
+      "directory": "web/node_modules/rolldown",
+      "version": "1.2.16"
+    },
+    {
+      "directory": "web/node_modules/source-map-js",
+      "version": "1.2.2"
+    },
+    {
+      "directory": "web/node_modules/tapable",
+      "version": "2.3.3"
+    },
+    {
+      "directory": "web/node_modules/tinyglobby",
+      "version": "0.2.17"
+    },
+    {
+      "directory": "web/node_modules/typescript",
+      "version": "5.9.3"
+    },
+    {
+      "directory": "web/node_modules/undici-types",
+      "version": "8.9.0"
+    },
+    {
+      "directory": "web/node_modules/use-sync-external-store",
+      "version": "1.7.0"
+    },
+    {
+      "directory": "web/node_modules/vite",
+      "version": "8.3.6"
+    }
+  ]
+}

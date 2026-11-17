@@ -1,0 +1,99 @@
+{
+  "schema": 1,
+  "channel": "runtime-preview",
+  "repository": "AndrewGodlewsky/copilot-enhance-prompt",
+  "sourceCommit": "85b924829a0c6deb75ca5736ffc03ba7c2d0da5c",
+  "version": "0.12.34",
+  "files": [
+    {
+      "path": ".github/plugin/marketplace.json",
+      "bytes": 220,
+      "sha256": "c5526c77b709dbc4d2471dadb072bf4f9a490108c6a16acaf5255d36348cab3f"
+    },
+    {
+      "path": "assets/icon.svg",
+      "bytes": 557,
+      "sha256": "da33f84df56d072fbaaa199c61ff7d7f55e7853c733d672b32371f04fb9dc765"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "bytes": 39557,
+      "sha256": "a362c9d5d15fd47dd9dd2da5536a30a3eeb794c8f77faaae0521e0d75c7472b8"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/extension.mjs",
+      "bytes": 386777,
+      "sha256": "0067d958f9c04772de615e6d6b0333e671038e10b1c252304fa080a81f9ea5a5"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/assets/app.js",
+      "bytes": 556505,
+      "sha256": "a0479803c84caae40d48d722494db92bf9884a3d827b59daa627ae1008fce1d8"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/assets/CHANGELOG.js",
+      "bytes": 39593,
+      "sha256": "3722f9b1c95b01ee885dfd2d45861fbaa60fb15f977867a1a7914048ed47aba8"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/assets/dropdown-menu.js",
+      "bytes": 18373,
+      "sha256": "2de2c85248a3e57184bce75be89d931e54d13488f119548b420b35f6b62ea998"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/assets/history.css",
+      "bytes": 6260,
+      "sha256": "736dcd8fe85cfe4801fdb3ff05887e6d54e8637c4b38f2126353c17bec459ecf"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/assets/history.js",
+      "bytes": 10419,
+      "sha256": "039497c51e7fb79faa50b8f54e01e790ec766b589ed5fbd2422f8d0824f24d4a"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/assets/icon.png",
+      "bytes": 34148,
+      "sha256": "5aafc41183b123645496bb65761b74c2c812f1ed0c6055b01d35cc52ab0a11fa"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/assets/index.css",
+      "bytes": 61719,
+      "sha256": "da85c30110ff5ae7893d1230be51a724e0c4f356a63e69bfddeedf8f1934a297"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/assets/sections.js",
+      "bytes": 33555,
+      "sha256": "52177f5bd5fa473dbd42f833ea6b19781d023cda23777bd0a43d5aa5edfd6d8c"
+    },
+    {
+      "path": "com.github.copilot/extensions/enhance-prompt/web/index.html",
+      "bytes": 447,
+      "sha256": "c9357e89132d548a04a77ad77dfbcf87d492eaa9e9a888602177c115417aa27c"
+    },
+    {
+      "path": "INSTALL.md",
+      "bytes": 3233,
+      "sha256": "86a93e63408e0da09ed549768c7f19db2d9ae4d9a204cd5532ba9ed3a5abc378"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 1064,
+      "sha256": "f687f417959130555840c0d277a865272920d501dbc2f6746bc82f4e35ee5f51"
+    },
+    {
+      "path": "plugin.json",
+      "bytes": 422,
+      "sha256": "6f3d2cdb72b6f606270d7414d32ee4f36e69f60a0f788f1149a394e4e3a0dc3b"
+    },
+    {
+      "path": "runtime-inventory.json",
+      "bytes": 135912,
+      "sha256": "761ef8236bb425f835b6d4439b6683f712be956962b3367aa2119d4aefe31202"
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "bytes": 85449,
+      "sha256": "ca4886c749b168381fea00e4acc77944057dd59d3889dae9951feb02dc154d4c"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+# Enhance Prompt runtime package
+
+This ZIP contains the native GitHub Copilot canvas, the green Lift icon, version notes, inventory and complete license notices. It includes no npm installation, build tools, source tests, separate SDK or executable runtime. GitHub Copilot supplies its own SDK/runtime. The full source and guides remain at [the repository](https://github.com/AndrewGodlewsky/copilot-enhance-prompt).
+
+This is an **optional manual-install preview**, not the marketplace update channel. Ordinary marketplace installs still follow their configured repository/branch. Installing an extracted ZIP is a local installation: the plugin cannot discover an online update source for it and will show automatic updating unavailable. Do not replace an existing marketplace installation just to try this package.
+
+1. Download the runtime ZIP, its `.sha256` checksum and `.json` contents report from the same [GitHub release](https://github.com/AndrewGodlewsky/copilot-enhance-prompt/releases). These are separate from GitHub's automatic **Source code** archives.
+2. Compare the ZIP's SHA-256 with the companion checksum before extracting. PowerShell's `Get-FileHash -Algorithm SHA256 <downloaded-file>` computes it. A matching checksum detects differing bytes; it is not a signature or proof that a compromised release is safe. The report identifies the source commit and hashes each file.
+3. Extract to a dedicated folder you intend to keep. Use Copilot desktop's local-folder plugin install if available, or its compatible CLI: `copilot plugin install <extracted-folder>`. Use the desktop's actual profile; forks, custom branches and existing marketplace identities must not be replaced implicitly. The installed runtime deprecates direct installs, so prefer the ordinary marketplace for ongoing use.
+4. Fully quit/reopen Copilot and open Enhance Prompt. Compare the footer version with the report. Reopen the same session when upgrading to retain its draft. Desktop icons/layout and saved-data behavior need the manual checks recorded in the repository; CLI tests do not prove them.
+
+To update this local package later, follow the installed source's local workflow and the new version's notes. Do not overlay an unknown installation or delete user data. For managed policy restrictions, contact your administrator. No installer runs automatically from the ZIP.
+
+[Full installation guide](https://github.com/AndrewGodlewsky/copilot-enhance-prompt#download-and-install) · [Security and pause/recovery](https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/main/SECURITY.md) · [Privacy and retained usage](https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/main/docs/privacy.md) · [Distribution provenance](https://github.com/AndrewGodlewsky/copilot-enhance-prompt/blob/main/docs/distribution-components.md)
+
+`runtime-inventory.json` includes source/build references that intentionally remain in the repository, not this runtime-only archive. Its existing text hashes normalize line endings; the companion archive report contains exact byte hashes. Preserve `LICENSE` and `THIRD_PARTY_NOTICES.md` when redistributing. Follow a referenced source path in the repository at the report's commit to inspect it.

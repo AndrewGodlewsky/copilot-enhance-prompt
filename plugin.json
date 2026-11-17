@@ -1,0 +1,17 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "enhance-prompt",
+  "version": "0.12.34",
+  "description": "Rewrite prompts with project context, reusable rules, model chains, and a native GitHub Copilot canvas.",
+  "keywords": [
+    "copilot",
+    "canvas",
+    "prompts",
+    "context"
+  ],
+  "extensions": {
+    "com.github.copilot": {
+      "logo": "assets/icon.svg"
+    }
+  }
+}
