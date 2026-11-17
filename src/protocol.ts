@@ -134,6 +134,8 @@ export interface PluginRequests {
     'history.clear': { output: { ok: true } }
     /** Undo of history.remove: brings back the entry of that id, if this worker removed it a moment ago. */
     'history.restore': { input: { id: string }; output: { restored: boolean } }
+    /** Claims this running version's automatic release notice across canvases. */
+    'release.check': { output: { version: string; show: boolean } }
     /** Rules tab: your rules and prompt structures. */
     'rules.get': { output: RulesConfig }
     /** Replaces them (cleaned and capped); answers with what was saved. */

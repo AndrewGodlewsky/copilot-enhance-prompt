@@ -4009,6 +4009,44 @@ async function loadFiles(paths, owner2) {
 // src/worker.ts
 import { randomUUID as randomUUID2 } from "node:crypto";
 
+// src/updates/version.ts
+function versionParts(value) {
+  if (typeof value !== "string" || value.length > 150) return null;
+  const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/.exec(value);
+  if (!match) return null;
+  const pre = match[4]?.split(".") ?? [];
+  if (pre.some((part) => /^\d+$/.test(part) && part.length > 1 && part.startsWith("0"))) return null;
+  return { core: match.slice(1, 4).map(BigInt), pre };
+}
+function compareVersions(left, right) {
+  const a = versionParts(left), b = versionParts(right);
+  if (!a || !b) return null;
+  const cmp = (x, y) => x < y ? -1 : x > y ? 1 : 0;
+  for (let i = 0; i < 3; i++) if (a.core[i] !== b.core[i]) return cmp(a.core[i], b.core[i]);
+  if (!a.pre.length || !b.pre.length) return a.pre.length === b.pre.length ? 0 : a.pre.length ? -1 : 1;
+  for (let i = 0; i < Math.max(a.pre.length, b.pre.length); i++) {
+    const x = a.pre[i], y = b.pre[i];
+    if (x === void 0 || y === void 0) return x === y ? 0 : x === void 0 ? -1 : 1;
+    if (x === y) continue;
+    const nx = /^\d+$/.test(x), ny = /^\d+$/.test(y);
+    return nx && ny ? cmp(BigInt(x), BigInt(y)) : nx !== ny ? nx ? -1 : 1 : cmp(x, y);
+  }
+  return 0;
+}
+
+// src/version.ts
+var VERSION = "0.12.25";
+
+// src/release-history.ts
+var RELEASE_SEEN_KEY = "releaseHistory.seenVersion";
+async function claimReleaseHistory(storage, version = VERSION) {
+  if (compareVersions(version, version) === null) throw new Error("The running plugin version is invalid.");
+  const previous = await storage.get(RELEASE_SEEN_KEY);
+  const order = compareVersions(version, previous);
+  if (order === null || order > 0) await storage.set(RELEASE_SEEN_KEY, version);
+  return { version, show: order !== null && order > 0 };
+}
+
 // src/project-identity.ts
 var MAX_PROJECT_IDENTITY = 32768;
 
@@ -5306,6 +5344,7 @@ function registerModelHandlers(host) {
   });
 }
 function registerDataHandlers(host) {
+  host.panels.handle("release.check", () => historyChange(host, () => claimReleaseHistory(host.storage)));
   const removedEntries = /* @__PURE__ */ new Map();
   const recoveryEpoch = async () => {
     const value = await host.storage.get(UNDO_EPOCH_KEY);
@@ -5637,31 +5676,6 @@ function persistentStore(directory2, name = "state.json") {
 import { readFile as readFile2, realpath as realpath5, stat } from "node:fs/promises";
 import { basename as basename3, dirname as dirname3, join as join4 } from "node:path";
 import { createHash as createHash2 } from "node:crypto";
-
-// src/updates/version.ts
-function versionParts(value) {
-  if (typeof value !== "string" || value.length > 150) return null;
-  const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/.exec(value);
-  if (!match) return null;
-  const pre = match[4]?.split(".") ?? [];
-  if (pre.some((part) => /^\d+$/.test(part) && part.length > 1 && part.startsWith("0"))) return null;
-  return { core: match.slice(1, 4).map(BigInt), pre };
-}
-function compareVersions(left, right) {
-  const a = versionParts(left), b = versionParts(right);
-  if (!a || !b) return null;
-  const cmp = (x, y) => x < y ? -1 : x > y ? 1 : 0;
-  for (let i = 0; i < 3; i++) if (a.core[i] !== b.core[i]) return cmp(a.core[i], b.core[i]);
-  if (!a.pre.length || !b.pre.length) return a.pre.length === b.pre.length ? 0 : a.pre.length ? -1 : 1;
-  for (let i = 0; i < Math.max(a.pre.length, b.pre.length); i++) {
-    const x = a.pre[i], y = b.pre[i];
-    if (x === void 0 || y === void 0) return x === y ? 0 : x === void 0 ? -1 : 1;
-    if (x === y) continue;
-    const nx = /^\d+$/.test(x), ny = /^\d+$/.test(y);
-    return nx && ny ? cmp(BigInt(x), BigInt(y)) : nx !== ny ? nx ? -1 : 1 : cmp(x, y);
-  }
-  return 0;
-}
 
 // src/updates/metadata.ts
 var UpdateError = class extends Error {
@@ -6163,9 +6177,6 @@ function createUpdates(options) {
   };
 }
 
-// src/version.ts
-var VERSION = "0.12.24";
-
 // src/worker-host.ts
 import { EventEmitter } from "node:events";
 
@@ -6181,6 +6192,7 @@ var OPERATIONS = /* @__PURE__ */ new Set([
   "canvas.request",
   "panel.start",
   "panel.persistence",
+  "release.history",
   "clipboard",
   "context.research",
   "context.research.round",

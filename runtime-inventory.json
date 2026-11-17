@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "plugin": "enhance-prompt",
-  "version": "0.12.24",
+  "version": "0.12.25",
   "hostProvided": [
     "@github/copilot-sdk",
     "@github/copilot-sdk/extension",
@@ -1199,20 +1199,20 @@
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/extension.mjs",
-      "bytes": 386128,
-      "sha256": "c1e095ede42c7d3401718185a4724b79c940aa9544658164a07242e35bd7eedd",
+      "bytes": 386758,
+      "sha256": "9315b4fec89a8b10743b157ff460552d1859fd8a8e64a144760898eb182e9242",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/CHANGELOG.js",
-      "bytes": 36197,
-      "sha256": "e11e4d69a45fb1baba507e2b8819d326c41b09d9cd4e2136d05e3fedc5fa24ca",
+      "bytes": 36689,
+      "sha256": "93913abb63e4b2997e638cda0fa428998bb60a9efcdf28e64d0f6d5da252702b",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/app.js",
-      "bytes": 553431,
-      "sha256": "4fe4914c331bfc8892550d539a34e541ca53f7aecb1fd5a28df2b9e4871ddd6f",
+      "bytes": 553537,
+      "sha256": "cf127de8abad010f297c0cb5e638b7d2eced96487f0bae1819577e662bb10556",
       "normalization": "lf"
     },
     {
@@ -1229,8 +1229,8 @@
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/history.js",
-      "bytes": 10403,
-      "sha256": "9dffb1c557d30b7b8bb3ed6fabb83df20e8b40169256e6eb8323aec481221c15",
+      "bytes": 10419,
+      "sha256": "039497c51e7fb79faa50b8f54e01e790ec766b589ed5fbd2422f8d0824f24d4a",
       "normalization": "lf"
     },
     {
@@ -1260,7 +1260,7 @@
     {
       "path": "plugin.json",
       "bytes": 422,
-      "sha256": "1a70386b91852b261a8cb198beb6764f3d3a99c1037703e96754baee577c7d28",
+      "sha256": "923e7cc6bd97e3a053cc09d6775b0cbf6cc82b02d7c5e45f7dce322f85002046",
       "normalization": "lf"
     }
   ],
@@ -1281,8 +1281,8 @@
   "inputs": [
     {
       "path": "CHANGELOG.md",
-      "bytes": 36161,
-      "sha256": "a1a84ee38c73297887ae8f766e39191fea86eaecc9f6d73cb069d02f6280481b",
+      "bytes": 36653,
+      "sha256": "2ab9c4ac8526133fce3f08d9184884627468904cd30b8f3fc5cc48580424edad",
       "normalization": "lf"
     },
     {
@@ -1593,8 +1593,8 @@
     },
     {
       "path": "src/diagnostics.ts",
-      "bytes": 6534,
-      "sha256": "5d64af0ea192c144b5203836355652c48548cf5e55bfdbe779354282d1aaa322",
+      "bytes": 6553,
+      "sha256": "2426869864569ef360af4c8be24f6c4a31beaf09191967b0df0f1bbd52df02e4",
       "normalization": "lf"
     },
     {
@@ -1779,8 +1779,14 @@
     },
     {
       "path": "src/protocol.ts",
-      "bytes": 9100,
-      "sha256": "b36e87fb70973b6b052504215538da8d9ac3fb12c21624a903bcda9e9aa47ccf",
+      "bytes": 9251,
+      "sha256": "edee904da07b45413cd46dade51b052ae44b4f09ff10eee70bb21a22e2127bf6",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/release-history.ts",
+      "bytes": 880,
+      "sha256": "159f03127038ac37e11c53f73d130301427cbb06bb9cc59769e7c0ecce9d07ee",
       "normalization": "lf"
     },
     {
@@ -1840,7 +1846,7 @@
     {
       "path": "src/version.ts",
       "bytes": 93,
-      "sha256": "bad51ada78b2cda004d67a3efa41db7f86a6a39e82b8bc7d570203e7b265dfb8",
+      "sha256": "b472b4f766b502a1d6133189f0dc39952360f8bf168743402aed44f2fc67660c",
       "normalization": "lf"
     },
     {
@@ -1851,8 +1857,8 @@
     },
     {
       "path": "src/worker.ts",
-      "bytes": 53931,
-      "sha256": "f65cad0724f4baa25142f14cab4d8005cc95538ca1af73174b68613380fcbc89",
+      "bytes": 54096,
+      "sha256": "a0f66c18c51cc8f8effc33cf3c19844d742ee0b704aa9aa3b5f1ae87b5d2ee6b",
       "normalization": "lf"
     },
     {
@@ -2829,8 +2835,8 @@
     },
     {
       "path": "web/src/history.tsx",
-      "bytes": 12472,
-      "sha256": "f4db829a07e2a2fdaafdc009ddb54ba1fcb3e794d27ea5046b7531720f289161",
+      "bytes": 12488,
+      "sha256": "538420a3081cd72284ec397559bc4e9e0c974cdff5613bbce156637527ce7ea6",
       "normalization": "lf"
     },
     {
@@ -2853,8 +2859,8 @@
     },
     {
       "path": "web/src/main.tsx",
-      "bytes": 10119,
-      "sha256": "2f712f9a6de4f205c14d4501785aeb7535eba0f86e9dd759b2bb36f5e4c27f8a",
+      "bytes": 9962,
+      "sha256": "76ea3fe5a45f952b6045514fcdec27fa43036eb673afc9af83718cf71a91ac75",
       "normalization": "lf"
     },
     {
@@ -2925,8 +2931,8 @@
     },
     {
       "path": "web/src/whats-new.tsx",
-      "bytes": 6479,
-      "sha256": "c8c2c00ee459ba4240d9d931b55a5cc38627d5e30571c6eab77fbc8bb1509bb7",
+      "bytes": 6999,
+      "sha256": "bdc73fe4828978e41c1c122c6db9340e5176aea11fe6fbc45487854a94cdc68b",
       "normalization": "lf"
     },
     {
@@ -3021,6 +3027,7 @@
     "src/prompt-sets.ts",
     "src/prompts.ts",
     "src/protocol.ts",
+    "src/release-history.ts",
     "src/rules.ts",
     "src/runtime.ts",
     "src/save-batches.ts",
@@ -3272,6 +3279,7 @@
     "src/prompt-sets.ts",
     "src/prompts.ts",
     "src/protocol.ts",
+    "src/release-history.ts",
     "src/rules.ts",
     "src/runtime.ts",
     "src/save-batches.ts",

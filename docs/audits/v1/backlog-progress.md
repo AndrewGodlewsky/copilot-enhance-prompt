@@ -14,11 +14,26 @@ Distribution/maintenance: #11 (manual/maintainer confirmation pending), #33 (run
 
 Efficiency: #12/#13/#15/#19/#20 shipped and closed. #14 saving implementation shipped (native-close/manual gate remains); #21 shipped and closed; #32 and #34 follow the usability fixes.
 
-Usability: #24 shipped and closed; #25 in verification, then #26, #27.
+Usability: #24/#25 shipped and closed; #26 in verification, then #27.
 
 Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and concrete choices; do independent work while an answer is pending. Never consume the owner's Copilot credits or control desktop/browser UI.
 
 ## Current work
+
+### 0.12.25 — #26, durable release history and accurate action copy
+
+A worker-owned release.check operation records its running version in shared storage under the existing cross-process transaction. SemVer ordering prevents older canvases rewinding the marker, and only one concurrent canvas claims a newer release. A missing/invalid marker establishes a quiet baseline; origin-local browser markers are not imported. Manual footer history remains available after errors. The initial promise survives StrictMode effect replay; cancelled effects cannot open dialogs. History explicitly says Copy enhanced prompt on either text view, and Clear documentation now includes the reviewed result. See [release-history behavior](../../release-history.md).
+
+Worker regressions first failed on the absent operation, then passed for baseline/reopen, concurrent claims, malformed state, failed writes and older versions. SemVer/prerelease/build cases and independent production disk adapters verify retained markers and unchanged user data. The dialog hook/loader fixture rejects localStorage access, exercises effect replay, lazy notes/retry and manual access after a failed check. Rendered History copy includes the same explicit label in Original view.
+
+Independent review found an important diagnostic allowlist omission and a minor development preview still writing the retired browser key. Both received failing regressions and fixes: sanitized release-history errors now reach Show Logs, and the mock release check handles the preview flag. One review/fix pass; no deferred minor. Typecheck, rebuild, all 535 final tests, package/diff checks and disposable runtime archive fixture pass. SDK/CLI 1.0.106-8.unstable.r43566476370.g869eef3, Node24.22.1, Windows x64. Exact hosted Verify and publication evidence follow in #26.
+
+Review rulings: actual desktop reopen, dialog focus, keyboard/screen reader and narrow-width Copy appearance remain #29. Independent disk adapters run in one process; the existing transaction has separate-process coverage, but this release does not claim a multiprocess dialog test. Same-version changed bytes/build metadata intentionally do not reopen notes. Storage infrastructure and same-user hostile filesystem interference are unchanged. No paid inference or owner installation changes occurred.
+
+Ruling: the first upgrade to this feature cannot reliably recover browser markers from earlier ports; establish one quiet durable baseline rather than guessing. Claiming is an at-most-once display attempt, not acknowledged reading; a closed canvas/lost response can consume an attempt, and manual notes remain available. Shared data directories share the marker. No network/model call, migration of user content or policy change is introduced.
+
+Previous release 0.12.24 / e26c6cb passed exact Verify 44064966814. Preview and all three runtime archive assets were published; #25 is closed.
+
 
 ### 0.12.24 — #25, item-specific action names
 

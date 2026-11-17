@@ -11,6 +11,7 @@ import { EFFORT_SETTINGS, REASONING_SETTINGS, isEffort, resolveEffort } from '..
 import type { ModelProfile } from '../../src/presets.ts'
 import { UNSUPPORTED_SETTINGS } from '../../src/capabilities.ts'
 import { createDiagnostics } from '../../src/diagnostics.ts'
+import { VERSION } from '../../src/version.ts'
 
 type Handler = (payload: unknown) => void
 
@@ -19,6 +20,7 @@ const PROJECT = 'storefront'
 const CHECKOUT = 'main'
 
 const events = new Map<string, Set<Handler>>()
+let showReleaseNotes = false
 const emit = (event: string, payload: unknown) => events.get(event)?.forEach((handler) => handler(payload))
 const listen = (event: string, handler: Handler) => {
   if (!events.has(event)) events.set(event, new Set())
@@ -209,6 +211,7 @@ const handlers: Record<string, (input: Record<string, unknown>, signal?: AbortSi
     structures: [{ id: 's1', name: 'Bug report', sections: ['Symptom', 'Steps to reproduce', 'Expected', 'Actual', 'Fix and verify'] }]
   }),
   'rules.save': (input) => (input as { config: unknown }).config,
+  'release.check': () => ({ version: VERSION, show: showReleaseNotes }),
   'logs.get': () => ({ ...createDiagnostics().snapshot(), platform: 'preview', architecture: 'preview', runtime: 'preview' }),
   'prompt.enhance': (input, signal) => enhance(input, signal),
   // The same list a run sends, without a run.
@@ -263,6 +266,7 @@ const SETTINGS_KEY = 'enhance-prompt:dev-settings'
 
 export async function installMockHost(): Promise<void> {
     const query = new URLSearchParams(location.search)
+    showReleaseNotes = query.get('whatsnew') === '1'
   try {
     Object.assign(settingsValues, JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}'))
   } catch {

@@ -49,7 +49,7 @@ export function HistoryReader({ entry, text, onTextChange }: { entry: HistoryEnt
       </details>
       <div className="history-actions">
         <Button size="sm" title="Open both saved texts in Enhance" onClick={() => reuse(entry)}><PencilIcon />Reuse</Button>
-        <Button size="sm" variant="ghost" title="Copy the enhanced prompt" onClick={() => void copy(entry.enhanced)}><CopyIcon />Copy</Button>
+        <Button size="sm" variant="ghost" title="Copy the enhanced prompt" onClick={() => void copy(entry.enhanced)}><CopyIcon />Copy enhanced prompt</Button>
         <Button size="sm" variant="ghost" className="text-destructive" title="Delete this history entry" onClick={() => void removeEntry(entry.id)}><Trash2Icon />Delete</Button>
       </div>
       <div className="history-text-tabs" role="group" aria-label="Which saved text to read">

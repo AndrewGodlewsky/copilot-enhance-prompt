@@ -14,6 +14,7 @@ import { imagesBlock, withImagePaths } from './images.ts'
 import { cleanAttachments, clearAttachments, loadFiles, putChunk, restoreAttachments } from './attachments.ts'
 import { attachmentItemId } from './image-limits.ts'
 import { randomUUID } from 'node:crypto'
+import { claimReleaseHistory } from './release-history.ts'
 import { parseRulesConfig, RULES_KEY, rulesFor, rulesToJson, structureById, type RulesConfig, type RuleWhere } from './rules.ts'
 import { capHistory, HISTORY_KEY, parseHistory, toJson, trimForHistory, type HistoryEntry } from './history.ts'
 import {
@@ -856,6 +857,7 @@ function registerModelHandlers(host: EnhanceWorker): void {
 
 /** The panel's Settings section: what is stored, and wiping it. Also the Rules tab's rules and structures. */
 function registerDataHandlers(host: EnhanceWorker): void {
+  host.panels.handle('release.check', () => historyChange(host, () => claimReleaseHistory(host.storage)))
   const removedEntries = new Map<string, { entry: HistoryEntry; until: number; epoch: string | null }>()
   const recoveryEpoch = async () => {
     const value = await host.storage.get(UNDO_EPOCH_KEY)

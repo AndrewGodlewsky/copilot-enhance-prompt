@@ -143,8 +143,6 @@ async function start(): Promise<void> {
     // ?onestep=0 turns it back off (the pictures share one browser profile, and it is remembered).
     const oneStep = query.get('onestep')
     if (oneStep) set(sendAfterEnhance, oneStep !== '0')
-    // ?whatsnew=1: as if just updated, so What's new opens.
-    if (query.get('whatsnew') === '1') localStorage.setItem('enhance-prompt:seen-version', '0')
     // ?attach=1: a screenshot and a log already attached; ?run=0 types the demo prompt without running it.
     if (query.get('attach') === '1') {
       const shot = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="40"><rect width="64" height="40" fill="#e7e5e4"/><rect x="6" y="6" width="52" height="6" fill="#a8a29e"/><rect x="6" y="16" width="30" height="18" fill="#d6d3d1"/></svg>')}`

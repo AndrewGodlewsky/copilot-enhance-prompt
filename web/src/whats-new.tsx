@@ -2,7 +2,10 @@ import { formatText } from '../../src/format.ts'
 // What's new and the changelog, from the English CHANGELOG.md (bundled as text, loaded when
 // the dialog opens).
 // The footer version opens all releases; after an update, show the current release once.
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { plugin } from '#panel'
+import { panelDiagnostics } from '../../src/panel/diagnostics.ts'
+import { diagnosticError } from '../../src/diagnostics.ts'
 import { VERSION } from '../../src/version.ts'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -66,8 +69,6 @@ function ReleaseBody({ body }: { body: string }) {
   return <div className="flex flex-col gap-1.5 text-sm leading-relaxed">{blocks}</div>
 }
 
-const SEEN_KEY = 'enhance-prompt:seen-version'
-
 /** Loads the English changelog only when the dialog opens. */
 async function loadChangelog(): Promise<Release[]> {
   return parseChangelog((await import('../../CHANGELOG.md?raw')).default)
@@ -92,11 +93,17 @@ export function WhatsNew() {
   }, [open, loaded, loadFailed])
   const releases = loaded ?? []
   const [view, setView] = useState('new')
-  // After an update (not on the first install), show what changed once.
+  const initialCheck = useRef<Promise<{ version: string; show: boolean } | null> | null>(null)
+  // The worker owns the durable marker. Reuse this request through StrictMode's
+  // effect cleanup/restart so a discarded effect cannot consume the notice.
   useEffect(() => {
-    const seen = localStorage.getItem(SEEN_KEY)
-    if (seen && seen !== VERSION) setOpen(true)
-    localStorage.setItem(SEEN_KEY, VERSION)
+    let alive = true
+    initialCheck.current ??= plugin.request('release.check').catch(error => {
+      panelDiagnostics.record('release.history', 'failed', diagnosticError(error))
+      return null
+    })
+    void initialCheck.current.then(answer => { if (alive && answer?.show && answer.version === VERSION) setOpen(true) })
+    return () => { alive = false }
   }, [])
   const latest = releases.find((release) => release.version === VERSION) ?? releases[0]
   return (

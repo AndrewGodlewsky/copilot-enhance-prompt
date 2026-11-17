@@ -1,5 +1,12 @@
 var e=`# Changes
 
+## [0.12.25] - 2026-11-17
+
+### Improved
+- Release-history tracking now survives canvas ports, sessions and restarts. The first opening establishes a quiet baseline; later upgrades can show What's new once. The footer version always opens all bundled notes.
+- History's button now says Copy enhanced prompt, including when you are reading the original request.
+- The guide now correctly explains that Clear removes both the request and the Review and send result while keeping saved History.
+
 ## [0.12.24] - 2026-11-17
 
 ### Improved

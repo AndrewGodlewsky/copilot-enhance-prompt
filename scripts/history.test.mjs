@@ -68,6 +68,7 @@ test('History library expands saved text inline, with accessible project and pro
   assert.match(reader, /&lt;script&gt;/)
   assert.match(reader, /café\/notes.md/)
   assert.match(module.exports.reader(entry, 'original'), /résumé.ts/)
+  assert.match(module.exports.reader(entry, 'original'), />Copy enhanced prompt<\/button>/)
   assert.match(module.exports.render([entry], 'missing'), /No matching prompts/)
   assert.match(module.exports.render([]), /No history yet/)
   assert.match(module.exports.undo(Date.now() - 1), /disabled=""[^>]*aria-label="Undo expired"/)
