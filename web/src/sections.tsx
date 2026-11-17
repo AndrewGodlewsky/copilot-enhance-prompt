@@ -52,7 +52,7 @@ import {
   testProfile,
   toggleProfile
 } from '../../src/panel/actions.ts'
-import { DISCLOSURES, modelOptions, newRuleLabel, PRIVACY_GROUPS, PRIVACY_ROWS, rulesConfig, rulesHere, ruleScopeLabel, SEND_AFTER_ROW, switchRow } from '../../src/panel/view.ts'
+import { DISCLOSURES, itemLabel, modelOptions, newRuleLabel, PRIVACY_GROUPS, PRIVACY_ROWS, rulesConfig, rulesHere, ruleScopeLabel, SEND_AFTER_ROW, switchRow } from '../../src/panel/view.ts'
 import { NEEDS_CONSENT, OTHER_AGENTS_LIMITS } from '../../src/privacy.ts'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/reui/alert'
@@ -129,6 +129,7 @@ function ProfileForm() {
 }
 
 function ProfileCard({ profile, index, count }: { profile: ProfileView; index: number; count: number }) {
+  const item = itemLabel('model profile', index, profile.name)
   const options = modelOptions(read(catalogs)[profile.id] ?? read(catalogs).copilot, profile.effectiveModel)
   const testing = read(busy) === 'test'
   return (
@@ -141,32 +142,32 @@ function ProfileCard({ profile, index, count }: { profile: ProfileView; index: n
           </div>
           <div className="text-muted-foreground truncate text-xs">{'GitHub Copilot · background rewrite'}</div>
         </div>
-        <Switch checked={profile.enabled} aria-label={profile.enabled ? 'Disable' : 'Enable'} onCheckedChange={(enabled) => void toggleProfile(profile, enabled)} />
+        <Switch checked={profile.enabled} aria-label={`${profile.enabled ? 'Disable' : 'Enable'} ${item}`} onCheckedChange={(enabled) => void toggleProfile(profile, enabled)} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="icon" variant="ghost" className="size-8" aria-label={'More'}>
+            <Button size="icon" variant="ghost" className="size-8" aria-label={`More actions for ${item}`}>
               <EllipsisVerticalIcon />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => openForm(profile)}>
+            <DropdownMenuItem aria-label={`Edit ${item}`} onSelect={() => openForm(profile)}>
               <Settings2Icon />
               {'Edit'}
             </DropdownMenuItem>
             {count > 1 ? (
               <>
-                <DropdownMenuItem disabled={index === 0} onSelect={() => void modelAction({ move: profile.id, to: index - 1 })}>
+                <DropdownMenuItem aria-label={`Move up ${item}`} disabled={index === 0} onSelect={() => void modelAction({ move: profile.id, to: index - 1 })}>
                   <ArrowUpIcon />
                   {'Move up'}
                 </DropdownMenuItem>
-                <DropdownMenuItem disabled={index === count - 1} onSelect={() => void modelAction({ move: profile.id, to: index + 1 })}>
+                <DropdownMenuItem aria-label={`Move down ${item}`} disabled={index === count - 1} onSelect={() => void modelAction({ move: profile.id, to: index + 1 })}>
                   <ArrowDownIcon />
                   {'Move down'}
                 </DropdownMenuItem>
               </>
             ) : null}
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onSelect={() => void modelAction({ remove: profile.id })}>
+            <DropdownMenuItem variant="destructive" aria-label={`Delete ${item}`} onSelect={() => void modelAction({ remove: profile.id })}>
               <Trash2Icon />
               {'Delete'}
             </DropdownMenuItem>
@@ -175,9 +176,9 @@ function ProfileCard({ profile, index, count }: { profile: ProfileView; index: n
       </div>
       <div className="flex items-center gap-2">
         <span className="text-muted-foreground w-12 shrink-0 text-xs">{'Model'}</span>
-        <Pick label={'Model'} value={profile.effectiveModel || undefined} placeholder={'Select a Copilot model'} options={options} onChange={(value) => void switchModel(profile, value)} className="h-8" />
+        <Pick label={`Model for ${item}`} value={profile.effectiveModel || undefined} placeholder={'Select a Copilot model'} options={options} onChange={(value) => void switchModel(profile, value)} className="h-8" />
       </div>
-      <Button size="sm" variant="outline" className="self-end" title={'GitHub Copilot · background rewrite'} onClick={() => void testProfile(profile.id)} disabled={testing}>
+      <Button size="sm" variant="outline" className="self-end" aria-label={`Test ${item}`} title={'GitHub Copilot · background rewrite'} onClick={() => void testProfile(profile.id)} disabled={testing}>
         {testing ? <Spinner /> : <PlugZapIcon />}
         {'Test'}
       </Button>
@@ -352,7 +353,7 @@ export function RulesSection() {
             <p className="text-muted-foreground text-sm">{'No rules yet. Example: "Always tell the agent to run pnpm test before finishing."'}</p>
           </Row>
         ) : null}
-        {shownRules.map((rule) => (
+        {shownRules.map((rule, index) => (
           <Row
             key={rule.id}
             className={cn(!rule.enabled && 'opacity-60')}
@@ -362,10 +363,10 @@ export function RulesSection() {
               <div className="flex items-center gap-1">
                 <Switch
                   checked={rule.enabled}
-                  aria-label={rule.enabled ? 'Disable' : 'Enable'}
+                  aria-label={`${rule.enabled ? 'Disable' : 'Enable'} ${itemLabel('rule', index, rule.text)}`}
                   onCheckedChange={(enabled) => saveRules((current) => ({ ...current, rules: current.rules.map((entry) => (entry.id === rule.id ? { ...entry, enabled } : entry)) }))}
                 />
-                <IconAction label={'Delete'} onClick={() => saveRules((current) => ({ ...current, rules: current.rules.filter((entry) => entry.id !== rule.id) }))}>
+                <IconAction label={`Delete ${itemLabel('rule', index, rule.text)}`} onClick={() => saveRules((current) => ({ ...current, rules: current.rules.filter((entry) => entry.id !== rule.id) }))}>
                   <Trash2Icon />
                 </IconAction>
               </div>
@@ -387,8 +388,9 @@ export function RulesSection() {
         }
       >
         {editing === 'new' ? <StructureForm onDone={() => setEditing(null)} /> : null}
-        {allStructures(config).map(({ structure, builtIn, edited }) => {
+        {allStructures(config).map(({ structure, builtIn, edited }, index) => {
           const name = structure.name
+          const item = itemLabel('structure', index, name)
           const sections = structure.sections
           if (editing === structure.id) return <StructureForm key={structure.id} id={structure.id} onDone={() => setEditing(null)} />
           return (
@@ -404,7 +406,7 @@ export function RulesSection() {
               control={
                 <div className="flex">
                   <IconAction
-                    label={'Edit'}
+                    label={`Edit ${item}`}
                     onClick={() => {
                       set(structureDraft, { name, sections: sections.join('\n') })
                       startEditing(structure.id)
@@ -414,12 +416,12 @@ export function RulesSection() {
                   </IconAction>
                   {builtIn ? (
                     edited ? (
-                      <IconAction label={'Restore the default'} onClick={() => removeStructure(structure.id)}>
+                      <IconAction label={`Restore the default for ${item}`} onClick={() => removeStructure(structure.id)}>
                         <RotateCcwIcon />
                       </IconAction>
                     ) : null
                   ) : (
-                    <IconAction label={'Delete'} onClick={() => removeStructure(structure.id)}>
+                    <IconAction label={`Delete ${item}`} onClick={() => removeStructure(structure.id)}>
                       <Trash2Icon />
                     </IconAction>
                   )}

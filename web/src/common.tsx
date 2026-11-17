@@ -76,7 +76,7 @@ export function IconAction({
           {children}
         </Button>
       </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
+      <TooltipContent className="max-w-[min(24rem,calc(100vw-24px))] [overflow-wrap:anywhere]">{label}</TooltipContent>
     </Tooltip>
   )
 }

@@ -14,11 +14,27 @@ Distribution/maintenance: #11 (manual/maintainer confirmation pending), #33 (run
 
 Efficiency: #12/#13/#15/#19/#20 shipped and closed. #14 saving implementation shipped (native-close/manual gate remains); #21 shipped and closed; #32 and #34 follow the usability fixes.
 
-Usability: #24 in verification, then #25, #26, #27.
+Usability: #24 shipped and closed; #25 in verification, then #26, #27.
 
 Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and concrete choices; do independent work while an answer is pending. Never consume the owner's Copilot credits or control desktop/browser UI.
 
 ## Current work
+
+### 0.12.24 — #25, item-specific action names
+
+Rules, structures and advanced profiles name their row in switches, menu actions, edit/delete/reset, model picks and tests. A current row number disambiguates duplicate or truncated names; previews cap at 96 Unicode code points and preserve saved content. Visible action words remain part of accessible names. Interaction primitives, target IDs and layout are unchanged. See [owner accessibility checks](../../item-action-accessibility.md).
+
+Rendered-name regression first failed on generic Disable, then passed for all repeated actions. Fixtures cover duplicated, empty and long profile labels, duplicate rules/structures, built-in resets and Unicode surrogate pairs. Menu content is exposed by a static fixture; real portal/focus/voice/screen-reader checks remain in #29, explicitly documented. Full rebuilt verification and independent review follow.
+
+Ruling: current row position is a readable disambiguator, not a persistent ID; it changes after reordering and filtering. Keep previews concise instead of reading a 500-character rule on every focus. Existing stored text remains untouched. No paid model calls, owner data mutation or UI automation.
+
+Independent review found long item names could overflow IconAction tooltips on narrow canvases. A rendered long-token tooltip regression failed before a viewport-bound max-width and anywhere wrapping fixed it; accessible names remain complete. No minor findings. One review/fix pass, then rebuilt full verification.
+
+Review rulings: actual tooltip positioning, zoom, menu portals, focus return, reorder/delete announcements, voice and screen-reader behavior remain owner gate #29. Code-point truncation can split a grapheme cluster; the documented contract preserves surrogate pairs, not all combining/ZWJ clusters. Single active edit-form Save/Cancel controls are outside repeated-row naming. The model picker's selected-value announcement remains existing Radix behavior. Executor separately verifies full tests/runtime/generated/CI/push/publication. No paid account calls or owner-data migration are involved.
+Final verification: typecheck, build, all 529 tests, package/diff checks and final disposable runtime archive fixture pass. SDK/CLI 1.0.106-8.unstable.r43566476370.g869eef3, Node24.22.1, Windows x64. Generated assets rebuilt; exact hosted CI and release evidence follow in #25 before closure. Manual accessibility remains #29.
+
+Previous release 0.12.23 / 251bab8 passed exact Verify 44063669439. Preview release and all three runtime archive assets were published; #24 is closed.
+
 
 ### 0.12.23 — #24, reliable History recovery
 

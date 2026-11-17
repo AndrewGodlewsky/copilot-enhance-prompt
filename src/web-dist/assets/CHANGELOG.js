@@ -1,5 +1,10 @@
 var e=`# Changes
 
+## [0.12.24] - 2026-11-17
+
+### Improved
+- Rule, structure and advanced model controls now identify the item they affect for screen readers and voice control. Duplicate and long names remain distinguishable without changing the layout or your saved content.
+
 ## [0.12.23] - 2026-11-17
 
 ### Improved

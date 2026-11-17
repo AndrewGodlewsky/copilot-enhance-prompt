@@ -21,6 +21,13 @@ import { type Catalog, type Run, type Target, catalogs, defaults, enabledProfile
  */
 export const SECTION_LABELS: Record<string, string> = { history: 'History', models: 'Models', rules: 'Rules', privacy: 'Settings' }
 
+/** Row position disambiguates duplicate names; previews never change the saved text. */
+export function itemLabel(kind: 'rule' | 'model profile' | 'structure', index: number, text: string): string {
+  const characters = Array.from(text.replace(/\s+/g, ' ').trim())
+  const preview = characters.slice(0, 96).join('') + (characters.length > 96 ? '…' : '')
+  return `${kind} ${index + 1}: ${preview || 'Untitled'}`
+}
+
 export function modelOptions(catalog: Catalog | undefined, current: string) {
   const options = (catalog?.models ?? []).map((model) => ({
     value: model.id,
