@@ -1,5 +1,10 @@
 var e=`# Changes
 
+## [0.12.29] - 2026-11-17
+
+### Verification
+- Added an owner-run desktop acceptance checklist covering installation, updates, drafts, model availability, sending and accessibility. It separates pending native/account checks from automated evidence; no app behavior changes.
+
 ## [0.12.28] - 2026-11-17
 
 ### Verification

@@ -167,6 +167,8 @@ The canvas uses an authenticated loopback server with origin and path checks. It
 
 The [v1 readiness audit](docs/audits/v1/README.md) records the original findings, architecture and scale measurements. Follow the [implementation ledger](docs/audits/v1/backlog-progress.md) for shipped fixes and remaining gates, the [concurrency and recovery evidence](docs/audits/v1/concurrency-scale.md), and the [actual Usage Insights consumer measurements](docs/audits/v1/usage-consumer.md) for current stress-test limits.
 
+Before stable v1, use the [owner desktop acceptance checklist](docs/desktop-acceptance.md) to record real install/update, account, draft, sending and accessibility results. Its native/account checks remain pending; automated fixtures do not replace them.
+
 For the prompt/context research, see the [measured findings](docs/research/prompt-evaluation-findings.md), [per-case results](docs/research/prompt-evaluation-results.md), and [opt-in evaluation runner](docs/research/prompt-evaluation-runner.md). The research harness uses synthetic inputs and separate, explicitly authorized subscription CLIs; it does not change the plugin's Copilot-only model integration. Normal tests make no account-backed inference calls.
 
 Install dependencies and rebuild the packaged extension and panel after changing source:

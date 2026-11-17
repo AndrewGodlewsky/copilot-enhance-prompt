@@ -12,13 +12,23 @@ Security and correctness: delivered; see versions below.
 
 Distribution/maintenance: #11 (manual/maintainer confirmation pending), #33 (runtime package prepared; stable channel/manual gates pending).
 
-Efficiency: #12/#13/#15/#19/#20/#21/#32 shipped and closed. #14 saving implementation shipped (native-close/manual gate remains); #34 actual consumer evidence is in final verification.
+Efficiency: #12/#13/#15/#19/#20/#21/#32 shipped and closed. #14 saving implementation shipped (native-close/manual gate remains); #34 actual consumer evidence is shipped and closed.
 
 Usability: #24/#25/#26/#27 shipped and closed.
 
 Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and concrete choices; do independent work while an answer is pending. Never consume the owner's Copilot credits or control desktop/browser UI.
 
 ## Current work
+
+### 0.12.29 — #29, owner desktop acceptance preparation
+
+Published a concise owner-run matrix with environment/result template, disposable/synthetic setup, allowance-marked steps and explicit expectations across installation/update/restart, catalog/managed policy, rewrite/send/cancel, attachments, saves/native close, History, rules, connection recovery, widths/zoom/text sizes, keyboard/AT, pause and usage. Every native/account row is pending; no owner installation is changed and no model is called. Historical audit results remain historical. See [desktop acceptance](../../desktop-acceptance.md).
+
+Ruling: headless fixtures and static ARIA checks cannot close native rendering, focus, close-flush, account policy or billing gates. Keep #29 open for observed owner results or explicitly approved unsupported scope. Do not manufacture destructive/network failures in the owner's profile, automatically claim v1, or infer authorization for paid steps. Full checks and final review follow for the documentation/package release.
+
+Final verification: typecheck, build, 541 final tests, package/diff checks and disposable runtime archive fixture pass. Independent review found no findings and verified 68 local Markdown targets. Thread limit required reusing an independent reviewer of an unrelated earlier issue; no author self-review or second review of this release. Review rulings: actual desktop install/rendering/focus/AT/clipboard/download/restart, live entitlements/policy, output/cancel latency/billing, pre-Saved native close, untested platforms and private-report delivery remain pending; no broader claim is made. External docs were not fetched by this reviewer. Exact hosted CI and publication follow, with #29 kept open.
+
+Previous release 0.12.28 / 2632134 passed exact Verify 44072230633; preview and three runtime archive assets were published and #34 is closed.
 
 ### 0.12.28 — #34, actual accounting consumer
 
