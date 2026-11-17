@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { UndoHistory } from './history-recovery'
 
 /**
  * The panel's notices (the shared `notice` atom) as toasts at the bottom: each one is shown once and
@@ -24,9 +25,11 @@ export function Notices() {
     // does one that says something went another way than asked (an error, a warning: why a prompt
     // was not sent by itself is three sentences).
     const action = current.action
-    show(current.text, {
+    const toastId = show(current.text, {
       duration: current.tone === 'danger' || current.tone === 'warning' || action ? 8000 : 4000,
-      ...(action ? { action: { label: action.label, onClick: () => void runNoticeAction(action.run) } } : {})
+      ...(action ? { action: action.run.kind === 'history.restore'
+        ? <UndoHistory {...action.run} onDone={() => toast.dismiss(toastId)} />
+        : { label: action.label, onClick: () => void runNoticeAction(action.run) } } : {})
     })
     set(notice, null)
   }, [current])

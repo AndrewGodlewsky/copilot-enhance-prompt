@@ -1,5 +1,12 @@
 # Changes
 
+## [0.12.23] - 2026-11-17
+
+### Improved
+- History now has a Recently deleted section with keyboard-accessible Undo for individual deletions for one minute.
+- Undo buttons expire at the actual recovery deadline, including after leaving the app in the background. Failed saves can be retried within that window.
+- Up to ten deletions can wait for recovery; further individual deletions ask you to Undo or wait instead of silently removing an earlier Undo opportunity.
+
 ## [0.12.22] - 2026-11-17
 
 ### Improved

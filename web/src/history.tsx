@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Pick } from './common'
 import './history.css'
+import { RecentlyDeleted } from './history-recovery'
 
 function Highlight({ text }: { text: string }) {
   return historyMatchParts(text, read(historyFilter)).map((part, index) => part.match
@@ -111,6 +112,7 @@ export function HistorySection() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <RecentlyDeleted />
       <div className="history-toolbar">
         <Button variant="outline" size="sm" className="history-project-toggle" aria-label={projectsExpanded ? 'Hide projects' : 'Show projects'} aria-expanded={projectsExpanded} aria-controls={projectsId} onClick={() => set(historyProjectsExpanded, !projectsExpanded)}>{projectsExpanded ? <PanelLeftCloseIcon /> : <PanelLeftOpenIcon />}Projects</Button>
         <div className="history-search"><SearchIcon className="size-4" aria-hidden="true" /><Input type="search" aria-label="Search original and enhanced prompts" placeholder="Search original and enhanced prompts" value={query} onChange={event => { set(historyFilter, event.target.value); resetPage() }} /></div>

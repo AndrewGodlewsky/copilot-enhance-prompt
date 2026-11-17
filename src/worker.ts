@@ -13,6 +13,7 @@ import { forgetTerminals, learnTerminal, loadTerminals } from './context/termina
 import { imagesBlock, withImagePaths } from './images.ts'
 import { cleanAttachments, clearAttachments, loadFiles, putChunk, restoreAttachments } from './attachments.ts'
 import { attachmentItemId } from './image-limits.ts'
+import { randomUUID } from 'node:crypto'
 import { parseRulesConfig, RULES_KEY, rulesFor, rulesToJson, structureById, type RulesConfig, type RuleWhere } from './rules.ts'
 import { capHistory, HISTORY_KEY, parseHistory, toJson, trimForHistory, type HistoryEntry } from './history.ts'
 import {
@@ -165,7 +166,7 @@ async function blockedAgent(host: EnhanceWorker, terminalId: string): Promise<st
 /** Entries removed a moment ago, for Undo: in memory only, a few of them, for a short while. */
 const UNDO_MS = 60_000
 const UNDO_KEPT = 10
-const removedEntries = new Map<string, { entry: HistoryEntry; until: number }>()
+const UNDO_EPOCH_KEY = 'history.undoEpoch'
 
 async function addHistory(host: EnhanceWorker, settings: Settings, entry: Omit<HistoryEntry, 'id' | 'at'>): Promise<void> {
   if (settings.historyLimit <= 0 || !settings.privacy.saveHistory) return
@@ -855,6 +856,22 @@ function registerModelHandlers(host: EnhanceWorker): void {
 
 /** The panel's Settings section: what is stored, and wiping it. Also the Rules tab's rules and structures. */
 function registerDataHandlers(host: EnhanceWorker): void {
+  const removedEntries = new Map<string, { entry: HistoryEntry; until: number; epoch: string | null }>()
+  const recoveryEpoch = async () => {
+    const value = await host.storage.get(UNDO_EPOCH_KEY)
+    return typeof value === 'string' ? value : null
+  }
+  const pruneRemoved = (epoch: string | null) => {
+    for (const [id, kept] of removedEntries) if (kept.until <= Date.now() || kept.epoch !== epoch) removedEntries.delete(id)
+  }
+  const clearSavedHistory = () => historyChange(host, async () => {
+    // Production storage patches both atomically. Older adapters invalidate first,
+    // so a failed Clear cannot resurrect an entry from another worker.
+    const epoch = randomUUID()
+    if (host.storage.patch) await host.storage.patch({ [UNDO_EPOCH_KEY]: epoch, [HISTORY_KEY]: undefined })
+    else { await host.storage.set(UNDO_EPOCH_KEY, epoch); await host.storage.delete(HISTORY_KEY) }
+    removedEntries.clear()
+  })
   // Saves land in the order they were asked for; the panel sends the whole list each time.
   let rulesQueue: Promise<unknown> = Promise.resolve()
   host.panels.handle('rules.get', async () => parseRulesConfig(await host.storage.get(RULES_KEY)))
@@ -868,43 +885,56 @@ function registerDataHandlers(host: EnhanceWorker): void {
 
   // History edits from the panel go through the same queue as new entries, so none is lost.
   host.panels.handle('history.remove', async ({ id }) => {
+    let undo: { id: string; expiresAt: number } | undefined
     await historyChange(host, async () => {
       const list = parseHistory(await host.storage.get(HISTORY_KEY))
       const gone = list.find((entry) => entry.id === id)
       if (!gone) return
+      const epoch = await recoveryEpoch()
+      pruneRemoved(epoch)
+      if (removedEntries.size >= UNDO_KEPT) throw new Error('Ten deleted prompts are still recoverable. Undo one or wait for its one-minute window before deleting another.')
       await host.storage.set(HISTORY_KEY, list.filter((entry) => entry.id !== id).map(toJson))
       // Kept in memory for a while, so that Undo can bring it back (history.restore).
-      removedEntries.set(id, { entry: gone, until: Date.now() + UNDO_MS })
-      for (const [key, kept] of removedEntries) if (kept.until < Date.now() || removedEntries.size > UNDO_KEPT) removedEntries.delete(key)
+      removedEntries.set(id, { entry: gone, until: Date.now() + UNDO_MS, epoch })
+      undo = { id, expiresAt: removedEntries.get(id)!.until }
     })
-    return { ok: true as const }
+    return { ok: true as const, ...(undo ? { undo } : {}) }
   })
+
+  host.panels.handle('history.removed', async () => historyChange(host, async () => {
+    pruneRemoved(await recoveryEpoch())
+    return { entries: [...removedEntries].reverse().map(([id, kept]) => ({ id, label: kept.entry.original.replace(/\s+/g, ' ').slice(0, 120), expiresAt: kept.until })) }
+  }))
 
   // Undo of a removal: only an entry this worker removed a moment ago, by its id. The panel sends no
   // entry, so nothing but what was in the history can come back into it.
   host.panels.handle('history.restore', async ({ id }) => {
-    const kept = removedEntries.get(typeof id === 'string' ? id : '')
-    removedEntries.delete(typeof id === 'string' ? id : '')
-    const settings = await readSettings(host)
-    if (!kept || kept.until < Date.now() || settings.historyLimit <= 0 || !settings.privacy.saveHistory) return { restored: false }
     let restored = false
     await historyChange(host, async () => {
       const list = parseHistory(await host.storage.get(HISTORY_KEY))
+      const epoch = await recoveryEpoch()
+      const settings = await readSettings(host)
+      pruneRemoved(epoch)
+      const kept = removedEntries.get(id)
+      if (!kept || settings.historyLimit <= 0 || !settings.privacy.saveHistory) return
       if (list.some((entry) => entry.id === kept.entry.id)) {
+        removedEntries.delete(id)
         restored = true
         return
       }
       const next = capHistory([...list, kept.entry].sort((a, b) => b.at - a.at), settings.historyLimit)
       // A history that filled up meanwhile has no room for an older entry: say so, do not claim it is back.
       restored = next.some((entry) => entry.id === kept.entry.id)
-      if (restored) await host.storage.set(HISTORY_KEY, next.map(toJson))
+      if (restored) {
+        await host.storage.set(HISTORY_KEY, next.map(toJson))
+        removedEntries.delete(id)
+      }
     })
     return { restored }
   })
 
   host.panels.handle('history.clear', async () => {
-    removedEntries.clear()
-    await historyChange(host, () => host.storage.delete(HISTORY_KEY))
+    await clearSavedHistory()
     return { ok: true as const }
   })
 
@@ -928,8 +958,7 @@ function registerDataHandlers(host: EnhanceWorker): void {
   host.panels.handle('data.clear', async ({ what }) => {
     const keys = await host.storage.keys()
     if (what === 'history' || what === 'all') {
-      removedEntries.clear()
-      await historyChange(host, () => host.storage.delete(HISTORY_KEY))
+      await clearSavedHistory()
     }
     if (what === 'catalogs' || what === 'all') {
       for (const key of keys.filter((entry) => entry.startsWith('catalog:'))) await host.storage.delete(key)

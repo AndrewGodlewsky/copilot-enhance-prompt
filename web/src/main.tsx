@@ -131,7 +131,7 @@ async function start(): Promise<void> {
     const entry = query.get('entry')
     if (entry) set(historyOpen, entry)
     if (query.get('toast') === 'undo') {
-      setTimeout(() => set(notice, { tone: 'neutral', text: 'Removed from the history.', action: { label: 'Undo', run: { kind: 'history.restore', id: 'none' } } }), 600)
+      setTimeout(() => set(notice, { tone: 'neutral', text: 'Removed from the history.', action: { label: 'Undo', run: { kind: 'history.restore', id: 'none', expiresAt: Date.now() + 60_000 } } }), 600)
     }
     // ?toast=blocked: what Send says for an agent that is waiting for an answer, once the demo's result is there.
     if (query.get('toast') === 'blocked') {

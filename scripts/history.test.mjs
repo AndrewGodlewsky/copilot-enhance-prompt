@@ -11,6 +11,8 @@ test('History library expands saved text inline, with accessible project and pro
         import React from 'react'
         import { renderToStaticMarkup } from 'react-dom/server'
         import { HistorySection, HistoryReader } from './src/history.tsx'
+        import { UndoHistory, RecentlyDeleted } from './src/history-recovery.tsx'
+        import { removedHistory } from '../src/panel/history-recovery.ts'
         import { set } from '../src/runtime.ts'
         import { historyRaw, historyScope, historyFilter, historyOpen, historyPageNumber, historyOrder, historyProjectsExpanded, projectName } from '../src/panel/state.ts'
         export const render = (entries, query = '', scope = 'all', selected = null, projectsExpanded = true) => {
@@ -21,6 +23,8 @@ test('History library expands saved text inline, with accessible project and pro
           return renderToStaticMarkup(React.createElement(HistorySection))
         }
         export const reader = (entry, text) => renderToStaticMarkup(React.createElement(HistoryReader, {entry, text, onTextChange: () => {}}))
+        export const undo = expiresAt => { set(removedHistory, [{ id: 'one', label: 'One', expiresAt }]); return renderToStaticMarkup(React.createElement(UndoHistory, { id: 'one', expiresAt })) }
+        export const deleted = entries => { set(removedHistory, entries); return renderToStaticMarkup(React.createElement(RecentlyDeleted)) }
       `,
       resolveDir: fileURLToPath(new URL('../web/', import.meta.url))
     },
@@ -66,4 +70,11 @@ test('History library expands saved text inline, with accessible project and pro
   assert.match(module.exports.reader(entry, 'original'), /résumé.ts/)
   assert.match(module.exports.render([entry], 'missing'), /No matching prompts/)
   assert.match(module.exports.render([]), /No history yet/)
+  assert.match(module.exports.undo(Date.now() - 1), /disabled=""[^>]*aria-label="Undo expired"/)
+  assert.doesNotMatch(module.exports.undo(Date.now() + 60_000), / disabled=""/)
+  const deleted = module.exports.deleted([{ id: 'one', label: 'Review <unsafe>', expiresAt: Date.now() + 60_000 }])
+  assert.match(deleted, /<summary[^>]*>Recently deleted/)
+  assert.match(deleted, /<button[^>]*aria-label="Undo deletion of Review &lt;unsafe&gt;"/)
+  assert.match(deleted, /one minute/)
+  assert.doesNotMatch(deleted, /<unsafe>/)
 })

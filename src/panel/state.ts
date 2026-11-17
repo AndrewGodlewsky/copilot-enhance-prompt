@@ -14,7 +14,7 @@ import { type AttemptView, type ModelsView, type ProfileInput } from '../protoco
 /** `title` and `state` are an agent's own (working, blocked, waiting, done): view.ts words the label from them. */
 export type Target = { terminalId: string; label: string; agent: string | null; title?: string; state?: string }
 /** What a notice's button does, as plain data: actions.ts runs it (`runNoticeAction`), the web UI only draws the button. */
-export type NoticeAction = { kind: 'history.restore'; id: string } | { kind: 'composer.restore' } | { kind: 'send.anyway'; terminalId: string; text: string }
+export type NoticeAction = { kind: 'history.restore'; id: string; expiresAt: number } | { kind: 'composer.restore' } | { kind: 'send.anyway'; terminalId: string; text: string }
 export type Notice = { tone: 'success' | 'danger' | 'warning' | 'neutral'; text: string; action?: { label: string; run: NoticeAction } } | null
 export type Defaults = {
   style: string

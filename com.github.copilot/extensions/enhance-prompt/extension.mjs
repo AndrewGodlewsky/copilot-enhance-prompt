@@ -4006,6 +4006,9 @@ async function loadFiles(paths, owner2) {
   return out;
 }
 
+// src/worker.ts
+import { randomUUID as randomUUID2 } from "node:crypto";
+
 // src/project-identity.ts
 var MAX_PROJECT_IDENTITY = 32768;
 
@@ -4751,7 +4754,7 @@ async function blockedAgent(host, terminalId) {
 }
 var UNDO_MS = 6e4;
 var UNDO_KEPT = 10;
-var removedEntries = /* @__PURE__ */ new Map();
+var UNDO_EPOCH_KEY = "history.undoEpoch";
 async function addHistory(host, settings, entry) {
   if (settings.historyLimit <= 0 || !settings.privacy.saveHistory) return;
   await historyChange(host, async () => {
@@ -5303,6 +5306,23 @@ function registerModelHandlers(host) {
   });
 }
 function registerDataHandlers(host) {
+  const removedEntries = /* @__PURE__ */ new Map();
+  const recoveryEpoch = async () => {
+    const value = await host.storage.get(UNDO_EPOCH_KEY);
+    return typeof value === "string" ? value : null;
+  };
+  const pruneRemoved = (epoch) => {
+    for (const [id2, kept] of removedEntries) if (kept.until <= Date.now() || kept.epoch !== epoch) removedEntries.delete(id2);
+  };
+  const clearSavedHistory = () => historyChange(host, async () => {
+    const epoch = randomUUID2();
+    if (host.storage.patch) await host.storage.patch({ [UNDO_EPOCH_KEY]: epoch, [HISTORY_KEY]: void 0 });
+    else {
+      await host.storage.set(UNDO_EPOCH_KEY, epoch);
+      await host.storage.delete(HISTORY_KEY);
+    }
+    removedEntries.clear();
+  });
   let rulesQueue = Promise.resolve();
   host.panels.handle("rules.get", async () => parseRulesConfig(await host.storage.get(RULES_KEY)));
   host.panels.handle("rules.save", async ({ config }) => {
@@ -5313,37 +5333,49 @@ function registerDataHandlers(host) {
     return clean;
   });
   host.panels.handle("history.remove", async ({ id: id2 }) => {
+    let undo;
     await historyChange(host, async () => {
       const list = parseHistory(await host.storage.get(HISTORY_KEY));
       const gone = list.find((entry) => entry.id === id2);
       if (!gone) return;
+      const epoch = await recoveryEpoch();
+      pruneRemoved(epoch);
+      if (removedEntries.size >= UNDO_KEPT) throw new Error("Ten deleted prompts are still recoverable. Undo one or wait for its one-minute window before deleting another.");
       await host.storage.set(HISTORY_KEY, list.filter((entry) => entry.id !== id2).map(toJson));
-      removedEntries.set(id2, { entry: gone, until: Date.now() + UNDO_MS });
-      for (const [key, kept] of removedEntries) if (kept.until < Date.now() || removedEntries.size > UNDO_KEPT) removedEntries.delete(key);
+      removedEntries.set(id2, { entry: gone, until: Date.now() + UNDO_MS, epoch });
+      undo = { id: id2, expiresAt: removedEntries.get(id2).until };
     });
-    return { ok: true };
+    return { ok: true, ...undo ? { undo } : {} };
   });
+  host.panels.handle("history.removed", async () => historyChange(host, async () => {
+    pruneRemoved(await recoveryEpoch());
+    return { entries: [...removedEntries].reverse().map(([id2, kept]) => ({ id: id2, label: kept.entry.original.replace(/\s+/g, " ").slice(0, 120), expiresAt: kept.until })) };
+  }));
   host.panels.handle("history.restore", async ({ id: id2 }) => {
-    const kept = removedEntries.get(typeof id2 === "string" ? id2 : "");
-    removedEntries.delete(typeof id2 === "string" ? id2 : "");
-    const settings = await readSettings(host);
-    if (!kept || kept.until < Date.now() || settings.historyLimit <= 0 || !settings.privacy.saveHistory) return { restored: false };
     let restored = false;
     await historyChange(host, async () => {
       const list = parseHistory(await host.storage.get(HISTORY_KEY));
+      const epoch = await recoveryEpoch();
+      const settings = await readSettings(host);
+      pruneRemoved(epoch);
+      const kept = removedEntries.get(id2);
+      if (!kept || settings.historyLimit <= 0 || !settings.privacy.saveHistory) return;
       if (list.some((entry) => entry.id === kept.entry.id)) {
+        removedEntries.delete(id2);
         restored = true;
         return;
       }
       const next = capHistory([...list, kept.entry].sort((a, b) => b.at - a.at), settings.historyLimit);
       restored = next.some((entry) => entry.id === kept.entry.id);
-      if (restored) await host.storage.set(HISTORY_KEY, next.map(toJson));
+      if (restored) {
+        await host.storage.set(HISTORY_KEY, next.map(toJson));
+        removedEntries.delete(id2);
+      }
     });
     return { restored };
   });
   host.panels.handle("history.clear", async () => {
-    removedEntries.clear();
-    await historyChange(host, () => host.storage.delete(HISTORY_KEY));
+    await clearSavedHistory();
     return { ok: true };
   });
   host.panels.handle("data.summary", async () => {
@@ -5363,8 +5395,7 @@ function registerDataHandlers(host) {
   host.panels.handle("data.clear", async ({ what }) => {
     const keys = await host.storage.keys();
     if (what === "history" || what === "all") {
-      removedEntries.clear();
-      await historyChange(host, () => host.storage.delete(HISTORY_KEY));
+      await clearSavedHistory();
     }
     if (what === "catalogs" || what === "all") {
       for (const key of keys.filter((entry) => entry.startsWith("catalog:"))) await host.storage.delete(key);
@@ -5458,7 +5489,7 @@ var import_proper_lockfile2 = __toESM(require_proper_lockfile(), 1);
 import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdir as mkdir2, readFile, rename as rename2, writeFile } from "node:fs/promises";
 import { join as join3, resolve as resolve3 } from "node:path";
-import { randomUUID as randomUUID2 } from "node:crypto";
+import { randomUUID as randomUUID3 } from "node:crypto";
 
 // src/copilot/store-observer.ts
 import { watchFile, unwatchFile } from "node:fs";
@@ -5574,7 +5605,7 @@ function persistentStore(directory2, name = "state.json") {
       if (value === void 0) delete data[key];
       else data[key] = value;
     }
-    const temporary = `${file}.${randomUUID2()}.tmp`;
+    const temporary = `${file}.${randomUUID3()}.tmp`;
     await writeFile(temporary, JSON.stringify(data), { encoding: "utf8", mode: 384 });
     for (let attempt = 0; ; attempt++) {
       try {
@@ -5824,7 +5855,7 @@ function installationReader(session2, packageRoot2, name = "enhance-prompt") {
 }
 
 // src/updates/service.ts
-import { randomUUID as randomUUID3 } from "node:crypto";
+import { randomUUID as randomUUID4 } from "node:crypto";
 
 // src/updates/process-owner.ts
 import { execFile as execFile2 } from "node:child_process";
@@ -5977,7 +6008,7 @@ function createUpdates(options) {
     const previous = await get();
     const installation = await inspect2();
     await reconcile(installation);
-    const id2 = randomUUID3();
+    const id2 = randomUUID4();
     const reserved = await mutate(async (state2) => {
       const changedSource = previous.scope !== void 0 && previous.scope !== installation.scope;
       const sharedResult = !changedSource && state2.completedCheck !== previous.completedCheck || state2.checkedAt !== void 0 && now() - state2.checkedAt < 5e3;
@@ -6049,7 +6080,7 @@ function createUpdates(options) {
     if (!installation.canUpdate || !installation.target || !installation.source) throw new UpdateError(installation.reason ?? "Updating is unavailable for this installation.");
     if (compareVersions(installation.installed, options.running) === -1) throw new UpdateError("The installed version is older than this canvas. Review the installation in Copilot before updating.");
     const available = await deadline(options.metadata(installation), 6e4);
-    const pending = { id: randomUUID3(), ...await own2(), started: now(), version: available.version };
+    const pending = { id: randomUUID4(), ...await own2(), started: now(), version: available.version };
     const reserved = await mutate(async (state2) => {
       if (state2.pending) return false;
       if (state2.scope !== installation.scope) throw new UpdateError("The installation source changed. Check for updates again.");
@@ -6101,7 +6132,7 @@ function createUpdates(options) {
       return state();
     },
     async withWork(run2) {
-      const id2 = randomUUID3();
+      const id2 = randomUUID4();
       const owner2 = await own2();
       await mutate(async (state2) => {
         if (state2.pending) throw new UpdateError("An update is in progress. Wait for verification before starting more plugin work.");
@@ -6133,7 +6164,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.22";
+var VERSION = "0.12.23";
 
 // src/worker-host.ts
 import { EventEmitter } from "node:events";
@@ -6654,7 +6685,7 @@ async function registerSessionUse(root, scope) {
 }
 
 // src/copilot/retained-data.ts
-import { createHash as createHash3, randomUUID as randomUUID4 } from "node:crypto";
+import { createHash as createHash3, randomUUID as randomUUID5 } from "node:crypto";
 import { lstat as lstat4, opendir, realpath as realpath8 } from "node:fs/promises";
 import { join as join8, relative as relative4, sep as sep3 } from "node:path";
 
@@ -6875,7 +6906,7 @@ function createRetainedData(root, currentScope, options = {}) {
       await scan(root, view2.other, (path) => path === "data/state.json" || path === "preferences/state.json" || /^data\/sessions\/[a-f0-9]{24}\.json$/.test(path) || ["usage/session-state", "usage/recovery"].includes(path));
       ensureOpen(signal);
       if (candidates2.length) {
-        const token = randomUUID4(), expiresAt = now() + 5 * 6e4;
+        const token = randomUUID5(), expiresAt = now() + 5 * 6e4;
         plans.set(owner2, { token, expiresAt, candidates: candidates2 });
         view2.cleanup = { token, expiresAt, count: candidates2.length, bytes: candidates2.reduce((sum, item2) => sum + item2.removableBytes, 0), sessions: candidates2.map(({ id: id2, updatedAt, bytes }) => ({ id: id2, updatedAt, bytes })) };
       }
@@ -7382,10 +7413,10 @@ async function createCanvasServer(options) {
 import { mkdtemp, mkdir as mkdir6, realpath as realpath12, rm as rm2 } from "node:fs/promises";
 import { basename as basename6, isAbsolute as isAbsolute5, join as join12, relative as relative6 } from "node:path";
 import { tmpdir as tmpdir3 } from "node:os";
-import { randomUUID as randomUUID7 } from "node:crypto";
+import { randomUUID as randomUUID8 } from "node:crypto";
 
 // src/copilot/usage.ts
-import { randomUUID as randomUUID6 } from "node:crypto";
+import { randomUUID as randomUUID7 } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { homedir as homedir2 } from "node:os";
 import { lstat as lstat6, mkdir as mkdir5, open as open4, realpath as realpath11, rename as rename4, writeFile as writeFile3 } from "node:fs/promises";
@@ -7394,7 +7425,7 @@ import { StringDecoder } from "node:string_decoder";
 
 // src/copilot/usage-recovery.ts
 var import_proper_lockfile3 = __toESM(require_proper_lockfile(), 1);
-import { randomUUID as randomUUID5 } from "node:crypto";
+import { randomUUID as randomUUID6 } from "node:crypto";
 import { lstat as lstat5, mkdir as mkdir4, open as open3, readdir as readdir4, realpath as realpath10, rename as rename3, rm, rmdir as rmdir2, unlink as unlink2, writeFile as writeFile2 } from "node:fs/promises";
 import { basename as basename5, isAbsolute as isAbsolute4, join as join10, relative as relative5, resolve as resolve4 } from "node:path";
 import { tmpdir as tmpdir2 } from "node:os";
@@ -7407,7 +7438,7 @@ var within = (root, path) => {
 };
 var missing = (error) => error.code === "ENOENT";
 async function save2(file, value) {
-  const temporary = `${file}.${randomUUID5()}.tmp`;
+  const temporary = `${file}.${randomUUID6()}.tmp`;
   await writeFile2(temporary, JSON.stringify(value), { mode: 384 });
   await rename3(temporary, file);
 }
@@ -7458,7 +7489,7 @@ async function cleanup(record) {
 }
 async function registerUsageJournal(root, sessionId, directory2) {
   if (!uuid.test(sessionId)) throw generic();
-  const record = { sessionId, ...await identity(await realpath10(directory2)), token: randomUUID5() };
+  const record = { sessionId, ...await identity(await realpath10(directory2)), token: randomUUID6() };
   const registry = join10(root, "recovery"), file = join10(registry, `${sessionId}.json`);
   await mkdir4(registry, { recursive: true, mode: 448 });
   await writeFile2(join10(record.directory, ownerFile), JSON.stringify({ token: record.token, sessionId, state: "running" }), { flag: "wx", mode: 384 });
@@ -7685,7 +7716,7 @@ async function reconcileUsageJournal(path, recorder) {
   if (unreadable) throw new Error("Unable to read usage accounting journal.");
 }
 async function replace(file, content) {
-  const temporary = `${file}.${randomUUID6()}.tmp`;
+  const temporary = `${file}.${randomUUID7()}.tmp`;
   await writeFile3(temporary, content, { encoding: "utf8", mode: 384 });
   await rename4(temporary, file);
 }
@@ -7698,7 +7729,7 @@ async function createUsageRecorder(sessionId, root = usageHome(), options = {}) 
   const file = join11(directory2, "events.jsonl");
   const started = (/* @__PURE__ */ new Date()).toISOString();
   await mkdir5(join11(root, "session-state"), { recursive: true, mode: 448 });
-  let lines = JSON.stringify({ type: "session.start", id: randomUUID6(), timestamp: started, data: { sessionId, context: { repository: "Enhanced Prompt" } } }) + "\n";
+  let lines = JSON.stringify({ type: "session.start", id: randomUUID7(), timestamp: started, data: { sessionId, context: { repository: "Enhanced Prompt" } } }) + "\n";
   const seen = /* @__PURE__ */ new Set();
   const keyOf = (receipt2) => {
     const accounting = object(object(object(receipt2.data)?.usage)?.accounting);
@@ -7898,7 +7929,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
     let directory2;
     let stop2;
     let usage;
-    const sessionId = randomUUID7();
+    const sessionId = randomUUID8();
     const stopClient = () => {
       if (client) stop2 ??= withDeadline(client.forceStop(), 1e4).then(() => true, () => false);
       return stop2;

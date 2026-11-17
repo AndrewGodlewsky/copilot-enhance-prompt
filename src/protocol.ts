@@ -127,7 +127,9 @@ export interface PluginRequests {
       }
     }
     /** Deletes one history entry (in order with new entries being saved). */
-    'history.remove': { input: { id: string }; output: { ok: true } }
+    'history.remove': { input: { id: string }; output: { ok: true; undo?: { id: string; expiresAt: number } } }
+    /** In-memory recovery metadata owned by this worker. Never accepts replacement entry data. */
+    'history.removed': { output: { entries: { id: string; label: string; expiresAt: number }[] } }
     /** Deletes the whole history (in order with new entries being saved). */
     'history.clear': { output: { ok: true } }
     /** Undo of history.remove: brings back the entry of that id, if this worker removed it a moment ago. */

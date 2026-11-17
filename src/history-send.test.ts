@@ -9,6 +9,7 @@ import { mountPanel } from './panel/testing.ts'
 import { targetLabel } from './panel/view.ts'
 import { msg, withMessage } from './messages.ts'
 import type { HistoryEntry } from './history.ts'
+import { refreshRemovedHistory, removedHistory } from './panel/history-recovery.ts'
 
 const models = { profiles: [], selectorProfileId: null }
 const answer = (enhanced: string) => ({ enhanced, model: 'm', profileName: 'P', ms: 900, attempts: [], context: [], notes: [] })
@@ -99,6 +100,7 @@ test('an agent waiting for an answer is not typed into unasked: the notice offer
 
 test('a history entry removed by mistake comes back with Undo', async () => {
   const asked: string[] = []
+  const expiresAt = Date.now() + 60_000
   const host = mockHost({
     storage: { history: [entry('h1', 'one'), entry('h2', 'two')] },
     requests: {
@@ -106,7 +108,7 @@ test('a history entry removed by mistake comes back with Undo', async () => {
       'targets.list': { targets: [] },
       'history.remove': (input) => {
         asked.push(`remove ${input.id}`)
-        return { ok: true as const }
+        return { ok: true as const, undo: { id: input.id, expiresAt } }
       },
       'history.restore': (input) => {
         asked.push(`restore ${input.id}`)
@@ -119,14 +121,34 @@ test('a history entry removed by mistake comes back with Undo', async () => {
   await removeEntry('h1')
   assert.equal(read(historyOpen), null)
   const undo = read(notice)?.action
-  assert.deepEqual(undo?.run, { kind: 'history.restore', id: 'h1' })
+  assert.deepEqual(undo?.run, { kind: 'history.restore', id: 'h1', expiresAt })
   await runNoticeAction(undo!.run)
   assert.deepEqual(asked, ['remove h1', 'restore h1'])
   assert.equal(read(notice)?.tone, 'success')
   // Too late (the worker keeps a removed entry for a minute only): it says so.
-  await runNoticeAction({ kind: 'history.restore', id: 'h9' })
+  await runNoticeAction({ kind: 'history.restore', id: 'h9', expiresAt: Date.now() - 1 })
   assert.equal(read(notice)?.tone, 'warning')
+  assert.match(read(notice)!.text, /expired/)
+  assert.deepEqual(asked, ['remove h1', 'restore h1'], 'an expired action does not even request a restore')
   assert.deepEqual(view.errors, [])
+  await view.unmount()
+})
+
+test('recovery refreshes coalesce a burst and discard the older in-flight snapshot', async () => {
+  let release!: (value: { entries: { id: string; label: string; expiresAt: number }[] }) => void
+  let calls = 0
+  const host = mockHost({ requests: {
+    'models.get': models,
+    'targets.list': { targets: [] },
+    'history.removed': async () => ++calls === 1 ? new Promise(resolve => { release = resolve }) : { entries: [] }
+  } })
+  const view = await mountPanel(host)
+  const first = refreshRemovedHistory()
+  const burst = Array.from({ length: 20 }, () => refreshRemovedHistory())
+  release({ entries: [{ id: 'stale', label: 'Deleted before Clear', expiresAt: Date.now() + 60_000 }] })
+  await Promise.all([first, ...burst])
+  assert.equal(calls, 2)
+  assert.deepEqual(read(removedHistory), [])
   await view.unmount()
 })
 

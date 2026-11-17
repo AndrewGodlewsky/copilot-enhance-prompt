@@ -24,6 +24,8 @@ import { diagnosticError } from '../diagnostics.ts'
 import { chatTextSize } from './appearance.ts'
 import { isChatTextSize } from '../text-size.ts'
 import { pendingUploads, resetUploads, uploadBlockReason, uploadRevision } from './uploads.ts'
+import { isExpired } from './expiry.ts'
+import { refreshRemovedHistory } from './history-recovery.ts'
 
 let inFlight: AbortController | null = null
 /** The enhance-and-send in flight (enhanceAndSend), so that Cancel and a closing panel stop its send too. */
@@ -597,8 +599,14 @@ export async function runNoticeAction(action: NoticeAction): Promise<void> {
   if (action.kind === 'composer.restore') restoreComposer()
   else if (action.kind === 'send.anyway') await sendTo(action.terminalId, action.text, true)
   else {
+    if (isExpired(action.expiresAt)) {
+      set(notice, { tone: 'warning', text: 'The one-minute Undo window has expired. This prompt can no longer be restored.' })
+      await refreshRemovedHistory()
+      return
+    }
     const answer = await plugin.request('history.restore', { id: action.id }).catch(() => ({ restored: false }))
-    set(notice, answer.restored ? { tone: 'success', text: 'Back in the history.' } : { tone: 'warning', text: 'It could not be brought back.' })
+    set(notice, answer.restored ? { tone: 'success', text: 'Back in the history.' } : { tone: 'warning', text: 'Could not restore this prompt. Its recovery window may have ended, or history saving is off or full. Check History and Settings before retrying.' })
+    await refreshRemovedHistory()
   }
 }
 
@@ -685,10 +693,11 @@ export function reuse(entry: HistoryEntry): void {
 /** History changes go through the worker, in order with the entries it is saving. */
 export async function removeEntry(id: string): Promise<void> {
   try {
-    await plugin.request('history.remove', { id })
+    const { undo } = await plugin.request('history.remove', { id })
     if (read(historyOpen) === id) set(historyOpen, null)
     // Delete sits next to Copy: one press too many is put right with Undo (the worker keeps the entry for a minute).
-    set(notice, { tone: 'neutral', text: 'Removed from the history.', action: { label: 'Undo', run: { kind: 'history.restore', id } } })
+    set(notice, { tone: 'neutral', text: undo ? 'Removed from history. Undo is available for one minute in Recently deleted.' : 'This prompt is no longer in history.', ...(undo ? { action: { label: 'Undo', run: { kind: 'history.restore' as const, ...undo } } } : {}) })
+    await refreshRemovedHistory()
   } catch (error) {
     set(notice, { tone: 'danger', text: message(error) })
   }
@@ -698,6 +707,7 @@ export async function clearHistory(): Promise<void> {
   set(confirmClearHistory, false)
   try {
     await plugin.request('history.clear')
+    await refreshRemovedHistory()
   } catch (error) {
     set(notice, { tone: 'danger', text: message(error) })
   }
@@ -842,7 +852,7 @@ export async function refreshDataSummary(): Promise<void> {
 export async function clearData(what: 'history' | 'catalogs' | 'all'): Promise<void> {
   try {
     await plugin.request('data.clear', { what })
-    if (what === 'history' || what === 'all') set(historyRaw, [])
+    if (what === 'history' || what === 'all') { set(historyRaw, []); await refreshRemovedHistory() }
     if (what === 'catalogs' || what === 'all') set(catalogs, {})
     if (what === 'all') {
       set(consents, [])

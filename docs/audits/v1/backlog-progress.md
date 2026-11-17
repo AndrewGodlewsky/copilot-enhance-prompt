@@ -12,13 +12,31 @@ Security and correctness: delivered; see versions below.
 
 Distribution/maintenance: #11 (manual/maintainer confirmation pending), #33 (runtime package prepared; stable channel/manual gates pending).
 
-Efficiency: #12/#13/#15/#19/#20 shipped and closed. #14 saving implementation shipped (native-close/manual gate remains); #21 in verification, then #32, #34.
+Efficiency: #12/#13/#15/#19/#20 shipped and closed. #14 saving implementation shipped (native-close/manual gate remains); #21 shipped and closed; #32 and #34 follow the usability fixes.
 
-Usability: #24, #25, #26, #27.
+Usability: #24 in verification, then #25, #26, #27.
 
 Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and concrete choices; do independent work while an answer is pending. Never consume the owner's Copilot credits or control desktop/browser UI.
 
 ## Current work
+
+### 0.12.23 — #24, reliable History recovery
+
+History exposes Recently deleted with worker-owned one-minute Undo metadata. Buttons use the absolute backend deadline, including resume from a hidden document, and click-time checks reject expired actions. Deletion/restore/recovery lists and Clear share the existing transaction queue. Failed writes keep the record; simultaneous restore succeeds once; capacity/privacy are rechecked. Up to ten waiting entries are preserved without silent eviction; an eleventh individual deletion waits rather than breaking an existing promise. Recovery remains in memory and accepts no client-supplied entry data. See [recovery behavior](../../history-recovery.md).
+
+Tests first reproduced missing deadlines, cross-worker access, lost failed-write recovery and silently evicted entries. Panel tests first reproduced a missing deadline and now reject expired actions without a backend request. Hidden/resumed clock tests, static keyboard-accessible markup, capacity/privacy and concurrent restore fixtures cover the new behavior. Full rebuilt verification and independent review follow before publication.
+
+Ruling: keep the existing one-minute, ten-entry memory bounds. Refusing an eleventh individual deletion is safer than silently invalidating an earlier Undo. Clear history and worker restart end recovery; this is not durable trash or a cross-installation recovery service. Manual desktop/screen-reader checks stay in #29. No paid calls or owner installation mutation.
+
+Independent review found four important defects, all reproduced RED→GREEN: derived-history effect identity caused repeated refreshes; another worker's Clear left recovery usable; a delayed history read passed stale expiry/privacy/limit checks; and an already-cleared/restored toast remained enabled. Stable raw-history dependencies, a shared random Clear generation (atomic with production history deletion), checks after reads, and observable recovery metadata fix them. A 20-caller refresh burst now performs two requests and drops the obsolete snapshot. React hook-dependency and markup fixtures run without a browser; they do not claim mounted desktop behavior.
+
+Ruling: regrade the accessible Undo/Restore name mismatch as important because voice users must be able to target the visible word; a failing rendered-name regression now passes with “Undo deletion of …”. The test-regex minor was a verification blocker: `/disabled/` matched CSS classes, corrected to the actual disabled attribute. No minors remain deferred. One review/fix pass; no re-review.
+
+Review rulings: manual keyboard/focus/screen-reader/suspend and width checks remain #29. Executor owns full rebuilt suite/runtime/CI/publication evidence. No paid account behavior is claimed. Recovery intentionally ends at worker restart; the wall-clock limitation remains documented. Existing history capacity policy is preserved. Worker ownership and Clear generations are not an OS sandbox against same-user filesystem modification. The fallback adapter invalidates before clearing if atomic patch is unavailable; a failed fallback Clear can conservatively end Undo, rather than permit content resurrection.
+Final verification: root/web typecheck, rebuild, all 527 tests, package and diff checks pass. Production disk adapters verify that atomic Clear persists its generation and rejects old recovery after new history arrives. The final runtime-only archive fixture passes exact package hashes, registration/context/send guards and synthetic update/data retention using SDK/CLI 1.0.106-8.unstable.r43566476370.g869eef3, Node24.22.1, Windows x64. No paid inference, live installation changes or UI automation. Exact hosted Verify, push and release evidence follow in #24 before closure.
+
+Previous release: 0.12.22 / 0d8dbcd, exact Verify 44059689860 attempt 2 succeeded. Attempt 1 had one existing OS-process-identity timeout under Windows load; the unchanged rerun passed all 515 tests. No timeout or production safety check was relaxed. Release assets and #21 closure were verified; evidence records the transient rather than claiming it fixed.
+
 
 ### 0.12.22 — #21, context coverage and explicit paths
 

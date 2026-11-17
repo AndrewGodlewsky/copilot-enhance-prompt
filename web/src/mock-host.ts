@@ -121,7 +121,7 @@ let fallbackDemo = false
 /** `?blocked=1`: the first agent is waiting for an answer, so Send asks before it types. */
 let blockedDemo = false
 /** History entries removed a moment ago, for Undo. */
-const removed = new Map<string, unknown>()
+const removed = new Map<string, { entry: { id: string; original: string; at: number }; expiresAt: number }>()
 const setHistory = (list: unknown[]): void => {
   store.set('history', list)
   emit('storage', { key: 'history' })
@@ -224,19 +224,24 @@ const handlers: Record<string, (input: Record<string, unknown>, signal?: AbortSi
   },
   'prompt.copy': () => ({ copied: true }),
   'history.remove': (input) => {
-    const list = store.get('history') as { id: string }[]
+    const list = store.get('history') as { id: string; original: string; at: number }[]
     const gone = list.find((entry) => entry.id === input.id)
-    if (gone) removed.set(gone.id, gone)
+    for (const [id, kept] of removed) if (kept.expiresAt <= Date.now()) removed.delete(id)
+    if (gone && removed.size >= 10) throw Error('Ten deleted prompts are still recoverable. Undo one or wait one minute.')
+    const expiresAt = Date.now() + 60_000
+    if (gone) removed.set(gone.id, { entry: gone, expiresAt })
     setHistory(list.filter((entry) => entry.id !== input.id))
+    return { ok: true, ...(gone ? { undo: { id: gone.id, expiresAt } } : {}) }
   },
+  'history.removed': () => ({ entries: [...removed].filter(([, kept]) => kept.expiresAt > Date.now()).reverse().map(([id, kept]) => ({ id, label: kept.entry.original.slice(0, 120), expiresAt: kept.expiresAt })) }),
   'history.restore': (input) => {
-    const entry = removed.get(String(input.id)) as { at: number } | undefined
-    if (!entry) return { restored: false }
+    const kept = removed.get(String(input.id))
+    if (!kept || kept.expiresAt <= Date.now()) return { restored: false }
     removed.delete(String(input.id))
-    setHistory([...(store.get('history') as { at: number }[]), entry].sort((a, b) => b.at - a.at))
+    setHistory([...(store.get('history') as { at: number }[]), kept.entry].sort((a, b) => b.at - a.at))
     return { restored: true }
   },
-  'history.clear': () => setHistory([]),
+  'history.clear': () => { removed.clear(); setHistory([]); return { ok: true } },
   'data.summary': () => ({ history: (store.get('history') as unknown[]).length, profiles: models.profiles.length, catalogs: 2 }),
   'data.clear': () => null,
   'consents.get': () => ({ granted: [...granted], needed: ['allowOtherAgents', 'allowAgentActivity'] }),
