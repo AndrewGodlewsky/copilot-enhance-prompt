@@ -1,5 +1,11 @@
 # Changes
 
+## [0.12.5] - 2026-11-17
+
+### Fixed
+- Projects with long paths now keep separate rules and history, even when their folder names and path prefixes match.
+- Older rules whose project paths may have been cut short stay visible in Rules with recovery instructions. Their text is preserved; re-add them in the intended project. Affected history entries remain available under No project recorded.
+
 ## [0.12.4] - 2026-11-17
 
 ### Fixed

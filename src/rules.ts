@@ -2,6 +2,7 @@
 // prompt is written in. Kept in the plugin's storage under RULES_KEY; the panel edits them, the worker
 // reads them for every run. No Node imports: both sides load this file.
 import type { JsonValue } from '#panel'
+import { MAX_PROJECT_IDENTITY, validProjectIdentity } from './project-identity.ts'
 
 export const RULES_KEY = 'rules'
 // Rules are short and few in practice; this only guards storage against runaway growth.
@@ -11,22 +12,27 @@ export const MAX_STRUCTURES = 20
 export const MAX_SECTIONS = 12
 
 /**
- * `scope` says where a rule is followed: '' in every project, `project:<name>` in one project, or
- * (saved before 2.6.5) a workspace's name. A project is named by its repository's name in the host: the
- * workspace's own name is "main" for the first checkout of every project, so a rule kept under it
- * was followed in all of them.
+ * `scope` is '' for every project or `project-full:<canonical path>` for one project.
+ * Legacy `project:<identity>` and workspace-name scopes remain readable. Old scopes at
+ * the former length cap are ambiguous and require review before they can apply again.
  */
 export type Rule = { id: string; text: string; enabled: boolean; scope: string }
-const SCOPE_CHARS = 200
 export const PROJECT_SCOPE = 'project:'
+const FULL_PROJECT_SCOPE = 'project-full:'
 /** The scope of a rule for one project. */
-export const projectScope = (project: string) => `${PROJECT_SCOPE}${project.trim()}`.slice(0, SCOPE_CHARS)
+export const projectScope = (project: string) => {
+  const identity = project
+  if (!validProjectIdentity(identity)) throw new Error('The project identity is missing or too long. Select a valid project before adding a scoped rule.')
+  return `${FULL_PROJECT_SCOPE}${identity}`
+}
 /** The name a scope shows: the project's, or the workspace's for a rule saved before 2.6.5. */
-export const scopeName = (scope: string) => (scope.startsWith(PROJECT_SCOPE) ? scope.slice(PROJECT_SCOPE.length) : scope)
+export const scopeName = (scope: string) => scope.startsWith(FULL_PROJECT_SCOPE) ? scope.slice(FULL_PROJECT_SCOPE.length) : scope.startsWith(PROJECT_SCOPE) ? scope.slice(PROJECT_SCOPE.length) : scope
+/** A legacy scope at the old cap may have lost its suffix. Never guess its destination. */
+export const scopeNeedsReview = (scope: string) => Boolean(scope) &&
+  ((!scope.startsWith(FULL_PROJECT_SCOPE) && scope.length === 200) || scopeName(scope).length > MAX_PROJECT_IDENTITY || !scopeName(scope))
 /**
- * Where a run happens: the focused workspace's name and its project's name. The project is null
- * when it is not known which project this is (several share the workspace's name and Copilot has not
- * said which is open): a rule of one project is then followed in none.
+ * The workspace name and complete canonical project identity supplied by the host.
+ * Unknown project identities are null: project-scoped rules then apply nowhere.
  */
 export type RuleWhere = { workspace: string | null; project: string | null }
 export type Structure = { id: string; name: string; sections: string[] }
@@ -58,7 +64,10 @@ export function parseRulesConfig(value: JsonValue | null | undefined): RulesConf
   const rules: Rule[] = []
   for (const item of Array.isArray(raw.rules) ? raw.rules : []) {
     if (!item || typeof item !== 'object' || Array.isArray(item)) continue
-    const rule = { id: id(item.id), text: str(item.text, MAX_RULE_CHARS), enabled: item.enabled !== false, scope: str(item.scope, SCOPE_CHARS) }
+    // Complete canonical paths may end in valid Unicode whitespace. Preserve legacy cap
+    // evidence too: trimming a clipped suffix could make it look like another shorter path.
+    const scope = typeof item.scope !== 'string' ? '' : item.scope.startsWith(FULL_PROJECT_SCOPE) || item.scope.length >= 200 ? item.scope : item.scope.trim()
+    const rule = { id: id(item.id), text: str(item.text, MAX_RULE_CHARS), enabled: item.enabled !== false, scope }
     if (rule.id && rule.text && rules.length < MAX_RULES) rules.push(rule)
   }
   const structures: Structure[] = []
@@ -81,7 +90,8 @@ export function rulesToJson(config: RulesConfig): JsonValue {
 /** Whether a rule is followed there: everywhere, in its project, or (an older rule) in workspaces of its name. */
 export function ruleApplies(rule: Pick<Rule, 'scope'>, where: RuleWhere): boolean {
   if (!rule.scope) return true
-  if (rule.scope.startsWith(PROJECT_SCOPE)) return where.project !== null && rule.scope === projectScope(where.project)
+  if (scopeNeedsReview(rule.scope)) return false
+  if (rule.scope.startsWith(FULL_PROJECT_SCOPE) || rule.scope.startsWith(PROJECT_SCOPE)) return where.project !== null && scopeName(rule.scope) === where.project
   return rule.scope === where.workspace
 }
 

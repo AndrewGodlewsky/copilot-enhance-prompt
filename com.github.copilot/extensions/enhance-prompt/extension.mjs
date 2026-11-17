@@ -2765,7 +2765,7 @@ async function findFocusedWorkspace(host, focused, hint) {
   }
 }
 async function projectNameOf(host, focused, workspace) {
-  if (workspace) return workspace.project?.trim() || workspace.name;
+  if (workspace) return workspace.project || workspace.name;
   if (!host.host.has("workspace.list")) return focused.displayName;
   const list = await host.host.call("workspace.list", {}).catch(() => null);
   const alike = (list?.workspaces ?? []).filter((ws) => ws.name === focused.displayName && (ws.branch ?? "") === focused.branch);
@@ -3671,15 +3671,19 @@ async function loadFiles(paths, owner) {
   return out;
 }
 
+// src/project-identity.ts
+var MAX_PROJECT_IDENTITY = 32768;
+
 // src/rules.ts
 var RULES_KEY = "rules";
 var MAX_RULES = 1e3;
 var MAX_RULE_CHARS = 500;
 var MAX_STRUCTURES = 20;
 var MAX_SECTIONS = 12;
-var SCOPE_CHARS = 200;
 var PROJECT_SCOPE = "project:";
-var projectScope = (project2) => `${PROJECT_SCOPE}${project2.trim()}`.slice(0, SCOPE_CHARS);
+var FULL_PROJECT_SCOPE = "project-full:";
+var scopeName = (scope) => scope.startsWith(FULL_PROJECT_SCOPE) ? scope.slice(FULL_PROJECT_SCOPE.length) : scope.startsWith(PROJECT_SCOPE) ? scope.slice(PROJECT_SCOPE.length) : scope;
+var scopeNeedsReview = (scope) => Boolean(scope) && (!scope.startsWith(FULL_PROJECT_SCOPE) && scope.length === 200 || scopeName(scope).length > MAX_PROJECT_IDENTITY || !scopeName(scope));
 var BUILT_IN_STRUCTURES = [
   {
     id: "brief",
@@ -3698,7 +3702,8 @@ function parseRulesConfig(value) {
   const rules = [];
   for (const item2 of Array.isArray(raw2.rules) ? raw2.rules : []) {
     if (!item2 || typeof item2 !== "object" || Array.isArray(item2)) continue;
-    const rule = { id: id(item2.id), text: str(item2.text, MAX_RULE_CHARS), enabled: item2.enabled !== false, scope: str(item2.scope, SCOPE_CHARS) };
+    const scope = typeof item2.scope !== "string" ? "" : item2.scope.startsWith(FULL_PROJECT_SCOPE) || item2.scope.length >= 200 ? item2.scope : item2.scope.trim();
+    const rule = { id: id(item2.id), text: str(item2.text, MAX_RULE_CHARS), enabled: item2.enabled !== false, scope };
     if (rule.id && rule.text && rules.length < MAX_RULES) rules.push(rule);
   }
   const structures = [];
@@ -3718,7 +3723,8 @@ function rulesToJson(config) {
 }
 function ruleApplies(rule, where) {
   if (!rule.scope) return true;
-  if (rule.scope.startsWith(PROJECT_SCOPE)) return where.project !== null && rule.scope === projectScope(where.project);
+  if (scopeNeedsReview(rule.scope)) return false;
+  if (rule.scope.startsWith(FULL_PROJECT_SCOPE) || rule.scope.startsWith(PROJECT_SCOPE)) return where.project !== null && scopeName(rule.scope) === where.project;
   return rule.scope === where.workspace;
 }
 function rulesFor(config, where) {
@@ -3769,7 +3775,7 @@ function parseHistory(value) {
         style: typeof style === "string" ? style : "balanced",
         model: typeof model === "string" ? model : "",
         source: source === "hook" ? "hook" : "panel",
-        ...typeof project2 === "string" && project2.trim() ? { project: project2.trim().slice(0, 200) } : {}
+        ...typeof project2 === "string" && project2 ? { project: item2.projectIdentity === "full" || project2.length >= 200 ? project2 : project2.trim(), ...item2.projectIdentity === "full" ? { projectIdentity: "full" } : {} } : {}
       });
     }
   }
@@ -4422,6 +4428,7 @@ async function addHistory(host, settings, entry) {
       id: `${at.toString(36)}${Math.random().toString(36).slice(2, 6)}`,
       at,
       ...entry,
+      ...entry.project ? { projectIdentity: "full" } : {},
       original: trimForHistory(entry.original),
       enhanced: trimForHistory(entry.enhanced)
     };
@@ -5626,7 +5633,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.4";
+var VERSION = "0.12.5";
 
 // src/worker-host.ts
 import { EventEmitter as EventEmitter2 } from "node:events";

@@ -5,7 +5,7 @@ import { formatText } from '../format.ts'
 import { files as panelFiles, plugin, read, set, settings, shell, update, type JsonValue } from '#panel'
 import { MAX_RULE_CHARS, MAX_RULES, MAX_SECTIONS, MAX_STRUCTURES, newId, projectScope, type RulesConfig } from '../rules.ts'
 import { exportName, historyMarkdown, ISSUES_URL, targetLabel } from './view.ts'
-import { type HistoryEntry } from '../history.ts'
+import { historyProjectPath, incompleteHistoryProject, type HistoryEntry } from '../history.ts'
 import { attachmentItemId } from '../image-limits.ts'
 import { type Message } from '../messages.ts'
 import { isContextLevel, type ContextItemView, type ProfileView } from '../presets.ts'
@@ -664,12 +664,14 @@ export function reuse(entry: HistoryEntry): void {
   // Written in another project, or (where the host cannot tell which project is open) in one that may
   // be another: it says where it is from, and is not marked fresh for this project.
   const here = read(projectName)
-  const elsewhere = entry.project && entry.project !== here ? entry.project : null
-  set(resultFor, elsewhere ? null : entry.original.trim())
-  if (!elsewhere && !replaced) return
+  const project = historyProjectPath(entry)
+  const elsewhere = project && project !== here ? project : null
+  const uncertain = incompleteHistoryProject(entry)
+  set(resultFor, elsewhere || uncertain ? null : entry.original.trim())
+  if (!elsewhere && !uncertain && !replaced) return
   set(notice, {
-    tone: elsewhere ? 'warning' : 'neutral',
-    text: elsewhere ? formatText('This prompt was written in {name}: read it before you send it here.', { name: elsewhere }) : 'Opened from the history. What the composer held was replaced.',
+    tone: elsewhere || uncertain ? 'warning' : 'neutral',
+    text: uncertain ? 'This older prompt has an incomplete project identity. Review it before sending it in this project.' : elsewhere ? formatText('This prompt was written in {name}: read it before you send it here.', { name: elsewhere }) : 'Opened from the history. What the composer held was replaced.',
     ...(replaced ? { action: { label: 'Undo', run: { kind: 'composer.restore' as const } } } : {})
   })
 }

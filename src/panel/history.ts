@@ -1,10 +1,10 @@
-import type { HistoryEntry } from '../history.ts'
+import { historyProjectPath, type HistoryEntry } from '../history.ts'
 
 export const HISTORY_PAGE_SIZE = 12
 export type HistoryOrder = 'newest' | 'oldest'
 export type HistoryProject = { value: string; path: string; name: string; label: string; detail: string; current: boolean; count: number }
 
-const projectPath = (entry: HistoryEntry) => entry.project || ''
+const projectPath = historyProjectPath
 const matches = (entry: HistoryEntry, query: string) => entry.original.toLowerCase().includes(query) || entry.enhanced.toLowerCase().includes(query)
 
 function pathLabel(path: string): { name: string; parent: string } {
@@ -42,7 +42,7 @@ export function historyProjects(entries: HistoryEntry[], current: string | null,
 /** null means all projects, '' means unassigned; keep the older current-project preference readable. */
 export function resolveHistoryProject(scope: unknown, entries: HistoryEntry[], current: string | null): string | null {
   if (typeof scope !== 'string') return null
-  if (scope === 'project') return entries.some(entry => entry.project) ? current : null
+  if (scope === 'project') return entries.some(projectPath) ? current : null
   const path = scope === 'unassigned' ? '' : scope.startsWith('path:') ? scope.slice(5) : null
   return path !== null && (path === current || entries.some(entry => projectPath(entry) === path)) ? path : null
 }

@@ -222,7 +222,7 @@ function inFocusedWorkspace(workspaces: readonly Workspace[], id: string, focuse
  * of them. Where the host lists no workspaces (an older the host), the workspace's name is all there is.
  */
 export async function projectNameOf(host: EnhanceWorker, focused: Focused, workspace: Workspace | null): Promise<string | null> {
-  if (workspace) return workspace.project?.trim() || workspace.name
+  if (workspace) return workspace.project || workspace.name
   if (!host.host.has('workspace.list')) return focused.displayName
   const list = await host.host.call('workspace.list', {}).catch(() => null)
   const alike = (list?.workspaces ?? []).filter((ws) => ws.name === focused.displayName && (ws.branch ?? '') === focused.branch)

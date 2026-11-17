@@ -8,7 +8,7 @@ Current baseline: 0.12.1 / 4104c29. Tracking issue: [#40](https://github.com/And
 
 ## Queue
 
-Security and correctness: #7, #16, #17, #18, #36, #37, #39.
+Security and correctness: #16, #17, #18, #36, #37, #39.
 
 Distribution/maintenance: #9, #10, #11, #33.
 
@@ -20,9 +20,19 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- Next: #7, complete project identities for rules and history.
+- Next: #16, pending attachment coordination with enhancement and sending.
 
 ## Delivered versions
+
+### 0.12.5 — #7, complete project identities
+
+New project rules and history retain full canonical paths up to 32,768 UTF-16 code units. Labels remain separate from matching. Versioned identity markers distinguish new complete paths from legacy values at the old 200-character cap. Ambiguous old rules remain visible with recovery guidance but never apply; ambiguous history remains searchable under No project recorded and warns on reuse. Saved text and paths are preserved.
+
+Verified: typecheck, build, 411 final tests, package checks and clean diff. Long Windows/Unicode paths with shared prefixes first reproduced rules/history collisions. Regression coverage checks distinct worktrees and duplicate folder labels, short legacy compatibility, exact-cap new identities, oversized identities and preserved content. Independent review found two whitespace collisions; both were reproduced in failing tests and fixed before the final rebuild/suite: preserve raw legacy cap evidence and complete paths ending in Unicode whitespace, including context lookup. No SDK integration changes, paid inference or desktop UI control. Manual layout verification remains in #29. Issue #7 records the pushed commit and preview release.
+
+Ruling: old identities exactly at the historical cap are conservatively treated as incomplete, even if a rare original identity was exactly that long. The old format has no completeness marker. This costs a manual rule re-add or history classification, avoiding guesses that could apply another project's rules.
+
+Ruling: an old version may already have trimmed a clipped trailing space and resaved a shorter identity. That cannot be distinguished from a legitimate short legacy identity. Preserve short compatibility, document manual review for those old rules, and do not guess or delete saved content.
 
 ### 0.12.2 — #2, in-flight privacy
 

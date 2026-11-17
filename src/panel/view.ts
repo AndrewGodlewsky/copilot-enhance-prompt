@@ -7,7 +7,7 @@ import { CONTEXT_LEVEL_LABELS, CONTEXT_LEVELS, isContextLevel, type ContextItemV
 import { isStyle, STYLE_LABELS, STYLES } from '../prompts.ts'
 import { BRAND } from '../brand.ts'
 import type { HistoryEntry } from '../history.ts'
-import { allStructures, ruleApplies, scopeName, structureById, type Rule, type RulesConfig } from '../rules.ts'
+import { allStructures, ruleApplies, scopeName, scopeNeedsReview, structureById, type Rule, type RulesConfig } from '../rules.ts'
 import { ESTIMATED_STEPS, stepPercent, type Step } from '../progress.ts'
 import type { PrivacyKey } from '../privacy.ts'
 import { effectiveEffort, effortReasoning } from './state.ts'
@@ -190,11 +190,14 @@ export const rulesConfig = (): RulesConfig => read(rulesState)
  */
 export function rulesHere(): Rule[] {
   const where = { workspace: read(workspaceName), project: read(projectName) }
-  return rulesConfig().rules.filter((rule) => ruleApplies(rule, where))
+  // Ambiguous legacy rules stay visible for recovery, but rulesFor never applies them.
+  return rulesConfig().rules.filter((rule) => ruleApplies(rule, where) || scopeNeedsReview(rule.scope))
 }
 
 /** Where a rule is followed, as its row says it. */
-export const ruleScopeLabel = (rule: Pick<Rule, 'scope'>): string => (rule.scope ? formatText('Only {name}', { name: scopeName(rule.scope) }) : 'everywhere')
+export const ruleScopeLabel = (rule: Pick<Rule, 'scope'>): string => scopeNeedsReview(rule.scope)
+  ? 'Not applied: the saved project path may be incomplete. Re-add this rule for the intended project, then remove the old rule.'
+  : rule.scope ? formatText('Only {name}', { name: scopeName(rule.scope) }) : 'everywhere'
 
 /**
  * Where a rule added now would go, as the composer says it: this project, or every project while

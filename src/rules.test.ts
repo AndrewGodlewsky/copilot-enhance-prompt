@@ -7,6 +7,7 @@ import { mountPanel } from './panel/testing.ts'
 import { newRuleLabel, rulesConfig, rulesHere, ruleScopeLabel, structureOptions } from './panel/view.ts'
 import { buildSystemPrompt } from './prompts.ts'
 import { forgetTerminals } from './context/terminals.ts'
+import { projectNameOf } from './context/index.ts'
 import { parseRulesConfig, projectScope, ruleApplies, rulesFor, scopeName, structureById, type RulesConfig } from './rules.ts'
 import * as main from './worker.ts'
 import { mockModelHost as mockHost, setRewrite } from './model-testing.ts'
@@ -26,6 +27,52 @@ const stored = {
   structures: [{ id: 'mine', name: 'Mine', sections: ['Mục tiêu', '', 'Tiêu chí hoàn thành'] }]
 }
 
+test('long Windows and Unicode worktree paths keep separate project rule identities', () => {
+  const prefix = 'C:/Projects/' + '共通-folder/'.repeat(24)
+  const first = prefix + 'worktree-a', second = prefix + 'worktree-b'
+  assert.notEqual(projectScope(first), projectScope(second))
+  const rules = parseRulesConfig({ rules: [{ id: 'long', text: 'Only A', enabled: true, scope: projectScope(first) }] })
+  assert.deepEqual(rulesFor(rules, { workspace: 'main', project: first }), ['Only A'])
+  assert.deepEqual(rulesFor(rules, { workspace: 'main', project: second }), [])
+  const clipped = ('project:' + first).slice(0, 200)
+  assert.equal(ruleApplies({ scope: clipped }, { workspace: 'main', project: first }), false)
+  assert.equal(ruleApplies({ scope: clipped }, { workspace: 'main', project: clipped.slice(8) }), false)
+  assert.match(ruleScopeLabel({ scope: clipped }), /Not applied.*Re-add/)
+})
+
+test('ambiguous legacy scopes remain visible for recovery without applying anywhere', async () => {
+  const scope = 'project:' + 'x'.repeat(192)
+  const old = { id: 'clipped', text: 'Keep saved user content 日本語.', scope, enabled: true }
+  const config = parseRulesConfig({ rules: [old] })
+  assert.deepEqual(config.rules, [old])
+  const view = await mountPanel(mockHost({ requests: { 'rules.get': config } }))
+  assert.ok(rulesHere().some(rule => rule.id === old.id))
+  assert.deepEqual(rulesFor(config, { project: scope.slice(8), workspace: 'main' }), [])
+  await view.unmount()
+})
+
+test('a legacy cutoff on whitespace is still ambiguous after repeated parsing', () => {
+  const shorter = 'C:/Projects/' + 'x'.repeat(179)
+  const scope = 'project:' + shorter + ' '
+  assert.equal(scope.length, 200)
+  const input = { rules: [{ id: 'old-space', text: 'Keep this rule.', scope, enabled: true }] }
+  const parsed = parseRulesConfig(parseRulesConfig(input))
+  assert.equal(parsed.rules[0].scope, scope)
+  assert.equal(ruleApplies(parsed.rules[0], { project: shorter, workspace: 'main' }), false)
+  assert.match(ruleScopeLabel(parsed.rules[0]), /Not applied/)
+})
+
+test('complete project identities preserve meaningful Unicode whitespace end to end', async () => {
+  const plain = 'C:/Projects/' + 'common/'.repeat(30) + 'worktree'
+  const spaced = plain + '\u00a0'
+  const config = parseRulesConfig({ rules: [{ id: 'space', text: 'Only the spaced folder.', scope: projectScope(spaced) }] })
+  assert.notEqual(projectScope(plain), projectScope(spaced))
+  assert.deepEqual(rulesFor(config, { project: plain, workspace: 'main' }), [])
+  assert.deepEqual(rulesFor(config, { project: spaced, workspace: 'main' }), ['Only the spaced folder.'])
+  const focused = { branch: 'main', displayName: 'main', terminals: [] }
+  assert.equal(await projectNameOf(mockHost() as never, focused, { id: 'test', name: 'main', path: spaced, project: spaced, branch: null, hostId: null }), spaced)
+})
+
 test('a rule is followed everywhere, in its own project, or (saved before 2.6.5) in workspaces of its name', () => {
   const config = parseRulesConfig(stored)
   assert.deepEqual(config.rules.map((rule) => rule.id), ['r1', 'r2', 'r3', 'r4'])
@@ -43,10 +90,12 @@ test('a rule is followed everywhere, in its own project, or (saved before 2.6.5)
   assert.deepEqual(rulesFor(config, { workspace: 'main', project: 'web-app' }), ['Always run pnpm test.'])
   assert.ok(!ruleApplies({ scope: 'project:Reup' }, { workspace: 'Reup', project: 'Shop' }))
   // How a scope is written and shown.
-  assert.equal(projectScope(' Reup '), 'project:Reup')
+  assert.equal(projectScope(' Reup '), 'project-full: Reup ')
   assert.equal(scopeName('project:Reup'), 'Reup')
   assert.equal(scopeName('web-app'), 'web-app')
-  assert.equal(projectScope('x'.repeat(400)).length, 200)
+  assert.equal(scopeName(projectScope('x'.repeat(400))).length, 400)
+  assert.throws(() => projectScope('x'.repeat(32_769)), /too long/)
+  assert.ok(ruleApplies({ scope: projectScope('x'.repeat(187)) }, { workspace: null, project: 'x'.repeat(187) }))
   assert.deepEqual(structureById(config, 'mine')?.sections, ['Mục tiêu', 'Tiêu chí hoàn thành'])
   assert.equal(structureById(config, 'brief')?.name, 'Task brief')
   assert.equal(structureById(config, 'gone'), null)
@@ -172,7 +221,7 @@ test('the Rules tab adds rules (for every project or this one) and structures; t
   await new Promise((resolve) => setTimeout(resolve, 100))
   const saved = savedConfig
   // The second one is kept under the project's name, not under the workspace's ("main" in every project).
-  assert.deepEqual(saved.rules.map((rule) => [rule.text, rule.scope]), [['Always run pnpm test.', ''], ['Use the design tokens.', 'project:Web']])
+  assert.deepEqual(saved.rules.map((rule) => [rule.text, rule.scope]), [['Always run pnpm test.', ''], ['Use the design tokens.', 'project-full:Web']])
   assert.deepEqual(saved.structures[0].sections, ['Mục tiêu', 'Tiêu chí hoàn thành'])
   // Turning a rule off keeps it.
   saveRules((current) => ({ ...current, rules: current.rules.map((rule) => (rule.text === 'Always run pnpm test.' ? { ...rule, enabled: false } : rule)) }))
@@ -220,7 +269,7 @@ test('the Rules tab shows the rules followed in this project, and says where a n
   set(ruleDraft, 'Added in Reup.')
   set(ruleScope, 'workspace')
   addRule()
-  assert.equal(rulesConfig().rules.at(-1)?.scope, 'project:Reup')
+  assert.equal(rulesConfig().rules.at(-1)?.scope, 'project-full:Reup')
   // The same panel in the other "main" project: Reup's rules are not listed there.
   focus = { workspace: 'main', project: 'Shop' }
   await view.emit('workspace.changed', { context: { branch: 'main', displayName: 'main', terminals: [] } })

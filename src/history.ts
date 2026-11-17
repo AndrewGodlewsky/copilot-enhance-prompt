@@ -1,5 +1,6 @@
 // History entries, shared by the panel and the worker (no Node imports here).
 import type { JsonValue } from '#panel'
+import { MAX_PROJECT_IDENTITY } from './project-identity.ts'
 
 export type HistoryEntry = {
   id: string
@@ -9,9 +10,15 @@ export type HistoryEntry = {
   style: string
   model: string
   source: 'panel' | 'hook'
-  /** The project it was written in (its name in the host), where that was known; older entries have none. */
+  /** Complete canonical project path where known; older entries may hold a name or clipped path. */
   project?: string
+  /** New entries store complete identities; old entries at the 200-character cap are uncertain. */
+  projectIdentity?: 'full'
 }
+
+export const incompleteHistoryProject = (entry: HistoryEntry): boolean => Boolean(entry.project) &&
+  (entry.project!.length > MAX_PROJECT_IDENTITY || (entry.projectIdentity !== 'full' && entry.project!.length === 200))
+export const historyProjectPath = (entry: HistoryEntry): string => incompleteHistoryProject(entry) ? '' : entry.project || ''
 
 /** Storage key; the panel reads it as a `persist: 'storage'` atom. */
 export const HISTORY_KEY = 'history'
@@ -62,7 +69,7 @@ export function parseHistory(value: JsonValue | null): HistoryEntry[] {
         style: typeof style === 'string' ? style : 'balanced',
         model: typeof model === 'string' ? model : '',
         source: source === 'hook' ? 'hook' : 'panel',
-        ...(typeof project === 'string' && project.trim() ? { project: project.trim().slice(0, 200) } : {})
+        ...(typeof project === 'string' && project ? { project: item.projectIdentity === 'full' || project.length >= 200 ? project : project.trim(), ...(item.projectIdentity === 'full' ? { projectIdentity: 'full' as const } : {}) } : {})
       })
     }
   }

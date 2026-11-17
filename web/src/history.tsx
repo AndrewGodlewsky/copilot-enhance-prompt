@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useId, useRef, useState } from 'react'
 import { read, set } from '#panel'
 import { ChevronDownIcon, ChevronRightIcon, CopyIcon, DownloadIcon, EllipsisIcon, FolderIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PencilIcon, SearchIcon, Trash2Icon } from 'lucide-react'
-import type { HistoryEntry } from '../../src/history.ts'
+import { historyProjectPath, incompleteHistoryProject, type HistoryEntry } from '../../src/history.ts'
 import { isStyle, STYLE_LABELS } from '../../src/prompts.ts'
 import { historyExcerpt, historyMatchParts, historyTitle } from '../../src/panel/history.ts'
 import { clearHistory, copy, exportHistory, removeEntry, reuse } from '../../src/panel/actions.ts'
@@ -44,6 +44,7 @@ export function HistoryReader({ entry, text, onTextChange }: { entry: HistoryEnt
       <details className="history-location">
         <summary>Project location</summary>
         <p>{entry.project || 'This older entry has no saved project.'}</p>
+        {incompleteHistoryProject(entry) ? <p>This older project path may be incomplete. The prompt is kept under No project recorded rather than assigned to a guessed project.</p> : null}
       </details>
       <div className="history-actions">
         <Button size="sm" title="Open both saved texts in Enhance" onClick={() => reuse(entry)}><PencilIcon />Reuse</Button>
@@ -133,7 +134,7 @@ export function HistorySection() {
           <div className="history-list-heading"><span title={project ?? undefined}>{project === null ? 'All prompts' : choices.find(choice => choice.path === project)?.label}</span><span>{window.total} {query.trim() ? 'matches' : 'saved'}</span></div>
           <div className="history-list-scroll" ref={scroll}>
             {window.entries.map(entry => (
-              <HistoryItem key={entry.id} entry={entry} expanded={selected?.id === entry.id} onToggle={() => set(historyOpen, selected?.id === entry.id ? null : entry.id)} projectLabel={project === null ? choices.find(choice => choice.path === (entry.project || ''))?.label ?? 'No project recorded' : styleName(entry)} />
+              <HistoryItem key={entry.id} entry={entry} expanded={selected?.id === entry.id} onToggle={() => set(historyOpen, selected?.id === entry.id ? null : entry.id)} projectLabel={project === null ? choices.find(choice => choice.path === historyProjectPath(entry))?.label ?? 'No project recorded' : styleName(entry)} />
             ))}
             {window.total === 0 ? <div className="history-empty"><strong>{all.length ? 'No matching prompts' : 'No history yet'}</strong><p>{all.length ? 'Try another project or a shorter search.' : 'Enhanced prompts show up here.'}</p></div> : null}
           </div>

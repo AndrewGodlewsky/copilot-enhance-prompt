@@ -1,15 +1,70 @@
 // History: size limits, and edits from the panel going through the worker's queue.
 import { read, set } from '#panel'
 import { assert, mockHost, mountWorker, test, type MockRequests } from '#testing'
-import { capHistory, HISTORY_ENTRY_CHARS, HISTORY_TOTAL_CHARS, parseHistory, trimForHistory, type HistoryEntry } from './history.ts'
+import { capHistory, HISTORY_ENTRY_CHARS, HISTORY_TOTAL_CHARS, historyProjectPath, parseHistory, trimForHistory, type HistoryEntry } from './history.ts'
 import { clearData, clearHistory, clearRequest, removeEntry, reuse } from './panel/actions.ts'
 import { busy, confirmClearHistory, confirmWipe, contextShown, draft, excluded, files, filteredHistory, history, historyFilter, historyWindow, lastRun, notice, put, result, resultFor, tab } from './panel/state.ts'
 import { attachmentItemId } from './image-limits.ts'
 import { mountPanel } from './panel/testing.ts'
 import * as main from './worker.ts'
+import { historyProjects, filterHistory } from './panel/history.ts'
 
 const entry = (id: string, size = 10): HistoryEntry => ({ id, at: 1, original: 'o'.repeat(size), enhanced: 'e'.repeat(size), style: 'balanced', model: 'm', source: 'panel' })
 const gpt = { id: 'gpt', name: 'gpt', preset: 'copilot', provider: 'copilot', model: 'gpt-5-mini', enabled: true }
+
+test('full common-prefix project paths survive history normalization and group separately', () => {
+  const prefix = 'C:/Projects/' + '日本語-worktrees/'.repeat(22)
+  const paths = [prefix + 'a/main', prefix + 'b/main']
+  const parsed = parseHistory(paths.map((project, index) => ({ ...entry(`long-${index}`), project })))
+  assert.deepEqual(parsed.map(item => item.project), paths)
+  const choices = historyProjects(parsed, paths[0])
+  assert.equal(choices.length, 2)
+  assert.ok(choices.every(choice => choice.count === 1 && choice.label.startsWith('main (')))
+  assert.deepEqual(filterHistory(parsed, '', paths[0], 'newest').map(item => item.id), ['long-0'])
+})
+
+test('legacy clipped history paths stay visible but never match a guessed project', async () => {
+  const path = 'C:/Projects/' + 'x'.repeat(188)
+  assert.equal(path.length, 200)
+  const original = 'Keep 日本語 and "quoted text" verbatim.'
+  const parsed = parseHistory([
+    { ...entry('old'), project: path, original },
+    { ...entry('new'), project: path, projectIdentity: 'full' },
+    { ...entry('oversized'), project: path.repeat(170), projectIdentity: 'full' }
+  ])
+  assert.equal(parsed[0].project, path)
+  assert.equal(parsed[0].original, original)
+  assert.deepEqual(parsed.map(historyProjectPath), ['', path, ''])
+  assert.deepEqual(filterHistory(parsed, '', path, 'newest').map(item => item.id), ['new'])
+  assert.equal(historyProjects(parsed, path).find(choice => choice.value === 'unassigned')?.count, 2)
+  const view = await mountPanel(mockHost())
+  reuse(parsed[0])
+  assert.equal(read(draft), original)
+  assert.equal(read(resultFor), null)
+  assert.match(read(notice)?.text ?? '', /incomplete project identity/)
+  await view.unmount()
+})
+
+test('history cutoff on whitespace cannot become a shorter valid project after normalization', () => {
+  const shorter = 'C:/Projects/' + 'x'.repeat(187)
+  const project = shorter + ' '
+  assert.equal(project.length, 200)
+  const parsed = parseHistory(parseHistory([{ ...entry('space'), project }]))
+  assert.equal(parsed[0].project, project)
+  assert.equal(historyProjectPath(parsed[0]), '')
+  assert.deepEqual(filterHistory(parsed, '', shorter, 'newest'), [])
+})
+
+test('new complete history identities preserve Unicode whitespace in folder names', () => {
+  const plain = 'C:/Projects/worktree', spaced = plain + '\u00a0'
+  const parsed = parseHistory([
+    { ...entry('plain'), project: plain, projectIdentity: 'full' },
+    { ...entry('space'), project: spaced, projectIdentity: 'full' }
+  ])
+  assert.deepEqual(parsed.map(historyProjectPath), [plain, spaced])
+  assert.equal(historyProjects(parsed, null).length, 2)
+  assert.deepEqual(filterHistory(parsed, '', spaced, 'newest').map(item => item.id), ['space'])
+})
 
 test('history keeps at most the limit (500) and stays under its total size; one huge entry is trimmed', () => {
   const many = Array.from({ length: 600 }, (_, index) => entry(`e${index}`))

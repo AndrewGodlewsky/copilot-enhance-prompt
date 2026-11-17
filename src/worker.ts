@@ -179,6 +179,7 @@ async function addHistory(host: EnhanceWorker, settings: Settings, entry: Omit<H
       id: `${at.toString(36)}${Math.random().toString(36).slice(2, 6)}`,
       at,
       ...entry,
+      ...(entry.project ? { projectIdentity: 'full' as const } : {}),
       original: trimForHistory(entry.original),
       enhanced: trimForHistory(entry.enhanced)
     }
