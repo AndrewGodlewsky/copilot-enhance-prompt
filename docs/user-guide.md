@@ -18,6 +18,8 @@ Reports include the plugin version, runtime version, OS/architecture, timestamps
 
 ## Enhance
 
+**Settings → Prompt preferences → Use enhanced prompts** is checked by default. Uncheck it to use the original 0.11.2 rewrite instructions. This choice is remembered and applies to the next enhancement, without changing saved prompts, models or context collection. [Compare the prompt sets](enhanced-prompts.md).
+
 Write the request and choose Context Level, Style, and Effort. Low, Medium, and High use the model and reasoning pairs assigned in Models. Options contains structures and the context preview. Paste, drop or pick attachments, and exclude unnecessary context before clicking Enhance. Enter adds a line without enhancing or sending. Cancel stops the current run. Refine moves the result back into the composer. The rewritten instructions and headings use English while preserving your code, paths, quoted text and other supplied data.
 
 The dropdown is named **Context Level**. **AI Test** is a separate experimental choice beside AI-assisted: the effort model can inspect excerpts and request more evidence before rewriting, in up to two rounds and 45 seconds. Preview shows its initial context only. Research adds model usage; its progress and final context note show the work performed. [AI Test limits and privacy](context-levels.md#ai-test-experimental-follow-up-research). **General** is the default style; the other eight offer shorter prompts, specifications, task-specific workflows or custom formatting. Structures change headings while keeping the style's purpose. **Plan first** stops after the plan unless the current task explicitly requests implementation. [Style guide and review](styles.md).

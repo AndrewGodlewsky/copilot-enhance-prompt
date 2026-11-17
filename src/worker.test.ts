@@ -9,6 +9,8 @@ import { forgetTerminals, terminalsSaved } from './context/terminals.ts'
 import * as main from './worker.ts'
 import { mockModelHost as mockHost, setRewrite, type RewriteInput } from './model-testing.ts'
 import { LlmError } from './llm.ts'
+import { buildSystemPrompt, buildUserMessage, STYLES } from './prompts.ts'
+import { buildRewriteSystemPrompt } from './prompt-sets.ts'
 
 // Every temporary folder a test makes is removed when the file's tests are done.
 const tempDirs: string[] = []
@@ -62,6 +64,75 @@ function hostFor(root: string | null, extra: Record<string, unknown> = {}) {
     ...extra
   }
 }
+
+test('enhanced prompts default on; an explicit saved false restores the original request payload', async () => {
+  const calls = stubRewrite(() => 'A rewritten prompt')
+  const host = mockHost({ storage: { models: { profiles: [profile('main')] } }, results: hostFor(null) })
+  const worker = await mountWorker(main, { host })
+  const prompt = 'Explain "原文 🧪" in src/session.ts; do not edit any files.'
+  try {
+    await worker.request('prompt.enhance', { prompt, style: 'plan', level: 'off' })
+    assert.notEqual(calls[0].system, buildSystemPrompt({ style: 'plan' }))
+    assert.match(calls[0].system, /Current-request boundary/)
+    await host.settings.set('useEnhancedPrompts', false)
+    await worker.request('prompt.enhance', { prompt, style: 'plan', level: 'off', useEnhancedPrompts: true } as never)
+    assert.equal(calls[1].system, buildSystemPrompt({ style: 'plan' }))
+    assert.equal(calls[1].user, buildUserMessage(prompt))
+    assert.equal(calls[0].user, calls[1].user)
+    await host.settings.set('useEnhancedPrompts', true)
+    await worker.request('prompt.enhance', { prompt, style: 'plan', level: 'off', useEnhancedPrompts: false } as never)
+    assert.equal(calls[2].system, calls[0].system)
+  } finally { await worker.deactivate() }
+})
+
+test('both prompt sets reach every effort and style, including final rewriting after AI context calls', async () => {
+  const calls = stubRewrite(call => call.system.startsWith('You pick source files') ? '["src/index.ts"]'
+    : call.system.startsWith('You research project context') ? '{"done":true}' : 'Rewritten prompt')
+  const host = mockHost({ settings: {
+    effortLowModel: 'main|fixture', effortMediumModel: 'main|fixture', effortHighModel: 'main|fixture',
+    customInstructions: 'Keep "原文".', saveHistory: false
+  }, storage: { models: { profiles: [profile('main', 'fixture')] } }, results: hostFor(project()) })
+  const worker = await mountWorker(main, { host })
+  try {
+    for (const enabled of [false, true]) {
+      await host.settings.set('useEnhancedPrompts', enabled)
+      for (const [index, style] of STYLES.entries()) {
+        const effort = (['low', 'medium', 'high'] as const)[index % 3]
+        const level = (['off', 'max', 'ai-test'] as const)[index % 3]
+        const before = calls.length
+        await worker.request('prompt.enhance', { prompt: 'Explain "原文" in src/index.ts without edits.', style, effort, level, terminalId: 't1' })
+        assert.equal(calls.length - before, level === 'off' ? 1 : 2)
+        const rewrite = calls.at(-1)!
+        assert.equal(rewrite.system, buildRewriteSystemPrompt({ style, customInstructions: 'Keep "原文".', agent: level === 'off' ? null : 'claude' }, enabled))
+        assert.ok(rewrite.user.includes('Explain "原文" in src/index.ts without edits.'))
+        if (level === 'max') assert.match(calls[before].system, /^You pick source files/)
+        if (level === 'ai-test') assert.match(calls[before].system, /^You research project context/)
+      }
+    }
+  } finally { await worker.deactivate() }
+})
+
+test('a preference change during inference affects the next run, never its fallback attempts', async () => {
+  const host = mockHost({ storage: { models: { profiles: [profile('first'), profile('second')] } }, results: hostFor(null) })
+  const calls: RewriteInput[] = []
+  setRewrite(async call => {
+    calls.push(call)
+    if (calls.length === 1) {
+      await host.settings.set('useEnhancedPrompts', false)
+      throw new LlmError('Rate limit', 'rate_limited')
+    }
+    return 'Rewritten prompt'
+  })
+  const worker = await mountWorker(main, { host })
+  try {
+    await worker.request('prompt.enhance', { prompt: 'Explain this without edits.', style: 'review', level: 'off' })
+    assert.equal(calls.length, 2)
+    assert.equal(calls[0].system, buildRewriteSystemPrompt({ style: 'review' }))
+    assert.equal(calls[1].system, calls[0].system)
+    await worker.request('prompt.enhance', { prompt: 'Explain this without edits.', style: 'review', level: 'off' })
+    assert.equal(calls[2].system, buildSystemPrompt({ style: 'review' }))
+  } finally { await worker.deactivate() }
+})
 
 test('standard level: rules, stack and tree, never .env; adapts to Claude', async () => {
   const root = project()

@@ -64,7 +64,7 @@ test('Custom only falls back to General when empty and retains supplied instruct
 
 test('all nine styles reach Copilot with the original request intact', async () => {
   const host = mockHost({
-    settings: { customInstructions: 'Keep literal paths.', saveHistory: false },
+    settings: { useEnhancedPrompts: false, customInstructions: 'Keep literal paths.', saveHistory: false },
     storage: { models: { profiles: [{ id: 'copilot', name: 'Copilot fixture', preset: 'copilot', provider: 'copilot', model: 'fixture', enabled: true }] } },
     results: { 'workspace.readContext': { displayName: 'fixture', branch: '', terminals: [] }, 'agents.list': { agents: [] }, 'copilot.rewrite': { text: 'Copilot fixture output' } }
   })

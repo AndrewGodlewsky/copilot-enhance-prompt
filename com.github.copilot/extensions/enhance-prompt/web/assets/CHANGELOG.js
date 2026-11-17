@@ -1,5 +1,12 @@
 var e=`# Changes
 
+## [0.12.0] - 2026-11-16
+
+### Added
+- **Settings → Prompt preferences → Use enhanced prompts** is checked by default. It selects a separate set of rewrite instructions for all nine styles, with clearer handling of task boundaries, approvals, uncertain evidence and open decisions.
+- Uncheck it to use the original prompts from 0.11.2. The choice is remembered across sessions and applies to the next enhancement; a running enhancement keeps its original choice through fallback attempts.
+- Both sets keep your custom instructions, rules and structures. Switching leaves drafts, attachments, history, model assignments and context collection unchanged. The revised set is available to try; improved model output has not yet been established by live evaluation.
+
 ## [0.11.2] - 2026-11-16
 
 ### Added

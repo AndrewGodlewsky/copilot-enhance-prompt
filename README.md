@@ -12,7 +12,7 @@ The English-language React panel retains model chains and fallback, prompt style
 
 ## Download and install
 
-**Development preview, version 0.11.2.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
+**Development preview, version 0.12.0.** The `main` branch contains the Copilot plugin, including its built extension and panel. Install it from GitHub using the instructions below, or download a local copy for development. The package includes the root `plugin.json` and `com.github.copilot/` directory.
 
 ### Requirements
 
@@ -90,6 +90,8 @@ The native tab uses the compact SVG declared in `plugin.json`. Version 0.1.5 rem
 ## Use it
 
 **General** is the default style. Use **Context** to choose how much project information to include, and **Style** to choose how the task should be expressed. [Guide to all nine styles](docs/styles.md).
+
+**Settings → Prompt preferences → Use enhanced prompts** is checked by default. Try the separate revised instructions, or uncheck it to return to the original 0.11.2 prompts. The saved choice applies to the next enhancement without changing context collection, models or existing prompts. [What differs between the two sets](docs/enhanced-prompts.md).
 
 Choose **Relevant code** for most coding tasks: it adds local source matches without an extra model call. **Project overview** stays the default for quick orientation; **AI-assisted** adds model-based file selection when needed. **AI Test** is a separate experiment: the effort model can request follow-up searches and file excerpts in up to two research rounds before rewriting. It adds time and possible usage charges; AI-assisted remains unchanged. **Off** keeps only the inputs you supply. Saved Basic selections remain compatible. [Context choices and limits](docs/context-levels.md). For a deeper walkthrough, download and open the [interactive context guide](docs/context-levels-guide.html) in your browser; it works offline.
 

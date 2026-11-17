@@ -10,6 +10,8 @@ The three controls have different jobs:
 
 ## All nine styles
 
+These styles are available in both prompt sets. **Settings → Prompt preferences → Use enhanced prompts** selects the separate revised instructions by default; uncheck it to use the original 0.11.2 instructions. [Prompt sets and their differences](enhanced-prompts.md).
+
 | Style | Use it for | What it asks the rewriter to produce |
 | --- | --- | --- |
 | **General** | Everyday tasks, mixed requests, or when no other style fits | A clear goal and short sections only where useful. Small tasks stay small; explanations and investigations stay within their requested scope. |

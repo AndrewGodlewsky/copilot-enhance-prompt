@@ -3,6 +3,7 @@ import type { JsonValue } from './runtime.ts'
 export const DEFAULTS: Record<string, JsonValue> = {
   "chatTextSize": "medium",
   "defaultStyle": "balanced",
+  "useEnhancedPrompts": true,
   "customInstructions": "",
   "contextLevel": "standard",
   "effortLowModel": "recommended",

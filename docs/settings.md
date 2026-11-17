@@ -4,6 +4,8 @@ All preferences live inside the canvas. Prompt preferences include default style
 
 Privacy switches are checked by the worker on every preview and enhancement, including AI-assisted selection and AI Test research. Unsupported controls are disabled in both the UI and backend.
 
+**Prompt preferences → Use enhanced prompts** is checked by default for new and existing installations. Uncheck it to use the original 0.11.2 rewrite instructions. Both sets support every style, custom instructions, rules and structures. The preference is saved across sessions and applies to the next enhancement; an active run keeps its choice through model fallback. It does not change context collection or model assignments. [Prompt sets and verification limits](enhanced-prompts.md).
+
 **Send right after enhancing** is off by default and needs its explanation dialog. Once enabled, the **Enhance and send** button may send an unread result. The panel checks the original session, project and input, cancellation, and whether Copilot is idle. Closing the panel, editing the prompt or changing the destination prevents automatic sending. Request-box Enter keys never enhance or send. The result editor retains Ctrl/Cmd+Enter to send the reviewed text.
 
 ## Effort models

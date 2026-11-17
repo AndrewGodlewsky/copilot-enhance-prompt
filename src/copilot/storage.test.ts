@@ -65,6 +65,33 @@ test('chat text size persists across sessions and rejects invalid writes, with a
   } finally { await rm(dir, { recursive: true, force: true }) }
 })
 
+test('enhanced prompt preference defaults on, persists false, and leaves saved user data untouched', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'enhance-prompt-set-test-'))
+  try {
+    const unused = async (): Promise<never> => { throw new Error('Preference persistence must not call the session RPC.') }
+    const session = (sessionId: string): CopilotSession => ({ sessionId, send: unused,
+      rpc: { metadata: { snapshot: unused, activity: unused, isProcessing: unused }, permissions: { pendingRequests: unused }, queue: { pendingItems: unused } } })
+    const first = createServices(session('first'), dir)
+    await first.settings.set('customInstructions', 'Keep "原文".')
+    await first.storage.set('panel:draft', 'My original request')
+    await first.storage.set('panel:result', 'My previous prompt')
+    await first.storage.set('history', [{ id: 'saved', original: '你好', enhanced: 'Saved prompt' }])
+    assert.equal(await first.settings.get('useEnhancedPrompts'), true)
+    await first.settings.set('useEnhancedPrompts', false)
+    assert.equal(await createServices(session('second'), dir).settings.get('useEnhancedPrompts'), false)
+    for (const value of ['false', 0, null, {}]) await assert.rejects(first.settings.set('useEnhancedPrompts', value), /Invalid/)
+    assert.equal(await first.settings.get('useEnhancedPrompts'), false)
+    await first.settings.set('useEnhancedPrompts', true)
+    assert.equal(await createServices(session('first'), dir).settings.get('useEnhancedPrompts'), true)
+    assert.equal(await first.settings.get('customInstructions'), 'Keep "原文".')
+    assert.equal(await first.storage.get('panel:draft'), 'My original request')
+    assert.equal(await first.storage.get('panel:result'), 'My previous prompt')
+    assert.deepEqual(await first.storage.get('history'), [{ id: 'saved', original: '你好', enhanced: 'Saved prompt' }])
+    await persistentStore(join(dir, 'preferences')).set('useEnhancedPrompts', 'false')
+    assert.equal(await first.settings.get('useEnhancedPrompts'), true, 'invalid saved data must not disable the default')
+  } finally { await rm(dir, { recursive: true, force: true }) }
+})
+
 test('legacy language cleanup preserves unrelated preferences, credentials and user data across sessions', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'enhance-english-test-'))
   try {

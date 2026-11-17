@@ -7,6 +7,7 @@ import { Group, Row, Pick } from './common'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
 import { UpdateSettings } from './updates'
 
 export function Preferences() {
@@ -28,6 +29,9 @@ export function Preferences() {
     </Row>
   </Group>
   <Group title={'Prompt preferences'}>
+    <Row title={<label htmlFor="use-enhanced-prompts" className="cursor-pointer">Use enhanced prompts</label>}
+      description={<span id="enhanced-prompts-help">Use revised instructions for task boundaries, approvals and evidence. Uncheck to use the original prompts. Applies to the next enhancement.</span>}
+      control={<Checkbox id="use-enhanced-prompts" aria-describedby="enhanced-prompts-help" checked={values.useEnhancedPrompts !== false} onCheckedChange={value => void setSetting('useEnhancedPrompts', value === true)} />} />
     <Row title={'Default style'}><Pick label={'Default style'} value={String(values.defaultStyle ?? 'balanced')} options={styleOptions()} onChange={value => void setSetting('defaultStyle', value)} /></Row>
     <Row title={'Default context level'}><Pick label={'Default context level'} value={String(values.contextLevel ?? 'standard')} options={levelOptions(String(values.contextLevel ?? 'standard'))} onChange={value => void setSetting('contextLevel', value)} /></Row>
     <Row title={'Custom instructions'}><Textarea aria-label={'Custom instructions'} value={String(values.customInstructions ?? '')} onChange={event => edit('customInstructions', event.target.value)} onBlur={() => save('customInstructions')} /></Row>

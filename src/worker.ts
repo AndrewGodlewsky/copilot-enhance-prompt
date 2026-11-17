@@ -24,7 +24,8 @@ import {
   type ChainOptions
 } from './models.ts'
 import { isContextLevel, newProfileId, normalizeProfile, type ContextLevel, type ModelProfile, type ModelsConfig } from './presets.ts'
-import { buildSystemPrompt, buildUserMessage, cleanOutput, isStyle, PASTE_END, PASTE_START, terminalChunks, terminalSafe, type Style } from './prompts.ts'
+import { buildUserMessage, cleanOutput, isStyle, PASTE_END, PASTE_START, terminalChunks, terminalSafe, type Style } from './prompts.ts'
+import { buildRewriteSystemPrompt } from './prompt-sets.ts'
 import { PANEL_REQUEST_LIMIT_MS, type ModelsView } from './protocol.ts'
 import { CONSENTS_KEY, NEEDS_CONSENT, parseConsents, parseOtherAgentsLimits, parsePrivacy, type OtherAgentsLimits, type Privacy, type PrivacyKey } from './privacy.ts'
 import { createProgress, planSteps, type StepReporter } from './progress.ts'
@@ -50,6 +51,7 @@ export const RUN_LIMITS = { budgetMs: PANEL_REQUEST_LIMIT_MS - 5_000, pickerMs: 
 
 export type Settings = {
   defaultStyle: Style
+  useEnhancedPrompts: boolean
   customInstructions: string
   contextLevel: ContextLevel
   terminalLines: number
@@ -79,6 +81,7 @@ export async function readSettings(host: EnhanceWorker): Promise<Settings> {
   const level = str(all.contextLevel, 'standard')
   return {
     defaultStyle: isStyle(style) ? style : 'balanced',
+    useEnhancedPrompts: bool(all.useEnhancedPrompts, true),
     customInstructions: str(all.customInstructions),
     contextLevel: isContextLevel(level) ? level : 'standard',
     terminalLines: num(all.terminalLines, 100),
@@ -338,13 +341,13 @@ export async function enhance(
     gathered.notes.push(researched.note)
   }
   const agentItem = gathered.items.find((entry) => entry.kind === 'agent')
-  const system = buildSystemPrompt({
+  const system = buildRewriteSystemPrompt({
     style,
     customInstructions: settings.customInstructions,
     agent: settings.adaptToAgent ? (agentItem?.content.split(' ')[0] ?? null) : null,
     rules: own.rules,
     structure: structureById(own.config, input.structureId)
-  })
+  }, settings.useEnhancedPrompts)
   // Attached files, read before any model is called: images are shown to models that read images,
   // text goes in the context, and the user message lists every file by its path.
   const files = await loadFiles((input.files ?? []).filter((path) => typeof path === 'string' && path.trim())).catch((error: unknown) => {
