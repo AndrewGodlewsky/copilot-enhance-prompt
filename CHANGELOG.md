@@ -6,6 +6,9 @@
 - Every proposed change now receives a clean Windows build and tests that detect stale packaged files. Weekly dependency monitoring covers the plugin, panel and build workflows.
 - Maintainer guidance records security-alert settings and release checks. These checks use no Copilot credits and do not automatically publish or install updates.
 
+### Fixed
+- Retained usage recovery accepts Windows folder-name aliases while still refusing linked recovery directories. This fixes a problem found by the new clean-machine tests.
+
 ## [0.12.12] - 2026-11-17
 
 ### Added

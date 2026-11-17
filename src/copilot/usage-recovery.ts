@@ -114,8 +114,16 @@ async function journal(record: Record): Promise<string> {
 /** Bounded and cross-process serialized. Counts are safe for support logs; no paths leave this module. */
 export async function recoverUsageJournals(root: string, consume: (sessionId: string, journal: string) => Promise<void>, options: { manual?: boolean; inspect?: boolean; now?: () => number } = {}): Promise<UsageRecoveryStatus> {
   const status: UsageRecoveryStatus = { pending: 0, unconfirmed: 0, recovered: 0, failed: 0, deferred: 0 }
-  const registry = join(root, 'recovery')
-  try { if (!(await lstat(registry)).isDirectory() || await realpath(registry) !== resolve(registry)) throw generic() }
+  let registry: string
+  try {
+    // Windows may supply TEMP with an 8.3 name or different casing. Resolve the
+    // trusted storage root first; the recovery directory itself may not be a link.
+    const rootInfo = await lstat(root)
+    if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink()) throw generic()
+    registry = join(await realpath(root), 'recovery')
+    const info = await lstat(registry)
+    if (!info.isDirectory() || info.isSymbolicLink() || await realpath(registry) !== registry) throw generic()
+  }
   catch (error) { if (missing(error)) return status; throw generic() }
   const release = await lockfile.lock(registry, { realpath: false, stale: 30_000, retries: { retries: 12, minTimeout: 50, maxTimeout: 250 } })
   try {

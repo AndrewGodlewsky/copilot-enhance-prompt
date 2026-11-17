@@ -29,6 +29,27 @@ async function fixture(run: (f: { root: string; helper: string; journal: string;
   finally { await rm(base, { recursive: true, force: true }) }
 }
 
+test('Windows spelling aliases of the trusted accounting root do not block recovery', { skip: process.platform !== 'win32' }, async () => fixture(async ({ root, helper, journal }) => {
+  const recorder = await createUsageRecorder(id, root, { helperDirectory: helper })
+  await recorder.stopped!(); await recorder.settled!()
+  const result = await recoverUsage(true, root.toUpperCase())
+  assert.equal(result.recovered, 1)
+  await assert.rejects(access(journal), { code: 'ENOENT' })
+}))
+
+test('canonicalizing the accounting root still refuses a linked root or recovery registry', async () => fixture(async ({ root, helper, journal }) => {
+  const recorder = await createUsageRecorder(id, root, { helperDirectory: helper })
+  await recorder.stopped!(); await recorder.settled!()
+  const alias = `${root}-alias`, registry = join(root, 'recovery'), moved = join(root, 'kept-recovery')
+  await symlink(root, alias, 'junction')
+  await assert.rejects(recoverUsage(true, alias))
+  await rename(registry, moved)
+  await symlink(moved, registry, 'junction')
+  await assert.rejects(recoverUsage(true, root))
+  await access(journal)
+  await access(join(moved, `${id}.json`))
+}))
+
 test('failed disk writes recover exactly once across restart and concurrent retry; raw text is removed only after success', async () => fixture(async ({ root, helper, journal, receipt }) => {
   const recorder = await createUsageRecorder(id, root, { helperDirectory: helper })
   recorder.record(event('one'))

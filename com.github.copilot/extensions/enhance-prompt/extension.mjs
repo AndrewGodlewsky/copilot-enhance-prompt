@@ -6758,9 +6758,13 @@ async function journal(record) {
 }
 async function recoverUsageJournals(root, consume, options = {}) {
   const status = { pending: 0, unconfirmed: 0, recovered: 0, failed: 0, deferred: 0 };
-  const registry = join7(root, "recovery");
+  let registry;
   try {
-    if (!(await lstat3(registry)).isDirectory() || await realpath7(registry) !== resolve4(registry)) throw generic();
+    const rootInfo = await lstat3(root);
+    if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink()) throw generic();
+    registry = join7(await realpath7(root), "recovery");
+    const info = await lstat3(registry);
+    if (!info.isDirectory() || info.isSymbolicLink() || await realpath7(registry) !== registry) throw generic();
   } catch (error) {
     if (missing(error)) return status;
     throw generic();

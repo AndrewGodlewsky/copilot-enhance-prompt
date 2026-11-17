@@ -8,7 +8,7 @@ Current baseline: 0.12.1 / 4104c29. Tracking issue: [#40](https://github.com/And
 
 ## Queue
 
-Security and correctness: #39.
+Security and correctness: delivered; see versions below.
 
 Distribution/maintenance: #10, #11, #33.
 
@@ -29,6 +29,8 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 Read-only Windows workflows install both locks with pinned Node/npm, run typecheck/build/final tests/package checks, and reject modified/staged/deleted/untracked generated artifacts. Separate full-tree audits cover both roots on schedule and dependency changes. SHA-pinned actions and weekly Dependabot PRs cover both npm roots/actions; no secrets, model calls, auto-merges or publication.
 
 Local verification: clean root/web npm ci, typecheck/build, 454 final tests, package checks and clean diff pass. Both full dependency audits report zero known advisories. A failing generated-guard regression now covers modified/staged/removed/new outputs and excludes unrelated files. Independent review found no blockers. Actual GitHub runner evidence will be recorded in #10 before publishing.
+
+The first real Windows CI run passed 446/454 tests and failed eight usage-recovery tests: the trusted accounting root can use Windows short-name/case aliases. A local case-alias regression reproduced the failure. Resolve that trusted root before validating its recovery child; root and child links are still refused. Both new regressions pass. The corrected full suite has 456 tests; the final runner result is attached to #10 before release.
 
 Repository API verified alerts/security-update PRs were disabled; both are now enabled and rechecked. Secret scanning/push protection were already enabled. Main is unprotected, with no rulesets; workflows are read-only but repository policy allows all actions. Ruling: do not change direct-to-main policy by silently imposing PR-only enforcement. CI status is advisory until owner policy changes. Documented in [maintenance](../../maintenance.md).
 
