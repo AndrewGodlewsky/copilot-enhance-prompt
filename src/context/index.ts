@@ -10,7 +10,7 @@ import { english, msg, raw, type Message } from '../messages.ts'
 import type { ContextItemView, ContextLevel } from '../presets.ts'
 import type { StepReporter } from '../progress.ts'
 import { projectFileAllowed, filterAllowed, isSensitive, readText, snippet, treeSummary, walkFiles, type FilePolicy } from './files.ts'
-import { changedPaths, gitDiff, gitFiles, gitGrep, gitGrepCount, gitLog, gitStatus, isGitRepo, statusLinePaths } from './git.ts'
+import { changedPaths, gitDiff, gitFiles, gitGrepCounts, gitLog, gitStatus, isGitRepo, statusLinePaths } from './git.ts'
 import { readRuleFiles } from './instructions.ts'
 import { contentScores, scoreFiles, weightedKeywords } from './relevance.ts'
 import { detectStack } from './stack.ts'
@@ -473,24 +473,16 @@ async function dynamicParts(
   const keywords = weighted.map((entry) => entry.word)
   const grepTargets = weighted.filter((entry) => entry.word.length >= 4).slice(0, 8)
   const grepWords = grepTargets.map((entry) => entry.word)
-  // Each word searched is a share of the step; ranking the files is the last tenth.
-  let searched = 0
   // Avoid oversized Windows argument lists. The fallback reads only permitted files.
   const useGitSearch = parts.isGit && parts.refused.join('').length < 5000 && parts.refused.length < 100
   const likely = scoreFiles(files, weighted, new Map(), changed, true).map(entry => entry.path)
   const local = !useGitSearch ? await searchFiles(root, [...new Set([...likely, ...files])], grepWords, allow, signal) : null
   if (local?.limited) notes.push(msg('note.search_limited'))
-  const perWord = useGitSearch
-    ? await Promise.all(
-        grepWords.map((word) =>
-          gitGrepCount(root, word, signal, parts.refused, options.ensureAccess).then((counts) => {
-            searched++
-            step('search', 'running', undefined, (searched / grepWords.length) * 0.9)
-            return counts
-          })
-        )
-      )
-    : local?.counts ?? []
+  const searched = useGitSearch ? await gitGrepCounts(root,grepWords,{signal,refused:parts.refused,ensureAccess:options.ensureAccess}) : null
+  if (searched?.limited) notes.push(msg('note.git_search_limited'))
+  if (searched?.unavailable) notes.push(msg('note.git_search_unavailable'))
+  const perWord = searched?.counts ?? local?.counts ?? []
+  step('search','running',undefined,0.9)
   stopIfCancelled(signal)
   const content = contentScores(perWord, files.length, grepTargets.map((entry) => entry.weight))
   const mentionsTests = /\btest|spec|kiểm thử/i.test(options.prompt)
@@ -520,7 +512,7 @@ async function dynamicParts(
   // Line numbers of the keywords inside the chosen files, for focused snippets.
   stopIfCancelled(signal)
   await options.ensureAccess?.()
-  const lines = useGitSearch ? await gitGrep(root, grepWords, picked.map((entry) => entry.path), undefined, signal, options.ensureAccess) : local?.hits ?? new Map<string, number[]>()
+  const lines = searched?.hits ?? local?.hits ?? new Map<string, number[]>()
   stopIfCancelled(signal)
   for (const entry of picked) entry.hits = lines.get(entry.path) ?? []
 

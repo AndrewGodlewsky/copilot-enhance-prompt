@@ -1,0 +1,91 @@
+{
+  "version": "0.12.20",
+  "at": "2026-11-17T09:14:47.917Z",
+  "baselineCommit": "ef6f55ccefe8a3ecc015377777c5e6e30bb8eeb4",
+  "node": "v24.22.1",
+  "git": "git version 2.55.0.windows.3",
+  "platform": "win32",
+  "syntheticOnly": true,
+  "modelCalls": 0,
+  "method": "Three alternating samples of prior/current production search and full Deep gather over 30,001 tiny files. Fixture creation/bundling excluded. Both use their production time/output budgets. Compare every keyword count and every emitted context item. No browser/model; endpoint memory is not peak RSS.",
+  "sourceHashes": {
+    "src/context/git.ts": "e5d6b0c344406fe02766e9f0b84332577c4717ca078a2ab30f28cb5223afd4e3",
+    "src/context/index.ts": "3a96612669d80857d539e312e2e4e5fc412675c405f8f89b5a6799b691b96ff0",
+    "scripts/audit/context-search.mjs": "2d54398dad18df537f21b6d33858d7fbecc6f8e40f7a0fa2fb29f7a67ab90272"
+  },
+  "measurements": [
+    {
+      "label": "search.prior",
+      "ms": 2927.245,
+      "heapUsed": 19101992,
+      "rss": 97144832
+    },
+    {
+      "label": "search.current",
+      "ms": 669.797,
+      "heapUsed": 38859616,
+      "rss": 116695040
+    },
+    {
+      "label": "gather.prior",
+      "ms": 5501.689,
+      "heapUsed": 46999192,
+      "rss": 220196864
+    },
+    {
+      "label": "gather.current",
+      "ms": 2456.42,
+      "heapUsed": 83439184,
+      "rss": 270413824
+    },
+    {
+      "label": "search.prior",
+      "ms": 2968.693,
+      "heapUsed": 109782656,
+      "rss": 279588864
+    },
+    {
+      "label": "search.current",
+      "ms": 651.543,
+      "heapUsed": 57440760,
+      "rss": 275406848
+    },
+    {
+      "label": "gather.prior",
+      "ms": 5441.31,
+      "heapUsed": 71402104,
+      "rss": 282685440
+    },
+    {
+      "label": "gather.current",
+      "ms": 2348.731,
+      "heapUsed": 50301392,
+      "rss": 306692096
+    },
+    {
+      "label": "search.prior",
+      "ms": 2942.491,
+      "heapUsed": 77076304,
+      "rss": 311816192
+    },
+    {
+      "label": "search.current",
+      "ms": 650.862,
+      "heapUsed": 116429064,
+      "rss": 321675264
+    },
+    {
+      "label": "gather.prior",
+      "ms": 5437.036,
+      "heapUsed": 63038616,
+      "rss": 306081792
+    },
+    {
+      "label": "gather.current",
+      "ms": 2370.8,
+      "heapUsed": 71314368,
+      "rss": 308645888
+    }
+  ],
+  "everyKeywordAndContextItemVerified": true
+}

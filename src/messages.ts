@@ -14,6 +14,8 @@ export const MESSAGES = {
   'note.git_off': 'Git access is off. Local file search still works.',
   'note.no_files': 'No files matched the prompt; the agent will be told to locate them.',
   'note.search_limited': 'Local content search reached its file, size, or time limit. Name relevant files in your request to prioritize them.',
+  'note.git_search_limited': 'Repository content search reached its output or time limit. Rankings and excerpts use only complete matches collected before the limit. Name relevant files in your request to help focus context.',
+  'note.git_search_unavailable': 'Repository content search was unavailable. Context still uses permitted file names, explicit paths and project metadata; content-match ranking may be incomplete.',
   'note.project_files_off': 'Project files are off in Settings: workspace and agent only.',
   'note.preview_no_research': 'Preview shows initial local context. AI Test research runs only when you click Enhance.',
   'note.research_summary': 'AI Test: {rounds} research rounds, {searches} search terms, {excerpts} added excerpts; {reason}. The rewrite uses the available evidence, which may be incomplete.',

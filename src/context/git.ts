@@ -36,19 +36,26 @@ export async function git(cwd: string, args: string[], options: GitOptions = {})
   return gitRaw(cwd, [...overrides, ...args], options)
 }
 
-function gitRaw(
+async function gitRaw(
   cwd: string,
   args: string[],
   options: GitOptions,
   requireComplete = false
 ): Promise<string | null> {
+  const result = await gitResult(cwd,args,options)
+  return result.cancelled || result.error && (requireComplete || !result.text) ? null : result.text
+}
+
+type GitResult = { text: string; error: boolean; limited: boolean; unavailable: boolean; cancelled: boolean }
+function gitResult(cwd: string, args: string[], options: GitOptions): Promise<GitResult> {
   const { signal } = options
-  if (signal?.aborted) return Promise.resolve(null)
+  const cancelled = (): GitResult => ({text:'',error:true,limited:true,unavailable:false,cancelled:true})
+  if (signal?.aborted) return Promise.resolve(cancelled())
   return new Promise((resolve) => {
     // Cancel: stop git (and anything it started) at once, including child processes.
     const onAbort = () => {
       killTree(child)
-      resolve(null)
+      resolve(cancelled())
     }
     const child = execFile(
       'git',
@@ -65,15 +72,12 @@ function gitRaw(
       (error, stdout) => {
         signal?.removeEventListener('abort', onAbort)
         if (signal?.aborted) {
-          resolve(null)
+          resolve(cancelled())
           return
         }
-        // git grep exits 1 when nothing matched; a too-large output still has a useful prefix.
-        if (error && (requireComplete || !stdout)) {
-          resolve(null)
-          return
-        }
-        resolve(stdout)
+        const noMatches = error?.code === 1 && args[0] === 'grep' && !stdout
+        const limited = !!error && (error.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER' || error.killed === true)
+        resolve({text:stdout,error:!!error,limited,unavailable:!!error && !limited && !noMatches,cancelled:false})
       }
     )
     signal?.addEventListener('abort', onAbort, { once: true })
@@ -210,6 +214,46 @@ export async function gitGrepCount(root: string, word: string, signal?: AbortSig
     if (match) counts.set(match[1], Number(match[2]))
   }
   return counts
+}
+
+export type GitSearch = { counts: Map<string,number>[]; hits: Map<string,number[]>; limited: boolean; unavailable: boolean }
+
+/** Parse NUL-delimited filename/line fields. Only complete source lines count;
+ * filenames may contain colons, tabs or newlines. No source text is retained. */
+export function parseGrepMatches(text: string, words: string[]): GitSearch {
+  const counts = words.map(()=>new Map<string,number>()), hits = new Map<string,number[]>()
+  const patterns = words.map(word=>new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'iu'))
+  let cursor = 0, limited = false
+  while (cursor < text.length) {
+    const nameEnd = text.indexOf('\0',cursor), lineEnd = text.indexOf('\0',nameEnd+1), contentEnd = text.indexOf('\n',lineEnd+1)
+    if (nameEnd < cursor || lineEnd < nameEnd || contentEnd < lineEnd) { limited = true; break }
+    const path = text.slice(cursor,nameEnd), lineText = text.slice(nameEnd+1,lineEnd), content = text.slice(lineEnd+1,contentEnd)
+    cursor = contentEnd+1
+    const line = Number(lineText)
+    if (!path || !/^[1-9]\d*$/.test(lineText) || !Number.isSafeInteger(line) || isSensitive(path)) { limited = true; continue }
+    let matched = false
+    patterns.forEach((pattern,index)=>{
+      if (pattern.test(content)) { counts[index].set(path,(counts[index].get(path)??0)+1); matched = true }
+    })
+    if (matched) { const list=hits.get(path)??[];if(list.length<20) list.push(line);hits.set(path,list) }
+  }
+  return {counts,hits,limited,unavailable:false}
+}
+
+/** One bounded Git scan for all literal keywords, preserving counts per word. */
+export async function gitGrepCounts(root: string, words: string[], options: GitOptions & { refused?: string[] } = {}): Promise<GitSearch> {
+  const empty = (): GitSearch => ({counts:words.map(()=>new Map()),hits:new Map(),limited:false,unavailable:false})
+  if (!words.length) return empty()
+  if (words.length>12 || words.some(word=>!word || word.length>200 || /[\0\r\n]/.test(word))) return {...empty(),unavailable:true}
+  const refused = options.refused ?? []
+  if (refused.length>=100 || refused.join('').length>=5000 || refused.some(path=>path.includes('\0'))) return {...empty(),unavailable:true}
+  await options.ensureAccess?.()
+  const args = ['grep','-n','-z','-H','--no-heading','--no-break','--no-column','--no-textconv','-I','-i','-F','--untracked','--exclude-standard',...words.flatMap(word=>['-e',word]),'--',...SAFE_PATHSPECS,...refused.map(path=>`:(exclude,literal)${path}`)]
+  const result = await gitResult(root,args,{...options,maxBytes:options.maxBytes??4_000_000,timeoutMs:options.timeoutMs??5000})
+  await options.ensureAccess?.()
+  if (result.cancelled || result.unavailable) return {...empty(),limited:result.limited,unavailable:result.unavailable}
+  const parsed = parseGrepMatches(result.text,words)
+  return {...parsed,limited:parsed.limited||result.limited}
 }
 
 /** Line numbers in `paths` matching any keyword. */

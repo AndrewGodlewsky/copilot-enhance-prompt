@@ -45,6 +45,9 @@ filenames are listed as hints. Instructions and README share a 9,000-character a
 with individual instruction files limited to 4,000 characters.
 
 Relevant code prioritizes filenames, identifiers, content matches and changed files.
+With Git available, one bounded scan counts all keywords and supplies excerpt positions.
+Incomplete or unavailable searches are identified in context notes. See [search behavior,
+limits and measured performance](context-search.md).
 With Git unavailable or disabled, local search still works and reads supported hidden
 instruction directories. The fallback searches up to 300 candidate files, 4 MB of text,
 or 1.5 seconds, whichever comes first. A note appears when it stops early. Naming files

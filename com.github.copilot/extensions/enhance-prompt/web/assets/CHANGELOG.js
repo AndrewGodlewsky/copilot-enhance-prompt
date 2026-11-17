@@ -1,5 +1,11 @@
 var e=`# Changes
 
+## [0.12.20] - 2026-11-17
+
+### Improved
+- Relevant code, AI-assisted and AI Test context use one repository content search for their keywords and excerpt positions, reducing repeated scanning.
+- Searches retain literal matching, per-keyword ranking, file exclusions and Unicode. Incomplete or unavailable content searches are identified in context notes instead of appearing complete.
+
 ## [0.12.19] - 2026-11-17
 
 ### Added

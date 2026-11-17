@@ -12,7 +12,7 @@ Security and correctness: delivered; see versions below.
 
 Distribution/maintenance: #11 (manual/maintainer confirmation pending), #33 (runtime package prepared; stable channel/manual gates pending).
 
-Efficiency: #12/#13 shipped and closed. #14 saving implementation shipped (native-close/manual gate remains); #15 in verification, then #19, #20, #21, #32, #34.
+Efficiency: #12/#13/#15 shipped and closed. #14 saving implementation shipped (native-close/manual gate remains); #19 in verification, then #20, #21, #32, #34.
 
 Usability: #24, #25, #26, #27.
 
@@ -20,9 +20,19 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- #14 shipped in 0.12.18 / 426aea5 (Verify 44046061858), preview release and runtime archive published; native-close acceptance remains open. #15 retained-data visibility and explicit cleanup is in verification for 0.12.19. #11 and #33 owner gates remain open.
+- #15 shipped in 0.12.19 / ef6f55c (Verify 44052500782), preview and runtime archive published, issue closed. #19 batched repository search is in verification for 0.12.20. #14/#11/#33 owner gates remain open.
 
 ## Delivered versions
+
+### 0.12.20 — #19, one repository keyword scan
+
+Initial code-context gathering counts all keywords and captures excerpt positions in one bounded Git process. The per-keyword ranking formula is unchanged. Framed filenames, escaped Unicode literal patterns, full-record parsing and explicit unavailable/incomplete notes prevent silent false completeness. Privacy is rechecked before/after search; selected content still goes through confined reads and redaction. [Behavior and limits](../../context-search.md).
+
+New tests first failed for the absent batched operation, then passed against real Git counts/ranking, Unicode, overlap, literal punctuation, exclusions and binary/no-match behavior. Additional coverage checks framed unusual names, truncation, timeout/cancellation and exactly one grep through integrated gathering. The 30,001-file benchmark compares three alternating current/prior production gathers and verifies every count and emitted item. Median search improved 2,942.491→651.543 ms; integrated gather 5,441.310→2,370.800 ms. Raw measurements/source hashes are retained. Typecheck/build, all 499 final tests, package/diff checks and the disposable installed-runtime archive fixture pass. The first full suite exposed a Windows fixture-directory EBUSY during cleanup after a bounded child process; matching existing cancellation fixtures, owned temporary cleanup now retries briefly. No production assertion was weakened.
+
+Independent review passed all five new tests plus seven existing Git safety/cancellation tests, checked source hashes/medians and found no blockers or deferred minors. Review rulings: #21 retains unusual-name enumeration/explicit-path work; the framing parser alone cannot supply missing enumeration. Partial-budget coverage and named-runtime Unicode evidence stay qualified, as do tiny-file timing/endpoint-memory observations. Repository edits between search and excerpt reads remain non-transactional; final confined reads and privacy checks still apply. Executor full/runtime/CI/generated/release checks are separate from review; the benchmark was run by the executor, its hashes and assertions independently reviewed. Desktop/account checks remain unperformed owner gates, without paid traffic or UI automation. Hosted CI and exact publication evidence are attached to #19 before closure.
+
+Ruling: retain a shared four-megabyte/five-second search bound rather than allowing source output to grow without limit. Dense/long matching lines can exhaust it sooner than the former per-word count outputs; show incomplete evidence instead of claiming equal coverage beyond the bound. UTF-8 casefold equivalence is tested on the installed Git and a named corpus, not every Git locale/Unicode version. Parser delimiter safety does not imply complete unusual-name enumeration; #21 owns that separate path. No model, feature expiry or account/desktop mutation is introduced.
 
 ### 0.12.19 — #15, retained storage and inactive draft cleanup
 
