@@ -1,14 +1,12 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { EventEmitter } from 'node:events'
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
-import { watchFile, unwatchFile } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import lockfile from 'proper-lockfile'
 import type { JsonValue, KeyValueStore } from '../runtime.ts'
+import { notifyStoreWrite, observeStore } from './store-observer.ts'
 
 const held = new AsyncLocalStorage<Set<string>>()
-const buses = new Map<string, EventEmitter>()
 export type PersistentStore = KeyValueStore & {
   snapshot(): Promise<Record<string, JsonValue>>
   patch(values: Record<string, JsonValue | undefined>): Promise<void>
@@ -51,38 +49,14 @@ export function persistentStore(directory: string, name = 'state.json'): Persist
     const temporary = `${file}.${randomUUID()}.tmp`
     await writeFile(temporary, JSON.stringify(data), { encoding: 'utf8', mode: 0o600 })
     await rename(temporary, file)
-    for (const [key] of entries) buses.get(file)?.emit('change', { key })
+    notifyStoreWrite(file, data, entries.map(([key]) => key))
   })
   return {
     snapshot: read,
     patch,
     get: async key => { const data = await read(); return Object.hasOwn(data, key) ? data[key] : null },
     set: (key, value) => patch({ [key]: value }), delete: key => patch({ [key]: undefined }), keys: async () => Object.keys(await read()),
-    onDidChange: listener => {
-      // Migration may touch tens of thousands of inactive files. Only observed
-      // stores need a bus, and the last subscriber releases it.
-      const bus = buses.get(file) ?? new EventEmitter()
-      bus.setMaxListeners(100)
-      buses.set(file, bus)
-      bus.on('change', listener)
-      let active = true
-      let previous = read().catch(() => ({} as Record<string, JsonValue>))
-      const refresh = () => {
-        const next = read().catch(() => ({} as Record<string, JsonValue>))
-        void Promise.all([previous, next]).then(([before, after]) => {
-          if (!active) return
-          for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
-            if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) listener({ key })
-          }
-        }).catch(() => {})
-        previous = next
-      }
-      watchFile(file, { interval: 500, persistent: false }, refresh)
-      return { dispose: () => {
-        active = false; bus.off('change', listener); unwatchFile(file, refresh)
-        if (!bus.listenerCount('change') && buses.get(file) === bus) buses.delete(file)
-      } }
-    },
+    onDidChange: listener => observeStore(file, read, listener),
     transaction
   }
 }

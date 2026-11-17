@@ -5280,13 +5280,90 @@ import { join as join11 } from "node:path";
 // src/copilot/storage.ts
 var import_proper_lockfile2 = __toESM(require_proper_lockfile(), 1);
 import { AsyncLocalStorage } from "node:async_hooks";
-import { EventEmitter } from "node:events";
 import { mkdir as mkdir2, readFile, rename as rename2, writeFile } from "node:fs/promises";
-import { watchFile, unwatchFile } from "node:fs";
 import { join as join3, resolve as resolve3 } from "node:path";
 import { randomUUID as randomUUID2 } from "node:crypto";
+
+// src/copilot/store-observer.ts
+import { watchFile, unwatchFile } from "node:fs";
+var observers = /* @__PURE__ */ new Map();
+var differences = (before, after) => [.../* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)])].filter((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]));
+function observeStore(file, read, listener) {
+  let observer = observers.get(file);
+  if (!observer) {
+    const listeners = /* @__PURE__ */ new Set();
+    let previous, revision = 0, active = true, reading = false, dirty = false;
+    let notifiedDuringRead;
+    const emit = (keys) => {
+      for (const key of keys) {
+        notifiedDuringRead?.add(key);
+        for (const fn of listeners) fn({ key });
+      }
+    };
+    const refresh = () => {
+      dirty = true;
+      if (reading || !active) return;
+      reading = true;
+      void (async () => {
+        try {
+          while (dirty && active) {
+            dirty = false;
+            const observedRevision = revision;
+            const initial = previous === void 0, alreadyNotified = /* @__PURE__ */ new Set();
+            notifiedDuringRead = alreadyNotified;
+            const next = await read().catch(() => void 0);
+            notifiedDuringRead = void 0;
+            if (!active || !next) continue;
+            if (revision !== observedRevision) {
+              if (initial && previous) emit(differences(next, previous).filter((key) => !alreadyNotified.has(key)));
+              continue;
+            }
+            const before = previous;
+            previous = next;
+            if (before) emit(differences(before, next));
+          }
+        } finally {
+          reading = false;
+        }
+      })().catch(() => {
+      });
+    };
+    observer = {
+      listeners,
+      refresh,
+      written(values, keys) {
+        const changed = previous ? differences(previous, values) : [];
+        revision++;
+        previous = structuredClone(values);
+        emit([.../* @__PURE__ */ new Set([...keys, ...changed])]);
+      },
+      dispose() {
+        active = false;
+        unwatchFile(file, refresh);
+      }
+    };
+    observers.set(file, observer);
+    watchFile(file, { interval: 500, persistent: false }, refresh);
+    refresh();
+  }
+  observer.listeners.add(listener);
+  let disposed = false;
+  return { dispose() {
+    if (disposed) return;
+    disposed = true;
+    observer.listeners.delete(listener);
+    if (!observer.listeners.size && observers.get(file) === observer) {
+      observer.dispose();
+      observers.delete(file);
+    }
+  } };
+}
+function notifyStoreWrite(file, values, keys) {
+  observers.get(file)?.written(values, keys);
+}
+
+// src/copilot/storage.ts
 var held = new AsyncLocalStorage();
-var buses = /* @__PURE__ */ new Map();
 function persistentStore(directory2, name = "state.json") {
   const root = resolve3(directory2);
   if (name !== "state.json" && !/^[a-f0-9]{24}\.json$/.test(name)) throw new Error("Invalid session storage filename.");
@@ -5324,7 +5401,7 @@ function persistentStore(directory2, name = "state.json") {
     const temporary = `${file}.${randomUUID2()}.tmp`;
     await writeFile(temporary, JSON.stringify(data), { encoding: "utf8", mode: 384 });
     await rename2(temporary, file);
-    for (const [key] of entries) buses.get(file)?.emit("change", { key });
+    notifyStoreWrite(file, data, entries.map(([key]) => key));
   });
   return {
     snapshot: read,
@@ -5336,32 +5413,7 @@ function persistentStore(directory2, name = "state.json") {
     set: (key, value) => patch({ [key]: value }),
     delete: (key) => patch({ [key]: void 0 }),
     keys: async () => Object.keys(await read()),
-    onDidChange: (listener) => {
-      const bus = buses.get(file) ?? new EventEmitter();
-      bus.setMaxListeners(100);
-      buses.set(file, bus);
-      bus.on("change", listener);
-      let active = true;
-      let previous = read().catch(() => ({}));
-      const refresh = () => {
-        const next = read().catch(() => ({}));
-        void Promise.all([previous, next]).then(([before, after]) => {
-          if (!active) return;
-          for (const key of /* @__PURE__ */ new Set([...Object.keys(before), ...Object.keys(after)])) {
-            if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) listener({ key });
-          }
-        }).catch(() => {
-        });
-        previous = next;
-      };
-      watchFile(file, { interval: 500, persistent: false }, refresh);
-      return { dispose: () => {
-        active = false;
-        bus.off("change", listener);
-        unwatchFile(file, refresh);
-        if (!bus.listenerCount("change") && buses.get(file) === bus) buses.delete(file);
-      } };
-    },
+    onDidChange: (listener) => observeStore(file, read, listener),
     transaction
   };
 }
@@ -5897,10 +5949,10 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.16";
+var VERSION = "0.12.17";
 
 // src/worker-host.ts
-import { EventEmitter as EventEmitter2 } from "node:events";
+import { EventEmitter } from "node:events";
 
 // src/diagnostics.ts
 var OPERATIONS = /* @__PURE__ */ new Set([
@@ -6047,7 +6099,7 @@ function createDiagnostics() {
 // src/worker-host.ts
 function createWorkerHost(services2, log = (_message) => {
 }, diagnostics2 = createDiagnostics()) {
-  const events = new EventEmitter2();
+  const events = new EventEmitter();
   events.setMaxListeners(100);
   const handlers = /* @__PURE__ */ new Map();
   handlers.set("logs.get", () => ({ ...diagnostics2.snapshot(), platform: process.platform, architecture: process.arch, runtime: process.version }));
@@ -6436,6 +6488,21 @@ function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_D
       await prepare();
       return storeFor(key).get(key);
     },
+    getMany: async (keys) => {
+      if (!Array.isArray(keys) || keys.length > 64 || keys.some((key) => typeof key !== "string" || key.length > 2e3)) throw new Error("Invalid storage keys.");
+      const groups = /* @__PURE__ */ new Map();
+      for (const key of new Set(keys)) {
+        const store = storeFor(key);
+        groups.set(store, [...groups.get(store) ?? [], key]);
+      }
+      await prepare();
+      const values = /* @__PURE__ */ Object.create(null);
+      await Promise.all([...groups].map(async ([store, selected]) => {
+        const snapshot = await store.snapshot();
+        for (const key of selected) values[key] = Object.hasOwn(snapshot, key) ? snapshot[key] : null;
+      }));
+      return { ...values };
+    },
     set: async (key, value) => {
       await prepare();
       await storeFor(key).set(key, value);
@@ -6632,7 +6699,11 @@ async function createCanvasServer(options) {
           await work(() => client.settings.set(input.key, input.value));
           answer = true;
         } else if (method === "storage.keys") answer = (await client.storage.keys()).filter(readable);
-        else if (method === "storage.get") {
+        else if (method === "storage.getMany") {
+          if (Object.keys(input).some((key) => key !== "keys") || !Array.isArray(input.keys) || input.keys.length > 64 || input.keys.some((key) => typeof key !== "string" || !readable(key))) throw invalid();
+          const keys = [...new Set(input.keys)];
+          answer = client.storage.getMany ? await client.storage.getMany(keys) : Object.fromEntries(await Promise.all(keys.map(async (key) => [key, await client.storage.get(key)])));
+        } else if (method === "storage.get") {
           if (typeof input.key !== "string" || !readable(input.key)) throw invalid();
           answer = await client.storage.get(input.key);
         } else if (method === "storage.set" || method === "storage.delete") {

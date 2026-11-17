@@ -135,6 +135,11 @@ export async function createCanvasServer(options: { worker: Worker; assets: stri
         } else if (method === 'settings.get') answer = input.key === undefined ? await client.settings.get() : await client.settings.get(input.key)
         else if (method === 'settings.set') { await work(() => client.settings.set(input.key, input.value)); answer = true }
         else if (method === 'storage.keys') answer = (await client.storage.keys()).filter(readable)
+        else if (method === 'storage.getMany') {
+          if (Object.keys(input).some(key => key !== 'keys') || !Array.isArray(input.keys) || input.keys.length > 64 || input.keys.some((key: unknown) => typeof key !== 'string' || !readable(key))) throw invalid()
+          const keys = [...new Set<string>(input.keys)]
+          answer = client.storage.getMany ? await client.storage.getMany(keys) : Object.fromEntries(await Promise.all(keys.map(async key => [key, await client.storage.get(key)])))
+        }
         else if (method === 'storage.get') {
           if (typeof input.key !== 'string' || !readable(input.key)) throw invalid()
           answer = await client.storage.get(input.key)

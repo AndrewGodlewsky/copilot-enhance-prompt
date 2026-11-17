@@ -8,6 +8,7 @@ export type RequestInput<K extends keyof PluginRequests> = PluginRequests[K] ext
 export type KeyValueStore = {
   transaction?<T>(fn: () => Promise<T>): Promise<T>
   get(key: string): Promise<JsonValue | null>
+  getMany?(keys: string[]): Promise<Record<string, JsonValue>>
   set(key: string, value: JsonValue): Promise<void>
   delete(key: string): Promise<void>
   keys(): Promise<string[]>
@@ -45,6 +46,7 @@ let client: PanelClient | undefined
 let generation = 0
 let followStorage: Disposable | undefined
 const copy = <T>(value: T): T => value === undefined ? value : structuredClone(value)
+const edits = new WeakMap<Atom<unknown>, number>()
 export const version = () => changes
 export function subscribe(listener: () => void): () => void {
   listeners.add(listener)
@@ -69,6 +71,7 @@ export function read<T>(target: Atom<T>): T { return target.compute ? target.com
 const storageKey = (target: Atom<unknown>) => target.persist === 'storage' ? target.key! : `panel:${target.key}`
 export function set<T>(target: Atom<T>, value: T): void {
   if (Object.is(target.value, value)) return
+  edits.set(target, (edits.get(target) ?? 0) + 1)
   target.value = value
   if (target.persist && target.key && client) {
     void client.storage.set(storageKey(target), (value ?? null) as JsonValue).catch(error => {
@@ -94,30 +97,49 @@ export function bindPanel(next: PanelClient, reset = true): void {
 export async function ready(): Promise<void> {
   const current = frame()
   const epoch = generation
-  const load = async (target: Atom<unknown>) => {
-    let value: JsonValue | null = null
+  const pending = [...atoms].filter(target => target.persist && target.key)
+  const requests = new WeakMap<Atom<unknown>, number>()
+  const retry = async <T>(run: () => Promise<T>): Promise<T> => {
     for (let attempt = 0; ; attempt++) {
-      if (generation !== epoch) return
-      try { value = await current.storage.get(storageKey(target)); break }
+      try { return await run() }
       catch (error) {
         if ((error as { code?: string })?.code !== 'rate_limited' || attempt >= 2) throw error
         await new Promise(resolve => setTimeout(resolve, 2000 * (attempt + 1)))
       }
     }
+  }
+  const load = async (targets: Atom<unknown>[]) => {
+    if (generation !== epoch || !targets.length) return
+    const identities = targets.map(target => { const request = (requests.get(target) ?? 0) + 1; requests.set(target, request); return { target, request, edit: edits.get(target) } })
+    const keys = [...new Set(targets.map(storageKey))]
+    const values: Record<string, JsonValue | null> = Object.create(null)
+    if (current.storage.getMany) {
+      for (let start = 0; start < keys.length && generation === epoch; start += 64) Object.assign(values, await retry(() => current.storage.getMany!(keys.slice(start, start + 64))))
+    } else {
+      let index = 0
+      await Promise.all(Array.from({ length: Math.min(4, keys.length) }, async () => {
+        while (index < keys.length && generation === epoch) { const key = keys[index++]; values[key] = await retry(() => current.storage.get(key)) }
+      }))
+    }
     if (generation !== epoch) return
-    target.value = value ?? copy(target.initial)
+    for (const { target, request, edit } of identities) if (requests.get(target) === request && edits.get(target) === edit) target.value = copy(values[storageKey(target)] ?? target.initial)
     changed()
   }
-  const pending = [...atoms].filter(target => target.persist && target.key)
-  let index = 0
-  await Promise.all(Array.from({ length: Math.min(4, pending.length) }, async () => {
-    while (index < pending.length && generation === epoch) await load(pending[index++])
-  }))
-  if (generation !== epoch) return
   followStorage?.dispose()
+  const changedKeys = new Set<string>()
+  let queued = false
   followStorage = current.storage.onDidChange(({ key }) => {
-    for (const target of atoms) if (target.persist === 'storage' && target.key && storageKey(target) === key) void load(target)
+    changedKeys.add(key)
+    if (queued) return
+    queued = true
+    queueMicrotask(() => {
+      queued = false
+      const targets = pending.filter(target => target.persist === 'storage' && changedKeys.has(storageKey(target)))
+      changedKeys.clear()
+      void load(targets).catch(error => { for (const listener of persistenceErrors) listener(error) })
+    })
   })
+  await load(pending)
 }
 export const plugin: PanelClient['plugin'] = {
   request: (name, input, options) => frame().plugin.request(name, input, options),
@@ -130,6 +152,7 @@ export const settings: SettingsStore = {
 }
 export const storage: KeyValueStore = {
   get: key => frame().storage.get(key), set: (key, value) => frame().storage.set(key, value),
+  getMany: async keys => frame().storage.getMany ? frame().storage.getMany!(keys) : Object.fromEntries(await Promise.all(keys.map(async key => [key, await frame().storage.get(key)]))),
   delete: key => frame().storage.delete(key), keys: () => frame().storage.keys(),
   onDidChange: handler => frame().storage.onDidChange(handler)
 }

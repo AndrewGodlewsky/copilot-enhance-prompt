@@ -4,6 +4,8 @@ Starting in 0.12.16, saved panel state lives in `data/sessions/<session-hash>.js
 
 Normal edits read and atomically replace only the current session file. Every file has its own cross-process lock. Operations that explicitly change shared and session state lock shared data before session data. Writes to separate files are coordinated, but are not a multi-file database transaction with crash-atomic rollback.
 
+From 0.12.17, [panel restoration](state-restoration.md) batches initial reads and shares file-change snapshots. Privacy reads still access current preferences directly.
+
 ## Upgrading
 
 Restart Copilot after updating. The first new worker holds the shared-store migration lock, copies legacy session values into independent files (at most eight writers), and replaces shared state only after every copy succeeds. Before that final replacement, the original shared values are authoritative. Other new workers wait or report a lock timeout that can be retried after migration finishes. Large installations pay a one-time migration cost; steady-state editing does not scan inactive sessions.

@@ -149,7 +149,7 @@ export const MAX_PARKED = 20
 
 /**
  * The draft, the last result and what the last run used are kept across panel runs (the host writes
- * `persist: 'plugin'` atoms to panel-state.json in the plugin's data folder) only while "Save history"
+ * `persist: 'plugin'` atoms to this session's data file) only while "Save history"
  * is on. The panel works on the in-memory atoms above; `put` mirrors them into these saved copies,
  * or empties the copies when saving is off. Same keys as before, so earlier saved values still load.
  */

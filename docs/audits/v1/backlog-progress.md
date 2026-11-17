@@ -20,9 +20,19 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- #12 implementation verified; publishing 0.12.16 after hosted CI. Next: #13, bulk restore and change snapshots. #11 and #33 shipped preparation in 0.12.14 and 0.12.15; their manual/owner gates remain open.
+- #12 shipped in 0.12.16 / d7c88da; hosted Verify 44039499253 passed, preview and runtime archive published. #13 is verified locally; publishing 0.12.17 after hosted CI. Next: #14, coalesced durable draft saves. #11 and #33 manual/owner gates remain open.
 
 ## Delivered versions
+
+### 0.12.17 — #13, batched restoration and shared observers
+
+Authenticated initial restoration deduplicates keys, reads each participating store once and applies values together. Local edit/request/generation guards reject late snapshots. One per-process observer per file compares external changes for all subscribers; corrupt reads do not imply deletion and the last subscriber removes the watcher. Privacy/ordinary reads continue reading current files directly. [Behavior and benchmark](../../state-restoration.md).
+
+Verified: typecheck/build, all 474 final tests, package/diff checks and disposable installed-runtime archive fixture pass. Instrumented tests prove two reads for mixed shared/session batches, one observer parse for three subscribers, fresh privacy values, missing/deleted keys, bounded authenticated HTTP inputs, local edits and older async responses, cross-process notifications and watcher disposal. The production state layer over real loopback HTTP restores 18 fields with one request/two reads instead of 18/18. Median 500-history/20-composer restore improved from 23.951 ms to 10.867 ms; historical 30k shared-store redundant-read comparison improved from 1653.840 ms to 73.788 ms. Raw samples/source hashes and endpoint memory observations are retained; benchmark finished under a 512 MiB V8 heap limit, without paid inference or UI control.
+
+Final independent review ran 15 focused tests and found one important race: a local write could absorb unrelated external edits/deletions into the baseline without notifying subscribers. Two failing regressions reproduced it before and during initial observer loading; the fix emits missing differences without installing obsolete snapshots. Final focused five observer tests and the whole suite pass. No minor findings were identified.
+
+Ruling: batch snapshots are atomic per file, not across shared/session files. Observers expose latest state, not every intermediate write. These measurements exclude rendering and observer startup, and memory samples are not peak RSS guarantees. Disconnected event recovery remains #27 and desktop acceptance #29. No general long-lived data cache is introduced. Hosted CI and exact release/commit evidence are attached to #13 before closure.
 
 ### 0.12.16 — #12, session storage partitions
 

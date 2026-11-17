@@ -6,6 +6,9 @@ import { join } from 'node:path'
 import { createUpdates } from '../updates/service.ts'
 import { persistentStore } from './storage.ts'
 import { request as httpRequest } from 'node:http'
+import { createServices } from './services.ts'
+import { createWorkerHost } from '../worker-host.ts'
+import type { CopilotSession } from './session.ts'
 
 test('static assets use confined bounded reads and preserve MIME and CSP protections', async () => {
   const fixture = await mkdtemp(join(tmpdir(), 'enhance-static-'))
@@ -185,5 +188,22 @@ test('four simultaneous canvas startups restore eighty saved atoms without excee
       assert.ok(atoms.every(atom => runtime.read(atom) === 'Saved request 日本語'))
     }))
     assert.ok(peak <= 16, `peak concurrent startup reads: ${peak}`)
+  } finally { await server.close(); await worker.deactivate(); await rm(directory, { recursive: true, force: true }) }
+})
+
+test('HTTP bulk restore is authenticated, bounded and confined to readable keys in this session', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'enhance-bulk-http-'))
+  const services = createServices({ sessionId: 'bulk-http' } as CopilotSession, join(directory, 'state'))
+  await services.settings.get(); await services.storage.set('panel:draft', 'Only my request 🧪')
+  await services.storage.set('history', [{ original: 'Saved history' }]); await services.data.set('private-key', 'Never expose')
+  const worker = createWorkerHost(services), server = await createCanvasServer({ worker, assets: directory })
+  try {
+    const url = server.open('one'), token = new URL(url).pathname.split('/')[2]
+    const post = (input: unknown, authenticated = true) => fetch(url + 'api', { method: 'POST', headers: { 'content-type': 'application/json', ...(authenticated ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ method: 'storage.getMany', input }) })
+    assert.equal((await post({ keys: ['panel:draft'] }, false)).status, 403)
+    for (const input of [{ keys: 'panel:draft' }, { keys: ['private-key'] }, { keys: ['internal:sessionStorage'] }, { keys: ['session:' + '0'.repeat(24) + ':panel:draft'] }, { keys: Array(65).fill('panel:draft') }, { keys: [null] }, { keys: ['history'], target: 'other-session' }]) assert.equal((await post(input)).status, 400)
+    const response = await post({ keys: ['panel:draft', 'history', 'panel:draft', 'panel:result'] })
+    assert.equal(response.status, 200)
+    assert.deepEqual((await response.json()).result, { 'panel:draft': 'Only my request 🧪', history: [{ original: 'Saved history' }], 'panel:result': null })
   } finally { await server.close(); await worker.deactivate(); await rm(directory, { recursive: true, force: true }) }
 })

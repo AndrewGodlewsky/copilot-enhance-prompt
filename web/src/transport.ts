@@ -46,6 +46,7 @@ export function connectCanvas(): void {
       set: (key, value) => write('settings.set', { key, value }), onDidChange: handler => listen('settings', handler)
     },
     storage: {
+      getMany: keys => call('storage.getMany', { keys }),
       get: key => call('storage.get', { key }), set: (key, value: JsonValue) => write('storage.set', { key, value }),
       delete: key => write('storage.delete', { key }), keys: () => call('storage.keys'), onDidChange: handler => listen('storage', handler)
     },

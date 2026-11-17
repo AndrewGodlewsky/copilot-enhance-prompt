@@ -1,5 +1,11 @@
 var e=`# Changes
 
+## [0.12.17] - 2026-11-17
+
+### Improved
+- Opening the plugin restores saved fields in a batch, reducing repeated disk reads and canvas requests. Multiple open canvases share file-change checks.
+- A delayed saved-state response no longer replaces edits made while loading or a newer history update. Privacy checks still read current preferences, and an unreadable data file is not treated as an empty one.
+
 ## [0.12.16] - 2026-11-17
 
 ### Improved

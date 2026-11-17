@@ -102,6 +102,18 @@ export function createServices(session: CopilotSession, directory = process.env.
   }
   const storage: KeyValueStore = {
     get: async key => { await prepare(); return storeFor(key).get(key) },
+    getMany: async keys => {
+      if (!Array.isArray(keys) || keys.length > 64 || keys.some(key => typeof key !== 'string' || key.length > 2000)) throw new Error('Invalid storage keys.')
+      const groups = new Map<ReturnType<typeof storeFor>, string[]>()
+      for (const key of new Set(keys)) { const store = storeFor(key); groups.set(store, [...(groups.get(store) ?? []), key]) }
+      await prepare()
+      const values: Record<string, JsonValue> = Object.create(null)
+      await Promise.all([...groups].map(async ([store, selected]) => {
+        const snapshot = await store.snapshot()
+        for (const key of selected) values[key] = Object.hasOwn(snapshot, key) ? snapshot[key] : null
+      }))
+      return { ...values }
+    },
     set: async (key, value) => { await prepare(); await storeFor(key).set(key, value) },
     delete: async key => { await prepare(); await storeFor(key).delete(key) },
     keys: async () => { await prepare(); return [...new Set([...(await data.keys()).filter(visibleShared), ...await panelData.keys()])] },

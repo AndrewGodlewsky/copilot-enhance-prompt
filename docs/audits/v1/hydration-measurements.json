@@ -1,0 +1,332 @@
+{
+  "version": "0.12.17",
+  "capturedAt": "2026-11-17T07:45:25.149Z",
+  "node": "v24.22.1",
+  "platform": "win32",
+  "sourceCommit": "d7c88dacf1d89196a83d80583dc47d80d6ea3f44",
+  "workingTreeModified": true,
+  "heapLimitArgument": [
+    "--expose-gc",
+    "--max-old-space-size=512"
+  ],
+  "modelCalls": 0,
+  "syntheticOnly": true,
+  "measurements": [
+    {
+      "name": "production-hydration-50-history-single",
+      "samples": [
+        {
+          "ms": 41.627,
+          "fileReads": 18,
+          "requests": 18,
+          "heapUsedBytes": 22655800,
+          "heapDeltaBytes": 8992992,
+          "rssBytes": 106164224
+        },
+        {
+          "ms": 19.164,
+          "fileReads": 18,
+          "requests": 18,
+          "heapUsedBytes": 24265944,
+          "heapDeltaBytes": 7939760,
+          "rssBytes": 99348480
+        },
+        {
+          "ms": 18.972,
+          "fileReads": 18,
+          "requests": 18,
+          "heapUsedBytes": 22931680,
+          "heapDeltaBytes": 7083016,
+          "rssBytes": 99876864
+        },
+        {
+          "ms": 20.347,
+          "fileReads": 18,
+          "requests": 18,
+          "heapUsedBytes": 23584696,
+          "heapDeltaBytes": 7665776,
+          "rssBytes": 100835328
+        },
+        {
+          "ms": 18.791,
+          "fileReads": 18,
+          "requests": 18,
+          "heapUsedBytes": 29980632,
+          "heapDeltaBytes": 13995624,
+          "rssBytes": 109637632
+        },
+        {
+          "ms": 18.114,
+          "fileReads": 18,
+          "requests": 18,
+          "heapUsedBytes": 30031456,
+          "heapDeltaBytes": 13957888,
+          "rssBytes": 112365568
+        },
+        {
+          "ms": 17.407,
+          "fileReads": 18,
+          "requests": 18,
+          "heapUsedBytes": 30057224,
+          "heapDeltaBytes": 13910640,
+          "rssBytes": 112541696
+        }
+      ],
+      "medianMs": 18.972
+    },
+    {
+      "name": "production-hydration-50-history-bulk",
+      "samples": [
+        {
+          "ms": 4.861,
+          "fileReads": 2,
+          "requests": 1,
+          "heapUsedBytes": 19077192,
+          "heapDeltaBytes": 2896304,
+          "rssBytes": 104349696
+        },
+        {
+          "ms": 4.514,
+          "fileReads": 2,
+          "requests": 1,
+          "heapUsedBytes": 19551856,
+          "heapDeltaBytes": 3358016,
+          "rssBytes": 103886848
+        },
+        {
+          "ms": 4.549,
+          "fileReads": 2,
+          "requests": 1,
+          "heapUsedBytes": 19098504,
+          "heapDeltaBytes": 2875824,
+          "rssBytes": 103157760
+        },
+        {
+          "ms": 4.189,
+          "fileReads": 2,
+          "requests": 1,
+          "heapUsedBytes": 19104688,
+          "heapDeltaBytes": 2880464,
+          "rssBytes": 104022016
+        },
+        {
+          "ms": 4.418,
+          "fileReads": 2,
+          "requests": 1,
+          "heapUsedBytes": 19104872,
+          "heapDeltaBytes": 2878576,
+          "rssBytes": 104050688
+        },
+        {
+          "ms": 3.791,
+          "fileReads": 2,
+          "requests": 1,
+          "heapUsedBytes": 19117520,
+          "heapDeltaBytes": 2886704,
+          "rssBytes": 104116224
+        },
+        {
+          "ms": 3.997,
+          "fileReads": 2,
+          "requests": 1,
+          "heapUsedBytes": 19118560,
+          "heapDeltaBytes": 2876816,
+          "rssBytes": 104103936
+        }
+      ],
+      "medianMs": 4.418
+    },
+    {
+      "name": "production-hydration-500-history-single",
+      "samples": [
+        {
+          "ms": 24.081,
+          "fileReads": 18,
+          "requests": 18,
+          "heapUsedBytes": 40554696,
+          "heapDeltaBytes": 22127424,
+          "rssBytes": 125431808
+        },
+        {
+          "ms": 24.721,
+          "fileReads": 18,
+          "requests": 18,
+          "heapUsedBytes": 41280528,
+          "heapDeltaBytes": 22426600,
+          "rssBytes": 129802240
+        },
+        {
+          "ms": 22.777,
+          "fileReads": 18,
+          "requests": 18,
+          "heapUsedBytes": 41290984,
+          "heapDeltaBytes": 22406640,
+          "rssBytes": 131272704
+        },
+        {
+          "ms": 23.717,
+          "fileReads": 18,
+          "requests": 18,
+          "heapUsedBytes": 41279256,
+          "heapDeltaBytes": 22359776,
+          "rssBytes": 132390912
+        },
+        {
+          "ms": 24.167,
+          "fileReads": 18,
+          "requests": 18,
+          "heapUsedBytes": 41343944,
+          "heapDeltaBytes": 22398032,
+          "rssBytes": 133627904
+        },
+        {
+          "ms": 22.414,
+          "fileReads": 18,
+          "requests": 18,
+          "heapUsedBytes": 41369072,
+          "heapDeltaBytes": 22362440,
+          "rssBytes": 134758400
+        },
+        {
+          "ms": 23.951,
+          "fileReads": 18,
+          "requests": 18,
+          "heapUsedBytes": 41479856,
+          "heapDeltaBytes": 22447312,
+          "rssBytes": 135983104
+        }
+      ],
+      "medianMs": 23.951
+    },
+    {
+      "name": "production-hydration-500-history-bulk",
+      "samples": [
+        {
+          "ms": 10.867,
+          "fileReads": 2,
+          "requests": 1,
+          "heapUsedBytes": 30532112,
+          "heapDeltaBytes": 11412232,
+          "rssBytes": 127537152
+        },
+        {
+          "ms": 10.564,
+          "fileReads": 2,
+          "requests": 1,
+          "heapUsedBytes": 30536120,
+          "heapDeltaBytes": 11401616,
+          "rssBytes": 127279104
+        },
+        {
+          "ms": 10.777,
+          "fileReads": 2,
+          "requests": 1,
+          "heapUsedBytes": 30545752,
+          "heapDeltaBytes": 11401864,
+          "rssBytes": 125145088
+        },
+        {
+          "ms": 10.972,
+          "fileReads": 2,
+          "requests": 1,
+          "heapUsedBytes": 30541048,
+          "heapDeltaBytes": 11397824,
+          "rssBytes": 127188992
+        },
+        {
+          "ms": 11.231,
+          "fileReads": 2,
+          "requests": 1,
+          "heapUsedBytes": 30570928,
+          "heapDeltaBytes": 11426248,
+          "rssBytes": 127537152
+        },
+        {
+          "ms": 24.691,
+          "fileReads": 2,
+          "requests": 1,
+          "heapUsedBytes": 30574944,
+          "heapDeltaBytes": 11410320,
+          "rssBytes": 127569920
+        },
+        {
+          "ms": 10.81,
+          "fileReads": 2,
+          "requests": 1,
+          "heapUsedBytes": 30569584,
+          "heapDeltaBytes": 11403032,
+          "rssBytes": 127586304
+        }
+      ],
+      "medianMs": 10.867
+    },
+    {
+      "name": "legacy-stress-20-redundant-reads",
+      "samples": [
+        {
+          "ms": 1653.84,
+          "fileReads": 20,
+          "requests": 0,
+          "heapUsedBytes": 269656904,
+          "heapDeltaBytes": 184159368,
+          "rssBytes": 375746560
+        },
+        {
+          "ms": 1667.92,
+          "fileReads": 20,
+          "requests": 0,
+          "heapUsedBytes": 269702360,
+          "heapDeltaBytes": 189434984,
+          "rssBytes": 379006976
+        },
+        {
+          "ms": 1625.836,
+          "fileReads": 20,
+          "requests": 0,
+          "heapUsedBytes": 269620240,
+          "heapDeltaBytes": 189328392,
+          "rssBytes": 379101184
+        }
+      ],
+      "medianMs": 1653.84
+    },
+    {
+      "name": "legacy-stress-one-snapshot",
+      "samples": [
+        {
+          "ms": 74.308,
+          "fileReads": 1,
+          "requests": 0,
+          "heapUsedBytes": 269683936,
+          "heapDeltaBytes": 189449808,
+          "rssBytes": 378359808
+        },
+        {
+          "ms": 68.454,
+          "fileReads": 1,
+          "requests": 0,
+          "heapUsedBytes": 269651312,
+          "heapDeltaBytes": 189417280,
+          "rssBytes": 378363904
+        },
+        {
+          "ms": 73.788,
+          "fileReads": 1,
+          "requests": 0,
+          "heapUsedBytes": 269682528,
+          "heapDeltaBytes": 189449360,
+          "rssBytes": 378384384
+        }
+      ],
+      "medianMs": 73.788
+    }
+  ],
+  "sourceHashes": {
+    "src/runtime.ts": "28413d17b1a86001a6029c4d4c60953438cb06707e1022814571d0bca2265be4",
+    "src/copilot/services.ts": "d960104ddfcaf82cad5bf14f14778eb50df491f4f3a45d0bbb613616b63656bf",
+    "src/copilot/storage.ts": "5f586d769824dd5a53fd37932ef9dc5ba4332fa3abb8d7b9e5168d0d0ca9e14b",
+    "src/copilot/store-observer.ts": "83624f144724d8cb2f7e2880166c4a32b1cf4c00e2f1fb55b92e7a20227a44e5",
+    "src/copilot/server.ts": "aef4499d67d701b78f171b92d4e6bbf8d41486176e32dbdc495482d8270e701a",
+    "scripts/audit/hydration.mjs": "1ca354c107faf37cfc078481d93c8540fe1c56c9e55ee49586ae31ec2972739c"
+  }
+}
