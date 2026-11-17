@@ -26,6 +26,8 @@ Restoring or downgrading is a separate maintainer-reviewed action. Never replace
 
 ## Evidence
 
+Starting in 0.12.19, **Settings → Retained storage** reports local sizes and offers explicit, bounded inactive-draft cleanup. Workers record their process ownership before storage access. Unknown older sessions remain protected and do not expire. See [inspection and cleanup](retained-storage.md) for the precise scope, restart requirement and large-store limits.
+
 The [synthetic measurements](audits/v1/session-storage-measurements.json) retain raw timings at 100, 1,000, 10,000 and 30,000 sessions, source hashes and environment details. `node scripts/audit/session-storage.mjs` uses owned disposable fixtures, verifies every migrated draft/result and compares the former shared-file access pattern with current session access. It makes no model calls. Timings are local measurements, not latency guarantees for every disk.
 
 Regression tests cover original Unicode data, attachments, unrelated global values, simultaneous processes, interrupted shared and session replacements, waiting for outstanding writers before releasing a failed migration, cross-process notifications, conflicting old workers, and private recovery export. Desktop reopening and appearance remain manual acceptance checks.

@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "plugin": "enhance-prompt",
-  "version": "0.12.18",
+  "version": "0.12.19",
   "hostProvided": [
     "@github/copilot-sdk",
     "@github/copilot-sdk/extension",
@@ -1199,26 +1199,26 @@
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/extension.mjs",
-      "bytes": 355664,
-      "sha256": "c67cf3193a6026202a8754a1a40830a345849cc050029f4cbaa8ed5546aef607",
+      "bytes": 371989,
+      "sha256": "abb3fff35c08aab6d8bef4400584cd1fa83d90a89345b4fe4eb980bab9cfc452",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/CHANGELOG.js",
-      "bytes": 33556,
-      "sha256": "edf590afc855119cfb4e0d6fc46ef4c10c37e1fcd0f73cdbd70a363d8954054e",
+      "bytes": 34170,
+      "sha256": "1a3686883282098b3b06562d1a17b9a4539cdfa1e96c780b9f9f0609f69694fe",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/app.js",
-      "bytes": 548463,
-      "sha256": "9159114a314b931d9ba93baa09d5bb6f7e8b58a4ffd5b77ffa165764e6d9bcf8",
+      "bytes": 548640,
+      "sha256": "ccfbc59ec642c7eedf582d20fb0c5f145a55c573cd076ed73c020888c7a0b160",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/dropdown-menu.js",
       "bytes": 18374,
-      "sha256": "d3313b155319bf85f075be4dadf0cc1cfaf3e6572f5a240abc48b79d15603080",
+      "sha256": "45a4fa36e7a2613f90f225828319a507c63cabeab5c3dc345ab5c18c61ba537d",
       "normalization": "lf"
     },
     {
@@ -1230,7 +1230,7 @@
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/history.js",
       "bytes": 10378,
-      "sha256": "386174e16d1892e949bfac1e05b0bc3a3442ea6dd0efcb3c485aea875a67b276",
+      "sha256": "d6cd129965b17c943b4e1d500b5c126deccb74afd76fc9757801958c96b1203a",
       "normalization": "lf"
     },
     {
@@ -1241,14 +1241,14 @@
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/index.css",
-      "bytes": 61205,
-      "sha256": "712057574fa0cb3e34e8fd0c9b580369c722ee1bfb294e944e39d93c73b8fa29",
+      "bytes": 61521,
+      "sha256": "7f6c8e90a179ea10a582878de22d70c3834cf43ae6816b08114cb998302bcc8c",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/sections.js",
-      "bytes": 27429,
-      "sha256": "cca1e14280dc69a0d5ff282b0b8f3858301908a0ebb46682d2cfba7ae69f78ec",
+      "bytes": 33245,
+      "sha256": "cba4b07294a41c3c998e2f782524a192fd24e8f063c6060387ac371e2c680299",
       "normalization": "lf"
     },
     {
@@ -1260,7 +1260,7 @@
     {
       "path": "plugin.json",
       "bytes": 422,
-      "sha256": "4df4c8e592cf6d060a9f1ed30b7c979030d2f9ebab1a3ac0b2593a4cd8c4a5ac",
+      "sha256": "fc055f1b033e908cc85bbd96d165eacb3026c97ca8db2887be36280bfcdc3e30",
       "normalization": "lf"
     }
   ],
@@ -1281,8 +1281,8 @@
   "inputs": [
     {
       "path": "CHANGELOG.md",
-      "bytes": 33520,
-      "sha256": "b362afba5b25253d8ad88271c4d7a4fefa6f5d5aa47ccc5662b67304f3ce37ea",
+      "bytes": 34134,
+      "sha256": "e472c553c9c2a0da3e26fd4385b7f8250256eab1ac631a9e58eff678989d2b11",
       "normalization": "lf"
     },
     {
@@ -1503,8 +1503,8 @@
     },
     {
       "path": "src/copilot/extension.ts",
-      "bytes": 3958,
-      "sha256": "36c3161620ac7f83d8749ebd37c3679a02139311250ea5f85ffec93a2a3d4f7c",
+      "bytes": 3986,
+      "sha256": "fb8252bf0e1ff74c806d745e3351d11f06e4429a18a2d54bcbd85c0877fa075d",
       "normalization": "lf"
     },
     {
@@ -1514,15 +1514,27 @@
       "normalization": "lf"
     },
     {
+      "path": "src/copilot/retained-data.ts",
+      "bytes": 12629,
+      "sha256": "bc83a71b1baab30d594e3a2f6c972d31b207b7f526f42ab2e93b22359898618c",
+      "normalization": "lf"
+    },
+    {
       "path": "src/copilot/server.ts",
-      "bytes": 15141,
-      "sha256": "d93a47430ad721a75de1618d1f641622d718c68d76314fc5beef73458a169d06",
+      "bytes": 16361,
+      "sha256": "1b1a0fb26ddb90efbcc73589218f3c66d7b5447135233e26f6a7cdc58e0c2d10",
       "normalization": "lf"
     },
     {
       "path": "src/copilot/services.ts",
-      "bytes": 10151,
-      "sha256": "bd0dd06354490fd3b59e6766ee988fa5ccc3ac0916bf78f326e8421c770d8062",
+      "bytes": 10374,
+      "sha256": "04b56fea78995ddb023f5fb441f3b7960686d594c4aaff35e82581ca458411fc",
+      "normalization": "lf"
+    },
+    {
+      "path": "src/copilot/session-activity.ts",
+      "bytes": 3742,
+      "sha256": "272b5a89c2000048114900acae4a0503780cb725074af167ed19af1a193810db",
       "normalization": "lf"
     },
     {
@@ -1761,8 +1773,8 @@
     },
     {
       "path": "src/runtime.ts",
-      "bytes": 9284,
-      "sha256": "3e23dba776bddb445a92165aefde2c21d7236699ddcc5a6c2b44788106b159b9",
+      "bytes": 9349,
+      "sha256": "9f317bd6106b4f4f577001c7fd9b206fd4b92176f416ac7df2b463d9af8c3e4a",
       "normalization": "lf"
     },
     {
@@ -1810,7 +1822,7 @@
     {
       "path": "src/version.ts",
       "bytes": 93,
-      "sha256": "6500a7a8d61816c8e1830faface94043694456c9ed8dfc957499a4429adac079",
+      "sha256": "6ada578116edcfe0efad1a30a2fb2be94a662680a65c1c6869f6cc16b1704ee1",
       "normalization": "lf"
     },
     {
@@ -2840,6 +2852,12 @@
       "normalization": "lf"
     },
     {
+      "path": "web/src/retained-data.tsx",
+      "bytes": 6806,
+      "sha256": "7d47787b41356110dfe8a5cf8293e75d41bc1287397b4cccfa713b5840958f19",
+      "normalization": "lf"
+    },
+    {
       "path": "web/src/save-status.tsx",
       "bytes": 1079,
       "sha256": "6884f471502713ea31879d53dd0a594bd3be1c0f1cda4e9a603de49a6660bd18",
@@ -2847,8 +2865,8 @@
     },
     {
       "path": "web/src/sections.tsx",
-      "bytes": 32056,
-      "sha256": "93c9f1367cc77c5a5fc399238634fb18b13c444d70e036037937f956149671fd",
+      "bytes": 32126,
+      "sha256": "4ab56c0c1b0dea21eae42baf0f4eed8c7359dc52d9952089d83bdd6cfe5c144e",
       "normalization": "lf"
     },
     {
@@ -2859,8 +2877,8 @@
     },
     {
       "path": "web/src/transport.ts",
-      "bytes": 7372,
-      "sha256": "64ef5ec09e6dd7c40b15766f2d6c273ab7c36e221fc56211e966d784587c9e9b",
+      "bytes": 7619,
+      "sha256": "8889b8016ef08cf47adc2794ea785d77b2d2b5c716a6de934792b9e707b9df11",
       "normalization": "lf"
     },
     {
@@ -2934,8 +2952,10 @@
     "src/context/terminals.ts",
     "src/copilot/extension.ts",
     "src/copilot/models.ts",
+    "src/copilot/retained-data.ts",
     "src/copilot/server.ts",
     "src/copilot/services.ts",
+    "src/copilot/session-activity.ts",
     "src/copilot/session-storage.ts",
     "src/copilot/session.ts",
     "src/copilot/storage.ts",
@@ -3147,6 +3167,7 @@
     "web/src/panel-runtime.ts",
     "web/src/preferences.tsx",
     "web/src/quiet-desk.tsx",
+    "web/src/retained-data.tsx",
     "web/src/save-status.tsx",
     "web/src/sections.tsx",
     "web/src/theme.ts",
@@ -3178,8 +3199,10 @@
     "src/context/terminals.ts",
     "src/copilot/extension.ts",
     "src/copilot/models.ts",
+    "src/copilot/retained-data.ts",
     "src/copilot/server.ts",
     "src/copilot/services.ts",
+    "src/copilot/session-activity.ts",
     "src/copilot/session-storage.ts",
     "src/copilot/session.ts",
     "src/copilot/storage.ts",
@@ -3257,6 +3280,7 @@
     "web/src/panel-runtime.ts",
     "web/src/preferences.tsx",
     "web/src/quiet-desk.tsx",
+    "web/src/retained-data.tsx",
     "web/src/save-status.tsx",
     "web/src/sections.tsx",
     "web/src/theme.ts",

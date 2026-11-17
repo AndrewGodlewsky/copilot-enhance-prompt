@@ -44,6 +44,10 @@ export function connectCanvas(): void {
   })
   const needsSavedState = new Set(['prompt.enhance', 'prompt.send', 'models.test', 'context.preview', 'data.clear'])
   const client: PanelClient = {
+    retained: {
+      inspect: signal => call('retained.inspect', {}, {signal}),
+      clear: async (token, restarted, signal) => { await saves.flush(); signal?.throwIfAborted(); return call('retained.clear', {token,restarted}, {signal}) }
+    },
     persistence: saves,
     updates: {
       state: () => call('updates.state'), check: manual => call('updates.check', { manual }),

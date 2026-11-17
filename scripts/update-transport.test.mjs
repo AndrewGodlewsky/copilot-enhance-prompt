@@ -45,6 +45,9 @@ test('Update flushes queued saves and refuses installation after an unrelated su
     failDraft = true
     await assert.rejects(client.storage.set('panel:draft', 'Still unsaved'), /Save failed/)
     await client.storage.set('colorTheme', 'dark')
+    assert.equal(await client.retained.inspect(), true, 'read-only inspection remains available to diagnose failed saves')
+    await assert.rejects(client.retained.clear('preview', true), /could not be saved/)
+    assert.equal(calls.some(c => c.method === 'retained.clear'), false, 'cleanup waits for current draft saves')
     await assert.rejects(client.updates.install(), /could not be saved/)
     await assert.rejects(client.plugin.request('prompt.send', { terminalId: 'attached', text: 'Unsaved result' }), /could not be saved/)
     await assert.rejects(client.plugin.request('prompt.enhance', { prompt: 'Unsaved request' }), /could not be saved/)

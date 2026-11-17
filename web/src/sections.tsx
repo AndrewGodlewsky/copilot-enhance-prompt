@@ -3,6 +3,7 @@ import { formatText } from '../../src/format.ts'
 // actions (src/panel/*), drawn with shadcn/ReUI.
 import { Fragment, useState } from 'react'
 import { UsageRecovery } from './usage-recovery'
+import { RetainedData } from './retained-data'
 import { SECURITY_GUIDE_URL, SECURITY_REPORT_URL } from '../../src/panel/view.ts'
 import { read, set, update } from '#panel'
 import { ArrowDownIcon, ArrowUpIcon, RotateCcwIcon, CheckIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, PencilIcon, PlugZapIcon, PlusIcon, RefreshCwIcon, Settings2Icon, Trash2Icon } from 'lucide-react'
@@ -688,6 +689,7 @@ export function SettingsSection() {
           description={'Usage records are kept separately for Usage Insights and are not removed by these controls.'}
         />
       </Group>
+      <RetainedData />
       <Group title={'Feedback'}>
         <Row
           description={'Found a bug, or something that could be better? Open an issue on GitHub: it is how the plugin gets fixed and improved.'}

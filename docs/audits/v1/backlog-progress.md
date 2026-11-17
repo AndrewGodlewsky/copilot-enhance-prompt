@@ -12,7 +12,7 @@ Security and correctness: delivered; see versions below.
 
 Distribution/maintenance: #11 (manual/maintainer confirmation pending), #33 (runtime package prepared; stable channel/manual gates pending).
 
-Efficiency: #12/#13 shipped and closed. #14 saving implementation in verification (native-close/manual gate remains); then #15, #19, #20, #21, #32, #34.
+Efficiency: #12/#13 shipped and closed. #14 saving implementation shipped (native-close/manual gate remains); #15 in verification, then #19, #20, #21, #32, #34.
 
 Usability: #24, #25, #26, #27.
 
@@ -20,9 +20,21 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- #12 shipped in 0.12.16 / d7c88da (Verify 44039499253); #13 shipped in 0.12.17 / 1f3ff3f (Verify 44041368340). Both preview releases and runtime archives are published and issues closed. #14 implementation is in review for 0.12.18, with native-close acceptance kept open. Next: #15 retained-data visibility and safe explicit cleanup. #11 and #33 owner gates remain open.
+- #14 shipped in 0.12.18 / 426aea5 (Verify 44046061858), preview release and runtime archive published; native-close acceptance remains open. #15 retained-data visibility and explicit cleanup is in verification for 0.12.19. #11 and #33 owner gates remain open.
 
 ## Delivered versions
+
+### 0.12.19 — #15, retained storage and inactive draft cleanup
+
+Settings provides explicit scoped local counts and a five-minute, canvas-bound preview of up to 100 inactive drafts. Worker ownership is registered before storage access. Fresh liveness and content checks under existing transactions preserve current/newly active/changed/unknown/corrupt sessions. Only eight private composer keys are removed; controls, shared history/preferences, uploads and usage/recovery stay intact. Cancellation or write failure stops further cleanup and requires a fresh inspection. [Scope and bounds](../../retained-storage.md).
+
+Focused tests cover real child-process reopening, authenticated human-only HTTP, wrong-canvas/expired/changed plans, cancellation/close, links/corruption, bounded private reads, failed atomic replacement and current-save preservation. Regressions first failed for reading private contents beyond the preview and for blocking read-only inspection behind a failed save, then passed. Synthetic 100/1k/10k/30k fixtures verify every session value and accounting record after cleanup. At 1k inspection fell from 2,138 ms to 1,000 ms; 10k completed in 11,770 ms. At 30k it still reaches 15 seconds and reports partial counts. Raw single samples and source hashes are retained; these are not rendering or peak-memory guarantees. Measurements precede the final unreadable-scope reporting correction; scan limits and cleanup algorithms are unchanged.
+
+Independent review passed 22 focused tests and identified one reporting omission, initially graded minor. Ruling: regrade it as important under the explicit incomplete-count contract; an unreadable preferences directory must not imply a complete shared-data total. The junction regression failed, then passed after the scope-existence correction. Final typecheck/build, all 494 tests, package/diff checks and the disposable installed-runtime archive fixture pass. No deferred minors remain. Exact hosted CI and publication evidence is attached to #15 before closure.
+
+Final review rulings: desktop rendering, assistive technology and restart usability remain #29, and native close remains #14; claiming either without owner evidence would hide a host limitation. Closing old workers cannot be inferred from PID records; retain explicit confirmation and conservative unknown-file protection. Same-account hostile races, fsync/power-loss durability and cross-file atomicity remain unclaimed rather than weakening preservation checks. Full scans/peak memory/universal latency are not established by bounded single local samples. Unknown legacy drafts, uploads and helper journals stay outside this cleanup to avoid unauthorized loss. Paid/account behavior is unchanged and untested. Executor-owned full/runtime/CI checks are separate from the review's focused tests. Existing saturation-test listener warnings do not come from new subscriptions and remain unchanged; those tests pass.
+
+Ruling: require explicit restart confirmation because older unregistered workers cannot be proved closed. Unknown old drafts remain protected, with no age-based expiry or automatic migration into cleanup eligibility. PID reuse/inaccessible processes are conservatively active/unknown. Activity-registration failure refuses storage rather than allowing an untracked writer. This can need maintainer recovery. Ruling: bounded inspection returns lower bounds instead of blocking on unlimited data; repeated scans start over and exceptionally large stores may require offline review. No complete 30k sweep is claimed. Same-user hostile filesystem races and cross-file power-loss atomicity remain outside the existing cooperative storage guarantee. Desktop rendering/restart/assistive-technology acceptance remains #29.
 
 ### 0.12.18 — #14, coalesced saves and visible recovery
 

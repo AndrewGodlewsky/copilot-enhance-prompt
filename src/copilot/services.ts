@@ -14,6 +14,8 @@ import type { createCopilotModels } from './models.ts'
 import { EFFORT_SETTINGS, REASONING_SETTINGS, validReasoning, modelAssignment, parseModelAssignment, parseCatalogAssignment } from '../effort.ts'
 import { MODELS_KEY, parseModelsConfig, modelsToJson } from '../presets.ts'
 import { effectiveModel } from '../models.ts'
+import { registerSessionUse } from './session-activity.ts'
+import { createRetainedData } from './retained-data.ts'
 
 // These services have no equivalent on the current canvas SDK. Do not silently emulate them.
 export function createServices(session: CopilotSession, directory = process.env.ENHANCE_PROMPT_DATA_DIR || join(process.env.LOCALAPPDATA || join(homedir(), '.local', 'share'), 'copilot-enhance-prompt'), copilot?: ReturnType<typeof createCopilotModels>) {
@@ -43,6 +45,7 @@ export function createServices(session: CopilotSession, directory = process.env.
       }
       await data.patch(changes)
       await partitionSessions(directory, data)
+      await registerSessionUse(directory, scope)
     })
     await retiredCredentials.transaction(async () => {
       for (const key of await retiredCredentials.keys()) if (key.startsWith('apiKey.')) await retiredCredentials.delete(key)
@@ -140,5 +143,5 @@ export function createServices(session: CopilotSession, directory = process.env.
       : name === 'copilot.usage.recover' && copilot ? await copilot.recoverUsage(true) as never
       : adapter.call(name, input, options)
   }
-  return { storage, settings, host, adapter, directory, data, attachmentOwner: `${directory}\0${session.sessionId}` }
+  return { storage, settings, host, adapter, directory, data, retained: createRetainedData(directory, scope, {prepare}), attachmentOwner: `${directory}\0${session.sessionId}` }
 }

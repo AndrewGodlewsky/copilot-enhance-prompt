@@ -157,6 +157,8 @@ Preferences, profiles, rules and history are local. Saved prompt history is not 
 
 The status below navigation shows saving progress and offers **Retry save** on failure. Wait for **Saved** before closing; Copilot's native close does not wait for the plugin. Copy your text if saving fails. See [draft saving and close limitations](docs/draft-saving.md).
 
+**Settings → Retained storage** inspects local sizes and previews up to 100 verified inactive drafts for explicit cleanup. Current/active sessions, control preferences, shared history, uploads and usage accounting stay intact. Restart Copilot after upgrading before confirming cleanup. Untracked older sessions stay protected; large or unreadable stores show incomplete counts. See [cleanup scope, safeguards and measured limits](docs/retained-storage.md).
+
 The canvas uses an authenticated loopback server with origin and path checks. It exposes no agent-callable send or consent action. There is no tracking or analytics. [Privacy details](docs/privacy.md). [Resource limits](docs/resource-limits.md) describe attachment, settings and concurrency bounds, including when to retry busy requests.
 
 ## Development

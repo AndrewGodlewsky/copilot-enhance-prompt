@@ -927,11 +927,11 @@ var require_retry_operation = __commonJS({
       for (var i = 0; i < this._errors.length; i++) {
         var error = this._errors[i];
         var message = error.message;
-        var count2 = (counts[message] || 0) + 1;
-        counts[message] = count2;
-        if (count2 >= mainErrorCount) {
+        var count3 = (counts[message] || 0) + 1;
+        counts[message] = count3;
+        if (count3 >= mainErrorCount) {
           mainError = error;
-          mainErrorCount = count2;
+          mainErrorCount = count3;
         }
       }
       return mainError;
@@ -1849,7 +1849,7 @@ function maskFormats(text) {
 function redactSecrets(text) {
   return maskFormats(text.replace(DASHED_KEY, "[redacted]")).replace(
     SECRET_ASSIGNMENT,
-    (match, name, sep3, value) => /tokens$/i.test(name) && /^\d+[\]})]*$/.test(value) ? match : `${name}${sep3}[redacted]`
+    (match, name, sep4, value) => /tokens$/i.test(name) && /^\d+[\]})]*$/.test(value) ? match : `${name}${sep4}[redacted]`
   );
 }
 var PLAIN_URL = /^[a-z][a-z0-9+.-]*:\/\/[^@]*$/i;
@@ -2307,7 +2307,7 @@ function treeSummary(files, maxLines = 70) {
       dirs.set(sub, (dirs.get(sub) ?? 0) + 1);
     }
   }
-  const lines = [...dirs.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([dir, count2]) => `${dir.split("/").length > 2 ? "  " : ""}${dir} (${count2})`);
+  const lines = [...dirs.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([dir, count3]) => `${dir.split("/").length > 2 ? "  " : ""}${dir} (${count3})`);
   const all = [...lines, ...topFiles.sort((a, b) => a.localeCompare(b))];
   return all.length > maxLines ? `${all.slice(0, maxLines).join("\n")}
 \u2026(${all.length - maxLines} more)` : all.join("\n");
@@ -2442,8 +2442,8 @@ function statusLinePaths(line) {
 function changedPaths(statusLines) {
   return statusLines.map((line) => (line.slice(3).split(" -> ").pop() ?? "").replace(/^"|"$/g, "")).filter(Boolean);
 }
-async function gitLog(root, count2, signal, ensureAccess) {
-  return git(root, ["log", `-n${count2}`, "--no-merges", "--pretty=format:%h %s (%cr)"], { signal, ensureAccess });
+async function gitLog(root, count3, signal, ensureAccess) {
+  return git(root, ["log", `-n${count3}`, "--no-merges", "--pretty=format:%h %s (%cr)"], { signal, ensureAccess });
 }
 var MAX_DIFF_EXCLUSIONS = 300;
 function parseNameStatus(out) {
@@ -2659,8 +2659,8 @@ function contentScores(perWord, totalFiles, weights = []) {
     if (df === 0 || df > Math.max(20, totalFiles * 0.05)) return;
     const idf = Math.log(1 + (totalFiles + 1) / (df + 1));
     const k = keywordFactor(weights[index] ?? 4);
-    for (const [file, count2] of counts) {
-      scores.set(file, (scores.get(file) ?? 0) + k * idf * (1 + Math.log(count2)));
+    for (const [file, count3] of counts) {
+      scores.set(file, (scores.get(file) ?? 0) + k * idf * (1 + Math.log(count3)));
     }
   });
   return scores;
@@ -2853,12 +2853,12 @@ function learnTerminal(host, terminalId, workspaceId) {
   save(host);
 }
 function workspacesOfTerminals(terminalIds) {
-  const count2 = /* @__PURE__ */ new Map();
+  const count3 = /* @__PURE__ */ new Map();
   for (const id2 of terminalIds) {
     const workspace = known.get(id2);
-    if (workspace) count2.set(workspace, (count2.get(workspace) ?? 0) + 1);
+    if (workspace) count3.set(workspace, (count3.get(workspace) ?? 0) + 1);
   }
-  return [...count2.entries()].sort((a, b) => b[1] - a[1]).map(([workspace]) => workspace);
+  return [...count3.entries()].sort((a, b) => b[1] - a[1]).map(([workspace]) => workspace);
 }
 async function forgetTerminals(host) {
   await saving.catch(() => void 0);
@@ -4832,12 +4832,12 @@ var unnamedRuns = 0;
 function startRun(host, input, panelId, budgetMs) {
   if (pendingRuns.size >= MAX_REWRITES) throw busyError();
   const runId = typeof input.runId === "string" ? input.runId.slice(0, 64) : "";
-  const progress = runId ? (level, allowProjectFiles, readsOtherAgents) => createProgress(runId, planSteps(level, allowProjectFiles, readsOtherAgents), (snapshot) => {
+  const progress = runId ? (level, allowProjectFiles, readsOtherAgents) => createProgress(runId, planSteps(level, allowProjectFiles, readsOtherAgents), (snapshot2) => {
     const key = JSON.stringify([panelId, runId]);
     latestProgress.delete(key);
-    latestProgress.set(key, snapshot);
+    latestProgress.set(key, snapshot2);
     for (const old of [...latestProgress.keys()].slice(0, Math.max(0, latestProgress.size - MAX_TRACKED_RUNS))) latestProgress.delete(old);
-    host.panels.post("enhance.progress", snapshot, { panel: panelId });
+    host.panels.post("enhance.progress", snapshot2, { panel: panelId });
   }) : void 0;
   const stop2 = new AbortController();
   const run2 = {
@@ -5275,7 +5275,7 @@ function activate(host) {
 }
 
 // src/copilot/extension.ts
-import { join as join11 } from "node:path";
+import { join as join13 } from "node:path";
 
 // src/copilot/storage.ts
 var import_proper_lockfile2 = __toESM(require_proper_lockfile(), 1);
@@ -5957,7 +5957,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.18";
+var VERSION = "0.12.19";
 
 // src/worker-host.ts
 import { EventEmitter } from "node:events";
@@ -6260,8 +6260,8 @@ function createWorkerHost(services2, log = (_message) => {
 
 // src/copilot/services.ts
 import { homedir } from "node:os";
-import { join as join7 } from "node:path";
-import { createHash as createHash3 } from "node:crypto";
+import { join as join9 } from "node:path";
+import { createHash as createHash4 } from "node:crypto";
 
 // src/text-size.ts
 function isChatTextSize(value) {
@@ -6407,32 +6407,384 @@ function sessionAdapter(session2) {
 // src/capabilities.ts
 var UNSUPPORTED_SETTINGS = /* @__PURE__ */ new Set(["allowTerminalRead", "allowOtherAgents", "allowAgentActivity", "allowEditorSaves", "allowOpenFiles"]);
 
+// src/copilot/session-activity.ts
+import { lstat as lstat3, mkdir as mkdir3, realpath as realpath6 } from "node:fs/promises";
+import { join as join7 } from "node:path";
+var scopeName2 = (scope) => {
+  if (!/^[a-f0-9]{24}$/.test(scope)) throw Error("Invalid session identity.");
+  return `${scope}.json`;
+};
+var invalid = () => Error("Unable to verify session activity. Keep the saved files for recovery.");
+var processAlive = (pid) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error.code === "ESRCH" ? false : void 0;
+  }
+};
+async function storageDirectory(root, ...parts) {
+  const initial = await lstat3(root).catch(() => null);
+  if (!initial?.isDirectory() || initial.isSymbolicLink()) return;
+  let path = await realpath6(root).catch(() => void 0);
+  if (!path) return;
+  for (const part of parts) {
+    if (!/^[a-z-]+$/.test(part)) return;
+    path = join7(path, part);
+    const info = await lstat3(path).catch(() => null);
+    if (!info?.isDirectory() || info.isSymbolicLink() || await realpath6(path).catch(() => void 0) !== path) return;
+  }
+  return path;
+}
+async function owners(root, scope) {
+  const directory2 = await storageDirectory(root, "data", "session-activity");
+  if (!directory2) return;
+  const file = await readConfinedFile(directory2, scopeName2(scope), 8192, (path) => path === scopeName2(scope));
+  if (!file) return;
+  try {
+    const saved = JSON.parse(file.data.toString("utf8"));
+    if (!saved || saved.version !== 1 || !Array.isArray(saved.pids) || !saved.pids.length || saved.pids.length > 64 || Object.keys(saved).some((key) => !["version", "pids"].includes(key)) || saved.pids.some((pid) => !Number.isSafeInteger(pid) || pid < 1 || pid > 2 ** 31 - 1)) return;
+    return saved.pids;
+  } catch {
+    return;
+  }
+}
+async function sessionUse(root, scope, alive2 = processAlive) {
+  const pids = await owners(root, scope);
+  if (!pids) return "unknown";
+  const states = pids.map(alive2);
+  return states.some((state) => state === true) ? "active" : states.every((state) => state === false) ? "inactive" : "unknown";
+}
+async function registerSessionUse(root, scope) {
+  const name = scopeName2(scope);
+  await persistentStore(join7(root, "data")).transaction(async () => {
+    const data = await storageDirectory(root, "data");
+    if (!data) throw invalid();
+    await mkdir3(join7(data, "session-activity"), { mode: 448 }).catch((error) => {
+      if (error.code !== "EEXIST") throw error;
+    });
+    const directory2 = await storageDirectory(root, "data", "session-activity");
+    if (!directory2) throw invalid();
+    const existing = await lstat3(join7(directory2, name)).catch((error) => {
+      if (error.code !== "ENOENT") throw error;
+      return null;
+    });
+    const prior = existing ? await owners(root, scope) : [];
+    if (!prior) throw invalid();
+    const pids = [.../* @__PURE__ */ new Set([...prior.filter((pid) => processAlive(pid) !== false), process.pid])];
+    if (pids.length > 64) throw invalid();
+    if (JSON.stringify(prior) !== JSON.stringify(pids)) await persistentStore(directory2, name).patch({ version: 1, pids });
+  });
+}
+
+// src/copilot/retained-data.ts
+import { createHash as createHash3, randomUUID as randomUUID4 } from "node:crypto";
+import { lstat as lstat4, opendir, realpath as realpath7 } from "node:fs/promises";
+import { join as join8, relative as relative4, sep as sep3 } from "node:path";
+
+// src/panel-storage.ts
+var PRIVATE_PANEL_KEYS = /* @__PURE__ */ new Set(["draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked"]);
+
+// src/copilot/retained-data.ts
+var empty = () => ({ files: 0, bytes: 0, unreadable: 0, partial: false });
+var invalidPlan = () => Error("Inspect stored data again before clearing inactive drafts.");
+var digest = (data) => createHash3("sha256").update(data).digest("hex");
+var count = (size, bytes) => {
+  size.files++;
+  size.bytes += bytes;
+};
+var unsafe = (size) => {
+  size.unreadable++;
+  size.partial = true;
+};
+var existsOrUnreadable = (path) => lstat4(path).then(() => true, (error) => error.code !== "ENOENT");
+var MAX_FILE_BYTES = 32 * 1024 * 1024;
+var MAX_CLEAR = 100;
+async function snapshot(directory2, path) {
+  const file = await readConfinedFile(directory2, path, MAX_FILE_BYTES, (local) => local === path);
+  if (!file) return;
+  try {
+    const values = JSON.parse(file.data.toString("utf8"));
+    if (!values || typeof values !== "object" || Array.isArray(values)) return;
+    return { values, data: file.data };
+  } catch {
+    return;
+  }
+}
+function createRetainedData(root, currentScope, options = {}) {
+  if (!/^[a-f0-9]{24}$/.test(currentScope)) throw Error("Invalid session identity.");
+  const now = options.now ?? Date.now, alive2 = options.alive ?? processAlive;
+  const uploadsDirectory = options.uploadsDirectory ?? ATTACHMENTS_DIR;
+  const plans = /* @__PURE__ */ new Map();
+  let operating = false;
+  let operatingOwner, closed = false;
+  const ensureOpen = (signal) => {
+    signal?.throwIfAborted();
+    if (closed) throw Error("This canvas closed. Inspect stored data again after reopening.");
+  };
+  async function operation(owner2, run2) {
+    if (operating) throw Error("A storage inspection or cleanup is already running. Wait and retry.");
+    operating = true;
+    operatingOwner = owner2;
+    closed = false;
+    try {
+      await options.prepare?.();
+      return await run2();
+    } finally {
+      operating = false;
+      operatingOwner = void 0;
+    }
+  }
+  async function inspect2(owner2, signal) {
+    return operation(owner2, async () => {
+      ensureOpen(signal);
+      plans.delete(owner2);
+      for (const [key, plan] of plans) if (plan.expiresAt <= now()) plans.delete(key);
+      if (plans.size >= 16) throw Error("Too many storage previews are open. Close one and retry.");
+      const started = now(), deadline2 = started + (options.maxMs ?? 15e3);
+      let entries = 0;
+      const exhausted = () => {
+        ensureOpen(signal);
+        return entries >= (options.maxEntries ?? 5e4) || now() >= deadline2;
+      };
+      const view2 = { checkedAt: started, location: root, uploadLocation: uploadsDirectory, sessions: { current: empty(), active: empty(), inactive: empty(), unknown: empty() }, shared: empty(), uploads: empty(), usage: empty(), recovery: empty(), other: empty() };
+      if (!await storageDirectory(root)) {
+        for (const size of [...Object.values(view2.sessions), view2.shared, view2.uploads, view2.usage, view2.recovery, view2.other]) unsafe(size);
+        return view2;
+      }
+      const candidates2 = [], processes = /* @__PURE__ */ new Map();
+      const cachedAlive = (pid) => {
+        if (!processes.has(pid)) processes.set(pid, alive2(pid));
+        return processes.get(pid);
+      };
+      const directory2 = await storageDirectory(root, "data", "sessions");
+      if (directory2) {
+        const incomplete = () => {
+          for (const size of Object.values(view2.sessions)) size.partial = true;
+        };
+        const inspectBatch = async (names2) => {
+          const results = await Promise.allSettled(names2.map(async (name) => {
+            const id2 = name.slice(0, -5), info = await lstat4(join8(directory2, name)).catch(() => null);
+            const safe = info?.isFile() && !info.isSymbolicLink() && info.nlink === 1;
+            return { name, id: id2, info, use: safe && id2 !== currentScope ? await sessionUse(root, id2, cachedAlive) : void 0 };
+          }));
+          for (const result of results) {
+            ensureOpen(signal);
+            if (result.status === "rejected") throw result.reason;
+            if (now() >= deadline2) {
+              incomplete();
+              break;
+            }
+            const { name, id: id2, info, use } = result.value;
+            if (!info?.isFile() || info.isSymbolicLink() || info.nlink !== 1) {
+              unsafe(view2.sessions.unknown);
+              continue;
+            }
+            if (id2 === currentScope) {
+              count(view2.sessions.current, info.size);
+              continue;
+            }
+            if (use !== "inactive") {
+              count(view2.sessions[use ?? "unknown"], info.size);
+              continue;
+            }
+            if (candidates2.length >= MAX_CLEAR) {
+              count(view2.sessions.inactive, info.size);
+              continue;
+            }
+            const saved = await snapshot(directory2, name);
+            if (!saved) {
+              count(view2.sessions.unknown, info.size);
+              unsafe(view2.sessions.unknown);
+              continue;
+            }
+            count(view2.sessions.inactive, info.size);
+            const remaining = { ...saved.values };
+            const keys = [...PRIVATE_PANEL_KEYS].map((key) => `panel:${key}`).filter((key) => Object.hasOwn(remaining, key));
+            if (keys.length) {
+              for (const key of keys) delete remaining[key];
+              candidates2.push({ id: id2, digest: digest(saved.data), bytes: info.size, removableBytes: Math.max(0, saved.data.length - Buffer.byteLength(JSON.stringify(remaining))), updatedAt: info.mtimeMs });
+            }
+          }
+        };
+        let names = [];
+        for await (const entry of await opendir(directory2)) {
+          if (exhausted()) {
+            incomplete();
+            break;
+          }
+          entries++;
+          if (!/^[a-f0-9]{24}\.json$/.test(entry.name)) continue;
+          names.push(entry.name);
+          if (names.length === 16) {
+            await inspectBatch(names);
+            names = [];
+          }
+        }
+        if (names.length) await inspectBatch(names);
+      } else if (await existsOrUnreadable(join8(root, "data", "sessions"))) unsafe(view2.sessions.unknown);
+      async function scan(path, size, exclude = () => false) {
+        if (exhausted()) {
+          size.partial = true;
+          return;
+        }
+        const initial = await lstat4(path).catch((error) => {
+          if (error.code !== "ENOENT") unsafe(size);
+          return null;
+        });
+        if (!initial) return;
+        if (initial.isSymbolicLink()) {
+          unsafe(size);
+          return;
+        }
+        const base = await realpath7(path).catch(() => void 0);
+        if (!base) {
+          unsafe(size);
+          return;
+        }
+        const visit = async (file, depth) => {
+          if (exclude(relative4(base, file).split(sep3).join("/"))) return;
+          if (exhausted()) {
+            size.partial = true;
+            return;
+          }
+          entries++;
+          const info = await lstat4(file).catch(() => null);
+          if (!info || info.isSymbolicLink() || await realpath7(file).catch(() => void 0) !== file) {
+            unsafe(size);
+            return;
+          }
+          if (info.isFile()) {
+            if (info.nlink === 1) count(size, info.size);
+            else unsafe(size);
+            return;
+          }
+          if (!info.isDirectory() || depth > 4) {
+            unsafe(size);
+            return;
+          }
+          const children = await opendir(file).catch(() => null);
+          if (!children) {
+            unsafe(size);
+            return;
+          }
+          for await (const child of children) {
+            if (exhausted()) {
+              size.partial = true;
+              break;
+            }
+            await visit(join8(file, child.name), depth + 1);
+          }
+        };
+        await visit(base, 0);
+      }
+      const data = await storageDirectory(root, "data");
+      if (data) {
+        await scan(join8(data, "state.json"), view2.shared);
+        const saved = exhausted() ? void 0 : await snapshot(data, "state.json");
+        if (saved && Array.isArray(saved.values.history)) view2.history = { entries: saved.values.history.length, bytes: Buffer.byteLength(JSON.stringify(saved.values.history)) };
+      } else unsafe(view2.shared);
+      const preferences = await storageDirectory(root, "preferences");
+      if (preferences) await scan(join8(preferences, "state.json"), view2.shared);
+      else if (await existsOrUnreadable(join8(root, "preferences"))) unsafe(view2.shared);
+      await scan(uploadsDirectory, view2.uploads);
+      const usage = await storageDirectory(root, "usage");
+      if (usage) {
+        await scan(join8(usage, "session-state"), view2.usage);
+        await scan(join8(usage, "recovery"), view2.recovery);
+      } else if (await existsOrUnreadable(join8(root, "usage"))) {
+        unsafe(view2.usage);
+        unsafe(view2.recovery);
+      }
+      await scan(root, view2.other, (path) => path === "data/state.json" || path === "preferences/state.json" || /^data\/sessions\/[a-f0-9]{24}\.json$/.test(path) || ["usage/session-state", "usage/recovery"].includes(path));
+      ensureOpen(signal);
+      if (candidates2.length) {
+        const token = randomUUID4(), expiresAt = now() + 5 * 6e4;
+        plans.set(owner2, { token, expiresAt, candidates: candidates2 });
+        view2.cleanup = { token, expiresAt, count: candidates2.length, bytes: candidates2.reduce((sum, item2) => sum + item2.removableBytes, 0), sessions: candidates2.map(({ id: id2, updatedAt, bytes }) => ({ id: id2, updatedAt, bytes })) };
+      }
+      return view2;
+    });
+  }
+  async function clear(owner2, token, restarted, signal) {
+    if (!restarted) throw Error("Confirm you restarted Copilot after updating before cleanup.");
+    return operation(owner2, async () => {
+      ensureOpen(signal);
+      const plan = plans.get(owner2);
+      if (!plan || plan.token !== token || plan.expiresAt <= now()) throw invalidPlan();
+      plans.delete(owner2);
+      const result = { cleared: 0, skipped: 0, failed: 0, bytes: 0, cancelled: false };
+      for (const item2 of plan.candidates) {
+        if (signal?.aborted || closed) {
+          result.cancelled = true;
+          break;
+        }
+        try {
+          await persistentStore(join8(root, "data")).transaction(async () => {
+            if (item2.id === currentScope || await sessionUse(root, item2.id, alive2) !== "inactive") {
+              result.skipped++;
+              return;
+            }
+            const directory2 = await storageDirectory(root, "data", "sessions");
+            if (!directory2) {
+              result.skipped++;
+              return;
+            }
+            const store = sessionData(root, item2.id);
+            await store.transaction(async () => {
+              const saved = await snapshot(directory2, `${item2.id}.json`);
+              if (!saved || digest(saved.data) !== item2.digest) {
+                result.skipped++;
+                return;
+              }
+              ensureOpen(signal);
+              await store.patch(Object.fromEntries([...PRIVATE_PANEL_KEYS].map((key) => [`panel:${key}`, void 0])));
+              result.cleared++;
+              result.bytes += item2.removableBytes;
+            });
+          });
+        } catch {
+          if (signal?.aborted || closed) result.cancelled = true;
+          else result.failed++;
+          break;
+        }
+      }
+      return result;
+    });
+  }
+  return { inspect: inspect2, clear, close(owner2) {
+    plans.delete(owner2);
+    if (operatingOwner === owner2) closed = true;
+  } };
+}
+
 // src/copilot/services.ts
-function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_DIR || join7(process.env.LOCALAPPDATA || join7(homedir(), ".local", "share"), "copilot-enhance-prompt"), copilot2) {
-  const data = persistentStore(join7(directory2, "data"));
-  const prefs = persistentStore(join7(directory2, "preferences"));
-  const retiredCredentials = persistentStore(join7(directory2, "credentials"));
-  const scope = createHash3("sha256").update(session2.sessionId).digest("hex").slice(0, 24);
+function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_DIR || join9(process.env.LOCALAPPDATA || join9(homedir(), ".local", "share"), "copilot-enhance-prompt"), copilot2) {
+  const data = persistentStore(join9(directory2, "data"));
+  const prefs = persistentStore(join9(directory2, "preferences"));
+  const retiredCredentials = persistentStore(join9(directory2, "credentials"));
+  const scope = createHash4("sha256").update(session2.sessionId).digest("hex").slice(0, 24);
   const panelData = sessionData(directory2, scope);
   let migration;
   const prepare = () => migration ??= (async () => {
     await data.transaction(async () => {
-      const snapshot = await data.snapshot();
-      validateSessionLayout(snapshot);
+      const snapshot2 = await data.snapshot();
+      validateSessionLayout(snapshot2);
       await prefs.transaction(async () => {
         for (const key of ["uiLanguage", "outputLanguage", "notifyWhenDone", "allowEnvKeys", "statusBarItem", "allowAgentLaunch"]) if (await prefs.get(key) !== null) await prefs.delete(key);
       });
       const changes = {};
-      for (const key of Object.keys(snapshot)) {
+      for (const key of Object.keys(snapshot2)) {
         if (key === "uiLocale" || key.startsWith("catalog:") || key.startsWith("sent:") || /^(?:session:[a-f0-9]{24}:)?panel:(?:uiLanguage|outputChoice|feedbackAsk|feedbackOff|hookLast)$/.test(key)) changes[key] = void 0;
       }
-      const saved = snapshot[MODELS_KEY];
+      const saved = snapshot2[MODELS_KEY];
       if (saved !== void 0) {
         const cleaned = modelsToJson(parseModelsConfig(saved));
         if (JSON.stringify(saved) !== JSON.stringify(cleaned)) changes[MODELS_KEY] = cleaned;
       }
       await data.patch(changes);
       await partitionSessions(directory2, data);
+      await registerSessionUse(directory2, scope);
     });
     await retiredCredentials.transaction(async () => {
       for (const key of await retiredCredentials.keys()) if (key.startsWith("apiKey.")) await retiredCredentials.delete(key);
@@ -6506,8 +6858,8 @@ function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_D
       await prepare();
       const values = /* @__PURE__ */ Object.create(null);
       await Promise.all([...groups].map(async ([store, selected]) => {
-        const snapshot = await store.snapshot();
-        for (const key of selected) values[key] = Object.hasOwn(snapshot, key) ? snapshot[key] : null;
+        const snapshot2 = await store.snapshot();
+        for (const key of selected) values[key] = Object.hasOwn(snapshot2, key) ? snapshot2[key] : null;
       }));
       return { ...values };
     },
@@ -6557,26 +6909,21 @@ function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_D
     has: (name) => Boolean(copilot2) && ["copilot.catalog", "copilot.rewrite", "copilot.usage.status", "copilot.usage.recover"].includes(name) || adapter.has(name),
     call: async (name, input, options) => name === "copilot.catalog" && copilot2 ? await copilot2.catalog() : name === "copilot.rewrite" && copilot2 ? { text: await copilot2.rewrite(input, options?.signal, options?.ensureAccess) } : name === "copilot.usage.status" && copilot2 ? await copilot2.recoverUsage(false, true) : name === "copilot.usage.recover" && copilot2 ? await copilot2.recoverUsage(true) : adapter.call(name, input, options)
   };
-  return { storage, settings, host, adapter, directory: directory2, data, attachmentOwner: `${directory2}\0${session2.sessionId}` };
+  return { storage, settings, host, adapter, directory: directory2, data, retained: createRetainedData(directory2, scope, { prepare }), attachmentOwner: `${directory2}\0${session2.sessionId}` };
 }
 
 // src/copilot/server.ts
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
-import { realpath as realpath6 } from "node:fs/promises";
+import { realpath as realpath8 } from "node:fs/promises";
 import { extname } from "node:path";
-
-// src/panel-storage.ts
-var PRIVATE_PANEL_KEYS = /* @__PURE__ */ new Set(["draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked"]);
-
-// src/copilot/server.ts
 var MODEL_WRITES = /* @__PURE__ */ new Set(["models.save", "models.delete", "models.move", "models.roles", "consent.set", "rules.save"]);
 var PANEL_KEYS = /* @__PURE__ */ new Set(["tab", "style", "level", "effort", "structureChoice", "terminalWorkspaces", "optionsOpen", "draft", "result", "lastRun", "contextShown", "contextNotes", "files", "workspaceKey", "parked", "sendAfterEnhance", "historyScope"]);
 var readable = (key) => key === "history" || key === "colorTheme" || key.startsWith("panel:") && PANEL_KEYS.has(key.slice(6));
 var writable = (key) => key === "colorTheme" || key.startsWith("panel:") && PANEL_KEYS.has(key.slice(6));
-var invalid = (message = "Invalid canvas request.") => Object.assign(new Error(message), { status: 400 });
+var invalid2 = (message = "Invalid canvas request.") => Object.assign(new Error(message), { status: 400 });
 async function body(request, timeoutMs) {
-  if (!request.headers["content-type"]?.startsWith("application/json")) throw invalid();
+  if (!request.headers["content-type"]?.startsWith("application/json")) throw invalid2();
   let size = 0;
   let tooLarge = false;
   const parts = [];
@@ -6602,7 +6949,7 @@ async function body(request, timeoutMs) {
     };
     const end = () => finish(tooLarge ? Object.assign(new Error("The canvas request is too large."), { status: 413 }) : void 0);
     const fail = (error) => finish(error);
-    const aborted = () => finish(invalid("The request was disconnected."));
+    const aborted = () => finish(invalid2("The request was disconnected."));
     const timer = setTimeout(() => finish(Object.assign(new Error("The request body timed out. Retry when the connection is ready."), { status: 408 })), timeoutMs);
     request.on("data", data);
     request.on("end", end);
@@ -6610,7 +6957,7 @@ async function body(request, timeoutMs) {
     request.on("aborted", aborted);
   });
   const value = JSON.parse(Buffer.concat(parts).toString("utf8"));
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw invalid();
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw invalid2();
   validateJson(value);
   return value;
 }
@@ -6619,7 +6966,7 @@ async function createCanvasServer(options) {
   const canvases = /* @__PURE__ */ new Map();
   let pending = 0, streams = 0;
   let origin = "";
-  const assets = await realpath6(options.assets);
+  const assets = await realpath8(options.assets);
   const json3 = (res, status, value) => {
     res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
     res.end(JSON.stringify(value ?? null));
@@ -6637,6 +6984,8 @@ async function createCanvasServer(options) {
     const canvas2 = canvases.get(id2);
     if (!canvas2) return;
     canvases.delete(id2);
+    for (const controller of canvas2.controllers) controller.abort();
+    options.retained?.close(id2);
     worker2.closePanel(id2);
     options.onClose?.(id2);
     for (const sub of canvas2.subscriptions) sub.dispose();
@@ -6667,7 +7016,7 @@ async function createCanvasServer(options) {
           return;
         }
         if (route === "events") {
-          if (req.method !== "GET") throw invalid();
+          if (req.method !== "GET") throw invalid2();
           if (canvas2.streams.size >= 2 || streams >= 16) throw busyError();
           res.writeHead(200, { "content-type": "text/event-stream", connection: "keep-alive" });
           res.write('data: {"kind":"connected"}\n\n');
@@ -6680,7 +7029,7 @@ async function createCanvasServer(options) {
           });
           return;
         }
-        if (req.method !== "POST") throw invalid();
+        if (req.method !== "POST") throw invalid2();
         if (canvas2.pending >= 24 || pending >= 64) throw busyError();
         canvas2.pending++;
         pending++;
@@ -6690,11 +7039,17 @@ async function createCanvasServer(options) {
         };
         const request = await body(req, options.bodyTimeoutMs ?? 1e4);
         const controller = new AbortController();
+        canvas2.controllers.add(controller);
+        const quotaRelease = release;
+        release = () => {
+          canvas2.controllers.delete(controller);
+          quotaRelease?.();
+        };
         res.on("close", () => {
           if (!res.writableEnded) controller.abort();
         });
         const { method, input = {} } = request;
-        if (!input || typeof input !== "object" || Array.isArray(input)) throw invalid();
+        if (!input || typeof input !== "object" || Array.isArray(input)) throw invalid2();
         let answer;
         const client = worker2.panel(canvas2.id);
         const work = (run2) => options.updates ? options.updates.withWork(run2) : run2();
@@ -6704,19 +7059,28 @@ async function createCanvasServer(options) {
           for (const [key, value] of Object.entries(values)) if (value === void 0) await client.storage.delete(key);
           else await client.storage.set(key, value);
         };
-        if (typeof method === "string" && method.startsWith("updates.")) {
-          if (!options.updates) throw invalid("Updates are unavailable in this runtime.");
+        if (method === "retained.inspect" || method === "retained.clear") {
+          if (!options.retained) throw invalid2("Stored-data inspection is unavailable in this runtime.");
+          if (method === "retained.inspect") {
+            if (Object.keys(input).length) throw invalid2();
+            answer = await work(() => options.retained.inspect(canvas2.id, controller.signal));
+          } else {
+            if (Object.keys(input).some((key) => !["token", "restarted"].includes(key)) || typeof input.token !== "string" || input.token.length > 100 || typeof input.restarted !== "boolean") throw invalid2();
+            answer = await work(() => options.retained.clear(canvas2.id, input.token, input.restarted, controller.signal));
+          }
+        } else if (typeof method === "string" && method.startsWith("updates.")) {
+          if (!options.updates) throw invalid2("Updates are unavailable in this runtime.");
           const action = method.slice(8);
           const expected = action === "check" ? ["manual"] : action === "automatic" ? ["enabled"] : [];
-          if (Object.keys(request).some((key) => !["method", "input"].includes(key)) || Object.keys(input).some((key) => !expected.includes(key))) throw invalid();
+          if (Object.keys(request).some((key) => !["method", "input"].includes(key)) || Object.keys(input).some((key) => !expected.includes(key))) throw invalid2();
           if (action === "check" && typeof input.manual === "boolean") answer = await options.updates.check(input.manual);
           else if (action === "automatic" && typeof input.enabled === "boolean") answer = await options.updates.automatic(input.enabled);
           else if (action === "state") answer = await options.updates.state();
           else if (action === "install") answer = await options.updates.install();
           else if (action === "later") answer = await options.updates.later();
-          else throw invalid();
+          else throw invalid2();
         } else if (method === "request") {
-          if (typeof request.name !== "string") throw invalid();
+          if (typeof request.name !== "string") throw invalid2();
           const name = request.name;
           const run2 = () => worker2.request(name, input, { signal: controller.signal, panelId: canvas2.id, timeoutMs: 12e4 });
           const guarded = async () => {
@@ -6736,18 +7100,18 @@ async function createCanvasServer(options) {
           answer = true;
         } else if (method === "storage.keys") answer = (await client.storage.keys()).filter(readable);
         else if (method === "storage.getMany") {
-          if (Object.keys(input).some((key) => key !== "keys") || !Array.isArray(input.keys) || input.keys.length > 64 || input.keys.some((key) => typeof key !== "string" || !readable(key))) throw invalid();
+          if (Object.keys(input).some((key) => key !== "keys") || !Array.isArray(input.keys) || input.keys.length > 64 || input.keys.some((key) => typeof key !== "string" || !readable(key))) throw invalid2();
           const keys = [...new Set(input.keys)];
           answer = client.storage.getMany ? await client.storage.getMany(keys) : Object.fromEntries(await Promise.all(keys.map(async (key) => [key, await client.storage.get(key)])));
         } else if (method === "storage.get") {
-          if (typeof input.key !== "string" || !readable(input.key)) throw invalid();
+          if (typeof input.key !== "string" || !readable(input.key)) throw invalid2();
           answer = await client.storage.get(input.key);
         } else if (method === "storage.patch") {
-          if (Object.keys(input).some((key) => key !== "changes") || !Array.isArray(input.changes) || input.changes.length > 64) throw invalid();
+          if (Object.keys(input).some((key) => key !== "changes") || !Array.isArray(input.changes) || input.changes.length > 64) throw invalid2();
           const values = /* @__PURE__ */ Object.create(null);
           for (const change of input.changes) {
-            if (!change || typeof change !== "object" || Array.isArray(change) || Object.keys(change).some((key) => !["key", "value", "remove"].includes(key)) || typeof change.key !== "string" || !writable(change.key) || (change.remove === true ? Object.hasOwn(change, "value") : Object.hasOwn(change, "remove") || !Object.hasOwn(change, "value"))) throw invalid();
-            if (change.key === "colorTheme" && !change.remove && !["system", "light", "dark"].includes(change.value)) throw invalid();
+            if (!change || typeof change !== "object" || Array.isArray(change) || Object.keys(change).some((key) => !["key", "value", "remove"].includes(key)) || typeof change.key !== "string" || !writable(change.key) || (change.remove === true ? Object.hasOwn(change, "value") : Object.hasOwn(change, "remove") || !Object.hasOwn(change, "value"))) throw invalid2();
+            if (change.key === "colorTheme" && !change.remove && !["system", "light", "dark"].includes(change.value)) throw invalid2();
             values[change.key] = change.remove ? void 0 : change.value;
           }
           await work(() => atomic(async () => {
@@ -6758,8 +7122,8 @@ async function createCanvasServer(options) {
           }));
           answer = true;
         } else if (method === "storage.set" || method === "storage.delete") {
-          if (typeof input.key !== "string" || !writable(input.key)) throw invalid();
-          if (method === "storage.set" && input.key === "colorTheme" && !["system", "light", "dark"].includes(input.value)) throw invalid();
+          if (typeof input.key !== "string" || !writable(input.key)) throw invalid2();
+          if (method === "storage.set" && input.key === "colorTheme" && !["system", "light", "dark"].includes(input.value)) throw invalid2();
           await work(() => atomic(async () => {
             if (method === "storage.set" && PRIVATE_PANEL_KEYS.has(input.key.slice(6)) && await client.settings.get("saveHistory") === false) await client.storage.delete(input.key);
             else if (method === "storage.set") await client.storage.set(input.key, input.value);
@@ -6767,10 +7131,11 @@ async function createCanvasServer(options) {
           }));
           answer = true;
         } else if (method === "close") {
+          options.retained?.close(canvas2.id);
           worker2.closePanel(canvas2.id);
           options.onClose?.(canvas2.id);
           answer = true;
-        } else throw invalid();
+        } else throw invalid2();
         if (!res.destroyed) json3(res, 200, { result: answer ?? null });
         return;
       }
@@ -6813,7 +7178,7 @@ async function createCanvasServer(options) {
       let canvas2 = canvases.get(id2);
       if (!canvas2) {
         if (canvases.size >= 16) throw busyError();
-        canvas2 = { id: id2, token: randomBytes(32).toString("hex"), streams: /* @__PURE__ */ new Set(), subscriptions: [], pending: 0 };
+        canvas2 = { id: id2, token: randomBytes(32).toString("hex"), streams: /* @__PURE__ */ new Set(), subscriptions: [], pending: 0, controllers: /* @__PURE__ */ new Set() };
         const target = canvas2;
         target.subscriptions.push(
           worker2.onPost((post) => {
@@ -6838,40 +7203,40 @@ async function createCanvasServer(options) {
 }
 
 // src/copilot/models.ts
-import { mkdtemp, mkdir as mkdir5, realpath as realpath9, rm as rm2 } from "node:fs/promises";
-import { basename as basename6, isAbsolute as isAbsolute5, join as join10, relative as relative5 } from "node:path";
+import { mkdtemp, mkdir as mkdir6, realpath as realpath11, rm as rm2 } from "node:fs/promises";
+import { basename as basename6, isAbsolute as isAbsolute5, join as join12, relative as relative6 } from "node:path";
 import { tmpdir as tmpdir3 } from "node:os";
-import { randomUUID as randomUUID6 } from "node:crypto";
+import { randomUUID as randomUUID7 } from "node:crypto";
 
 // src/copilot/usage.ts
-import { randomUUID as randomUUID5 } from "node:crypto";
+import { randomUUID as randomUUID6 } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { homedir as homedir2 } from "node:os";
-import { lstat as lstat4, mkdir as mkdir4, open as open4, realpath as realpath8, rename as rename4, writeFile as writeFile3 } from "node:fs/promises";
-import { join as join9 } from "node:path";
+import { lstat as lstat6, mkdir as mkdir5, open as open4, realpath as realpath10, rename as rename4, writeFile as writeFile3 } from "node:fs/promises";
+import { join as join11 } from "node:path";
 import { StringDecoder } from "node:string_decoder";
 
 // src/copilot/usage-recovery.ts
 var import_proper_lockfile3 = __toESM(require_proper_lockfile(), 1);
-import { randomUUID as randomUUID4 } from "node:crypto";
-import { lstat as lstat3, mkdir as mkdir3, open as open3, readdir as readdir4, realpath as realpath7, rename as rename3, rm, rmdir as rmdir2, unlink as unlink2, writeFile as writeFile2 } from "node:fs/promises";
-import { basename as basename5, isAbsolute as isAbsolute4, join as join8, relative as relative4, resolve as resolve4 } from "node:path";
+import { randomUUID as randomUUID5 } from "node:crypto";
+import { lstat as lstat5, mkdir as mkdir4, open as open3, readdir as readdir4, realpath as realpath9, rename as rename3, rm, rmdir as rmdir2, unlink as unlink2, writeFile as writeFile2 } from "node:fs/promises";
+import { basename as basename5, isAbsolute as isAbsolute4, join as join10, relative as relative5, resolve as resolve4 } from "node:path";
 import { tmpdir as tmpdir2 } from "node:os";
 var uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 var ownerFile = ".enhance-usage-owner.json";
 var generic = () => new Error("Unable to recover usage accounting. Raw helper data was left untouched.");
 var within = (root, path) => {
-  const part = relative4(root, path);
+  const part = relative5(root, path);
   return !!part && !isAbsolute4(part) && !part.startsWith("..");
 };
 var missing = (error) => error.code === "ENOENT";
 async function save2(file, value) {
-  const temporary = `${file}.${randomUUID4()}.tmp`;
+  const temporary = `${file}.${randomUUID5()}.tmp`;
   await writeFile2(temporary, JSON.stringify(value), { mode: 384 });
   await rename3(temporary, file);
 }
 async function json2(file) {
-  const before = await lstat3(file, { bigint: true });
+  const before = await lstat5(file, { bigint: true });
   if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size > 16384n) throw generic();
   const handle = await open3(file, "r");
   try {
@@ -6883,16 +7248,16 @@ async function json2(file) {
   }
 }
 async function identity(directory2) {
-  const info = await lstat3(directory2, { bigint: true });
-  const canonical = await realpath7(directory2);
-  const temp = await realpath7(tmpdir2());
+  const info = await lstat5(directory2, { bigint: true });
+  const canonical = await realpath9(directory2);
+  const temp = await realpath9(tmpdir2());
   if (!info.isDirectory() || info.isSymbolicLink() || canonical !== resolve4(directory2) || !within(temp, canonical) || !basename5(canonical).startsWith("enhance-copilot-")) throw generic();
   return { directory: canonical, dev: String(info.dev), ino: String(info.ino) };
 }
 async function owner(record) {
   const info = await identity(record.directory);
   if (info.dev !== record.dev || info.ino !== record.ino) throw generic();
-  const value = await json2(join8(record.directory, ownerFile));
+  const value = await json2(join10(record.directory, ownerFile));
   if (value.token !== record.token || value.sessionId !== record.sessionId || !["running", "stopped"].includes(value.state)) throw generic();
   return value;
 }
@@ -6909,25 +7274,25 @@ async function cleanup(record) {
   for (const name of await readdir4(record.directory)) {
     if (name === ownerFile) continue;
     await sameDirectory(record);
-    await rm(join8(record.directory, name), { recursive: true, force: false, maxRetries: 3 });
+    await rm(join10(record.directory, name), { recursive: true, force: false, maxRetries: 3 });
   }
   if ((await owner(record)).state !== "stopped") throw generic();
-  await unlink2(join8(record.directory, ownerFile));
+  await unlink2(join10(record.directory, ownerFile));
   await rmdir2(record.directory);
 }
 async function registerUsageJournal(root, sessionId, directory2) {
   if (!uuid.test(sessionId)) throw generic();
-  const record = { sessionId, ...await identity(await realpath7(directory2)), token: randomUUID4() };
-  const registry = join8(root, "recovery"), file = join8(registry, `${sessionId}.json`);
-  await mkdir3(registry, { recursive: true, mode: 448 });
-  await writeFile2(join8(record.directory, ownerFile), JSON.stringify({ token: record.token, sessionId, state: "running" }), { flag: "wx", mode: 384 });
+  const record = { sessionId, ...await identity(await realpath9(directory2)), token: randomUUID5() };
+  const registry = join10(root, "recovery"), file = join10(registry, `${sessionId}.json`);
+  await mkdir4(registry, { recursive: true, mode: 448 });
+  await writeFile2(join10(record.directory, ownerFile), JSON.stringify({ token: record.token, sessionId, state: "running" }), { flag: "wx", mode: 384 });
   await writeFile2(file, JSON.stringify(record), { flag: "wx", mode: 384 });
   let release;
   return {
     async stopped() {
       release = await import_proper_lockfile3.default.lock(registry, { realpath: false, stale: 3e4, retries: { retries: 80, minTimeout: 50, maxTimeout: 250 } });
       await owner(record);
-      await save2(join8(record.directory, ownerFile), { token: record.token, sessionId, state: "stopped" });
+      await save2(join10(record.directory, ownerFile), { token: record.token, sessionId, state: "stopped" });
     },
     async committed() {
       await save2(file, { ...record, committed: true });
@@ -6950,9 +7315,9 @@ async function registerUsageJournal(root, sessionId, directory2) {
 async function journal(record) {
   let path = record.directory;
   for (const component of ["home", "session-state", record.sessionId, "events.jsonl"]) {
-    path = join8(path, component);
-    const info = await lstat3(path);
-    if (info.isSymbolicLink() || await realpath7(path) !== path || (component === "events.jsonl" ? !info.isFile() || info.nlink !== 1 : !info.isDirectory())) throw generic();
+    path = join10(path, component);
+    const info = await lstat5(path);
+    if (info.isSymbolicLink() || await realpath9(path) !== path || (component === "events.jsonl" ? !info.isFile() || info.nlink !== 1 : !info.isDirectory())) throw generic();
   }
   return path;
 }
@@ -6960,11 +7325,11 @@ async function recoverUsageJournals(root, consume, options = {}) {
   const status = { pending: 0, unconfirmed: 0, recovered: 0, failed: 0, deferred: 0 };
   let registry;
   try {
-    const rootInfo = await lstat3(root);
+    const rootInfo = await lstat5(root);
     if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink()) throw generic();
-    registry = join8(await realpath7(root), "recovery");
-    const info = await lstat3(registry);
-    if (!info.isDirectory() || info.isSymbolicLink() || await realpath7(registry) !== registry) throw generic();
+    registry = join10(await realpath9(root), "recovery");
+    const info = await lstat5(registry);
+    if (!info.isDirectory() || info.isSymbolicLink() || await realpath9(registry) !== registry) throw generic();
   } catch (error) {
     if (missing(error)) return status;
     throw generic();
@@ -6974,7 +7339,7 @@ async function recoverUsageJournals(root, consume, options = {}) {
     const now = options.now?.() ?? Date.now();
     let attempted = 0;
     for (const name of (await readdir4(registry)).filter((name2) => name2.endsWith(".json")).sort()) {
-      const file = join8(registry, name);
+      const file = join10(registry, name);
       let record;
       try {
         record = parse(await json2(file), name);
@@ -6984,7 +7349,7 @@ async function recoverUsageJournals(root, consume, options = {}) {
         } catch (error) {
           if (record.committed && missing(error)) {
             try {
-              await lstat3(record.directory);
+              await lstat5(record.directory);
             } catch (error2) {
               if (missing(error2)) {
                 if (!options.inspect) await unlink2(file);
@@ -7065,7 +7430,7 @@ function object(value) {
 function safeId(value, max = 256) {
   return typeof value === "string" && value.length <= max && !value.includes("://") && identifier.test(value) ? value : void 0;
 }
-function count(value) {
+function count2(value) {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : void 0;
 }
 function metric(value) {
@@ -7084,7 +7449,7 @@ function project(event, sessionId) {
   const model = safeId(data.model, 128);
   if (model) usage.model = model;
   for (const field of numericFields) {
-    const value = field === "duration" ? metric(data[field]) : count(data[field]);
+    const value = field === "duration" ? metric(data[field]) : count2(data[field]);
     if (value !== void 0) usage[field] = value;
   }
   if (typeof data.cacheDetailsReported === "boolean") usage.cacheDetailsReported = data.cacheDetailsReported;
@@ -7098,13 +7463,13 @@ function project(event, sessionId) {
     usage.provider = { kind: provider.kind === "copilot" ? "copilot" : "external" };
   }
   const copilotUsage = object(data.copilotUsage);
-  const totalNanoAiu = count(copilotUsage?.totalNanoAiu);
+  const totalNanoAiu = count2(copilotUsage?.totalNanoAiu);
   if (totalNanoAiu !== void 0) usage.copilotUsage = { totalNanoAiu };
   if (["complete", "partial", "unavailable"].includes(data.aiCreditsStatus)) usage.aiCreditsStatus = data.aiCreditsStatus;
   const accounting = object(data.accounting);
   if (accounting?.sourceSessionId === sessionId) {
     const usageId = safeId(accounting.usageId);
-    const sequence = count(accounting.sequence);
+    const sequence = count2(accounting.sequence);
     if (usageId && sequence !== void 0) usage.accounting = { sourceSessionId: sessionId, usageId, sequence };
   }
   return { type: "session.usage_record", id: id2, timestamp: new Date(ms).toISOString(), data: { usage } };
@@ -7144,29 +7509,29 @@ async function reconcileUsageJournal(path, recorder) {
   if (unreadable) throw new Error("Unable to read usage accounting journal.");
 }
 async function replace(file, content) {
-  const temporary = `${file}.${randomUUID5()}.tmp`;
+  const temporary = `${file}.${randomUUID6()}.tmp`;
   await writeFile3(temporary, content, { encoding: "utf8", mode: 384 });
   await rename4(temporary, file);
 }
 function usageHome() {
-  return join9(process.env.ENHANCE_PROMPT_DATA_DIR || join9(process.env.LOCALAPPDATA || join9(homedir2(), ".local", "share"), "copilot-enhance-prompt"), "usage");
+  return join11(process.env.ENHANCE_PROMPT_DATA_DIR || join11(process.env.LOCALAPPDATA || join11(homedir2(), ".local", "share"), "copilot-enhance-prompt"), "usage");
 }
 async function createUsageRecorder(sessionId, root = usageHome(), options = {}) {
   if (!uuid2.test(sessionId)) throw new Error("Invalid usage session ID.");
-  const directory2 = join9(root, "session-state", sessionId);
-  const file = join9(directory2, "events.jsonl");
+  const directory2 = join11(root, "session-state", sessionId);
+  const file = join11(directory2, "events.jsonl");
   const started = (/* @__PURE__ */ new Date()).toISOString();
-  await mkdir4(join9(root, "session-state"), { recursive: true, mode: 448 });
-  let lines = JSON.stringify({ type: "session.start", id: randomUUID5(), timestamp: started, data: { sessionId, context: { repository: "Enhanced Prompt" } } }) + "\n";
+  await mkdir5(join11(root, "session-state"), { recursive: true, mode: 448 });
+  let lines = JSON.stringify({ type: "session.start", id: randomUUID6(), timestamp: started, data: { sessionId, context: { repository: "Enhanced Prompt" } } }) + "\n";
   const seen = /* @__PURE__ */ new Set();
   const keyOf = (receipt2) => {
     const accounting = object(object(object(receipt2.data)?.usage)?.accounting);
     return accounting ? `${sessionId}:${accounting.usageId}` : `event:${receipt2.id}`;
   };
   if (options.resume) {
-    const canonical = await realpath8(root);
-    if (await realpath8(directory2) !== join9(canonical, "session-state", sessionId)) throw new Error("Unable to reopen usage accounting.");
-    const before = await lstat4(file, { bigint: true });
+    const canonical = await realpath10(root);
+    if (await realpath10(directory2) !== join11(canonical, "session-state", sessionId)) throw new Error("Unable to reopen usage accounting.");
+    const before = await lstat6(file, { bigint: true });
     if (!before.isFile() || before.nlink !== 1n || before.size > 64n * 1024n * 1024n) throw new Error("Unable to reopen usage accounting.");
     const handle = await open4(file, "r");
     let content;
@@ -7191,8 +7556,8 @@ async function createUsageRecorder(sessionId, root = usageHome(), options = {}) 
       }
     }
   } else {
-    await mkdir4(directory2, { mode: 448 });
-    await replace(join9(directory2, "workspace.yaml"), JSON.stringify({ id: sessionId, name: `Enhanced Prompt \xB7 ${started}` }) + "\n");
+    await mkdir5(directory2, { mode: 448 });
+    await replace(join11(directory2, "workspace.yaml"), JSON.stringify({ id: sessionId, name: `Enhanced Prompt \xB7 ${started}` }) + "\n");
     await replace(file, lines);
   }
   const recovery = options.helperDirectory ? await registerUsageJournal(root, sessionId, options.helperDirectory) : void 0;
@@ -7263,7 +7628,7 @@ async function desktopRuntime(probe) {
     probe?.stage("runtime_identity");
     const executable = hostRuntime(void 0, void 0, void 0, void 0, probe);
     probe?.stage("runtime_path");
-    const path = await realpath9(executable);
+    const path = await realpath11(executable);
     probe?.check("runtimePathResolved", true);
     loadingSdk = true;
     probe?.stage("sdk_import");
@@ -7357,7 +7722,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
     let directory2;
     let stop2;
     let usage;
-    const sessionId = randomUUID6();
+    const sessionId = randomUUID7();
     const stopClient = () => {
       if (client) stop2 ??= withDeadline(client.forceStop(), 1e4).then(() => true, () => false);
       return stop2;
@@ -7387,14 +7752,14 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
         checkReasoning(requested, input.reasoningEffort);
         check();
       }
-      directory2 = await mkdtemp(join10(tmpdir3(), "enhance-copilot-"));
-      const workspace = join10(directory2, "workspace");
-      await mkdir5(workspace);
+      directory2 = await mkdtemp(join12(tmpdir3(), "enhance-copilot-"));
+      const workspace = join12(directory2, "workspace");
+      await mkdir6(workspace);
       check();
       client = new sdk.CopilotClient({
         mode: "empty",
         workingDirectory: workspace,
-        baseDirectory: join10(directory2, "home"),
+        baseDirectory: join12(directory2, "home"),
         connection: sdk.RuntimeConnection.forStdio({ path, args: ["--no-auto-update"] }),
         env: runtimeEnvironment(),
         useLoggedInUser: true,
@@ -7418,7 +7783,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
         sessionId,
         onEvent: (event) => usage.record(event),
         workingDirectory: workspace,
-        configDirectory: join10(directory2, "home"),
+        configDirectory: join12(directory2, "home"),
         model: input.model,
         ...input.reasoningEffort !== void 0 ? { reasoningEffort: input.reasoningEffort } : {},
         systemMessage: { mode: "replace", content: input.system },
@@ -7464,7 +7829,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       checkReasoning(parentModel, input.reasoningEffort);
       checkReasoning(model, input.reasoningEffort);
       stage("copilot.workspace");
-      if (metadata.isRemote !== false || await realpath9(metadata.workingDirectory) !== await realpath9(workspace)) throw unavailable2();
+      if (metadata.isRemote !== false || await realpath11(metadata.workingDirectory) !== await realpath11(workspace)) throw unavailable2();
       stage("copilot.tools");
       await withDeadline(session2.rpc.tools.initializeAndValidate(), 15e3);
       const [tools, selected] = await withDeadline(Promise.all([session2.rpc.tools.getCurrentMetadata(), session2.rpc.model.getCurrent()]), 15e3);
@@ -7503,7 +7868,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
           stage("copilot.usage");
           try {
             if (stopped !== false) await usage.stopped?.();
-            if (stopped !== false && directory2) await reconcileUsageJournal(join10(directory2, "home", "session-state", sessionId, "events.jsonl"), usage);
+            if (stopped !== false && directory2) await reconcileUsageJournal(join12(directory2, "home", "session-state", sessionId, "events.jsonl"), usage);
             await usage.flush();
             if (stopped !== false) await usage.committed?.();
           } catch {
@@ -7524,7 +7889,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
             throw usageFailed();
           }
         } else if (directory2) {
-          const inside = relative5(tmpdir3(), directory2);
+          const inside = relative6(tmpdir3(), directory2);
           if (inside && !isAbsolute5(inside) && !inside.startsWith("..") && basename6(directory2).startsWith("enhance-copilot-")) {
             await rm2(directory2, { recursive: true, force: true, maxRetries: 3 }).catch(() => {
               diagnostics2?.record(phase, "failed");
@@ -7622,14 +7987,14 @@ activate(worker.api);
 var packageRoot = fileURLToPath(new URL("../../../", import.meta.url));
 var updates = createUpdates({
   running: VERSION,
-  store: persistentStore(join11(services.directory, "updates", installationKey(packageRoot))),
+  store: persistentStore(join13(services.directory, "updates", installationKey(packageRoot))),
   installation: installationReader(session, packageRoot),
   metadata: remoteMetadata(),
   busy: () => hasActiveRuns() || worker.hasActiveWork() || copilot.hasActiveWork(),
   update: (target) => session.rpc.plugins.update({ name: target }),
   record: (operation, outcome, code) => diagnostics.record(operation, outcome, { code })
 });
-server = await createCanvasServer({ worker, updates, assets: fileURLToPath(new URL("./web/", import.meta.url)), onClose: cancelPanelRuns });
+server = await createCanvasServer({ worker, updates, retained: services.retained, assets: fileURLToPath(new URL("./web/", import.meta.url)), onClose: cancelPanelRuns });
 ready();
 process.stderr.write("[Enhance Prompt] Canvas server ready.\n");
 void copilot.recoverUsage().catch(() => {

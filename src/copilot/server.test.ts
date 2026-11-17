@@ -232,3 +232,34 @@ test('atomic panel saves retain their session and privacy opt-out prevents queue
     assert.equal(await other.storage.get('panel:draft'), 'Other session retained', 'opt-out must not expire inactive drafts')
   } finally { await server.close(); await worker.deactivate(); await rm(directory, { recursive: true, force: true }) }
 })
+
+test('retained-data cleanup is human HTTP only, canvas-bound and restricted to a stopped fixture session', async () => {
+  const { execFileSync } = await import('node:child_process')
+  const { createHash } = await import('node:crypto')
+  const { sessionData } = await import('./session-storage.ts')
+  const directory = await mkdtemp(join(tmpdir(),'enhance-retained-http-'))
+  const services = createServices({sessionId:'current'} as CopilotSession,directory)
+  await services.storage.set('panel:draft','Keep current')
+  execFileSync(process.execPath,['--input-type=module','--eval',`import {createServices} from ${JSON.stringify(new URL('./services.ts',import.meta.url).href)}; const service=createServices({sessionId:'stopped'},process.env.TEST_STORAGE_ROOT); await service.storage.set('panel:draft','Inactive fixture'); await service.storage.set('panel:style','balanced');`],{env:{...process.env,TEST_STORAGE_ROOT:directory},windowsHide:true})
+  const stopped = createHash('sha256').update('stopped').digest('hex').slice(0,24)
+  const worker = createWorkerHost(services), server = await createCanvasServer({worker,assets:directory,retained:services.retained})
+  try {
+    const urls = [server.open('one'),server.open('two')]
+    const post = (index:number, method:string,input:unknown, authenticated = true) => fetch(urls[index]+'api',{method:'POST',headers:{'content-type':'application/json',...(authenticated?{authorization:`Bearer ${new URL(urls[index]).pathname.split('/')[2]}`}:{})},body:JSON.stringify({method,input})})
+    assert.equal((await post(0,'retained.inspect',{},false)).status,403)
+    assert.equal((await post(0,'retained.inspect',{target:directory})).status,400)
+    const response = await post(0,'retained.inspect',{})
+    assert.equal(response.status,200)
+    const view = (await response.json()).result
+    assert.equal(view.cleanup.count,1)
+    const input = {token:view.cleanup.token,restarted:true}
+    assert.equal((await post(1,'retained.clear',input)).status,400)
+    assert.equal((await post(0,'retained.clear',{...input,target:'other'})).status,400)
+    assert.equal((await post(0,'retained.clear',{...input,restarted:false})).status,400)
+    assert.equal((await post(0,'retained.clear',input)).status,200)
+    assert.equal(await sessionData(directory,stopped).get('panel:draft'),null)
+    assert.equal(await sessionData(directory,stopped).get('panel:style'),'balanced')
+    assert.equal(await services.storage.get('panel:draft'),'Keep current')
+    await assert.rejects(worker.request('retained.clear' as any,input as any),/Unknown request/)
+  } finally { await server.close(); await worker.deactivate(); await rm(directory,{recursive:true,force:true}) }
+})

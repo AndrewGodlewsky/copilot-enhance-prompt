@@ -1,5 +1,12 @@
 var e=`# Changes
 
+## [0.12.19] - 2026-11-17
+
+### Added
+- Settings → Retained storage can inspect local file sizes for session drafts, shared data, uploads and usage accounting. Bounded scans mark incomplete totals explicitly.
+- Preview and clear up to 100 verified inactive drafts at a time. Active, changed, corrupt and unverified sessions are protected; preferences, history, uploads and usage records remain intact. No automatic draft expiry is added.
+- Restart Copilot after updating before using cleanup. Older session files without activity records need manual review; the plugin never assumes that old files are inactive.
+
 ## [0.12.18] - 2026-11-17
 
 ### Improved

@@ -28,6 +28,7 @@ export type AppEvents = {
 }
 export type SaveOptions = { suggestedName?: string; mimeType?: string; data: string | ArrayBuffer }
 export type PanelClient = {
+  retained?: import('./copilot/retained-data.ts').RetainedClient
   persistence?: { flush(): Promise<void>; retry(): Promise<void>; snapshot(): import('./save-queue.ts').SaveState; subscribe(listener: () => void): () => void }
   updates?: import('./updates/types.ts').UpdateClient
   plugin: {

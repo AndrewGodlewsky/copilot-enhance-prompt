@@ -1,0 +1,239 @@
+{
+  "version": "0.12.19",
+  "capturedAt": "2026-11-17T08:50:58.646Z",
+  "node": "v24.22.1",
+  "platform": "win32",
+  "sourceCommit": "426aea58380e9757fbc8671057370a4bc32deb20",
+  "workingTreeModified": true,
+  "syntheticOnly": true,
+  "modelCalls": 0,
+  "method": "One sample per size. Fixture creation excluded. Production scan/cleanup with deterministic process liveness; 15-second/50k-entry budgets unchanged. Every session and usage record verified after a 100-session maximum cleanup. Endpoint memory is not peak memory. No browser rendering.",
+  "measurements": [
+    {
+      "sessions": 100,
+      "usageRecords": 100,
+      "inspectMs": 223.411,
+      "clearMs": 283.095,
+      "sessionSizes": {
+        "current": {
+          "files": 1,
+          "bytes": 799,
+          "unreadable": 0,
+          "partial": false
+        },
+        "active": {
+          "files": 30,
+          "bytes": 24024,
+          "unreadable": 0,
+          "partial": false
+        },
+        "inactive": {
+          "files": 60,
+          "bytes": 48048,
+          "unreadable": 0,
+          "partial": false
+        },
+        "unknown": {
+          "files": 9,
+          "bytes": 7209,
+          "unreadable": 0,
+          "partial": false
+        }
+      },
+      "usageSize": {
+        "files": 100,
+        "bytes": 2190,
+        "unreadable": 0,
+        "partial": false
+      },
+      "otherSize": {
+        "files": 90,
+        "bytes": 2250,
+        "unreadable": 0,
+        "partial": false
+      },
+      "cleanup": {
+        "cleared": 60,
+        "skipped": 0,
+        "failed": 0,
+        "bytes": 45174,
+        "cancelled": false
+      },
+      "allSessionValuesAndUsageVerified": true,
+      "heapUsedBytes": 14303640,
+      "heapDeltaBytes": 3798136,
+      "rssBytes": 83517440
+    },
+    {
+      "sessions": 1000,
+      "usageRecords": 1000,
+      "inspectMs": 2138.214,
+      "clearMs": 625.188,
+      "sessionSizes": {
+        "current": {
+          "files": 1,
+          "bytes": 799,
+          "unreadable": 0,
+          "partial": false
+        },
+        "active": {
+          "files": 300,
+          "bytes": 240834,
+          "unreadable": 0,
+          "partial": false
+        },
+        "inactive": {
+          "files": 600,
+          "bytes": 481668,
+          "unreadable": 0,
+          "partial": false
+        },
+        "unknown": {
+          "files": 99,
+          "bytes": 79479,
+          "unreadable": 0,
+          "partial": false
+        }
+      },
+      "usageSize": {
+        "files": 1000,
+        "bytes": 22890,
+        "unreadable": 0,
+        "partial": false
+      },
+      "otherSize": {
+        "files": 900,
+        "bytes": 22500,
+        "unreadable": 0,
+        "partial": false
+      },
+      "cleanup": {
+        "cleared": 100,
+        "skipped": 0,
+        "failed": 0,
+        "bytes": 75334,
+        "cancelled": false
+      },
+      "allSessionValuesAndUsageVerified": true,
+      "heapUsedBytes": 13369472,
+      "heapDeltaBytes": 2013616,
+      "rssBytes": 95203328
+    },
+    {
+      "sessions": 10000,
+      "usageRecords": 10000,
+      "inspectMs": 15002,
+      "clearMs": 614.845,
+      "sessionSizes": {
+        "current": {
+          "files": 1,
+          "bytes": 799,
+          "unreadable": 0,
+          "partial": true
+        },
+        "active": {
+          "files": 2138,
+          "bytes": 1720424,
+          "unreadable": 0,
+          "partial": true
+        },
+        "inactive": {
+          "files": 4275,
+          "bytes": 3440043,
+          "unreadable": 0,
+          "partial": true
+        },
+        "unknown": {
+          "files": 712,
+          "bytes": 572944,
+          "unreadable": 0,
+          "partial": true
+        }
+      },
+      "usageSize": {
+        "files": 0,
+        "bytes": 0,
+        "unreadable": 0,
+        "partial": true
+      },
+      "otherSize": {
+        "files": 0,
+        "bytes": 0,
+        "unreadable": 0,
+        "partial": true
+      },
+      "cleanup": {
+        "cleared": 100,
+        "skipped": 0,
+        "failed": 0,
+        "bytes": 75334,
+        "cancelled": false
+      },
+      "allSessionValuesAndUsageVerified": true,
+      "heapUsedBytes": 24244784,
+      "heapDeltaBytes": 12611712,
+      "rssBytes": 108630016
+    },
+    {
+      "sessions": 30000,
+      "usageRecords": 30000,
+      "inspectMs": 15002.164,
+      "clearMs": 593.325,
+      "sessionSizes": {
+        "current": {
+          "files": 1,
+          "bytes": 799,
+          "unreadable": 0,
+          "partial": true
+        },
+        "active": {
+          "files": 2147,
+          "bytes": 1727669,
+          "unreadable": 0,
+          "partial": true
+        },
+        "inactive": {
+          "files": 4295,
+          "bytes": 3456143,
+          "unreadable": 0,
+          "partial": true
+        },
+        "unknown": {
+          "files": 715,
+          "bytes": 575359,
+          "unreadable": 0,
+          "partial": true
+        }
+      },
+      "usageSize": {
+        "files": 0,
+        "bytes": 0,
+        "unreadable": 0,
+        "partial": true
+      },
+      "otherSize": {
+        "files": 0,
+        "bytes": 0,
+        "unreadable": 0,
+        "partial": true
+      },
+      "cleanup": {
+        "cleared": 100,
+        "skipped": 0,
+        "failed": 0,
+        "bytes": 75334,
+        "cancelled": false
+      },
+      "allSessionValuesAndUsageVerified": true,
+      "heapUsedBytes": 21246192,
+      "heapDeltaBytes": 9522912,
+      "rssBytes": 109322240
+    }
+  ],
+  "sourceHashes": {
+    "src/copilot/retained-data.ts": "b3caef76a5905d82133160a0ea3727948c009fc690b3387c8252d863a5b80f26",
+    "src/copilot/session-activity.ts": "272b5a89c2000048114900acae4a0503780cb725074af167ed19af1a193810db",
+    "src/copilot/storage.ts": "bdb2b891b08e93137eedc3a5bcdccd91a0cca126280edbc1737c885e156b6adb",
+    "scripts/audit/retained-data.mjs": "aec45f1b46963bcf30b92d95ebf2b1f36975a8751b990545ea1d776e4bf82cba"
+  }
+}

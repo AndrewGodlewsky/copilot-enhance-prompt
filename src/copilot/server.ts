@@ -10,9 +10,10 @@ import type { createUpdates } from '../updates/service.ts'
 import { REQUEST_BYTES, busyError, validateJson } from '../limits.ts'
 import { readConfinedFile } from '../confined-read.ts'
 import { PRIVATE_PANEL_KEYS } from '../panel-storage.ts'
+import type { createRetainedData } from './retained-data.ts'
 
 type Worker = ReturnType<typeof createWorkerHost>
-type Canvas = { id: string; token: string; streams: Set<ServerResponse>; subscriptions: Disposable[]; pending: number }
+type Canvas = { id: string; token: string; streams: Set<ServerResponse>; subscriptions: Disposable[]; pending: number; controllers: Set<AbortController> }
 const MODEL_WRITES = new Set(['models.save', 'models.delete', 'models.move', 'models.roles', 'consent.set', 'rules.save'])
 const PANEL_KEYS = new Set(['tab', 'style', 'level', 'effort', 'structureChoice', 'terminalWorkspaces', 'optionsOpen', 'draft', 'result', 'lastRun', 'contextShown', 'contextNotes', 'files', 'workspaceKey', 'parked', 'sendAfterEnhance', 'historyScope'])
 const readable = (key: string) => key === 'history' || key === 'colorTheme' || key.startsWith('panel:') && PANEL_KEYS.has(key.slice(6))
@@ -47,7 +48,7 @@ async function body(request: IncomingMessage, timeoutMs: number): Promise<Record
   return value as Record<string, any>
 }
 
-export async function createCanvasServer(options: { worker: Worker; assets: string; onClose?: (id: string) => void; updates?: ReturnType<typeof createUpdates>; bodyTimeoutMs?: number }) {
+export async function createCanvasServer(options: { worker: Worker; assets: string; onClose?: (id: string) => void; updates?: ReturnType<typeof createUpdates>; retained?: ReturnType<typeof createRetainedData>; bodyTimeoutMs?: number }) {
   const { worker } = options
   const canvases = new Map<string, Canvas>()
   let pending = 0, streams = 0
@@ -65,6 +66,8 @@ export async function createCanvasServer(options: { worker: Worker; assets: stri
     const canvas = canvases.get(id)
     if (!canvas) return
     canvases.delete(id)
+    for (const controller of canvas.controllers) controller.abort()
+    options.retained?.close(id)
     worker.closePanel(id)
     options.onClose?.(id)
     for (const sub of canvas.subscriptions) sub.dispose()
@@ -103,6 +106,9 @@ export async function createCanvasServer(options: { worker: Worker; assets: stri
         release = () => { canvas.pending--; pending-- }
         const request = await body(req, options.bodyTimeoutMs ?? 10_000)
         const controller = new AbortController()
+        canvas.controllers.add(controller)
+        const quotaRelease = release
+        release = () => { canvas.controllers.delete(controller); quotaRelease?.() }
         res.on('close', () => { if (!res.writableEnded) controller.abort() })
         const { method, input = {} } = request
         if (!input || typeof input !== 'object' || Array.isArray(input)) throw invalid()
@@ -114,7 +120,16 @@ export async function createCanvasServer(options: { worker: Worker; assets: stri
           if (client.storage.patch) return client.storage.patch(values)
           for (const [key, value] of Object.entries(values)) if (value === undefined) await client.storage.delete(key); else await client.storage.set(key, value)
         }
-        if (typeof method === 'string' && method.startsWith('updates.')) {
+        if (method === 'retained.inspect' || method === 'retained.clear') {
+          if (!options.retained) throw invalid('Stored-data inspection is unavailable in this runtime.')
+          if (method === 'retained.inspect') {
+            if (Object.keys(input).length) throw invalid()
+            answer = await work(() => options.retained!.inspect(canvas.id,controller.signal))
+          } else {
+            if (Object.keys(input).some(key=>!['token','restarted'].includes(key)) || typeof input.token !== 'string' || input.token.length > 100 || typeof input.restarted !== 'boolean') throw invalid()
+            answer = await work(() => options.retained!.clear(canvas.id,input.token,input.restarted,controller.signal))
+          }
+        } else if (typeof method === 'string' && method.startsWith('updates.')) {
           if (!options.updates) throw invalid('Updates are unavailable in this runtime.')
           const action = method.slice(8)
           const expected = action === 'check' ? ['manual'] : action === 'automatic' ? ['enabled'] : []
@@ -178,6 +193,7 @@ export async function createCanvasServer(options: { worker: Worker; assets: stri
           }))
           answer = true
         } else if (method === 'close') {
+          options.retained?.close(canvas.id)
           worker.closePanel(canvas.id); options.onClose?.(canvas.id); answer = true
         } else throw invalid()
         if (!res.destroyed) json(res, 200, { result: answer ?? null })
@@ -207,7 +223,7 @@ export async function createCanvasServer(options: { worker: Worker; assets: stri
       let canvas = canvases.get(id)
       if (!canvas) {
         if (canvases.size >= 16) throw busyError()
-        canvas = { id, token: randomBytes(32).toString('hex'), streams: new Set(), subscriptions: [], pending: 0 }
+        canvas = { id, token: randomBytes(32).toString('hex'), streams: new Set(), subscriptions: [], pending: 0, controllers:new Set() }
         const target = canvas
         target.subscriptions.push(
           worker.onPost(post => { if (!post.panel || post.panel === id) broadcast(target, { kind: 'plugin', name: post.event, payload: post.payload }) }),
