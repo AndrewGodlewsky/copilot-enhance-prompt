@@ -38,6 +38,8 @@ To select a published branch or tag, use `"AndrewGodlewsky/copilot-enhance-promp
 
 ### Check for updates
 
+From 0.12.15, preview release assets may also include a **runtime-only ZIP**, checksum and contents report. This optional manual package omits development files; GitHub's automatic Source code ZIP is still the full repository. [Runtime package instructions](INSTALL.md) explain the trade-off: local ZIP installs have no discoverable online update source. Existing marketplace installs and configured forks/branches are unchanged. [Packaging measurements and channel policy](docs/runtime-package.md).
+
 Opening the canvas checks its installed source quietly, at most once every 24 hours. **Settings → Plugin updates** offers a manual check and an **Automatically check for updates** switch. A newer version shows **View changes**, **Update**, and **Later**; Later hides that version’s notice, not future versions. Update asks the attached Copilot session to update only Enhance Prompt, then verifies its inventory and installed manifest.
 
 Finish active plugin work first. Saved drafts, settings, attachments and history stay in their existing storage. Once installation is verified, restart Copilot and reopen the **same session** and plugin to retain its saved draft. Opening a new session also loads the update, but drafts belong to their original session. Reopening just the canvas does not reload its backend on the tested runtime. Desktop restart/reopen presentation still needs manual verification.

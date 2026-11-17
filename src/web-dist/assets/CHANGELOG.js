@@ -1,5 +1,11 @@
 var e=`# Changes
 
+## [0.12.15] - 2026-11-17
+
+### Added
+- Preview releases can now include a smaller runtime-only ZIP with exact-file checksums, full notices and an installation guide. It leaves out developer tools, tests and duplicate compiled assets.
+- The ordinary GitHub marketplace remains the recommended installation and update route. The optional ZIP is for manual local installation and does not gain automatic online updates; no existing installation is moved to a different source.
+
 ## [0.12.14] - 2026-11-17
 
 ### Added

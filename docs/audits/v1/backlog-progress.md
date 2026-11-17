@@ -10,7 +10,7 @@ Current baseline: 0.12.1 / 4104c29. Tracking issue: [#40](https://github.com/And
 
 Security and correctness: delivered; see versions below.
 
-Distribution/maintenance: #11 (manual/maintainer confirmation pending), #33.
+Distribution/maintenance: #11 (manual/maintainer confirmation pending), #33 (runtime package prepared; stable channel/manual gates pending).
 
 Efficiency: #12, #13, #14, #15, #19, #20, #21, #32, #34.
 
@@ -20,9 +20,19 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- In progress: #11, security guidance and private reporting; desktop/maintainer confirmation requested. Next: #33, smaller runtime package and distribution policy.
+- In progress: #33, optional runtime package and channel policy. Next: #12, partition session drafts. #11's guidance shipped in 0.12.14 / 1a21bfa; hosted CI passed (run 44035339697), with manual/maintainer confirmations still open.
 
 ## Delivered versions
+
+### 0.12.15 — #33, optional runtime archive
+
+A committed-tree allowlist produces a runtime-only ZIP, exact archive checksum and per-file/size report. It validates the existing inventory, full notices, manifest, version and regular-file paths, then independently lists/extracts the ZIP and compares bytes. It rejects stale input, omitted files from Git export attributes, links and overwrites. Source remains at the recorded commit; no SDK/runtime/npm dependency is added.
+
+Verified unit cases first failed before the packager existed, then passed. A disposable real CLI install matched every expected package file's hash. Its built extension passed registration, asset/context/privacy/theme/diagnostic/sending fixtures; a synthetic metadata-only managed update preserved other package bytes and separate synthetic drafts/results/preferences. No paid model calls, live installs or desktop UI. Typecheck/build, all 457 final tests and package/diff checks pass; the final rebuilt package passed the runtime fixture again. Exact measured archive/source sizes and hosted CI are recorded with the release assets and issue evidence.
+
+Independent review found no blockers. Final minor (deferred): installed-cache tests do not enumerate unexpected host-created files; they compare all expected file hashes. Evidence wording is corrected to reflect that limit. Archive tests do reject extra/missing ZIP members. No claim about the host adding zero cache metadata is made.
+
+Ruling: retain the existing root marketplace and all fork/ref/pin behavior. The optional ZIP is a manual local install with online updates unavailable; it is not a silent distribution migration. Stable managed small-package channel/signing decisions and desktop branding/data checks remain open in #33. Hashes are integrity comparisons, not signatures; Git transfer sizes and cross-toolchain archive reproducibility are not claimed.
 
 ### 0.12.14 — #11, security support and recovery
 
