@@ -10,7 +10,7 @@ import { msg } from '../messages.ts'
 function fixture() {
   const state = { helperLogin: 'person', parentLogin: 'person', host: 'https://github.com', tools: [] as unknown[], selected: 'model-a', provider: 'copilot', policy: 'enabled', currentDirectory: '', sent: [] as unknown[], stopped: 0, config: {} as Record<string, unknown>, options: {} as Record<string, unknown>, hold: false,
     prepared: '', recorded: [] as unknown[], flushed: false, prepareFails: false, flushFails: false, stopFails: false, generateFails: false,
-    preflight: async (_phase: string) => {},
+    lifecycle: [] as string[], preflight: async (_phase: string) => {},
     authenticated: true, supportsReasoning: true, rawReasoning: false, efforts: ['low', 'medium', 'high', 'max'], appliedReasoning: 'high', helperEfforts: null as string[] | null }
   const emit = (event: unknown) => (state.config.onEvent as ((event: unknown) => void) | undefined)?.(event)
   const model = (efforts = state.efforts) => ({ id: 'model-a', name: 'Model A', provider: { kind: state.provider }, policy: { state: state.policy }, capabilities: { supports: { vision: true, ...(state.rawReasoning ? { reasoning_effort: efforts } : { reasoningEffort: state.supportsReasoning }) } }, ...(state.rawReasoning ? {} : { supportedReasoningEfforts: efforts, defaultReasoningEffort: 'medium' }) })
@@ -45,7 +45,12 @@ function fixture() {
   return { state, diagnostics, parent, provider: createCopilotModels(parent, async () => ({ sdk, path: process.execPath }), diagnostics, async sessionId => {
     if (state.prepareFails) throw new Error('PRIVATE disk failure')
     state.prepared = sessionId
-    return { record(event: unknown) { state.recorded.push(event) }, async flush() {
+    return { record(event: unknown) { state.recorded.push(event) },
+    async stopped() { assert.equal(state.stopped, 1); state.lifecycle.push('stopped') },
+    async committed() { assert.equal(state.flushed, true); state.lifecycle.push('committed') },
+    async complete() { await state.preflight('complete'); await assert.rejects(access(state.options.baseDirectory as string)); state.lifecycle.push('complete') },
+    async settled() { state.lifecycle.push('settled'); await state.preflight('settled') },
+    async flush() {
       await state.preflight('flush')
       assert.equal(state.stopped, 1, 'flush waits for the helper to stop')
       if (state.flushFails) throw new Error('PRIVATE disk failure')
@@ -65,11 +70,23 @@ test('catalog checks authentication without starting a helper and retains suppor
   assert.equal(state.sent.length, 0)
 })
 
+test('final accounting lifecycle failures are sanitized and cannot leave confirmed helpers active', async () => {
+  for (const phase of ['complete', 'settled']) {
+    const { provider, state } = fixture()
+    state.preflight = async current => { if (current === phase) throw new Error('EPERM PRIVATE/accounting/path') }
+    await assert.rejects(provider.rewrite({ model: 'model-a', system: 'Rewrite', user: 'Draft' }), { text: { code: 'error.copilot_usage' } })
+    assert.equal(state.sent.length, 1)
+    assert.ok(state.lifecycle.includes('settled'))
+    assert.equal(provider.hasActiveWork(), false)
+  }
+})
+
 test('reasoning is passed to the helper and verified before sending the prompt', async () => {
   const { provider, state } = fixture()
   await provider.rewrite({ model: 'model-a', reasoningEffort: 'high', system: 'Rewrite', user: 'Draft' })
   assert.equal(state.config.reasoningEffort, 'high')
   assert.equal(state.sent.length, 1)
+  assert.deepEqual(state.lifecycle, ['stopped', 'committed', 'complete', 'settled'])
 })
 
 test('privacy revoked during helper preflight prevents session instructions or inference from being sent', async () => {
@@ -195,6 +212,7 @@ test('a usage flush failure is visible and preserves the helper directory for re
   try {
     await assert.rejects(provider.rewrite({ model: 'model-a', system: 'Rewrite', user: 'Draft' }), { text: { code: 'error.copilot_usage' } })
     await access(state.currentDirectory)
+    assert.deepEqual(state.lifecycle, ['stopped', 'settled'])
     assert.ok(diagnostics.snapshot().entries.some(entry => entry.operation === 'copilot.usage' && entry.outcome === 'failed'))
     assert.doesNotMatch(JSON.stringify(diagnostics.snapshot()), /PRIVATE/)
   } finally {

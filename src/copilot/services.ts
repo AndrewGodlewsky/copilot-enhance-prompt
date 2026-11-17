@@ -96,9 +96,11 @@ export function createServices(session: CopilotSession, directory = process.env.
     transaction: async fn => { await prepare(); return data.transaction(fn) }
   }
   const host: EnhanceWorker['host'] = {
-    has: name => (Boolean(copilot) && ['copilot.catalog', 'copilot.rewrite'].includes(name)) || adapter.has(name),
+    has: name => (Boolean(copilot) && ['copilot.catalog', 'copilot.rewrite', 'copilot.usage.status', 'copilot.usage.recover'].includes(name)) || adapter.has(name),
     call: async (name, input, options) => name === 'copilot.catalog' && copilot ? await copilot.catalog() as never
       : name === 'copilot.rewrite' && copilot ? { text: await copilot.rewrite(input as import('./models.ts').CopilotRewrite, options?.signal, options?.ensureAccess) } as never
+      : name === 'copilot.usage.status' && copilot ? await copilot.recoverUsage(false, true) as never
+      : name === 'copilot.usage.recover' && copilot ? await copilot.recoverUsage(true) as never
       : adapter.call(name, input, options)
   }
   return { storage, settings, host, adapter, directory, data, attachmentOwner: `${directory}\0${session.sessionId}` }

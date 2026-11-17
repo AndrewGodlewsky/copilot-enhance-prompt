@@ -57,6 +57,8 @@ const updates = createUpdates({
 server = await createCanvasServer({ worker, updates, assets: fileURLToPath(new URL('./web/', import.meta.url)), onClose: cancelPanelRuns })
 ready()
 process.stderr.write('[Enhance Prompt] Canvas server ready.\n')
+// Bounded local recovery is independent of rendering, network access and model calls.
+void copilot.recoverUsage().catch(() => {})
 
 let stopping = false
 async function stop() {

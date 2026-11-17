@@ -106,6 +106,23 @@ test('separates sessions and refuses invalid or existing IDs', async () => fixtu
   await assert.rejects(createUsageRecorder(first, root), { code: 'EEXIST' })
 }))
 
+test('reopening a stopped usage recorder preserves receipts and deduplicates replay across restarts', async () => fixture(async root => {
+  const firstRecorder = await createUsageRecorder(first, root)
+  firstRecorder.record(event())
+  await firstRecorder.flush()
+  const recovered = await createUsageRecorder(first, root, { resume: true })
+  recovered.record(event('replayed-after-restart'))
+  recovered.record(event('new-receipt', { accounting: { sourceSessionId: first, usageId: 'usage-2', sequence: 2 } }))
+  await recovered.flush()
+  const reopened = await createUsageRecorder(first, root, { resume: true })
+  reopened.record(event('replayed-again'))
+  await reopened.flush()
+  const saved = await entries(root)
+  assert.equal(saved.lines.length, 3)
+  assert.deepEqual(saved.lines.slice(1).map(line => line.data.usage.accounting.usageId), ['usage-1', 'usage-2'])
+  assert.equal(JSON.stringify(saved).includes('secret'), false)
+}))
+
 test('surfaces directory and asynchronous write failures without payloads', async () => fixture(async root => {
   const blocked = join(root, 'blocked')
   await writeFile(blocked, '')
@@ -171,4 +188,17 @@ test('invalid live usage envelope fails flush and accepted timestamps are normal
   assert.equal((await entries(root)).lines[1].timestamp, timestamp)
   recorder.record({ type: 'assistant.usage', id: 'bad-time', timestamp: 'private', data: event().data })
   await assert.rejects(recorder.flush(), { message: 'Unable to save usage accounting.' })
+}))
+
+test('malformed journal waits for queued receipt writes before rejecting', async () => fixture(async root => {
+  const journal = join(root, 'tail.jsonl')
+  await writeFile(journal, JSON.stringify({ type: 'session.usage_record' }) + '\nPRIVATE incomplete JSON')
+  let written = false, flushed = false
+  let pending = Promise.resolve()
+  await assert.rejects(reconcileUsageJournal(journal, {
+    record() { pending = new Promise(resolve => setTimeout(() => { written = true; resolve() }, 30)) },
+    async flush() { flushed = true; await pending }
+  }), { message: 'Unable to read usage accounting journal.' })
+  assert.equal(flushed, true)
+  assert.equal(written, true, 'no queued writer may outlive the recovery lock')
 }))

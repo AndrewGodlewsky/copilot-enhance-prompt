@@ -913,6 +913,12 @@ function registerDataHandlers(host: EnhanceWorker): void {
     }
   })
 
+  for (const operation of ['status', 'recover'] as const) host.panels.handle(`usage.${operation}`, async () => {
+    if (!host.host.has(`copilot.usage.${operation}`)) throw new LlmError(msg('error.copilot_usage'), 'unavailable')
+    // Paths, session IDs and cleanup targets come exclusively from the owned registry.
+    return host.host.call(`copilot.usage.${operation}`, {})
+  })
+
   host.panels.handle('data.clear', async ({ what }) => {
     const keys = await host.storage.keys()
     if (what === 'history' || what === 'all') {

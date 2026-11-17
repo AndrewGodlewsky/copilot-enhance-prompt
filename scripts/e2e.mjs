@@ -146,6 +146,9 @@ try {
   assert.ok(JSON.stringify(latestUser).includes(enhanced.enhanced))
   console.log('Retired settings/provider rejection and guarded session submission verified.')
   const diagnostics = await request('logs.get')
+  const recovered = await request('usage.recover')
+  assert.deepEqual(recovered, { pending: 0, unconfirmed: 0, recovered: 0, failed: 0, deferred: 0 })
+  assert.deepEqual(await request('usage.status'), recovered)
   assert.ok(diagnostics.entries.some(entry => entry.operation === 'prompt.send' && entry.outcome === 'ok'))
   for (const privateValue of [project, 'Improve this test request', 'Fixture enhanced prompt', token, session.sessionId]) {
     assert.ok(!JSON.stringify(diagnostics).includes(privateValue), 'diagnostics exclude private request and connection data')

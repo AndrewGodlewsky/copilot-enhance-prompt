@@ -2,6 +2,7 @@ import { formatText } from '../../src/format.ts'
 // History, Models, Rules and Settings (privacy) sections of the web panel: the panel's state and
 // actions (src/panel/*), drawn with shadcn/ReUI.
 import { Fragment, useState } from 'react'
+import { UsageRecovery } from './usage-recovery'
 import { read, set, update } from '#panel'
 import { ArrowDownIcon, ArrowUpIcon, RotateCcwIcon, CheckIcon, CopyIcon, EllipsisVerticalIcon, ExternalLinkIcon, PencilIcon, PlugZapIcon, PlusIcon, RefreshCwIcon, Settings2Icon, Trash2Icon } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -641,6 +642,7 @@ export function SettingsSection() {
           setReading(null)
         }}
       />
+      <UsageRecovery />
       <Group title={'Stored on this machine'} hint={'Nothing is sent anywhere except your prompt and the context you allow, to the model you run. No tracking or analytics.'}>
         {data ? (
           [

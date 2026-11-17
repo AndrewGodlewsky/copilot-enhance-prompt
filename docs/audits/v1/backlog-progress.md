@@ -8,7 +8,7 @@ Current baseline: 0.12.1 / 4104c29. Tracking issue: [#40](https://github.com/And
 
 ## Queue
 
-Security and correctness: #17, #18, #36, #37, #39.
+Security and correctness: #18, #36, #37, #39.
 
 Distribution/maintenance: #9, #10, #11, #33.
 
@@ -20,9 +20,17 @@ Evidence/owner decisions: #23, #29, #30, #31, #35. Prepare the evidence and conc
 
 ## Current work
 
-- Next: #17, durable recovery of retained usage journals.
+- Next: #18, backend ranges and aggregate request limits.
 
 ## Delivered versions
+
+### 0.12.7 — #17, recover retained usage accounting
+
+Helpers register ownership before receiving input. A confirmed stop and cross-process lock protect receipt replay, durable commit and cleanup. Startup retries at most eight stopped journals with persisted backoff; Settings offers a local retry and Show Logs includes counts without transcript text or paths. Receipt identities deduplicate replay after restarts. History clearing leaves accounting intact. Unconfirmed or legacy unregistered helpers remain untouched.
+
+Verified: typecheck, build, 428 final tests, package checks and clean diff. Disk-write failure, concurrent retries (including another process), restart, duplicate receipts, bounded batches, live/replaced/junction paths, and interrupted cleanup are covered. Independent review found three additional defects, reproduced in failing tests and fixed: a real Windows locked file now retains the ownership marker until cleanup succeeds; malformed journal tails settle queued writes; final lifecycle failures remain sanitized accounting errors and cannot trigger another model fallback. Empty-root crash recovery validates original directory identity. Installed SDK/CLI `1.0.106-8.unstable.r43566476370.g869eef3` passed production helper and built extension local fixtures without paid inference or owner installation changes. No UI automation; Settings appearance remains a manual check. Issue #17 records the pushed commit and preview release.
+
+Limits: unknown helper shutdown, changed ownership, malformed/unreadable retained data and older unregistered helpers are not automatically deleted. They can need maintainer-assisted recovery. This is not an OS sandbox against another process running as the same user.
 
 ### 0.12.6 — #16, complete attachment inputs
 

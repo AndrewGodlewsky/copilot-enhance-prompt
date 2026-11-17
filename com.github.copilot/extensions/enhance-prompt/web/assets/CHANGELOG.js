@@ -1,5 +1,12 @@
 var e=`# Changes
 
+## [0.12.7] - 2026-11-17
+
+### Fixed
+- Usage receipts kept after a disk-write failure can now be recovered across restarts without counting them twice. Confirmed stopped helpers are retried quietly when the plugin starts.
+- Find **Retry usage recovery** in Settings. It retries local accounting without using model credits. Show Logs includes recovery counts, with no prompts or paths.
+- Raw helper transcripts are removed only after accounting is saved and ownership and shutdown are verified. Unconfirmed or older unregistered files stay untouched; contact the maintainer if recovery cannot complete.
+
 ## [0.12.6] - 2026-11-17
 
 ### Fixed

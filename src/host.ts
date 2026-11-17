@@ -7,6 +7,8 @@ export type AgentInfo = { terminalId: string; title: string | null; agent: strin
 export type PlatformOperations = {
   'copilot.catalog': { input: {}; output: import('./catalog.ts').Catalog }
   'copilot.rewrite': { input: import('./copilot/models.ts').CopilotRewrite; output: { text: string } }
+  'copilot.usage.status': { input: {}; output: import('./copilot/usage-recovery.ts').UsageRecoveryStatus }
+  'copilot.usage.recover': { input: {}; output: import('./copilot/usage-recovery.ts').UsageRecoveryStatus }
   'workspace.readContext': { input: {}; output: { displayName: string; branch: string; terminals: { id: string; title?: string }[]; workspaceId?: string } }
   'workspace.list': { input: {}; output: { workspaces: WorkspaceInfo[]; truncated?: boolean } }
   'agents.list': { input: {}; output: { agents: AgentInfo[] } }

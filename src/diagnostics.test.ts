@@ -103,6 +103,7 @@ test('refresh retries the Copilot request and includes failure/recovery in copie
   const worker = createDiagnostics()
   const host = mockHost({ requests: {
     'logs.get': () => ({ ...worker.snapshot(), platform: 'fixture', architecture: 'fixture', runtime: 'fixture' }),
+    'usage.status': { pending: 2, unconfirmed: 1, recovered: 0, failed: 1, deferred: 0 },
     'models.catalog': input => {
       assert.equal(input.refresh, true)
       attempts++
@@ -123,6 +124,7 @@ test('refresh retries the Copilot request and includes failure/recovery in copie
     await loadCatalog('form', { preset: 'copilot' }, true)
     assert.equal(read(catalogs).form?.models.length, 1)
     const recovered = JSON.parse((await collectDiagnostics()).text)
+    assert.deepEqual(recovered.usageRecovery, { pending: 2, unconfirmed: 1, recovered: 0, failed: 1, deferred: 0 })
     assert.equal(recovered.copilotModelDiscovery.panel.modelCount, 1)
     assert.equal(recovered.copilotModelDiscovery.panel.failure, undefined)
     assert.ok(recovered.entries.some((entry: any) => entry.operation === 'copilot.refresh' && entry.outcome === 'ok'))

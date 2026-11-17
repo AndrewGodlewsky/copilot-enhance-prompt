@@ -98,7 +98,7 @@ var require_polyfills = __commonJS({
       }
       if (platform === "win32") {
         fs.rename = typeof fs.rename !== "function" ? fs.rename : (function(fs$rename) {
-          function rename4(from, to, cb) {
+          function rename5(from, to, cb) {
             var start = Date.now();
             var backoff = 0;
             fs$rename(from, to, function CB(er) {
@@ -118,8 +118,8 @@ var require_polyfills = __commonJS({
               if (cb) cb(er);
             });
           }
-          if (Object.setPrototypeOf) Object.setPrototypeOf(rename4, fs$rename);
-          return rename4;
+          if (Object.setPrototypeOf) Object.setPrototypeOf(rename5, fs$rename);
+          return rename5;
         })(fs.rename);
       }
       fs.read = typeof fs.read !== "function" ? fs.read : (function(fs$read) {
@@ -540,8 +540,8 @@ var require_graceful_fs = __commonJS({
         }
       }
       var fs$writeFile = fs2.writeFile;
-      fs2.writeFile = writeFile3;
-      function writeFile3(path, data, options, cb) {
+      fs2.writeFile = writeFile4;
+      function writeFile4(path, data, options, cb) {
         if (typeof options === "function")
           cb = options, options = null;
         return go$writeFile(path, data, options, cb);
@@ -595,9 +595,9 @@ var require_graceful_fs = __commonJS({
         }
       }
       var fs$readdir = fs2.readdir;
-      fs2.readdir = readdir3;
+      fs2.readdir = readdir4;
       var noReaddirOptionVersions = /^v[0-5]\./;
-      function readdir3(path, options, cb) {
+      function readdir4(path, options, cb) {
         if (typeof options === "function")
           cb = options, options = null;
         var go$readdir = noReaddirOptionVersions.test(process.version) ? function go$readdir2(path2, options2, cb2, startTime) {
@@ -700,7 +700,7 @@ var require_graceful_fs = __commonJS({
       }
       function ReadStream$open() {
         var that = this;
-        open2(that.path, that.flags, that.mode, function(err, fd) {
+        open4(that.path, that.flags, that.mode, function(err, fd) {
           if (err) {
             if (that.autoClose)
               that.destroy();
@@ -720,7 +720,7 @@ var require_graceful_fs = __commonJS({
       }
       function WriteStream$open() {
         var that = this;
-        open2(that.path, that.flags, that.mode, function(err, fd) {
+        open4(that.path, that.flags, that.mode, function(err, fd) {
           if (err) {
             that.destroy();
             that.emit("error", err);
@@ -737,8 +737,8 @@ var require_graceful_fs = __commonJS({
         return new fs2.WriteStream(path, options);
       }
       var fs$open = fs2.open;
-      fs2.open = open2;
-      function open2(path, flags, mode, cb) {
+      fs2.open = open4;
+      function open4(path, flags, mode, cb) {
         if (typeof mode === "function")
           cb = mode, mode = null;
         return go$open(path, flags, mode, cb);
@@ -1530,12 +1530,12 @@ var require_adapter = __commonJS({
       return newFs;
     }
     function toPromise(method) {
-      return (...args) => new Promise((resolve4, reject) => {
+      return (...args) => new Promise((resolve5, reject) => {
         args.push((err, result) => {
           if (err) {
             reject(err);
           } else {
-            resolve4(result);
+            resolve5(result);
           }
         });
         method(...args);
@@ -1576,27 +1576,27 @@ var require_adapter = __commonJS({
 var require_proper_lockfile = __commonJS({
   "node_modules/proper-lockfile/index.js"(exports, module) {
     "use strict";
-    var lockfile3 = require_lockfile();
+    var lockfile4 = require_lockfile();
     var { toPromise, toSync, toSyncOptions } = require_adapter();
     async function lock(file, options) {
-      const release = await toPromise(lockfile3.lock)(file, options);
+      const release = await toPromise(lockfile4.lock)(file, options);
       return toPromise(release);
     }
     function lockSync(file, options) {
-      const release = toSync(lockfile3.lock)(file, toSyncOptions(options));
+      const release = toSync(lockfile4.lock)(file, toSyncOptions(options));
       return toSync(release);
     }
     function unlock(file, options) {
-      return toPromise(lockfile3.unlock)(file, options);
+      return toPromise(lockfile4.unlock)(file, options);
     }
     function unlockSync(file, options) {
-      return toSync(lockfile3.unlock)(file, toSyncOptions(options));
+      return toSync(lockfile4.unlock)(file, toSyncOptions(options));
     }
     function check(file, options) {
-      return toPromise(lockfile3.check)(file, options);
+      return toPromise(lockfile4.check)(file, options);
     }
     function checkSync(file, options) {
-      return toSync(lockfile3.check)(file, toSyncOptions(options));
+      return toSync(lockfile4.check)(file, toSyncOptions(options));
     }
     module.exports = lock;
     module.exports.lock = lock;
@@ -1629,7 +1629,7 @@ function clipboardTools(platform) {
   ];
 }
 function run(tool, text) {
-  return new Promise((resolve4, reject) => {
+  return new Promise((resolve5, reject) => {
     const child = spawn(tool.command, tool.args, {
       stdio: ["pipe", "ignore", "ignore"],
       windowsHide: true,
@@ -1646,7 +1646,7 @@ function run(tool, text) {
     child.on("close", (code) => {
       clearTimeout(timer);
       if (code === 0) {
-        resolve4();
+        resolve5();
       } else {
         reject(new Error(`${tool.command} exited with ${code}`));
       }
@@ -2211,10 +2211,10 @@ async function git(cwd, args, options = {}) {
 function gitRaw(cwd, args, options, requireComplete = false) {
   const { signal } = options;
   if (signal?.aborted) return Promise.resolve(null);
-  return new Promise((resolve4) => {
+  return new Promise((resolve5) => {
     const onAbort = () => {
       killTree(child);
-      resolve4(null);
+      resolve5(null);
     };
     const child = execFile(
       "git",
@@ -2231,14 +2231,14 @@ function gitRaw(cwd, args, options, requireComplete = false) {
       (error, stdout) => {
         signal?.removeEventListener("abort", onAbort);
         if (signal?.aborted) {
-          resolve4(null);
+          resolve5(null);
           return;
         }
         if (error && (requireComplete || !stdout)) {
-          resolve4(null);
+          resolve5(null);
           return;
         }
-        resolve4(stdout);
+        resolve5(stdout);
       }
     );
     signal?.addEventListener("abort", onAbort, { once: true });
@@ -3365,12 +3365,12 @@ ${images.map((image, index) => `${index + 1}. ${image.path} (${image.name}, ${me
 </attached_images>`;
 }
 function withImagePaths(prompt, images) {
-  const missing = images.filter((image) => !prompt.includes(image.path));
-  if (missing.length === 0) return prompt;
+  const missing2 = images.filter((image) => !prompt.includes(image.path));
+  if (missing2.length === 0) return prompt;
   return `${prompt.trimEnd()}
 
 Attached images (open them):
-${missing.map((image) => `- ${image.path}`).join("\n")}`;
+${missing2.map((image) => `- ${image.path}`).join("\n")}`;
 }
 
 // src/attachments.ts
@@ -3401,9 +3401,9 @@ var TEXT_MAX = 2e4;
 var DAY_MS = 24 * 36e5;
 var RECEIPT = ".upload.json";
 var bad = () => new LlmError(msg("error.attachment_bad"), "invalid_params");
-var ownerKey = (owner) => {
-  if (!owner) throw bad();
-  return createHash("sha256").update(owner).digest("hex");
+var ownerKey = (owner2) => {
+  if (!owner2) throw bad();
+  return createHash("sha256").update(owner2).digest("hex");
 };
 var validId = (id2) => /^[a-z0-9-]{6,40}$/.test(id2);
 async function directory(path) {
@@ -3489,8 +3489,8 @@ function safeName(name) {
   const cleaned = basename2(name).replace(/[^\p{L}\p{N}._ -]+/gu, "_").replace(/^[. ]+/, "").trim().slice(0, 120).trim();
   return cleaned === RECEIPT || cleaned.startsWith(".upload-") ? `file-${cleaned}` : cleaned || "file";
 }
-async function putChunk(input, owner) {
-  const key = ownerKey(owner);
+async function putChunk(input, owner2) {
+  const key = ownerKey(owner2);
   if (!/^[a-z0-9-]{6,40}$/.test(input.id)) throw new LlmError(msg("error.attachment_bad"), "invalid_params");
   if (typeof input.data !== "string" || input.data.length > MAX_CHUNK_BASE64) throw new LlmError(msg("error.attachment_bad"), "invalid_params");
   if (input.index === 0 && typeof input.size === "number" && input.size > MAX_ATTACHMENT_BYTES) {
@@ -3595,8 +3595,8 @@ async function clearAttachments() {
   } catch {
   }
 }
-async function restoreAttachments(paths, owner) {
-  const key = ownerKey(owner);
+async function restoreAttachments(paths, owner2) {
+  const key = ownerKey(owner2);
   for (const path of paths) {
     try {
       const { id: id2, name } = pathParts(path);
@@ -3630,8 +3630,8 @@ function excerpt(text, max = TEXT_MAX) {
 \u2026(${cut.toLocaleString("en-US")} characters left out)\u2026
 ${tail}`, cut };
 }
-async function loadFiles(paths, owner) {
-  const key = ownerKey(owner);
+async function loadFiles(paths, owner2) {
+  const key = ownerKey(owner2);
   const out = { images: [], texts: [], paths: [] };
   for (const path of paths) {
     const { id: id2, name } = pathParts(path);
@@ -4462,11 +4462,11 @@ async function ownRules(host, hint) {
   return { config, rules: rulesFor(config, where), where };
 }
 function withAttachedPaths(prompt, paths) {
-  const missing = paths.filter((path) => !prompt.includes(path));
-  return missing.length === 0 ? prompt : `${prompt.trimEnd()}
+  const missing2 = paths.filter((path) => !prompt.includes(path));
+  return missing2.length === 0 ? prompt : `${prompt.trimEnd()}
 
 Attached files (open them):
-${missing.map((path) => `- ${path}`).join("\n")}`;
+${missing2.map((path) => `- ${path}`).join("\n")}`;
 }
 function gatherPrivacy(settings) {
   const otherAgents2 = settings.privacy.allowTerminalRead && settings.privacy.allowOtherAgents;
@@ -4720,10 +4720,10 @@ async function waitForRun(host, run2, signal, sliceMs) {
   try {
     const first = await Promise.race([
       run2.outcome,
-      ...sliceMs === null ? [] : [new Promise((resolve4) => slice = setTimeout(() => resolve4("pending"), sliceMs))],
-      new Promise((resolve4) => {
-        if (signal.aborted) resolve4("gone");
-        else signal.addEventListener("abort", onAbort = () => resolve4("gone"));
+      ...sliceMs === null ? [] : [new Promise((resolve5) => slice = setTimeout(() => resolve5("pending"), sliceMs))],
+      new Promise((resolve5) => {
+        if (signal.aborted) resolve5("gone");
+        else signal.addEventListener("abort", onAbort = () => resolve5("gone"));
       })
     ]);
     if (first === "pending") return null;
@@ -4821,7 +4821,7 @@ function registerRunHandlers(host) {
     const pressEnter = force !== true && !blocked && (enter ?? settings.sendPressEnter);
     const result = await sendPieces(host, terminalId, pieces);
     if (pressEnter && result.accepted) {
-      await new Promise((resolve4) => setTimeout(resolve4, 150));
+      await new Promise((resolve5) => setTimeout(resolve5, 150));
       await host.host.call("terminal.sendText", { terminalId, text: "\r" });
     }
     return { accepted: result.accepted };
@@ -5016,6 +5016,10 @@ function registerDataHandlers(host) {
       catalogs: keys.filter((key) => key.startsWith("catalog:")).length
     };
   });
+  for (const operation of ["status", "recover"]) host.panels.handle(`usage.${operation}`, async () => {
+    if (!host.host.has(`copilot.usage.${operation}`)) throw new LlmError(msg("error.copilot_usage"), "unavailable");
+    return host.host.call(`copilot.usage.${operation}`, {});
+  });
   host.panels.handle("data.clear", async ({ what }) => {
     const keys = await host.storage.keys();
     if (what === "history" || what === "all") {
@@ -5107,7 +5111,7 @@ function activate(host) {
 }
 
 // src/copilot/extension.ts
-import { join as join8 } from "node:path";
+import { join as join9 } from "node:path";
 
 // src/copilot/storage.ts
 var import_proper_lockfile2 = __toESM(require_proper_lockfile(), 1);
@@ -5285,7 +5289,7 @@ function metadataReader(fetcher = fetch, timeoutMs = 8e3) {
     }
   };
 }
-function remoteMetadata(read = metadataReader(), identity = { name: "enhance-prompt", manifest: "plugin.json", catalog: ".github/plugin/marketplace.json", changelog: "CHANGELOG.md" }) {
+function remoteMetadata(read = metadataReader(), identity2 = { name: "enhance-prompt", manifest: "plugin.json", catalog: ".github/plugin/marketplace.json", changelog: "CHANGELOG.md" }) {
   const branch = async (source) => {
     if (source.sha || source.ref && /^[0-9a-f]{7,40}$/i.test(source.ref)) throw new UpdateError("This installation is pinned to a commit. Change its source in Copilot to opt into updates.", "pinned");
     const api = `https://api.github.com/repos/${source.repo}`;
@@ -5316,18 +5320,18 @@ function remoteMetadata(read = metadataReader(), identity = { name: "enhance-pro
     if (installation.marketplace) {
       const market = installation.marketplace;
       const marketSha = await branch(market);
-      const catalog = await read(raw2(market, marketSha, identity.catalog));
-      const entries = Array.isArray(catalog?.plugins) ? catalog.plugins.filter((p) => p?.name === identity.name) : [];
+      const catalog = await read(raw2(market, marketSha, identity2.catalog));
+      const entries = Array.isArray(catalog?.plugins) ? catalog.plugins.filter((p) => p?.name === identity2.name) : [];
       if (entries.length !== 1) throw new UpdateError("The marketplace no longer identifies this plugin uniquely.");
       const entry = entries[0].source;
       const selected = typeof entry === "string" && /^\.\/(?:[\w./-]*)$/.test(entry) ? githubSource({ source: "github", ...market, path: [market.path, entry.slice(2)].filter(Boolean).join("/") || void 0 }) : githubSource(entry);
       if (!sameSource(selected, installation.source)) throw new UpdateError("The marketplace changed this plugin\u2019s source. Review it in Copilot before updating.", "source_changed");
       sha = sameSource({ ...selected, path: void 0 }, { ...market, path: void 0 }) ? marketSha : await branch(installation.source);
     } else sha = await branch(installation.source);
-    const manifest = await read(raw2(installation.source, sha, identity.manifest));
-    if (manifest?.name !== identity.name || compareVersions(manifest?.version, manifest?.version) !== 0) throw new UpdateError("The source plugin name or semantic version is invalid.", "invalid_params");
-    const hasChanges = await read(raw2(installation.source, sha, identity.changelog), true).catch(() => false);
-    return { version: manifest.version, ...hasChanges ? { changes: `https://github.com/${installation.source.repo}/blob/${sha}/${installation.source.path ? installation.source.path + "/" : ""}${identity.changelog}` } : {} };
+    const manifest = await read(raw2(installation.source, sha, identity2.manifest));
+    if (manifest?.name !== identity2.name || compareVersions(manifest?.version, manifest?.version) !== 0) throw new UpdateError("The source plugin name or semantic version is invalid.", "invalid_params");
+    const hasChanges = await read(raw2(installation.source, sha, identity2.changelog), true).catch(() => false);
+    return { version: manifest.version, ...hasChanges ? { changes: `https://github.com/${installation.source.repo}/blob/${sha}/${installation.source.path ? installation.source.path + "/" : ""}${identity2.changelog}` } : {} };
   };
 }
 
@@ -5605,7 +5609,7 @@ function createUpdates(options) {
       const id2 = randomUUID3();
       await mutate(async (state2) => {
         if (state2.pending) throw new UpdateError("An update is in progress. Wait for verification before starting more plugin work.");
-        state2.work = Object.fromEntries(Object.entries(state2.work ?? {}).filter(([, owner]) => isAlive(owner)));
+        state2.work = Object.fromEntries(Object.entries(state2.work ?? {}).filter(([, owner2]) => isAlive(owner2)));
         state2.work[id2] = pid;
         await put(state2);
       });
@@ -5633,7 +5637,7 @@ function createUpdates(options) {
 }
 
 // src/version.ts
-var VERSION = "0.12.6";
+var VERSION = "0.12.7";
 
 // src/worker-host.ts
 import { EventEmitter as EventEmitter2 } from "node:events";
@@ -5642,6 +5646,9 @@ import { EventEmitter as EventEmitter2 } from "node:events";
 var OPERATIONS = /* @__PURE__ */ new Set([
   "updates.check",
   "updates.install",
+  "usage.status",
+  "usage.recover",
+  "copilot.usage_recovery",
   "worker.ready",
   "canvas.connection",
   "canvas.request",
@@ -5913,7 +5920,7 @@ function createWorkerHost(services2, log = (_message) => {
       return await handler();
     },
     closePanel(panelId) {
-      for (const [request2, owner] of requests) if (owner === panelId) request2.abort();
+      for (const [request2, owner2] of requests) if (owner2 === panelId) request2.abort();
     },
     async deactivate() {
       for (const request2 of requests.keys()) request2.abort();
@@ -6089,9 +6096,9 @@ function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_D
   });
   let effortMigration;
   const prepareEfforts = () => effortMigration ??= prefs.transaction(async () => {
-    const missing = [];
-    for (const key of Object.values(EFFORT_SETTINGS)) if (await prefs.get(key) === null) missing.push(key);
-    if (!missing.length) return;
+    const missing2 = [];
+    for (const key of Object.values(EFFORT_SETTINGS)) if (await prefs.get(key) === null) missing2.push(key);
+    if (!missing2.length) return;
     const storedModels = await data.get(MODELS_KEY);
     const saved = parseModelsConfig(storedModels).profiles;
     const profiles = saved.filter((profile) => profile.enabled);
@@ -6102,7 +6109,7 @@ function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_D
     const current = selected ?? profiles[0];
     const override = explicit ? await legacy("modelChoice") : null;
     const assignment = explicit ? modelAssignment(explicit, typeof override === "string" && override ? override : selected ? effectiveModel(selected) : "") : current ? modelAssignment(current.id, effectiveModel(current)) : storedModels === null && choice === null ? "recommended" : "auto";
-    for (const key of missing) await prefs.set(key, assignment === "recommended" || parseModelAssignment(assignment) ? assignment : "auto");
+    for (const key of missing2) await prefs.set(key, assignment === "recommended" || parseModelAssignment(assignment) ? assignment : "auto");
   }).catch((error) => {
     effortMigration = void 0;
     throw error;
@@ -6158,8 +6165,8 @@ function createServices(session2, directory2 = process.env.ENHANCE_PROMPT_DATA_D
     }
   };
   const host = {
-    has: (name) => Boolean(copilot2) && ["copilot.catalog", "copilot.rewrite"].includes(name) || adapter.has(name),
-    call: async (name, input, options) => name === "copilot.catalog" && copilot2 ? await copilot2.catalog() : name === "copilot.rewrite" && copilot2 ? { text: await copilot2.rewrite(input, options?.signal, options?.ensureAccess) } : adapter.call(name, input, options)
+    has: (name) => Boolean(copilot2) && ["copilot.catalog", "copilot.rewrite", "copilot.usage.status", "copilot.usage.recover"].includes(name) || adapter.has(name),
+    call: async (name, input, options) => name === "copilot.catalog" && copilot2 ? await copilot2.catalog() : name === "copilot.rewrite" && copilot2 ? { text: await copilot2.rewrite(input, options?.signal, options?.ensureAccess) } : name === "copilot.usage.status" && copilot2 ? await copilot2.recoverUsage(false, true) : name === "copilot.usage.recover" && copilot2 ? await copilot2.recoverUsage(true) : adapter.call(name, input, options)
   };
   return { storage, settings, host, adapter, directory: directory2, data, attachmentOwner: `${directory2}\0${session2.sessionId}` };
 }
@@ -6180,13 +6187,13 @@ async function body(request) {
   if (!request.headers["content-type"]?.startsWith("application/json")) throw invalid();
   let size = 0;
   const parts = [];
-  await new Promise((resolve4, reject) => {
+  await new Promise((resolve5, reject) => {
     request.on("data", (chunk) => {
       size += chunk.length;
       if (size > LIMIT) reject(Object.assign(new Error("The canvas request is too large."), { status: 413 }));
       else parts.push(chunk);
     });
-    request.on("end", resolve4);
+    request.on("end", resolve5);
     request.on("error", reject);
   });
   const value = JSON.parse(Buffer.concat(parts).toString("utf8"));
@@ -6198,7 +6205,7 @@ async function createCanvasServer(options) {
   const canvases = /* @__PURE__ */ new Map();
   let origin = "";
   const assets = await realpath5(options.assets);
-  const json2 = (res, status, value) => {
+  const json3 = (res, status, value) => {
     res.writeHead(status, { "content-type": "application/json; charset=utf-8" });
     res.end(JSON.stringify(value ?? null));
   };
@@ -6227,20 +6234,20 @@ async function createCanvasServer(options) {
     res.setHeader("content-security-policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'");
     try {
       if (req.headers.host !== new URL(origin).host || req.headers.origin && req.headers.origin !== origin) {
-        json2(res, 403, { error: "Forbidden" });
+        json3(res, 403, { error: "Forbidden" });
         return;
       }
       const path = new URL(req.url ?? "/", origin).pathname;
       const match = /^\/c\/([a-f0-9]{64})\/(.*)$/.exec(path);
       const canvas2 = match && [...canvases.values()].find((item2) => item2.token === match[1]);
       if (!canvas2 || !match) {
-        json2(res, 403, { error: "Forbidden" });
+        json3(res, 403, { error: "Forbidden" });
         return;
       }
       const route = match[2];
       if (route === "api" || route === "events") {
         if (req.headers.authorization !== `Bearer ${canvas2.token}`) {
-          json2(res, 403, { error: "Forbidden" });
+          json3(res, 403, { error: "Forbidden" });
           return;
         }
         if (route === "events") {
@@ -6311,32 +6318,32 @@ async function createCanvasServer(options) {
           options.onClose?.(canvas2.id);
           answer = true;
         } else throw invalid();
-        if (!res.destroyed) json2(res, 200, { result: answer ?? null });
+        if (!res.destroyed) json3(res, 200, { result: answer ?? null });
         return;
       }
       if (req.method !== "GET" || route.includes("%") || route.includes("\\") || route.split("/").includes("..")) {
-        json2(res, 404, { error: "Not found" });
+        json3(res, 404, { error: "Not found" });
         return;
       }
       const file = await realpath5(resolve3(assets, route || "index.html")).catch(() => "");
       if (!file.startsWith(assets + sep2)) {
-        json2(res, 404, { error: "Not found" });
+        json3(res, 404, { error: "Not found" });
         return;
       }
       const mime = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".png": "image/png", ".svg": "image/svg+xml", ".woff2": "font/woff2" };
       if (!mime[extname(file)]) {
-        json2(res, 404, { error: "Not found" });
+        json3(res, 404, { error: "Not found" });
         return;
       }
       res.writeHead(200, { "content-type": mime[extname(file)] });
       res.end(await readFile4(file));
     } catch (error) {
-      if (!res.destroyed && !res.headersSent) json2(res, error.status ?? 400, { error: { message: error instanceof Error ? error.message : "Canvas request failed.", code: error?.code ?? "request_failed" } });
+      if (!res.destroyed && !res.headersSent) json3(res, error.status ?? 400, { error: { message: error instanceof Error ? error.message : "Canvas request failed.", code: error?.code ?? "request_failed" } });
     }
   });
-  await new Promise((resolve4, reject) => {
+  await new Promise((resolve5, reject) => {
     server2.once("error", reject);
-    server2.listen(0, "127.0.0.1", resolve4);
+    server2.listen(0, "127.0.0.1", resolve5);
   });
   origin = `http://127.0.0.1:${server2.address().port}`;
   return {
@@ -6362,25 +6369,217 @@ async function createCanvasServer(options) {
     async close() {
       for (const id2 of [...canvases.keys()]) closeCanvas(id2);
       server2.closeAllConnections();
-      await new Promise((resolve4) => server2.close(() => resolve4()));
+      await new Promise((resolve5) => server2.close(() => resolve5()));
     }
   };
 }
 
 // src/copilot/models.ts
-import { mkdtemp, mkdir as mkdir4, realpath as realpath6, rm } from "node:fs/promises";
-import { basename as basename5, isAbsolute as isAbsolute3, join as join7, relative as relative3 } from "node:path";
-import { tmpdir as tmpdir2 } from "node:os";
-import { randomUUID as randomUUID5 } from "node:crypto";
+import { mkdtemp, mkdir as mkdir5, realpath as realpath8, rm as rm2 } from "node:fs/promises";
+import { basename as basename6, isAbsolute as isAbsolute4, join as join8, relative as relative4 } from "node:path";
+import { tmpdir as tmpdir3 } from "node:os";
+import { randomUUID as randomUUID6 } from "node:crypto";
 
 // src/copilot/usage.ts
-import { randomUUID as randomUUID4 } from "node:crypto";
+import { randomUUID as randomUUID5 } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { homedir as homedir2 } from "node:os";
-import { mkdir as mkdir3, rename as rename3, writeFile as writeFile2 } from "node:fs/promises";
-import { join as join6 } from "node:path";
+import { lstat as lstat3, mkdir as mkdir4, open as open3, realpath as realpath7, rename as rename4, writeFile as writeFile3 } from "node:fs/promises";
+import { join as join7 } from "node:path";
 import { StringDecoder } from "node:string_decoder";
+
+// src/copilot/usage-recovery.ts
+var import_proper_lockfile3 = __toESM(require_proper_lockfile(), 1);
+import { randomUUID as randomUUID4 } from "node:crypto";
+import { lstat as lstat2, mkdir as mkdir3, open as open2, readdir as readdir3, realpath as realpath6, rename as rename3, rm, rmdir as rmdir2, unlink as unlink2, writeFile as writeFile2 } from "node:fs/promises";
+import { basename as basename5, isAbsolute as isAbsolute3, join as join6, relative as relative3, resolve as resolve4 } from "node:path";
+import { tmpdir as tmpdir2 } from "node:os";
 var uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+var ownerFile = ".enhance-usage-owner.json";
+var generic = () => new Error("Unable to recover usage accounting. Raw helper data was left untouched.");
+var within = (root, path) => {
+  const part = relative3(root, path);
+  return !!part && !isAbsolute3(part) && !part.startsWith("..");
+};
+var missing = (error) => error.code === "ENOENT";
+async function save2(file, value) {
+  const temporary = `${file}.${randomUUID4()}.tmp`;
+  await writeFile2(temporary, JSON.stringify(value), { mode: 384 });
+  await rename3(temporary, file);
+}
+async function json2(file) {
+  const before = await lstat2(file, { bigint: true });
+  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1n || before.size > 16384n) throw generic();
+  const handle = await open2(file, "r");
+  try {
+    const actual = await handle.stat({ bigint: true });
+    if (before.dev !== actual.dev || before.ino !== actual.ino || actual.nlink !== 1n || !actual.isFile()) throw generic();
+    return JSON.parse(await handle.readFile("utf8"));
+  } finally {
+    await handle.close();
+  }
+}
+async function identity(directory2) {
+  const info = await lstat2(directory2, { bigint: true });
+  const canonical = await realpath6(directory2);
+  const temp = await realpath6(tmpdir2());
+  if (!info.isDirectory() || info.isSymbolicLink() || canonical !== resolve4(directory2) || !within(temp, canonical) || !basename5(canonical).startsWith("enhance-copilot-")) throw generic();
+  return { directory: canonical, dev: String(info.dev), ino: String(info.ino) };
+}
+async function owner(record) {
+  const info = await identity(record.directory);
+  if (info.dev !== record.dev || info.ino !== record.ino) throw generic();
+  const value = await json2(join6(record.directory, ownerFile));
+  if (value.token !== record.token || value.sessionId !== record.sessionId || !["running", "stopped"].includes(value.state)) throw generic();
+  return value;
+}
+function parse(value, name) {
+  if (!value || !uuid.test(value.sessionId) || name !== `${value.sessionId}.json` || !uuid.test(value.token) || typeof value.directory !== "string" || typeof value.dev !== "string" || typeof value.ino !== "string") throw generic();
+  return value;
+}
+async function sameDirectory(record) {
+  const info = await identity(record.directory);
+  if (info.dev !== record.dev || info.ino !== record.ino) throw generic();
+}
+async function cleanup(record) {
+  if ((await owner(record)).state !== "stopped") throw generic();
+  for (const name of await readdir3(record.directory)) {
+    if (name === ownerFile) continue;
+    await sameDirectory(record);
+    await rm(join6(record.directory, name), { recursive: true, force: false, maxRetries: 3 });
+  }
+  if ((await owner(record)).state !== "stopped") throw generic();
+  await unlink2(join6(record.directory, ownerFile));
+  await rmdir2(record.directory);
+}
+async function registerUsageJournal(root, sessionId, directory2) {
+  if (!uuid.test(sessionId)) throw generic();
+  const record = { sessionId, ...await identity(await realpath6(directory2)), token: randomUUID4() };
+  const registry = join6(root, "recovery"), file = join6(registry, `${sessionId}.json`);
+  await mkdir3(registry, { recursive: true, mode: 448 });
+  await writeFile2(join6(record.directory, ownerFile), JSON.stringify({ token: record.token, sessionId, state: "running" }), { flag: "wx", mode: 384 });
+  await writeFile2(file, JSON.stringify(record), { flag: "wx", mode: 384 });
+  let release;
+  return {
+    async stopped() {
+      release = await import_proper_lockfile3.default.lock(registry, { realpath: false, stale: 3e4, retries: { retries: 80, minTimeout: 50, maxTimeout: 250 } });
+      await owner(record);
+      await save2(join6(record.directory, ownerFile), { token: record.token, sessionId, state: "stopped" });
+    },
+    async committed() {
+      await save2(file, { ...record, committed: true });
+    },
+    async cleanup() {
+      await cleanup(record);
+    },
+    async complete() {
+      const current = parse(await json2(file), basename5(file));
+      if (current.token !== record.token) throw generic();
+      await unlink2(file);
+    },
+    async settled() {
+      const unlock = release;
+      release = void 0;
+      await unlock?.();
+    }
+  };
+}
+async function journal(record) {
+  let path = record.directory;
+  for (const component of ["home", "session-state", record.sessionId, "events.jsonl"]) {
+    path = join6(path, component);
+    const info = await lstat2(path);
+    if (info.isSymbolicLink() || await realpath6(path) !== path || (component === "events.jsonl" ? !info.isFile() || info.nlink !== 1 : !info.isDirectory())) throw generic();
+  }
+  return path;
+}
+async function recoverUsageJournals(root, consume, options = {}) {
+  const status = { pending: 0, unconfirmed: 0, recovered: 0, failed: 0, deferred: 0 };
+  const registry = join6(root, "recovery");
+  try {
+    if (!(await lstat2(registry)).isDirectory() || await realpath6(registry) !== resolve4(registry)) throw generic();
+  } catch (error) {
+    if (missing(error)) return status;
+    throw generic();
+  }
+  const release = await import_proper_lockfile3.default.lock(registry, { realpath: false, stale: 3e4, retries: { retries: 12, minTimeout: 50, maxTimeout: 250 } });
+  try {
+    const now = options.now?.() ?? Date.now();
+    let attempted = 0;
+    for (const name of (await readdir3(registry)).filter((name2) => name2.endsWith(".json")).sort()) {
+      const file = join6(registry, name);
+      let record;
+      try {
+        record = parse(await json2(file), name);
+        let marker;
+        try {
+          marker = await owner(record);
+        } catch (error) {
+          if (record.committed && missing(error)) {
+            try {
+              await lstat2(record.directory);
+            } catch (error2) {
+              if (missing(error2)) {
+                if (!options.inspect) await unlink2(file);
+                status.recovered++;
+                continue;
+              }
+            }
+            await sameDirectory(record);
+            if ((await readdir3(record.directory)).length === 0) {
+              if (!options.inspect) {
+                await rmdir2(record.directory);
+                await unlink2(file);
+              }
+              status.recovered++;
+              continue;
+            }
+          }
+          throw error;
+        }
+        if (marker.state !== "stopped") {
+          status.unconfirmed++;
+          continue;
+        }
+      } catch {
+        status.unconfirmed++;
+        continue;
+      }
+      status.pending++;
+      if (options.inspect) {
+        if (record.attempts) status.failed++;
+        continue;
+      }
+      if (attempted >= 8 || !options.manual && (record.nextAt ?? 0) > now) {
+        status.deferred++;
+        continue;
+      }
+      attempted++;
+      try {
+        if (!record.committed) {
+          await consume(record.sessionId, await journal(record));
+          record = { ...record, committed: true };
+          await save2(file, record);
+        }
+        await cleanup(record);
+        await unlink2(file);
+        status.pending--;
+        status.recovered++;
+      } catch {
+        status.failed++;
+        const attempts = Math.min(20, (record.attempts ?? 0) + 1);
+        await save2(file, { ...record, attempts, nextAt: now + Math.min(36e5, 3e5 * 2 ** (attempts - 1)) }).catch(() => {
+        });
+      }
+    }
+    return status;
+  } finally {
+    await release();
+  }
+}
+
+// src/copilot/usage.ts
+var uuid2 = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 var identifier = /^[a-z0-9][a-z0-9._:+\/-]*$/i;
 var numericFields = [
   "inputTokens",
@@ -6448,6 +6647,7 @@ async function reconcileUsageJournal(path, recorder) {
   const decoder = new StringDecoder("utf8");
   let bytes = 0;
   let remainder = "";
+  let unreadable = false;
   const consume = (line) => {
     if (!line.trim()) return;
     let event;
@@ -6471,33 +6671,68 @@ async function reconcileUsageJournal(path, recorder) {
     }
     consume(remainder + decoder.end());
   } catch (error) {
-    if (error.code === "ENOENT") return;
-    throw new Error("Unable to read usage accounting journal.");
+    unreadable = error.code !== "ENOENT";
   }
   await recorder.flush();
+  if (unreadable) throw new Error("Unable to read usage accounting journal.");
 }
 async function replace(file, content) {
-  const temporary = `${file}.${randomUUID4()}.tmp`;
-  await writeFile2(temporary, content, { encoding: "utf8", mode: 384 });
-  await rename3(temporary, file);
+  const temporary = `${file}.${randomUUID5()}.tmp`;
+  await writeFile3(temporary, content, { encoding: "utf8", mode: 384 });
+  await rename4(temporary, file);
 }
 function usageHome() {
-  return join6(process.env.ENHANCE_PROMPT_DATA_DIR || join6(process.env.LOCALAPPDATA || join6(homedir2(), ".local", "share"), "copilot-enhance-prompt"), "usage");
+  return join7(process.env.ENHANCE_PROMPT_DATA_DIR || join7(process.env.LOCALAPPDATA || join7(homedir2(), ".local", "share"), "copilot-enhance-prompt"), "usage");
 }
-async function createUsageRecorder(sessionId, root = usageHome()) {
-  if (!uuid.test(sessionId)) throw new Error("Invalid usage session ID.");
-  const directory2 = join6(root, "session-state", sessionId);
-  const file = join6(directory2, "events.jsonl");
+async function createUsageRecorder(sessionId, root = usageHome(), options = {}) {
+  if (!uuid2.test(sessionId)) throw new Error("Invalid usage session ID.");
+  const directory2 = join7(root, "session-state", sessionId);
+  const file = join7(directory2, "events.jsonl");
   const started = (/* @__PURE__ */ new Date()).toISOString();
-  await mkdir3(join6(root, "session-state"), { recursive: true, mode: 448 });
-  await mkdir3(directory2, { mode: 448 });
-  await replace(join6(directory2, "workspace.yaml"), JSON.stringify({ id: sessionId, name: `Enhanced Prompt \xB7 ${started}` }) + "\n");
-  let lines = JSON.stringify({ type: "session.start", id: randomUUID4(), timestamp: started, data: { sessionId, context: { repository: "Enhanced Prompt" } } }) + "\n";
-  await replace(file, lines);
+  await mkdir4(join7(root, "session-state"), { recursive: true, mode: 448 });
+  let lines = JSON.stringify({ type: "session.start", id: randomUUID5(), timestamp: started, data: { sessionId, context: { repository: "Enhanced Prompt" } } }) + "\n";
   const seen = /* @__PURE__ */ new Set();
+  const keyOf = (receipt2) => {
+    const accounting = object(object(object(receipt2.data)?.usage)?.accounting);
+    return accounting ? `${sessionId}:${accounting.usageId}` : `event:${receipt2.id}`;
+  };
+  if (options.resume) {
+    const canonical = await realpath7(root);
+    if (await realpath7(directory2) !== join7(canonical, "session-state", sessionId)) throw new Error("Unable to reopen usage accounting.");
+    const before = await lstat3(file, { bigint: true });
+    if (!before.isFile() || before.nlink !== 1n || before.size > 64n * 1024n * 1024n) throw new Error("Unable to reopen usage accounting.");
+    const handle = await open3(file, "r");
+    let content;
+    try {
+      const actual = await handle.stat({ bigint: true });
+      if (!actual.isFile() || actual.nlink !== 1n || actual.dev !== before.dev || actual.ino !== before.ino) throw new Error("Unable to reopen usage accounting.");
+      content = await handle.readFile("utf8");
+    } finally {
+      await handle.close();
+    }
+    const saved = content.trim().split("\n").map((line) => JSON.parse(line));
+    const head = saved.shift();
+    if (head?.type !== "session.start" || !safeId(head.id) || typeof head.timestamp !== "string" || !Number.isFinite(Date.parse(head.timestamp)) || head?.data?.sessionId !== sessionId || head?.data?.context?.repository !== "Enhanced Prompt") throw new Error("Unable to reopen usage accounting.");
+    lines = JSON.stringify({ type: "session.start", id: head.id, timestamp: new Date(head.timestamp).toISOString(), data: { sessionId, context: { repository: "Enhanced Prompt" } } }) + "\n";
+    for (const event of saved) {
+      const receipt2 = project(event, sessionId);
+      if (!receipt2) throw new Error("Unable to reopen usage accounting.");
+      const key = keyOf(receipt2);
+      if (!seen.has(key)) {
+        seen.add(key);
+        lines += JSON.stringify(receipt2) + "\n";
+      }
+    }
+  } else {
+    await mkdir4(directory2, { mode: 448 });
+    await replace(join7(directory2, "workspace.yaml"), JSON.stringify({ id: sessionId, name: `Enhanced Prompt \xB7 ${started}` }) + "\n");
+    await replace(file, lines);
+  }
+  const recovery = options.helperDirectory ? await registerUsageJournal(root, sessionId, options.helperDirectory) : void 0;
   let pending = Promise.resolve();
   let failure = false;
   return {
+    ...recovery,
     record(event) {
       if (failure) return;
       let receipt2;
@@ -6508,9 +6743,7 @@ async function createUsageRecorder(sessionId, root = usageHome()) {
         return;
       }
       if (!receipt2) return;
-      const usage = object(object(receipt2.data)?.usage);
-      const accounting = object(usage?.accounting);
-      const key = accounting ? `${sessionId}:${accounting.usageId}` : `event:${receipt2.id}`;
+      const key = keyOf(receipt2);
       if (seen.has(key)) return;
       seen.add(key);
       pending = pending.then(async () => {
@@ -6527,6 +6760,13 @@ async function createUsageRecorder(sessionId, root = usageHome()) {
     }
   };
 }
+async function recoverUsage(manual = false, root = usageHome(), inspect = false) {
+  return recoverUsageJournals(root, async (sessionId, journal2) => {
+    const recorder = await createUsageRecorder(sessionId, root, { resume: true });
+    await reconcileUsageJournal(journal2, recorder);
+    await recorder.flush();
+  }, { manual, inspect });
+}
 
 // src/copilot/models.ts
 var unavailable2 = () => new LlmError(msg("error.copilot_unavailable"), "unavailable");
@@ -6534,9 +6774,9 @@ var cancelled = () => new LlmError(msg("error.cancelled"), "cancelled");
 var usageFailed = () => new LlmError(msg("error.copilot_usage"), "action_failed");
 function hostRuntime(executable = process.execPath, argv = process.argv, parentPid = process.ppid, environment = process.env, probe) {
   const checks = {
-    executableAllowed: isAbsolute3(executable) && ["copilot.exe", "copilot", "copilot-runtime.exe", "copilot-runtime"].includes(basename5(executable).toLowerCase()),
+    executableAllowed: isAbsolute4(executable) && ["copilot.exe", "copilot", "copilot-runtime.exe", "copilot-runtime"].includes(basename6(executable).toLowerCase()),
     // The packaged desktop uses a built-in entry name; SDK launches can use the preload's absolute path.
-    bootstrapPresent: argv.some((arg) => arg === "extension_bootstrap.mjs" || isAbsolute3(arg) && basename5(arg) === "extension_bootstrap.mjs"),
+    bootstrapPresent: argv.some((arg) => arg === "extension_bootstrap.mjs" || isAbsolute4(arg) && basename6(arg) === "extension_bootstrap.mjs"),
     sdkPathPresent: Boolean(environment.COPILOT_SDK_PATH),
     parentMatches: Number.isSafeInteger(parentPid) && parentPid > 0 && String(parentPid) === environment.COPILOT_EXTENSION_PARENT_PID
   };
@@ -6556,7 +6796,7 @@ async function desktopRuntime(probe) {
     probe?.stage("runtime_identity");
     const executable = hostRuntime(void 0, void 0, void 0, void 0, probe);
     probe?.stage("runtime_path");
-    const path = await realpath6(executable);
+    const path = await realpath8(executable);
     probe?.check("runtimePathResolved", true);
     loadingSdk = true;
     probe?.stage("sdk_import");
@@ -6650,7 +6890,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
     let directory2;
     let stop2;
     let usage;
-    const sessionId = randomUUID5();
+    const sessionId = randomUUID6();
     const stopClient = () => {
       if (client) stop2 ??= withDeadline(client.forceStop(), 1e4).then(() => true, () => false);
       return stop2;
@@ -6680,14 +6920,14 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
         checkReasoning(requested, input.reasoningEffort);
         check();
       }
-      directory2 = await mkdtemp(join7(tmpdir2(), "enhance-copilot-"));
-      const workspace = join7(directory2, "workspace");
-      await mkdir4(workspace);
+      directory2 = await mkdtemp(join8(tmpdir3(), "enhance-copilot-"));
+      const workspace = join8(directory2, "workspace");
+      await mkdir5(workspace);
       check();
       client = new sdk.CopilotClient({
         mode: "empty",
         workingDirectory: workspace,
-        baseDirectory: join7(directory2, "home"),
+        baseDirectory: join8(directory2, "home"),
         connection: sdk.RuntimeConnection.forStdio({ path, args: ["--no-auto-update"] }),
         env: runtimeEnvironment(),
         useLoggedInUser: true,
@@ -6699,7 +6939,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       check();
       stage("copilot.usage");
       try {
-        usage = await usageRecorder(sessionId);
+        usage = await usageRecorder(sessionId, void 0, { helperDirectory: directory2 });
       } catch {
         throw usageFailed();
       }
@@ -6711,7 +6951,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
         sessionId,
         onEvent: (event) => usage.record(event),
         workingDirectory: workspace,
-        configDirectory: join7(directory2, "home"),
+        configDirectory: join8(directory2, "home"),
         model: input.model,
         ...input.reasoningEffort !== void 0 ? { reasoningEffort: input.reasoningEffort } : {},
         systemMessage: { mode: "replace", content: input.system },
@@ -6757,7 +6997,7 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       checkReasoning(parentModel, input.reasoningEffort);
       checkReasoning(model, input.reasoningEffort);
       stage("copilot.workspace");
-      if (metadata.isRemote !== false || await realpath6(metadata.workingDirectory) !== await realpath6(workspace)) throw unavailable2();
+      if (metadata.isRemote !== false || await realpath8(metadata.workingDirectory) !== await realpath8(workspace)) throw unavailable2();
       stage("copilot.tools");
       await withDeadline(session2.rpc.tools.initializeAndValidate(), 15e3);
       const [tools, selected] = await withDeadline(Promise.all([session2.rpc.tools.getCurrentMetadata(), session2.rpc.model.getCurrent()]), 15e3);
@@ -6795,8 +7035,10 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
         if (usage) {
           stage("copilot.usage");
           try {
-            if (stopped !== false && directory2) await reconcileUsageJournal(join7(directory2, "home", "session-state", sessionId, "events.jsonl"), usage);
+            if (stopped !== false) await usage.stopped?.();
+            if (stopped !== false && directory2) await reconcileUsageJournal(join8(directory2, "home", "session-state", sessionId, "events.jsonl"), usage);
             await usage.flush();
+            if (stopped !== false) await usage.committed?.();
           } catch {
             diagnostics2?.record(phase, "failed", diagnosticError(usageFailed()));
             throw usageFailed();
@@ -6808,24 +7050,59 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
           diagnostics2?.record(phase, "failed");
           throw unavailable2();
         }
-        if (directory2) {
-          const inside = relative3(tmpdir2(), directory2);
-          if (inside && !isAbsolute3(inside) && !inside.startsWith("..") && basename5(directory2).startsWith("enhance-copilot-")) {
-            await rm(directory2, { recursive: true, force: true, maxRetries: 3 }).catch(() => {
+        if (usage?.cleanup) {
+          try {
+            await usage.cleanup();
+          } catch {
+            throw usageFailed();
+          }
+        } else if (directory2) {
+          const inside = relative4(tmpdir3(), directory2);
+          if (inside && !isAbsolute4(inside) && !inside.startsWith("..") && basename6(directory2).startsWith("enhance-copilot-")) {
+            await rm2(directory2, { recursive: true, force: true, maxRetries: 3 }).catch(() => {
               diagnostics2?.record(phase, "failed");
               throw unavailable2();
             });
           }
         }
+        try {
+          await usage?.complete?.();
+        } catch {
+          throw usageFailed();
+        }
         diagnostics2?.record(phase, "ok", { ms: Date.now() - phaseStarted });
       } finally {
-        if (stopped !== false) active.delete(controller);
+        try {
+          await usage?.settled?.();
+        } catch {
+          throw usageFailed();
+        } finally {
+          if (stopped !== false) active.delete(controller);
+        }
       }
     }
   }
-  return { catalog, rewrite, hasActiveWork: () => active.size > 0, close() {
-    for (const controller of active) controller.abort();
-  } };
+  return {
+    catalog,
+    rewrite,
+    async recoverUsage(manual = false, inspect = false) {
+      const activity = new AbortController();
+      active.add(activity);
+      try {
+        const status = await recoverUsage(manual, void 0, inspect);
+        if (!inspect) diagnostics2?.record("copilot.usage_recovery", status.failed || status.unconfirmed ? "failed" : "ok");
+        return status;
+      } catch {
+        throw usageFailed();
+      } finally {
+        active.delete(activity);
+      }
+    },
+    hasActiveWork: () => active.size > 0,
+    close() {
+      for (const controller of active) controller.abort();
+    }
+  };
 }
 async function withDeadline(promise, ms, timeout = unavailable2) {
   let timer;
@@ -6842,8 +7119,8 @@ async function withDeadline(promise, ms, timeout = unavailable2) {
 var SDK = "@github/copilot-sdk/extension";
 var { joinSession, createCanvas } = await import(SDK);
 var ready;
-var initialized = new Promise((resolve4) => {
-  ready = resolve4;
+var initialized = new Promise((resolve5) => {
+  ready = resolve5;
 });
 var services;
 var worker;
@@ -6878,7 +7155,7 @@ activate(worker.api);
 var packageRoot = fileURLToPath(new URL("../../../", import.meta.url));
 var updates = createUpdates({
   running: VERSION,
-  store: persistentStore(join8(services.directory, "updates", installationKey(packageRoot))),
+  store: persistentStore(join9(services.directory, "updates", installationKey(packageRoot))),
   installation: installationReader(session, packageRoot),
   metadata: remoteMetadata(),
   busy: () => hasActiveRuns() || worker.hasActiveWork() || copilot.hasActiveWork(),
@@ -6888,6 +7165,8 @@ var updates = createUpdates({
 server = await createCanvasServer({ worker, updates, assets: fileURLToPath(new URL("./web/", import.meta.url)), onClose: cancelPanelRuns });
 ready();
 process.stderr.write("[Enhance Prompt] Canvas server ready.\n");
+void copilot.recoverUsage().catch(() => {
+});
 var stopping = false;
 async function stop() {
   if (stopping) return;

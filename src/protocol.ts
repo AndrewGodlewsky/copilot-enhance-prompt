@@ -138,6 +138,8 @@ export interface PluginRequests {
     'rules.save': { input: { config: RulesConfig }; output: RulesConfig }
     /** What the plugin keeps: history entries, saved models and cached model lists. */
     'data.summary': { output: { history: number; profiles: number; catalogs: number } }
+    'usage.status': { output: import('./copilot/usage-recovery.ts').UsageRecoveryStatus }
+    'usage.recover': { output: import('./copilot/usage-recovery.ts').UsageRecoveryStatus }
     /** Deletes history, cached model lists, or everything (models too). */
     'data.clear': { input: { what: 'history' | 'catalogs' | 'all' }; output: { ok: true } }
 

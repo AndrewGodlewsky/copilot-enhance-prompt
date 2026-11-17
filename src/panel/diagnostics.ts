@@ -10,6 +10,9 @@ export async function collectDiagnostics(): Promise<{ text: string; connected: b
   let worker: WorkerDiagnostics | null = null
   try { worker = await plugin.request('logs.get', undefined, { timeoutMs: 5000 }) }
   catch (error) { panelDiagnostics.record('canvas.request', 'failed', diagnosticError(error)) }
+  let usageRecovery: unknown = null
+  try { usageRecovery = await plugin.request('usage.status', undefined, { timeoutMs: 5000 }) }
+  catch { /* Older workers may not support local accounting recovery. */ }
   const catalog = read(catalogs).form
   const effort = read(effectiveEffort)
   const reasoning = read(effortReasoning)[effort]
@@ -27,5 +30,5 @@ export async function collectDiagnostics(): Promise<{ text: string; connected: b
       ...(read(copilotRunFailure) ? { lastBackgroundFailure: diagnosticError({ text: read(copilotRunFailure)!.text }) } : {}) }
   }
   return { connected: worker !== null, discovery: JSON.stringify(discovery, null, 2),
-    text: JSON.stringify({ plugin: BRAND, ...panelDiagnostics.snapshot(), copilotModelDiscovery: discovery, worker }, null, 2) }
+    text: JSON.stringify({ plugin: BRAND, ...panelDiagnostics.snapshot(), copilotModelDiscovery: discovery, usageRecovery, worker }, null, 2) }
 }

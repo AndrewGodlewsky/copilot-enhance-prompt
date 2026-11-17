@@ -9,7 +9,7 @@ import type { ImageType } from '../images.ts'
 import { LlmError } from '../llm.ts'
 import { msg } from '../messages.ts'
 import { diagnosticError, type Diagnostics, type DiscoveryProbe } from '../diagnostics.ts'
-import { createUsageRecorder, reconcileUsageJournal, type UsageRecorder } from './usage.ts'
+import { createUsageRecorder, reconcileUsageJournal, recoverUsage, type UsageRecorder } from './usage.ts'
 
 type Auth = { isAuthenticated: boolean; login?: string; host?: string }
 type Model = { id: string; name?: string; provider?: { kind?: string }; policy?: { state?: string }; capabilities?: { supports?: { vision?: boolean; reasoningEffort?: boolean; reasoning_effort?: unknown } }; supportedReasoningEfforts?: unknown; defaultReasoningEffort?: unknown }
@@ -190,7 +190,7 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
       await withDeadline(client.start(), 30_000)
       check()
       stage('copilot.usage')
-      try { usage = await usageRecorder(sessionId) } catch { throw usageFailed() }
+      try { usage = await usageRecorder(sessionId, undefined, { helperDirectory: directory }) } catch { throw usageFailed() }
       check()
       stage('copilot.session')
       await ensureAccess?.()
@@ -263,8 +263,10 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
           // forceStop can detach live listeners before the last durable receipt is delivered.
           // Reconcile only this stopped helper's journal, retaining it if accounting cannot be saved.
           try {
+            if (stopped !== false) await usage.stopped?.()
             if (stopped !== false && directory) await reconcileUsageJournal(join(directory, 'home', 'session-state', sessionId, 'events.jsonl'), usage)
             await usage.flush()
+            if (stopped !== false) await usage.committed?.()
           }
           catch {
             diagnostics?.record(phase, 'failed', diagnosticError(usageFailed()))
@@ -275,20 +277,37 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
         }
         // Do not remove state while a helper might still be using it, or report success after a failed stop.
         if (stopped === false) { diagnostics?.record(phase, 'failed'); throw unavailable() }
-        if (directory) {
+        if (usage?.cleanup) {
+          try { await usage.cleanup() } catch { throw usageFailed() }
+        } else if (directory) {
           const inside = relative(tmpdir(), directory)
           if (inside && !isAbsolute(inside) && !inside.startsWith('..') && basename(directory).startsWith('enhance-copilot-')) {
             await rm(directory, { recursive: true, force: true, maxRetries: 3 }).catch(() => { diagnostics?.record(phase, 'failed'); throw unavailable() })
           }
         }
+        try { await usage?.complete?.() } catch { throw usageFailed() }
         diagnostics?.record(phase, 'ok', { ms: Date.now() - phaseStarted })
       } finally {
-        // Unknown shutdown leaves a conservative update blocker until this worker restarts.
-        if (stopped !== false) active.delete(controller)
+        try { await usage?.settled?.() } catch { throw usageFailed() }
+        finally {
+          // Unknown shutdown leaves a conservative update blocker until this worker restarts.
+          if (stopped !== false) active.delete(controller)
+        }
       }
     }
   }
-  return { catalog, rewrite, hasActiveWork: () => active.size > 0, close() { for (const controller of active) controller.abort() } }
+  return { catalog, rewrite,
+    async recoverUsage(manual = false, inspect = false) {
+      const activity = new AbortController()
+      active.add(activity)
+      try {
+        const status = await recoverUsage(manual, undefined, inspect)
+        if (!inspect) diagnostics?.record('copilot.usage_recovery', status.failed || status.unconfirmed ? 'failed' : 'ok')
+        return status
+      } catch { throw usageFailed() }
+      finally { active.delete(activity) }
+    },
+    hasActiveWork: () => active.size > 0, close() { for (const controller of active) controller.abort() } }
 }
 
 async function withDeadline<T>(promise: Promise<T>, ms: number, timeout = unavailable): Promise<T> {

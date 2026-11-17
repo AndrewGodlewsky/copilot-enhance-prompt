@@ -62,7 +62,7 @@ const bridge = {
   }
 }
 const retained = await mkdtemp(join(tmpdir(), 'enhance-usage-fixture-'))
-const service = createCopilotModels(parent, async () => ({ sdk: bridge, path: process.env.COPILOT_CLI_PATH }), undefined, id => createUsageRecorder(id, retained))
+const service = createCopilotModels(parent, async () => ({ sdk: bridge, path: process.env.COPILOT_CLI_PATH }), undefined, (id, _root, options) => createUsageRecorder(id, retained, options))
 const watchdog = setTimeout(() => { service.close(); for (const client of clients) void client.forceStop(); process.exitCode = 1 }, 55_000)
 try {
   const result = await service.rewrite({ model: 'gpt-4.1', system: 'Rewrite only the supplied request.', user: 'Add a dark mode setting.' })
@@ -100,6 +100,7 @@ try {
   }
   assert.equal(requests.length, 6)
   for (const directory of homes) await assert.rejects(access(directory))
+  assert.deepEqual(await readdir(join(retained, 'recovery')), [], 'successful cleanup removes every owned recovery registration')
   const sessions = await readdir(join(retained, 'session-state'))
   assert.equal(sessions.length, 6)
   const journals = await Promise.all(sessions.map(id => readFile(join(retained, 'session-state', id, 'events.jsonl'), 'utf8')))

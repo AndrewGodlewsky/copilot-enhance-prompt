@@ -1,11 +1,13 @@
 import { randomUUID } from 'node:crypto'
 import { createReadStream } from 'node:fs'
 import { homedir } from 'node:os'
-import { mkdir, rename, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, open, realpath, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { StringDecoder } from 'node:string_decoder'
 
-export type UsageRecorder = { record(event: unknown): void; flush(): Promise<void> }
+import { registerUsageJournal, recoverUsageJournals, type UsageRecoveryStatus } from './usage-recovery.ts'
+
+export type UsageRecorder = { record(event: unknown): void; flush(): Promise<void>; stopped?(): Promise<void>; committed?(): Promise<void>; cleanup?(): Promise<void>; complete?(): Promise<void>; settled?(): Promise<void> }
 
 type ObjectValue = Record<string, unknown>
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -79,6 +81,7 @@ export async function reconcileUsageJournal(path: string, recorder: UsageRecorde
   const decoder = new StringDecoder('utf8')
   let bytes = 0
   let remainder = ''
+  let unreadable = false
   const consume = (line: string) => {
     if (!line.trim()) return
     let event: unknown
@@ -98,10 +101,11 @@ export async function reconcileUsageJournal(path: string, recorder: UsageRecorde
     }
     consume(remainder + decoder.end())
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
-    throw new Error('Unable to read usage accounting journal.')
+    unreadable = (error as NodeJS.ErrnoException).code !== 'ENOENT'
   }
+  // Even a malformed tail must settle earlier receipt writes before the caller releases its lock.
   await recorder.flush()
+  if (unreadable) throw new Error('Unable to read usage accounting journal.')
 }
 
 async function replace(file: string, content: string): Promise<void> {
@@ -114,29 +118,57 @@ export function usageHome(): string {
   return join(process.env.ENHANCE_PROMPT_DATA_DIR || join(process.env.LOCALAPPDATA || join(homedir(), '.local', 'share'), 'copilot-enhance-prompt'), 'usage')
 }
 
-export async function createUsageRecorder(sessionId: string, root = usageHome()): Promise<UsageRecorder> {
+export async function createUsageRecorder(sessionId: string, root = usageHome(), options: { resume?: boolean; helperDirectory?: string } = {}): Promise<UsageRecorder> {
   if (!uuid.test(sessionId)) throw new Error('Invalid usage session ID.')
   const directory = join(root, 'session-state', sessionId)
   const file = join(directory, 'events.jsonl')
   const started = new Date().toISOString()
   await mkdir(join(root, 'session-state'), { recursive: true, mode: 0o700 })
-  await mkdir(directory, { mode: 0o700 })
-  await replace(join(directory, 'workspace.yaml'), JSON.stringify({ id: sessionId, name: `Enhanced Prompt · ${started}` }) + '\n')
   let lines = JSON.stringify({ type: 'session.start', id: randomUUID(), timestamp: started, data: { sessionId, context: { repository: 'Enhanced Prompt' } } }) + '\n'
-  await replace(file, lines)
-
   const seen = new Set<string>()
+  const keyOf = (receipt: ObjectValue) => {
+    const accounting = object(object(object(receipt.data)?.usage)?.accounting)
+    return accounting ? `${sessionId}:${accounting.usageId}` : `event:${receipt.id}`
+  }
+  if (options.resume) {
+    const canonical = await realpath(root)
+    if (await realpath(directory) !== join(canonical, 'session-state', sessionId)) throw new Error('Unable to reopen usage accounting.')
+    const before = await lstat(file, { bigint: true })
+    if (!before.isFile() || before.nlink !== 1n || before.size > 64n * 1024n * 1024n) throw new Error('Unable to reopen usage accounting.')
+    const handle = await open(file, 'r')
+    let content: string
+    try {
+      const actual = await handle.stat({ bigint: true })
+      if (!actual.isFile() || actual.nlink !== 1n || actual.dev !== before.dev || actual.ino !== before.ino) throw new Error('Unable to reopen usage accounting.')
+      content = await handle.readFile('utf8')
+    } finally { await handle.close() }
+    const saved = content.trim().split('\n').map(line => JSON.parse(line))
+    const head = saved.shift()
+    if (head?.type !== 'session.start' || !safeId(head.id) || typeof head.timestamp !== 'string' || !Number.isFinite(Date.parse(head.timestamp)) || head?.data?.sessionId !== sessionId || head?.data?.context?.repository !== 'Enhanced Prompt') throw new Error('Unable to reopen usage accounting.')
+    // Reconstruct only known receipts; never copy arbitrary journal contents into the accounting file.
+    lines = JSON.stringify({ type: 'session.start', id: head.id, timestamp: new Date(head.timestamp).toISOString(), data: { sessionId, context: { repository: 'Enhanced Prompt' } } }) + '\n'
+    for (const event of saved) {
+      const receipt = project(event, sessionId)
+      if (!receipt) throw new Error('Unable to reopen usage accounting.')
+      const key = keyOf(receipt)
+      if (!seen.has(key)) { seen.add(key); lines += JSON.stringify(receipt) + '\n' }
+    }
+  } else {
+    await mkdir(directory, { mode: 0o700 })
+    await replace(join(directory, 'workspace.yaml'), JSON.stringify({ id: sessionId, name: `Enhanced Prompt · ${started}` }) + '\n')
+    await replace(file, lines)
+  }
+  const recovery = options.helperDirectory ? await registerUsageJournal(root, sessionId, options.helperDirectory) : undefined
   let pending = Promise.resolve()
   let failure = false
   return {
+    ...recovery,
     record(event) {
       if (failure) return
       let receipt: ObjectValue | undefined
       try { receipt = project(event, sessionId) } catch { failure = true; return }
       if (!receipt) return
-      const usage = object(object(receipt.data)?.usage)
-      const accounting = object(usage?.accounting)
-      const key = accounting ? `${sessionId}:${accounting.usageId}` : `event:${receipt.id}`
+      const key = keyOf(receipt)
       if (seen.has(key)) return
       seen.add(key)
       pending = pending.then(async () => {
@@ -150,4 +182,12 @@ export async function createUsageRecorder(sessionId: string, root = usageHome())
       if (failure) throw new Error('Unable to save usage accounting.')
     },
   }
+}
+
+export async function recoverUsage(manual = false, root = usageHome(), inspect = false): Promise<UsageRecoveryStatus> {
+  return recoverUsageJournals(root, async (sessionId, journal) => {
+    const recorder = await createUsageRecorder(sessionId, root, { resume: true })
+    await reconcileUsageJournal(journal, recorder)
+    await recorder.flush()
+  }, { manual, inspect })
 }
