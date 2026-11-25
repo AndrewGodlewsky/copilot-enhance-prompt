@@ -1,13 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { access, rm } from 'node:fs/promises'
-import { createCopilotModels, hostRuntime, runtimeEnvironment, type DesktopSdk, type ModelSession } from './models.ts'
+import { createCopilotModels, hostRuntime, runtimeEnvironment, stdioGeneration, type DesktopSdk, type ModelSession } from './models.ts'
 import { createDiagnostics } from '../diagnostics.ts'
 import { resolveEffort } from '../effort.ts'
 import { LlmError } from '../llm.ts'
 import { msg } from '../messages.ts'
 
-function fixture() {
+// `current` mirrors desktop SDK 1.0.115: the stdio factory is renamed and the client rejects child-process settings.
+function fixture(current = false) {
   const state = { helperLogin: 'person', parentLogin: 'person', host: 'https://github.com', tools: [] as unknown[], selected: 'model-a', provider: 'copilot', policy: 'enabled', currentDirectory: '', sent: [] as unknown[], stopped: 0, config: {} as Record<string, unknown>, options: {} as Record<string, unknown>, hold: false,
     prepared: '', recorded: [] as unknown[], flushed: false, prepareFails: false, flushFails: false, stopFails: false, generateFails: false,
     lifecycle: [] as string[], preflight: async (_phase: string) => {},
@@ -21,9 +22,15 @@ function fixture() {
   } }
   let release: (() => void) | undefined
   const sdk: DesktopSdk = {
-    RuntimeConnection: { forStdio: options => options },
+    // Like the real factory, the current double keeps only the keys it knows, so a misnamed setting is lost.
+    RuntimeConnection: current
+      ? { forSpawnedStdio: ({ path, args, env, workingDirectory, baseDirectory, sessionIdleTimeoutSeconds }) => ({ kind: 'spawned-stdio', path, args, env, workingDirectory, baseDirectory, sessionIdleTimeoutSeconds }) }
+      : { forStdio: options => options },
     CopilotClient: class {
-      constructor(options: Record<string, unknown>) { state.options = options }
+      constructor(options: Record<string, unknown>) {
+        if (current && ('env' in options || 'workingDirectory' in options)) throw new Error('Configure env and workingDirectory on RuntimeConnection.forSpawnedStdio/forSpawnedTcp, not on CopilotClientOptions.')
+        state.options = options
+      }
       async start() { await state.preflight('start') }
       async forceStop() { state.stopped++; await state.preflight('stop'); if (state.stopFails) throw new Error('Fixture stop failed'); emit({ type: 'assistant.usage', data: { inputTokens: 11, outputTokens: 3 } }); release?.() }
       async createSession(config: Record<string, unknown>) {
@@ -42,13 +49,14 @@ function fixture() {
     }
   }
   const diagnostics = createDiagnostics()
-  return { state, diagnostics, parent, provider: createCopilotModels(parent, async () => ({ sdk, path: process.execPath }), diagnostics, async sessionId => {
+  const home = () => ((state.options.runtime as { baseDirectory?: string } | undefined)?.baseDirectory ?? state.options.baseDirectory) as string
+  return { state, diagnostics, parent, home, provider: createCopilotModels(parent, async () => ({ sdk, path: process.execPath }), diagnostics, async sessionId => {
     if (state.prepareFails) throw new Error('PRIVATE disk failure')
     state.prepared = sessionId
     return { record(event: unknown) { state.recorded.push(event) },
     async stopped() { assert.equal(state.stopped, 1); state.lifecycle.push('stopped') },
     async committed() { assert.equal(state.flushed, true); state.lifecycle.push('committed') },
-    async complete() { await state.preflight('complete'); await assert.rejects(access(state.options.baseDirectory as string)); state.lifecycle.push('complete') },
+    async complete() { await state.preflight('complete'); await assert.rejects(access(home())); state.lifecycle.push('complete') },
     async settled() { state.lifecycle.push('settled'); await state.preflight('settled') },
     async flush() {
       await state.preflight('flush')
@@ -266,6 +274,54 @@ test('Copilot rewrite uses an empty helper, returns text, and removes its tempor
   assert.equal(state.options.mode, 'empty')
   assert.equal(state.stopped, 1)
   await assert.rejects(access(state.options.baseDirectory as string))
+})
+
+// Sets one allowed and one excluded variable so the expected helper environment is known without calling the filter.
+async function withEnvironment<T>(run: () => Promise<T>): Promise<T> {
+  const saved = { GH_HOST: process.env.GH_HOST, COPILOT_API_URL: process.env.COPILOT_API_URL }
+  Object.assign(process.env, { GH_HOST: 'fixture.invalid', COPILOT_API_URL: 'https://override.invalid' })
+  try { return await run() }
+  finally {
+    for (const [key, value] of Object.entries(saved)) { if (value === undefined) delete process.env[key]; else process.env[key] = value }
+  }
+}
+
+test('the current desktop SDK starts the helper on a stdio connection carrying only the filtered environment', async () => {
+  const { provider, state } = fixture(true)
+  assert.equal(await withEnvironment(() => provider.rewrite({ model: 'model-a', system: 'Rewrite only', user: 'Draft' })), 'Rewritten request')
+  const runtime = state.options.runtime as { kind: string; path: string; args: string[]; env?: Record<string, string>; workingDirectory: string; baseDirectory: string }
+  assert.equal(runtime.kind, 'spawned-stdio')
+  assert.equal(runtime.path, process.execPath)
+  assert.deepEqual(runtime.args, ['--no-auto-update'])
+  assert.equal(runtime.env?.GH_HOST, 'fixture.invalid', 'the connection carries the filtered environment')
+  assert.equal(runtime.env?.COPILOT_API_URL, undefined)
+  assert.equal(runtime.workingDirectory, state.config.workingDirectory, 'the helper process starts in the empty session workspace')
+  assert.equal(state.options.mode, 'empty')
+  assert.deepEqual(state.options.github, { useLoggedInUser: true })
+  assert.deepEqual(state.options.plugins, { builtinDirectories: [] })
+  assert.deepEqual(state.sent, [{ prompt: 'Draft', attachments: [] }])
+  await assert.rejects(access(runtime.baseDirectory))
+})
+
+test('model discovery accepts either desktop SDK stdio factory and rejects an SDK offering neither', () => {
+  const CopilotClient = class {} as unknown as DesktopSdk['CopilotClient']
+  assert.equal(stdioGeneration({ CopilotClient, RuntimeConnection: { forSpawnedStdio: options => options } }), 'current')
+  assert.equal(stdioGeneration({ CopilotClient, RuntimeConnection: { forStdio: options => options } }), 'legacy')
+  assert.equal(stdioGeneration({ CopilotClient, RuntimeConnection: { forSpawnedStdio: options => options, forStdio: options => options } }), 'current')
+  assert.equal(stdioGeneration({ CopilotClient, RuntimeConnection: {} }), undefined)
+  assert.equal(stdioGeneration({ CopilotClient } as unknown as DesktopSdk), undefined)
+})
+
+test('earlier desktop SDKs keep the filtered environment and workspace on the client', async () => {
+  const { provider, state } = fixture()
+  assert.equal(await withEnvironment(() => provider.rewrite({ model: 'model-a', system: 'Rewrite only', user: 'Draft' })), 'Rewritten request')
+  const env = state.options.env as Record<string, string>
+  assert.equal(env.GH_HOST, 'fixture.invalid')
+  assert.equal(env.COPILOT_API_URL, undefined)
+  assert.equal(state.options.workingDirectory, state.config.workingDirectory)
+  assert.deepEqual(state.options.connection, { path: process.execPath, args: ['--no-auto-update'] })
+  assert.equal(state.options.useLoggedInUser, true)
+  assert.deepEqual(state.options.builtinPluginDirectories, [])
 })
 
 test('missing auth, account mismatch, unattributed models, policy blocks, tools and model substitution fail before sending', async () => {

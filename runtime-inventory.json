@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "plugin": "enhance-prompt",
-  "version": "0.12.34",
+  "version": "0.12.35",
   "hostProvided": [
     "@github/copilot-sdk",
     "@github/copilot-sdk/extension",
@@ -1199,20 +1199,20 @@
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/extension.mjs",
-      "bytes": 386777,
-      "sha256": "0067d958f9c04772de615e6d6b0333e671038e10b1c252304fa080a81f9ea5a5",
+      "bytes": 387392,
+      "sha256": "6849d8a42b56786418a4c2003d4ea935ba66e7e93c7a2acbe7f58b2998d800c7",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/CHANGELOG.js",
-      "bytes": 39593,
-      "sha256": "3722f9b1c95b01ee885dfd2d45861fbaa60fb15f977867a1a7914048ed47aba8",
+      "bytes": 40325,
+      "sha256": "d4320e19c06a34de0cc958d654513103b71debc837375462930d1894ee12fae9",
       "normalization": "lf"
     },
     {
       "path": "com.github.copilot/extensions/enhance-prompt/web/assets/app.js",
       "bytes": 556505,
-      "sha256": "a0479803c84caae40d48d722494db92bf9884a3d827b59daa627ae1008fce1d8",
+      "sha256": "84f960e73fee561202be2514430749d95005c0c51e8ad6fac524d16d3ec44d18",
       "normalization": "lf"
     },
     {
@@ -1260,7 +1260,7 @@
     {
       "path": "plugin.json",
       "bytes": 422,
-      "sha256": "6f3d2cdb72b6f606270d7414d32ee4f36e69f60a0f788f1149a394e4e3a0dc3b",
+      "sha256": "e6bd9e894af1019a0acb1c9747db56019c7934bba579d6fa694d1f267f95c11d",
       "normalization": "lf"
     }
   ],
@@ -1281,8 +1281,8 @@
   "inputs": [
     {
       "path": "CHANGELOG.md",
-      "bytes": 39557,
-      "sha256": "a362c9d5d15fd47dd9dd2da5536a30a3eeb794c8f77faaae0521e0d75c7472b8",
+      "bytes": 40289,
+      "sha256": "a547b9491f46a808ff22ade822820fd3de5b65bbffb666f7da99f9192f8c5203",
       "normalization": "lf"
     },
     {
@@ -1521,8 +1521,8 @@
     },
     {
       "path": "src/copilot/models.ts",
-      "bytes": 20239,
-      "sha256": "20a0f2fd00271b2f230b67f04b4be931113afdb1c5b163d7d711a87fefee0992",
+      "bytes": 21185,
+      "sha256": "db772aac5051840b011a8bd4be3a14119dd43b41ce1a026cb169d7c0558c4143",
       "normalization": "lf"
     },
     {
@@ -1852,7 +1852,7 @@
     {
       "path": "src/version.ts",
       "bytes": 93,
-      "sha256": "25ae362683e2a357d9e133c3bee30d0f2093d2d9a313374ab6647a7e922d2b33",
+      "sha256": "1dcfba72335172f00f1fcf70a07e65e44a889d66e2d78461e51015faff17a051",
       "normalization": "lf"
     },
     {

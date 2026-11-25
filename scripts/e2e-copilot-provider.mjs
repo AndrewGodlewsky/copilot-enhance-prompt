@@ -34,12 +34,18 @@ const parent = { rpc: { model: { list: async () => catalog }, gitHubAuth: { getS
 const homes = []
 const clients = []
 let suppressedUsage = 0
+let journalOnly
 const bridge = {
   RuntimeConnection: sdk.RuntimeConnection,
   CopilotClient: class {
     constructor(options) {
-      homes.push(options.baseDirectory)
-      this.client = new sdk.CopilotClient({ ...options, env: { ...options.env, GH_TOKEN: undefined, GITHUB_TOKEN: undefined }, useLoggedInUser: false })
+      // Production puts the child environment and home on the connection for current SDKs, on the client for earlier ones.
+      this.current = options.runtime !== undefined
+      const offline = env => ({ ...env, GH_TOKEN: undefined, GITHUB_TOKEN: undefined })
+      homes.push(this.current ? options.runtime.baseDirectory : options.baseDirectory)
+      this.client = new sdk.CopilotClient(this.current
+        ? { ...options, runtime: { ...options.runtime, env: offline(options.runtime.env) }, github: { ...options.github, useLoggedInUser: false } }
+        : { ...options, env: offline(options.env), useLoggedInUser: false })
       clients.push(this.client)
     }
     start() { return this.client.start() }
@@ -49,12 +55,22 @@ const bridge = {
       await writeFile(join(config.workingDirectory, 'AGENTS.md'), 'PRIVATE_INSTRUCTIONS_SENTINEL')
       await writeFile(join(config.workingDirectory, 'PRIVATE_FILENAME_SENTINEL.txt'), 'PRIVATE_CONTENT_SENTINEL')
       const dropLiveUsage = homes.length === 1
+      if (dropLiveUsage) journalOnly = config.sessionId
+      const provider = { type: 'openai', baseUrl: `http://127.0.0.1:${fixture.address().port}/v1`, apiKey: 'fixture', wireApi: 'completions' }
       const session = await this.client.createSession({ ...config,
         onEvent(event) {
           if (dropLiveUsage && event.type === 'assistant.usage') suppressedUsage++
           else config.onEvent(event)
         },
-        provider: { type: 'openai', baseUrl: `http://127.0.0.1:${fixture.address().port}/v1`, apiKey: 'fixture', wireApi: 'completions' } })
+        // Current SDKs name the loopback provider and need Copilot API models off for unqualified model ids to reach it.
+        ...(this.current
+          ? { inference: { providers: [{ name: 'fixture', ...provider }], defaultProvider: 'fixture' }, github: { capi: { enabled: false } } }
+          : { provider }) })
+      if (this.current) {
+        // A named loopback provider reports `fixture/<id>`; the Copilot API models production uses keep bare ids.
+        const selected = session.rpc.model.getCurrent.bind(session.rpc.model)
+        session.rpc.model.getCurrent = async () => { const result = await selected(); return { ...result, modelId: result.modelId?.replace(/^fixture\//, '') } }
+      }
       session.rpc.model.list = async () => catalog
       session.rpc.gitHubAuth.getStatus = async () => auth
       return session
@@ -109,7 +125,11 @@ try {
   assert.equal(receipts.length, 5, 'real runtime accounting survives helper cleanup')
   assert.ok(suppressedUsage > 0, 'a missing live event is recovered from the real runtime journal')
   assert.ok(receipts.every(event => event.data.usage.inputTokens === 1 && event.data.usage.outputTokens === 1))
-  assert.ok(receipts.every(event => event.data.usage.isByok === true), 'local fixture is never relabeled as Copilot usage')
+  // The 1.0.115-7 runtime journal omits BYOK labels, so only the session whose live event was suppressed may be unlabeled.
+  const live = receipts.filter(event => event.data.usage.accounting?.sourceSessionId !== journalOnly)
+  assert.equal(live.length, receipts.length - 1, 'exactly one receipt comes from the journal alone')
+  assert.ok(live.every(event => event.data.usage.isByok === true), 'live fixture receipts keep their BYOK label')
+  assert.ok(receipts.every(event => event.data.usage.isByok !== false && event.data.usage.provider?.kind !== 'copilot' && event.data.usage.copilotUsage === undefined), 'local fixture is never relabeled as Copilot usage')
   assert.ok(receipts.every(event => sessions.includes(event.data.usage.accounting.sourceSessionId)))
   assert.doesNotMatch(journals.join('\n'), /PRIVATE_|Add a dark mode|Rewrite only|Fixture rewritten|CANCEL_SENTINEL|127\.0\.0\.1|apiKey|data:image/)
   console.log('Production Copilot helper: output, model selection, applied reasoning, images, isolation, cancellation, retained usage and cleanup passed. No paid inference.')

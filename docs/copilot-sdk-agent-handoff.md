@@ -56,7 +56,7 @@ The verified Windows installation exposes declarations under `%LOCALAPPDATA%/Pro
 - `COPILOT_SDK_PATH` is present.
 - `COPILOT_EXTENSION_PARENT_PID` matches the actual positive `process.ppid`.
 
-Resolve that executable with `realpath`, import the host SDK, and verify `CopilotClient` and `RuntimeConnection.forStdio` exist. These checks recognize a tested host layout; they are not a cryptographic signature check or an OS sandbox. Refuse unknown layouts until they are inspected and tested.
+Resolve that executable with `realpath`, import the host SDK, and verify `CopilotClient` and a stdio connection factory exist: `RuntimeConnection.forSpawnedStdio` (seen in desktop SDK 1.0.115-7) or `forStdio` (seen through 1.0.106-8). These checks recognize a tested host layout; they are not a cryptographic signature check or an OS sandbox. Refuse unknown layouts until they are inspected and tested.
 
 A real bug came from requiring an absolute bootstrap path. The packaged desktop uses the bare embedded name. Accept those two tested forms; do not broaden the check to arbitrary relative paths or any argument containing the substring. See [runtime identity regression coverage](../scripts/e2e-runtime-identity.mjs).
 
@@ -76,27 +76,29 @@ Re-list models in both sessions, require the requested ID to be eligible in both
 
 Use one random UUID per helper, one empty temporary workspace and a separate temporary Copilot home. Pass that UUID to `createSession`, use it as the durable accounting session ID, and verify the SDK returns it unchanged. A plugin performing several stages can create several helpers; describe that relationship in its UI and usage documentation.
 
-The core client configuration is:
+The core client configuration, as verified against desktop SDK 1.0.115-7, is:
 
 ```ts
 const client = new sdk.CopilotClient({
   mode: 'empty',
-  workingDirectory: workspace,
-  baseDirectory: temporaryHome,
-  connection: sdk.RuntimeConnection.forStdio({
+  runtime: sdk.RuntimeConnection.forSpawnedStdio({
     path: verifiedDesktopExecutable,
-    args: ['--no-auto-update']
+    args: ['--no-auto-update'],
+    env: runtimeEnvironment(),
+    workingDirectory: workspace,
+    baseDirectory: temporaryHome
   }),
-  env: runtimeEnvironment(),
-  useLoggedInUser: true,
-  logLevel: 'error',
-  builtinPluginDirectories: []
+  github: { useLoggedInUser: true },
+  observability: { logLevel: 'error' },
+  plugins: { builtinDirectories: [] }
 })
 ```
 
+Desktop SDKs through at least 1.0.106-8 named the factory `forStdio`, passed it as `connection`, and took `workingDirectory`, `baseDirectory`, `env`, `useLoggedInUser`, `logLevel` and `builtinPluginDirectories` on the client. The helper detects which factory the host provides and builds the matching shape. The current SDK throws when `env` or `workingDirectory` is set on the client, and a connection without `env` inherits the whole process environment, so the allowlist must travel on the connection.
+
 Adapt `runtimeEnvironment()` as an allowlist. It keeps required OS, locale, existing GitHub authentication and proxy/certificate variables. It excludes code injection, provider endpoint overrides, desktop host IPC and tracing configuration. Do not inherit `process.env` wholesale or log its values. Authentication variables may contain secrets; never put their values into command arguments.
 
-After starting the client, prepare the durable accounting writer **before inference**. Register its callback in `createSession({ onEvent })`; this installs the listener before session creation events can arrive. These are the tested session options:
+After starting the client, prepare the durable accounting writer **before inference**. Register its callback in `createSession({ onEvent })`; this installs the listener before session creation events can arrive. These are the tested session options. SDK 1.0.115-7 groups them (for example `tools.availableTools`) and still accepts these flat names through a private compatibility layer. After creation the helper verifies the resulting tools, workspace and selected model, and refuses to send if they differ:
 
 ```ts
 {

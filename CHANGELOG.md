@@ -1,5 +1,14 @@
 # Changes
 
+## [0.12.35] - 2026-11-24
+
+### Fixed
+- Model lists and prompt rewriting work again after GitHub Copilot 1.5.0 updated its desktop SDK (runtime 1.0.115). Earlier plugin versions report that the required desktop SDK could not be loaded. Update the plugin, restart Copilot, then reopen Enhance Prompt.
+- Background rewriting keeps its empty workspace and filtered environment with the new SDK. Earlier Copilot desktop versions remain supported.
+
+### Verification
+- Rewriting, images, cancellation, reasoning levels, usage records and cleanup passed on the installed 1.0.115-7 runtime with a local model fixture. Rewriting on a Copilot plan was not exercised; if it fails, open Show Logs and share the Copilot model discovery section.
+
 ## [0.12.34] - 2026-11-17
 
 ### Verification

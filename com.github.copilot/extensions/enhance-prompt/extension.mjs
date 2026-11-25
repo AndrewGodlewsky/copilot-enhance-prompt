@@ -4035,7 +4035,7 @@ function compareVersions(left, right) {
 }
 
 // src/version.ts
-var VERSION = "0.12.34";
+var VERSION = "0.12.35";
 
 // src/release-history.ts
 var RELEASE_SEEN_KEY = "releaseHistory.seenVersion";
@@ -7842,6 +7842,10 @@ function runtimeEnvironment(source = process.env) {
   const allowed = /^(PATH|PATHEXT|SYSTEMROOT|WINDIR|COMSPEC|TEMP|TMP|HOME|USERPROFILE|LOCALAPPDATA|APPDATA|XDG_CONFIG_HOME|XDG_CACHE_HOME|LANG|LC_ALL|GH_TOKEN|GITHUB_TOKEN|GH_HOST|GITHUB_HOST|GH_CONFIG_DIR|HTTPS_PROXY|HTTP_PROXY|ALL_PROXY|NO_PROXY|NODE_EXTRA_CA_CERTS|SSL_CERT_FILE|SSL_CERT_DIR)$/i;
   return Object.fromEntries(Object.entries(source).filter((entry) => allowed.test(entry[0]) && typeof entry[1] === "string"));
 }
+function stdioGeneration(sdk) {
+  if (typeof sdk.RuntimeConnection?.forSpawnedStdio === "function") return "current";
+  if (typeof sdk.RuntimeConnection?.forStdio === "function") return "legacy";
+}
 async function desktopRuntime(probe) {
   let loadingSdk = false;
   try {
@@ -7857,8 +7861,9 @@ async function desktopRuntime(probe) {
     probe?.check("sdkImported", true);
     probe?.stage("sdk_api");
     probe?.check("clientAvailable", typeof sdk.CopilotClient === "function");
-    probe?.check("stdioAvailable", typeof sdk.RuntimeConnection?.forStdio === "function");
-    if (typeof sdk.CopilotClient !== "function" || typeof sdk.RuntimeConnection?.forStdio !== "function") throw unavailable2();
+    const stdio = stdioGeneration(sdk);
+    probe?.check("stdioAvailable", stdio !== void 0);
+    if (typeof sdk.CopilotClient !== "function" || !stdio) throw unavailable2();
     return { sdk, path };
   } catch (error) {
     probe?.finish("failed", error);
@@ -7976,12 +7981,23 @@ function createCopilotModels(parent, runtime = desktopRuntime, diagnostics2, usa
       const workspace = join12(directory2, "workspace");
       await mkdir6(workspace);
       check();
-      client = new sdk.CopilotClient({
+      const home = join12(directory2, "home");
+      const env = runtimeEnvironment();
+      const args = ["--no-auto-update"];
+      const stdio = stdioGeneration(sdk);
+      if (!stdio) throw unavailable2();
+      client = new sdk.CopilotClient(stdio === "current" ? {
+        mode: "empty",
+        runtime: sdk.RuntimeConnection.forSpawnedStdio({ path, args, env, workingDirectory: workspace, baseDirectory: home }),
+        github: { useLoggedInUser: true },
+        observability: { logLevel: "error" },
+        plugins: { builtinDirectories: [] }
+      } : {
         mode: "empty",
         workingDirectory: workspace,
-        baseDirectory: join12(directory2, "home"),
-        connection: sdk.RuntimeConnection.forStdio({ path, args: ["--no-auto-update"] }),
-        env: runtimeEnvironment(),
+        baseDirectory: home,
+        connection: sdk.RuntimeConnection.forStdio({ path, args }),
+        env,
         useLoggedInUser: true,
         logLevel: "error",
         builtinPluginDirectories: []

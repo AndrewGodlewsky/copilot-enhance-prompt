@@ -24,7 +24,8 @@ type HelperSession = ModelSession & {
   sendAndWait(input: { prompt: string; attachments: { type: 'blob'; data: string; mimeType: string }[] }, timeout: number): Promise<{ data: { content: string } } | undefined>
 }
 type Client = { start(): Promise<unknown>; createSession(config: Record<string, unknown>): Promise<HelperSession>; forceStop(): Promise<unknown> }
-export type DesktopSdk = { CopilotClient: new (options: Record<string, unknown>) => Client; RuntimeConnection: { forStdio(options: { path: string; args: string[] }): unknown } }
+type StdioFactory = (options: Record<string, unknown>) => unknown
+export type DesktopSdk = { CopilotClient: new (options: Record<string, unknown>) => Client; RuntimeConnection: { forSpawnedStdio?: StdioFactory; forStdio?: StdioFactory } }
 export type CopilotRewrite = { model: string; reasoningEffort?: string; system: string; user: string; images?: { type: ImageType; base64: string }[] }
 
 const unavailable = () => new LlmError(msg('error.copilot_unavailable'), 'unavailable')
@@ -52,6 +53,12 @@ export function runtimeEnvironment(source = process.env): Record<string, string>
   return Object.fromEntries(Object.entries(source).filter((entry): entry is [string, string] => allowed.test(entry[0]) && typeof entry[1] === 'string'))
 }
 
+// By desktop SDK 1.0.115, forStdio had become forSpawnedStdio and env/workingDirectory had moved from the client onto it.
+export function stdioGeneration(sdk: DesktopSdk): 'current' | 'legacy' | undefined {
+  if (typeof sdk.RuntimeConnection?.forSpawnedStdio === 'function') return 'current'
+  if (typeof sdk.RuntimeConnection?.forStdio === 'function') return 'legacy'
+}
+
 async function desktopRuntime(probe?: DiscoveryProbe): Promise<{ sdk: DesktopSdk; path: string }> {
   let loadingSdk = false
   try {
@@ -67,8 +74,9 @@ async function desktopRuntime(probe?: DiscoveryProbe): Promise<{ sdk: DesktopSdk
     probe?.check('sdkImported', true)
     probe?.stage('sdk_api')
     probe?.check('clientAvailable', typeof sdk.CopilotClient === 'function')
-    probe?.check('stdioAvailable', typeof sdk.RuntimeConnection?.forStdio === 'function')
-    if (typeof sdk.CopilotClient !== 'function' || typeof sdk.RuntimeConnection?.forStdio !== 'function') throw unavailable()
+    const stdio = stdioGeneration(sdk)
+    probe?.check('stdioAvailable', stdio !== undefined)
+    if (typeof sdk.CopilotClient !== 'function' || !stdio) throw unavailable()
     return { sdk, path }
   } catch (error) {
     probe?.finish('failed', error)
@@ -183,9 +191,17 @@ export function createCopilotModels(parent: ModelSession, runtime = desktopRunti
       const workspace = join(directory, 'workspace')
       await mkdir(workspace)
       check()
-      client = new sdk.CopilotClient({ mode: 'empty', workingDirectory: workspace, baseDirectory: join(directory, 'home'),
-        connection: sdk.RuntimeConnection.forStdio({ path, args: ['--no-auto-update'] }),
-        env: runtimeEnvironment(), useLoggedInUser: true, logLevel: 'error', builtinPluginDirectories: [] })
+      const home = join(directory, 'home')
+      const env = runtimeEnvironment()
+      const args = ['--no-auto-update']
+      const stdio = stdioGeneration(sdk)
+      if (!stdio) throw unavailable()
+      // The current SDK rejects env/workingDirectory on the client, and a connection without env inherits this process's.
+      client = new sdk.CopilotClient(stdio === 'current'
+        ? { mode: 'empty', runtime: sdk.RuntimeConnection.forSpawnedStdio!({ path, args, env, workingDirectory: workspace, baseDirectory: home }),
+          github: { useLoggedInUser: true }, observability: { logLevel: 'error' }, plugins: { builtinDirectories: [] } }
+        : { mode: 'empty', workingDirectory: workspace, baseDirectory: home, connection: sdk.RuntimeConnection.forStdio!({ path, args }),
+          env, useLoggedInUser: true, logLevel: 'error', builtinPluginDirectories: [] })
       stage('copilot.start')
       await withDeadline(client.start(), 30_000)
       check()

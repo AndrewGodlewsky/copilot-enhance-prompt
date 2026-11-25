@@ -16,6 +16,8 @@ const captured = []
 const fixture = createServer(async (req, res) => {
   let data = ''
   for await (const chunk of req) data += chunk
+  // Current runtimes also list a named provider's models (GET /v1/models); only inference requests are captured.
+  if (req.method !== 'POST' || !req.url.endsWith('/chat/completions')) { res.statusCode = 404; res.end(); return }
   captured.push(JSON.parse(data))
   res.setHeader('content-type', 'application/json')
   res.end(JSON.stringify({ id: 'fixture', object: 'chat.completion', choices: [{ index: 0, message: { role: 'assistant', content: 'Fixture enhanced prompt' }, finish_reason: 'stop' }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } }))
@@ -28,17 +30,25 @@ await mkdir(join(project, 'src'))
 await mkdir(join(project, '.github'))
 await writeFile(join(project, '.github/copilot-instructions.md'), 'CONTEXT_RULE_FIXTURE')
 await writeFile(join(project, 'src/service.ts'), `${'// header\n'.repeat(50)}export const validateSession = true`)
-const client = new CopilotClient({
-  mode: 'empty', baseDirectory: join(temporary, 'copilot'), workingDirectory: project,
-  builtinPluginDirectories: [resolve('.')],
-  connection: RuntimeConnection.forStdio({ path: cli, args: ['--no-auto-update'], env: { ...process.env, ENHANCE_PROMPT_DATA_DIR: join(temporary, 'plugin-data') } })
-})
+// By SDK 1.0.115 the stdio factory was renamed, child-process settings moved onto it and `provider` gave way to named providers.
+const current = typeof RuntimeConnection.forSpawnedStdio === 'function'
+const launch = { path: cli, args: ['--no-auto-update'], env: { ...process.env, ENHANCE_PROMPT_DATA_DIR: join(temporary, 'plugin-data') } }
+const client = new CopilotClient(current
+  ? { mode: 'empty', plugins: { builtinDirectories: [resolve('.')] },
+    runtime: RuntimeConnection.forSpawnedStdio({ ...launch, workingDirectory: project, baseDirectory: join(temporary, 'copilot') }) }
+  : { mode: 'empty', baseDirectory: join(temporary, 'copilot'), workingDirectory: project, builtinPluginDirectories: [resolve('.')],
+    connection: RuntimeConnection.forStdio(launch) })
+const provider = { type: 'openai', baseUrl, apiKey: 'fixture', wireApi: 'completions' }
+// Copilot API models stay off so the unqualified session model can only reach the loopback fixture.
+const fixtureModel = current
+  ? { inference: { providers: [{ name: 'fixture', ...provider }], defaultProvider: 'fixture' }, github: { capi: { enabled: false } } }
+  : { provider }
 let session
 const deadline = setTimeout(() => { console.error('Runtime smoke test timed out.'); void client.forceStop() }, 45_000)
 try {
   await client.start()
   console.log('Runtime started.')
-  session = await client.createSession({ workingDirectory: project, availableTools: [], requestExtensions: true, requestCanvasRenderer: true, extensionSdkPath: sdkDirectory, pluginDirectories: [resolve('.')], model: 'gpt-4o', provider: { type: 'openai', baseUrl, apiKey: 'fixture', wireApi: 'completions' } })
+  session = await client.createSession({ workingDirectory: project, availableTools: [], requestExtensions: true, requestCanvasRenderer: true, extensionSdkPath: sdkDirectory, pluginDirectories: [resolve('.')], model: 'gpt-4o', ...fixtureModel })
   console.log('Disposable session created.')
   await new Promise(resolve => setTimeout(resolve, 2000))
   let canvases
